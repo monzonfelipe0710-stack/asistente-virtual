@@ -22,8 +22,8 @@ export default function Navbar() {
             Acceso interno
           </Link>
           <a
-            href="https://miportal.formosa.gob.ar"
-            target="_blank"
+            href="https://miportal.formosa.gob.ar/"
+            target="_self"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-full bg-blue-800 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-900"
           >

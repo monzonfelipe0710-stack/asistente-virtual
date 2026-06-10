@@ -8,8 +8,8 @@ export default function ExternalAccess() {
 
       <div className="space-y-2">
         <a
-          href="https://miportal.formosa.gob.ar"
-          target="_blank"
+          href="https://miportal.formosa.gob.ar/"
+          target="_self"
           rel="noopener noreferrer"
           className="flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3 no-underline transition hover:-translate-y-0.5 hover:bg-blue-100"
         >
