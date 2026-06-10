@@ -61,19 +61,21 @@ export default function ChatWindow() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="bg-blue-800 px-4 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-          <span className="text-white font-semibold text-xs">AP</span>
+    <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_-25px_rgba(15,23,42,0.35)]">
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 px-4 py-4 text-white">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 shadow-inner">
+            <span className="text-sm font-black tracking-[0.25em] text-white">AP</span>
+          </div>
+          <div>
+            <h2 className="m-0 text-sm font-semibold">ChatAP</h2>
+            <p className="m-0 text-[11px] text-blue-100">Asistente Virtual · Atención digital</p>
+          </div>
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] text-blue-100 ring-1 ring-inset ring-emerald-300/30">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+            En línea
+          </span>
         </div>
-        <div>
-          <h2 className="text-sm font-semibold text-white m-0">ChatAP</h2>
-          <p className="text-[11px] text-blue-200 m-0">Asistente Virtual</p>
-        </div>
-        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-blue-200">
-          <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
-          En línea
-        </span>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-slate-50">

@@ -30,17 +30,20 @@ export default function QuickReplies({ onSelect }) {
   ];
 
   return (
-    <div className="flex flex-wrap gap-2 px-4 py-3 bg-slate-50 border-t border-slate-100">
-      {options.map((opt) => (
-        <button
-          key={opt.label}
-          onClick={() => onSelect(opt.query)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 cursor-pointer hover:bg-blue-50 hover:border-blue-200 hover:text-blue-800 transition-colors"
-        >
-          {opt.icon}
-          {opt.label}
-        </button>
-      ))}
+    <div className="border-t border-slate-100 bg-slate-50/90 px-4 py-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Acciones rápidas</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt.label}
+            onClick={() => onSelect(opt.query)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-800"
+          >
+            {opt.icon}
+            {opt.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

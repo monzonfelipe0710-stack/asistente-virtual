@@ -11,8 +11,8 @@ export default function DownloadSection() {
       : documents.filter((d) => d.category === activeCategory);
 
   return (
-    <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-100">
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_-25px_rgba(15,23,42,0.35)]">
+      <div className="border-b border-slate-100 px-4 py-4">
         <h2 className="text-sm font-semibold text-slate-800 m-0">
           Descargas
         </h2>
@@ -21,12 +21,12 @@ export default function DownloadSection() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-slate-100 bg-slate-50">
+      <div className="flex flex-wrap gap-1.5 border-b border-slate-100 bg-slate-50/80 px-4 py-3">
         {documentCategories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-3 py-1 text-xs rounded-md cursor-pointer transition-colors ${
+            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               activeCategory === cat
                 ? "bg-blue-800 text-white"
                 : "bg-white text-slate-600 border border-slate-200 hover:border-blue-200 hover:text-blue-800"
