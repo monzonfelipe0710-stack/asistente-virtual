@@ -1,24 +1,24 @@
 export default function DocumentCard({ document }) {
   const formatIcons = {
     PDF: (
-      <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
-        <span className="text-red-600 font-bold text-[10px]">PDF</span>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 shadow-sm">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-600">PDF</span>
       </div>
     ),
     DOCX: (
-      <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-        <span className="text-blue-600 font-bold text-[10px]">DOC</span>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 shadow-sm">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">DOC</span>
       </div>
     ),
     XLSX: (
-      <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-        <span className="text-green-600 font-bold text-[10px]">XLS</span>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 shadow-sm">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">XLS</span>
       </div>
     ),
   };
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg hover:border-blue-200 hover:shadow-sm transition-all">
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
       {formatIcons[document.format] || formatIcons.PDF}
 
       <div className="flex-1 min-w-0">
@@ -38,7 +38,7 @@ export default function DocumentCard({ document }) {
       </div>
 
       <button
-        className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-blue-800 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-colors"
+        className="shrink-0 rounded-xl bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 transition hover:bg-blue-100"
         onClick={() => alert(`Descargando: ${document.title}`)}
       >
         Descargar

@@ -1,7 +1,34 @@
 @import "tailwindcss";
 
+:root {
+  color: #0f172a;
+  background-color: #f8fbff;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
+
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply m-0 font-sans text-slate-700 bg-slate-50 antialiased;
+    @apply m-0 min-h-screen font-sans text-slate-700 antialiased;
+    background:
+      radial-gradient(circle at top, rgba(191, 219, 254, 0.35), transparent 30%),
+      linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+  }
+
+  ::selection {
+    background: rgba(30, 64, 175, 0.18);
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply rounded-3xl border border-white/70 bg-white/90 shadow-[0_18px_45px_-25px_rgba(15,23,42,0.35)] backdrop-blur;
   }
 }
