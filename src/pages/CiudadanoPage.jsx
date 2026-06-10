@@ -10,8 +10,9 @@ export default function CiudadanoPage() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <section className="glass-card p-6 sm:p-8 mb-6 overflow-hidden relative">
+        <section className="glass-card relative mb-6 overflow-hidden p-6 sm:p-8 animate-[fadeIn_0.35s_ease-out]">
           <div className="absolute -top-16 right-0 h-32 w-32 rounded-full bg-blue-100/80 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-indigo-100/60 blur-3xl" />
           <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-center">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-blue-700 font-semibold">Portal ciudadano</p>
@@ -34,8 +35,12 @@ export default function CiudadanoPage() {
                 { label: "Trámites guiados", value: "18", tone: "bg-emerald-50 text-emerald-700" },
                 { label: "Formularios", value: "12", tone: "bg-amber-50 text-amber-700" },
                 { label: "Atención digital", value: "Online", tone: "bg-indigo-50 text-indigo-700" },
-              ].map((item) => (
-                <article key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              ].map((item, index) => (
+                <article
+                  key={item.label}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-md"
+                  style={{ animationDelay: `${index * 80}ms` }}
+                >
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{item.label}</p>
                   <p className="mt-2 text-2xl font-semibold text-slate-900">{item.value}</p>
                   <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${item.tone}`}>Activo</span>
@@ -46,7 +51,7 @@ export default function CiudadanoPage() {
         </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
-          <div className="h-[640px]">
+          <div className="h-160">
             <ChatWindow />
           </div>
 

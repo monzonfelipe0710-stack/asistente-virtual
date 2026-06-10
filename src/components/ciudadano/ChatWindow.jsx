@@ -62,7 +62,7 @@ export default function ChatWindow() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_-25px_rgba(15,23,42,0.35)]">
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 px-4 py-4 text-white">
+      <div className="bg-linear-to-r from-blue-900 via-blue-800 to-indigo-900 px-4 py-4 text-white">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/12 shadow-inner">
             <span className="text-sm font-black tracking-[0.25em] text-white">AP</span>

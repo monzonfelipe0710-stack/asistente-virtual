@@ -5,7 +5,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3 no-underline">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-800 via-blue-700 to-indigo-700 shadow-lg shadow-blue-200">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-blue-800 via-blue-700 to-indigo-700 shadow-lg shadow-blue-200">
             <span className="text-sm font-black tracking-[0.2em] text-white">AP</span>
           </div>
           <div className="flex flex-col">
