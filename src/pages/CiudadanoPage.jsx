@@ -13,19 +13,32 @@ export default function CiudadanoPage() {
         <section className="glass-card relative mb-6 overflow-hidden p-6 sm:p-8 animate-[fadeIn_0.35s_ease-out]">
           <div className="absolute -top-16 right-0 h-32 w-32 rounded-full bg-blue-100/80 blur-3xl" />
           <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-indigo-100/60 blur-3xl" />
-          <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-center">
+          <div className="relative grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-center">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-blue-700 font-semibold">Portal ciudadano</p>
               <h1 className="mt-3 text-3xl sm:text-4xl font-semibold text-slate-900 leading-tight">
-                Tu asistente virtual para trámites y consultas institucionales.
+                Tu asistente virtual para resolver trámites y consultas sin perder tiempo.
               </h1>
               <p className="mt-4 text-slate-600 max-w-2xl text-sm sm:text-base">
-                Consultá información, encontrá formularios y accedé a los servicios de la Subsecretaría de Recursos Humanos en un solo lugar.
+                Centralizá información, encontrá formularios y accedé a los servicios de la Subsecretaría de Recursos Humanos con una experiencia más clara y profesional.
               </p>
               <div className="mt-5 flex flex-wrap gap-3 text-xs text-slate-600">
-                <span className="rounded-full bg-blue-50 px-3 py-1.5">Respuesta rápida</span>
-                <span className="rounded-full bg-emerald-50 px-3 py-1.5">Accesos directos</span>
-                <span className="rounded-full bg-amber-50 px-3 py-1.5">Documentación actualizada</span>
+                <span className="glass-chip">Respuesta rápida</span>
+                <span className="glass-chip">Accesos directos</span>
+                <span className="glass-chip">Documentación actualizada</span>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {[
+                  { title: "Trámites", text: "Guía paso a paso para consultas frecuentes." },
+                  { title: "Formularios", text: "Descargas rápidas y categorizadas por necesidad." },
+                  { title: "Soporte", text: "Canales de ayuda y acceso institucional directo." },
+                ].map((item) => (
+                  <article key={item.title} className="soft-ring p-4">
+                    <p className="text-[11px] uppercase tracking-[0.25em] text-blue-700">{item.title}</p>
+                    <p className="mt-2 text-sm text-slate-600">{item.text}</p>
+                  </article>
+                ))}
               </div>
             </div>
 
