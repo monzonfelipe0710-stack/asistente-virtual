@@ -22,7 +22,7 @@ export const botResponses = [
   {
     keywords: ["recibo", "sueldo", "haberes"],
     response:
-      "Podés consultar tus recibos de haberes a través de MiPortal (https://miportal.formosa.gob.ar). Si tenés problemas con el acceso, comunicate con la mesa de ayuda al 0800-555-1234.",
+      "Podés consultar tus recibos de haberes a través de MiPortal (https://www.formosa.gob.ar/miportal). Si tenés problemas con el acceso, comunicate con la mesa de ayuda al 0800-555-1234.",
   },
   {
     keywords: ["trámite", "documentación", "requisito"],

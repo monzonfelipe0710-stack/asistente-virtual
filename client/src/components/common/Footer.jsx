@@ -1,17 +1,24 @@
+import { Link } from "react-router-dom";
+
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200/80 bg-white/95 py-6 shadow-[0_-10px_30px_-18px_rgba(15,23,42,0.25)]">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-center sm:px-6 lg:flex-row lg:px-8 lg:text-left">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-700">Soporte institucional</p>
-          <p className="mt-1 text-xs text-slate-500">
+    <footer className="bg-white border-t border-slate-200/60 py-8 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-slate-400 font-medium">
             &copy; {new Date().getFullYear()} Subsecretaría de Recursos Humanos &mdash; Provincia de Formosa
           </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
-          <a href="#" className="transition hover:text-slate-700">Términos de uso</a>
-          <a href="#" className="transition hover:text-slate-700">Privacidad</a>
-          <a href="#" className="transition hover:text-slate-700">Contacto</a>
+          <div className="flex items-center gap-6 text-xs text-slate-400">
+            <Link to="/contacto" className="hover:text-slate-600 transition-colors no-underline font-medium">
+              Contacto
+            </Link>
+            <a href="#" className="hover:text-slate-600 transition-colors no-underline font-medium">
+              Términos de uso
+            </a>
+            <a href="#" className="hover:text-slate-600 transition-colors no-underline font-medium">
+              Privacidad
+            </a>
+          </div>
         </div>
       </div>
     </footer>
