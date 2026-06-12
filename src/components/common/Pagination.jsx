@@ -1,0 +1,58 @@
+import { useState } from "react";
+
+export default function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== "...") {
+      pages.push("...");
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-slate-100">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+      >
+        Anterior
+      </button>
+      {pages.map((p, i) =>
+        p === "..." ? (
+          <span key={`dots-${i}`} className="px-2 text-xs text-slate-300">...</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 ${
+              p === currentPage
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+      >
+        Siguiente
+      </button>
+    </div>
+  );
+}
+
+export function usePagination(items, pageSize = 5) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(items.length / pageSize);
+  const paginatedItems = items.slice((page - 1) * pageSize, page * pageSize);
+
+  return { page, totalPages, paginatedItems, setPage };
+}

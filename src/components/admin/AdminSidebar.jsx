@@ -41,25 +41,28 @@ const links = [
 
 export default function AdminSidebar() {
   return (
-    <aside className="w-60 bg-slate-900 text-white flex flex-col flex-shrink-0">
-      <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-700">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+    <aside className="w-60 bg-gradient-to-b from-primary via-primary to-primary-light flex flex-col flex-shrink-0">
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-white/10">
+        <div className="w-8 h-8 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
           <span className="text-white font-bold text-xs">AP</span>
         </div>
-        <span className="text-sm font-semibold">ChatAP Admin</span>
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold text-white tracking-tight">ChatAP Admin</span>
+          <span className="text-[10px] text-white/50 font-medium">Subsec. RRHH</span>
+        </div>
       </div>
 
-      <nav className="flex-1 py-3 px-2 space-y-1">
+      <nav className="flex-1 py-3 px-2 space-y-0.5 stagger-children">
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             end={link.to === "/admin"}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg no-underline transition-colors ${
+              `flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl no-underline transition-all duration-200 ${
                 isActive
-                  ? "bg-blue-700 text-white"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  ? "bg-white/15 text-white shadow-sm font-semibold"
+                  : "text-white/60 hover:bg-white/10 hover:text-white/90 font-medium"
               }`
             }
           >
@@ -69,10 +72,10 @@ export default function AdminSidebar() {
         ))}
       </nav>
 
-      <div className="px-4 py-3 border-t border-slate-700">
+      <div className="px-3 py-3 border-t border-white/10">
         <NavLink
           to="/"
-          className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors no-underline"
+          className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/40 hover:text-white/80 transition-colors no-underline rounded-lg hover:bg-white/5"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

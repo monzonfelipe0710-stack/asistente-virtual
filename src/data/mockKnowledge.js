@@ -11,7 +11,7 @@ export const knowledgeBase = [
     id: 2,
     question: "¿Dónde puedo ver mi recibo de sueldo?",
     answer:
-      "Los recibos de haberes están disponibles en MiPortal (https://miportal.formosa.gob.ar). Ingrese con su DNI y clave personal. Si olvidó su clave, puede recuperarla desde la misma página.",
+      "Los recibos de haberes están disponibles en MiPortal (https://www.formosa.gob.ar/miportal). Ingrese con su DNI y clave personal. Si olvidó su clave, puede recuperarla desde la misma página.",
     category: "Haberes",
     active: true,
   },
