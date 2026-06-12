@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum Rol {
+  SUPERUSUARIO
+  ADMINISTRADOR
+}
+
+enum TipoSector {
+  MINISTERIO
+  SUBSECRETARIA
+  DEPARTAMENTO
+}
+
+model Sector {
+  id  Int @id @default(autoincrement())
+  nombre  String
+  tipo  TipoSector
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parentId  Int? @map("parent_id")
+  parent  Sector? @relation("Jerarquia", fields: [parentId], references: [id], onDelete: SetNull)
+  hijos Sector[] @relation("Jerarquia")
+
+  tramites  Tramite[]
+  mesasEntrada  MesaEntrada[]
+  usuarios  UsuarioSector[]
+
+  @@index([parentId])
+  @@map("sectores")
+}
+
+model Tramite {
+  id  Int @id @default(autoincrement())
+  nombre  String
+  descripcion String
+  costo Decimal? @db.Decimal(12, 2) 
+  encargado String?
+  publicado Boolean @default(false)
+  createdAt DateTime @default(false)
+  updatedAt Datetime @updatedAt @map("updated_at")
+
+  embedding Unsupported("vector(1546)")?
+
+  sectorId  Int @map("sector_id")
+  sector  Sector @relation(fields: [sectorId], references: [id], onDelete: Restrict)
+
+  requisitos Requisito[]
+  documentos Documento[]
+  mesas TramiteMesa[]
+  consultas Consulta[]
+
+  @@index([sectorId])
+  @@map("tramites")
+}
