@@ -1,52 +1,22 @@
 export const knowledgeBase = [
-  {
-    id: 1,
-    question: "¿Cómo solicito una licencia anual?",
-    answer:
-      "Debe ingresar al SIGED, seleccionar 'Nuevo Trámite' y elegir 'Solicitud de Licencia Anual'. Complete el formulario y adjunte la documentación respaldatoria. El plazo de anticipación mínimo es de 15 días hábiles.",
-    category: "Licencias",
-    active: true,
-  },
-  {
-    id: 2,
-    question: "¿Dónde puedo ver mi recibo de sueldo?",
-    answer:
-      "Los recibos de haberes están disponibles en MiPortal (https://www.formosa.gob.ar/miportal). Ingrese con su DNI y clave personal. Si olvidó su clave, puede recuperarla desde la misma página.",
-    category: "Haberes",
-    active: true,
-  },
-  {
-    id: 3,
-    question: "¿Cuáles son los requisitos para el pase a planta permanente?",
-    answer:
-      "Los requisitos incluyen: 2 años de antigüedad en el organismo, evaluación de desempeño satisfactoria, certificado de aptitud psicofísica y no tener sanciones disciplinarias en el último año.",
-    category: "Ingresos",
-    active: true,
-  },
-  {
-    id: 4,
-    question: "¿Cómo realizo el seguimiento de un expediente?",
-    answer:
-      "Puede realizar el seguimiento a través del SIGED ingresando el número de expediente en el buscador. También recibe notificaciones automáticas ante cada movimiento del mismo.",
-    category: "Trámites",
-    active: true,
-  },
-  {
-    id: 5,
-    question: "¿Qué documentos necesito para jubilarme?",
-    answer:
-      "Debe presentar: DNI, últimos 3 recibos de sueldo, certificación de servicios, historia laboral actualizada y formulario de solicitud de jubilación completado. Todos los formularios están disponibles en Descargas.",
-    category: "Trámites",
-    active: false,
-  },
-  {
-    id: 6,
-    question: "¿Cómo gestiono un permiso por estudio?",
-    answer:
-      "Complete el formulario de Solicitud de Permiso por Estudio (disponible en Descargas), adjunte la constancia de inscripción o cursada, y preséntelo en Mesa de Entradas con 5 días hábiles de anticipación.",
-    category: "Licencias",
-    active: true,
-  },
+  { id: 1, question: "¿Cómo solicito licencia anual?", answer: "Debe completar el formulario de solicitud de licencia disponible en la sección de descargas. Luego presentarlo en Mesa de Entradas con 15 días hábiles de anticipación. La licencia se otorga según el régimen aprobado por Resolución N° 123/24.", category: "Licencias", active: true, views: 342, createdAt: "01/02/2024", updatedAt: "10/05/2026" },
+  { id: 2, question: "¿Dónde puedo ver mis recibos de haberes?", answer: "Los recibos de haberes están disponibles en el portal SUAF. Puede consultarlos ingresando con su CUIL y clave personal. Si tiene problemas de acceso, comuníquese con el Departamento de Liquidaciones al interno 4567.", category: "Haberes", active: true, views: 891, createdAt: "15/03/2024", updatedAt: "01/06/2026" },
+  { id: 3, question: "¿Qué requisitos necesito para ingresar a la planta permanente?", answer: "Los requisitos principales son: título secundario completo, certificado de antecedentes penales, examen psicofísico aprobado, y 2 años de antigüedad en la administración pública. El proceso está regido por el Convenio Colectivo de Trabajo.", category: "Ingresos", active: true, views: 567, createdAt: "20/04/2024", updatedAt: "05/05/2026" },
+  { id: 4, question: "¿Cómo hago para seguir un expediente?", answer: "Puede seguir el estado de su expediente ingresando a la sección SIGED del sistema. Necesitará el número de expediente asignado por Mesa de Entradas. También puede consultar llamando al interno 4567.", category: "Trámites", active: true, views: 1234, createdAt: "10/05/2024", updatedAt: "12/06/2026" },
+  { id: 5, question: "¿Qué documentación necesito para el jubilatorio?", answer: "Debe presentar: DNI, últimos 3 recibos de haberes, certificado de servicios, declaración jurada de cargos, y formulario de inicio de trámite previsional. La documentación debe ser presentada en original y copia.", category: "Trámites", active: false, views: 234, createdAt: "01/06/2024", updatedAt: "01/03/2026" },
+  { id: 6, question: "¿Cómo gestionar un permiso por estudio?", answer: "Complete el formulario de solicitud de permiso por estudio, adjunte el certificado de inscripción o cursada, y preséntelo en Recursos Humanos. El permiso se otorga por el tiempo estrictamente necesario para rendir.", category: "Licencias", active: true, views: 178, createdAt: "15/07/2024", updatedAt: "10/04/2026" },
+  { id: 7, question: "¿Cuántos días de licencia por enfermedad tengo?", answer: "Según el art. 43 del Régimen de Licencias, el agente tiene hasta 30 días corridos por año calendario por enfermedad. Se requiere certificado médico dentro de las 48 horas de iniciada la licencia.", category: "Licencias", active: true, views: 456, createdAt: "20/08/2024", updatedAt: "20/02/2026" },
+  { id: 8, question: "¿Cómo solicitar un adelanto de haberes?", answer: "El adelanto de haberes se tramita en el Departamento de Liquidaciones. Debe presentar una nota firmada con el monto solicitado y el motivo. El adelanto no puede superar el 50% del haber mensual.", category: "Haberes", active: true, views: 623, createdAt: "01/09/2024", updatedAt: "15/03/2026" },
+  { id: 9, question: "¿Qué es el SIGED y cómo funciona?", answer: "SIGED es el Sistema de Gestión Documental. Permite crear, seguir y archivar expedientes electrónicos. Todos los trámites administrativos se canalizan a través de este sistema. Cada expediente recibe un número único de seguimiento.", category: "Trámites", active: true, views: 789, createdAt: "10/10/2024", updatedAt: "05/06/2026" },
+  { id: 10, question: "¿Cómo tramitar el pase a otra repartición?", answer: "El pase debe ser solicitado mediante nota dirigida a la Dirección General. Se requiere el acuerdo de la repartición de destino. El trámite puede demorar entre 30 y 60 días hábiles.", category: "Trámites", active: true, views: 345, createdAt: "15/11/2024", updatedAt: "25/04/2026" },
+  { id: 11, question: "¿Cuáles son los descuentos aplicables a mi haber?", answer: "Los descuentos estándar incluyen: aporte jubilatorio (11%), obra social (3%), sindicato (2%), y seguro de vida (0.5%). Pueden existir descuentos adicionales por préstamos o embargos judiciales.", category: "Haberes", active: true, views: 567, createdAt: "01/12/2024", updatedAt: "10/05/2026" },
+  { id: 12, question: "¿Cómo obtener un certificado de servicios?", answer: "Solicite el certificado en el Departamento de Legajos. El plazo de emisión es de 5 a 10 días hábiles. El certificado detalla la antigüedad, cargos desempeñados y régimen horario.", category: "Legajos", active: true, views: 234, createdAt: "10/01/2025", updatedAt: "01/02/2026" },
+  { id: 13, question: "¿Qué hago si olvidé mi clave de acceso al sistema?", answer: "Diríjase al Departamento de Sistemas o comuníquese al interno 4567 para solicitar el reseteo de su contraseña. Deberá presentar su DNI para verificar su identidad.", category: "Sistemas", active: true, views: 890, createdAt: "15/02/2025", updatedAt: "12/06/2026" },
+  { id: 14, question: "¿Cómo inscribirme en la obra social?", answer: "La inscripción a la obra social se realiza en forma automática al ingresar a la administración pública. Si desea cambiar de obra social, debe completar el formulario de opción y presentarlo en Recursos Humanos.", category: "Ingresos", active: true, views: 156, createdAt: "01/03/2025", updatedAt: "20/01/2026" },
+  { id: 15, question: "¿Cómo justificar inasistencias?", answer: "Las inasistencias deben justificarse dentro de las 48 horas hábiles. Puede presentar: certificado médico, constancia de examen, o nota firmada con la explicación correspondiente.", category: "Licencias", active: true, views: 678, createdAt: "20/03/2025", updatedAt: "15/05/2026" },
+  { id: 16, question: "¿Qué es el bono por desempeño?", answer: "El bono por desempeño es un incentivo económico que se otorga semestralmente en base a la evaluación de objetivos cumplidos. Está regulado por el Programa de Estímulo al Desempeño (PED).", category: "Haberes", active: false, views: 423, createdAt: "10/04/2025", updatedAt: "01/03/2026" },
+  { id: 17, question: "¿Cómo pedir un informe de legajo personal?", answer: "Solicite el turno en el Departamento de Legajos para acceder a su legajo personal. El informe se entrega en el momento. Si requiere copias, solicítelas con 48 horas de anticipación.", category: "Legajos", active: true, views: 312, createdAt: "01/05/2025", updatedAt: "10/04/2026" },
+  { id: 18, question: "¿Cómo reportar un problema técnico con el sistema?", answer: "Comuníquese con la Mesa de Ayuda de Sistemas al interno 4567 o envíe un correo a soporte@rrhh.gob.ar indicando el problema y los pasos para reproducirlo.", category: "Sistemas", active: true, views: 245, createdAt: "15/06/2025", updatedAt: "05/06/2026" },
 ];
 
-export const knowledgeCategories = ["Todas", "Licencias", "Haberes", "Ingresos", "Trámites"];
+export const knowledgeCategories = ["Todas", "Licencias", "Haberes", "Ingresos", "Trámites", "Legajos", "Sistemas"];
