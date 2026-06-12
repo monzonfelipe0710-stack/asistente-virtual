@@ -1,71 +1,69 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { knowledgeBase } from "../../data/mockKnowledge";
 import { documents } from "../../data/mockDocuments";
 import { sigedRecords } from "../../data/mockSiged";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import useKeyboardShortcut from "../../hooks/useKeyboardShortcut";
 
 export default function GlobalSearch() {
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const ref = useRef(null);
+  const navigate = useNavigate();
 
-  if (!query.trim()) {
-    return (
-      <div className="relative">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          placeholder="Buscar en todo..."
-          className="w-48 lg:w-64 px-3 py-1.5 text-xs border border-slate-200/60 rounded-lg outline-none focus:border-primary/30 bg-slate-50/50 transition-colors placeholder:text-slate-400"
-        />
-      </div>
-    );
+  useKeyboardShortcut("k", true, () => {
+    setFocused(true);
+    setTimeout(() => ref.current?.focus(), 50);
+  });
+
+  useEffect(() => {
+    if (!focused) return;
+    const handler = (e) => { if (e.key === "Escape") { setFocused(false); setQuery(""); ref.current?.blur(); } };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [focused]);
+
+  const results = query.trim().length >= 2 ? [
+    ...knowledgeBase.filter((k) => k.active && (k.question.toLowerCase().includes(query.toLowerCase()) || k.answer.toLowerCase().includes(query.toLowerCase()))).map((r) => ({ ...r, _type: "knowledge", _label: r.question, _desc: r.answer.slice(0, 80) + "…", _link: "/admin/conocimiento" })),
+    ...documents.filter((d) => d.title.toLowerCase().includes(query.toLowerCase()) || d.description.toLowerCase().includes(query.toLowerCase())).map((d) => ({ ...d, _type: "document", _label: d.title, _desc: d.description, _link: "/admin/documentos" })),
+    ...sigedRecords.filter((r) => r.id.toLowerCase().includes(query.toLowerCase()) || r.applicant.toLowerCase().includes(query.toLowerCase())).map((r) => ({ ...r, _type: "siged", _label: r.id, _desc: `${r.type} — ${r.applicant}`, _link: "/admin/siged" })),
+  ].slice(0, 8) : [];
+
+  function handleSelect(item) {
+    setQuery("");
+    setFocused(false);
+    ref.current?.blur();
+    navigate(item._link);
   }
 
-  const q = query.toLowerCase();
-  const results = [
-    ...knowledgeBase
-      .filter((k) => k.question.toLowerCase().includes(q) || k.answer.toLowerCase().includes(q))
-      .map((k) => ({ type: "Artículo", title: k.question, desc: k.answer.slice(0, 80) + "...", link: "/admin/conocimiento" })),
-    ...documents
-      .filter((d) => d.title.toLowerCase().includes(q) || d.description.toLowerCase().includes(q))
-      .map((d) => ({ type: "Documento", title: d.title, desc: d.description, link: "/" })),
-    ...sigedRecords
-      .filter((r) => r.id.toLowerCase().includes(q) || r.applicant.toLowerCase().includes(q))
-      .map((r) => ({ type: "Expediente", title: r.id, desc: `${r.applicant} - ${r.type}`, link: "/admin/siged" })),
-  ];
+  const typeStyles = { knowledge: "bg-purple-50 text-purple-600 border-purple-200", document: "bg-emerald-50 text-emerald-600 border-emerald-200", siged: "bg-amber-50 text-amber-600 border-amber-200" };
 
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onBlur={() => setTimeout(() => setOpen(false), 200)}
-        placeholder="Buscar en todo..."
-        className="w-48 lg:w-64 px-3 py-1.5 text-xs border border-slate-200/60 rounded-lg outline-none focus:border-primary/30 bg-slate-50/50 transition-colors placeholder:text-slate-400"
-        autoFocus
-      />
-      {open && (
-        <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-slate-200/60 shadow-xl shadow-slate-200/50 max-h-72 overflow-y-auto z-50 animate-fade-in">
-          {results.length === 0 ? (
-            <p className="text-xs text-slate-400 px-3 py-4 text-center font-medium">Sin resultados</p>
+    <div className="relative" style={{ minWidth: 260 }}>
+      <div className="relative">
+        <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input ref={ref} type="text" value={query} onChange={(e) => setQuery(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => { setFocused(false); }, 200)} placeholder="Buscar..." className="input-field pl-9 pr-10 text-xs" aria-label="Búsqueda global" />
+        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono font-medium bg-slate-100 text-slate-400 rounded border border-slate-200 leading-none">Ctrl+K</kbd>
+      </div>
+      {focused && query.trim().length >= 2 && (
+        <div className="absolute top-full left-0 right-0 mt-1.5 card card-border overflow-hidden z-50 animate-scale-in shadow-lg">
+          {results.length > 0 ? (
+            <div className="py-1">
+              {results.map((item, i) => (
+                <button key={`${item._type}-${item.id}`} onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }} className="w-full text-left px-3 py-2.5 hover:bg-slate-50 transition-colors flex items-start gap-2.5 border-b border-slate-50 last:border-0 cursor-pointer">
+                  <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border shrink-0 mt-0.5 ${typeStyles[item._type] || "bg-slate-100 text-slate-500"}`}>{item._type === "knowledge" ? "Art." : item._type === "document" ? "Doc." : "SIGED"}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-700 m-0 truncate">{item._label}</p>
+                    <p className="text-[10px] text-slate-400 m-0 mt-0.5 truncate">{item._desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           ) : (
-            results.slice(0, 8).map((r, i) => (
-              <Link
-                key={i}
-                to={r.link}
-                onClick={() => { setQuery(""); setOpen(false); }}
-                className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-slate-50 no-underline border-b border-slate-50 last:border-0 transition-colors"
-              >
-                <span className="text-[10px] font-semibold text-accent bg-accent-light/50 px-1.5 py-0.5 rounded whitespace-nowrap mt-0.5">{r.type}</span>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-slate-800 m-0 truncate">{r.title}</p>
-                  <p className="text-[10px] text-slate-400 m-0 truncate">{r.desc}</p>
-                </div>
-              </Link>
-            ))
+            <div className="px-3 py-4 text-center">
+              <svg className="w-6 h-6 text-slate-200 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <p className="text-xs text-slate-400 font-medium">Sin resultados para "{query}"</p>
+            </div>
           )}
         </div>
       )}

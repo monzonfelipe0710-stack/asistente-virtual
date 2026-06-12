@@ -8,6 +8,9 @@ import Dashboard from "./components/admin/Dashboard";
 import UserTable from "./components/admin/UserTable";
 import KnowledgeManager from "./components/admin/KnowledgeManager";
 import SigedIntegration from "./components/admin/SigedIntegration";
+import DocumentManager from "./components/admin/DocumentManager";
+import ChatbotSettings from "./components/admin/ChatbotSettings";
+import ReportsPage from "./components/admin/ReportsPage";
 
 export default function App() {
   return (
@@ -21,6 +24,9 @@ export default function App() {
             <Route path="usuarios" element={<UserTable />} />
             <Route path="conocimiento" element={<KnowledgeManager />} />
             <Route path="siged" element={<SigedIntegration />} />
+            <Route path="documentos" element={<DocumentManager />} />
+            <Route path="configuracion" element={<ChatbotSettings />} />
+            <Route path="reportes" element={<ReportsPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
