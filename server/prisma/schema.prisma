@@ -4,8 +4,7 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
@@ -27,44 +26,134 @@ enum TipoSector {
 }
 
 model Sector {
-  id  Int @id @default(autoincrement())
-  nombre  String
-  tipo  TipoSector
+  id        Int @id @default(autoincrement())
+  nombre    String
+  tipo      TipoSector
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   parentId  Int? @map("parent_id")
-  parent  Sector? @relation("Jerarquia", fields: [parentId], references: [id], onDelete: SetNull)
+  parent    Sector? @relation("Jerarquia", fields: [parentId], references: [id], onDelete: SetNull)
   hijos Sector[] @relation("Jerarquia")
 
-  tramites  Tramite[]
+  tramites      Tramite[]
   mesasEntrada  MesaEntrada[]
-  usuarios  UsuarioSector[]
+  usuarios      UsuarioSector[]
 
   @@index([parentId])
   @@map("sectores")
 }
 
 model Tramite {
-  id  Int @id @default(autoincrement())
-  nombre  String
+  id          Int @id @default(autoincrement())
+  nombre      String
   descripcion String
-  costo Decimal? @db.Decimal(12, 2) 
-  encargado String?
-  publicado Boolean @default(false)
-  createdAt DateTime @default(false)
-  updatedAt Datetime @updatedAt @map("updated_at")
+  costo       Decimal? @db.Decimal(12, 2) 
+  encargado   String?
+  publicado   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   embedding Unsupported("vector(1546)")?
 
   sectorId  Int @map("sector_id")
-  sector  Sector @relation(fields: [sectorId], references: [id], onDelete: Restrict)
+  sector    Sector @relation(fields: [sectorId], references: [id], onDelete: Restrict)
 
-  requisitos Requisito[]
-  documentos Documento[]
-  mesas TramiteMesa[]
-  consultas Consulta[]
+  requisitos  Requisito[]
+  documentos  Documento[]
+  mesas       TramiteMesa[]
+  consultas   Consulta[]
 
   @@index([sectorId])
   @@map("tramites")
+}
+
+model Requisito {
+  id              Int @id @default(autoincrement())
+  descripcion     String
+  dondeSeConsigue String? @map("donde_se_consigue")
+  costo           Decimal? @db.Decimal(12, 2)
+
+  tramiteId Int @map("tramite_id")
+  tramite   Tramite @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+
+  @@index([tramiteId])
+  @@map("requisitos")
+}
+
+model MesaEntrada {
+  id        Int @id @default(autoincrement())
+  nombre    String
+  direccion String?
+  localidad String?
+  esGeneral Boolean @default(false) @map("es_general")
+
+  sectorId  Int? @map("sector_id")
+  sector    Sector? @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+
+  tramites  TramiteMesa[]
+
+  @@index([sectorId])
+  @@map("mesas_entrada")
+}
+
+model TramiteMesa {
+  tramiteId Int @map("tramite_id")
+  mesaId    Int @map("mesa_id")
+
+  tramite   Tramite @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+  mesa      MesaEntrada @relation(fields: [mesaId], references: [id], onDelete: Cascade)
+
+  @@id([tramiteId, mesaId])
+  @@map("tramite_mesa")
+}
+
+model Documento {
+  id        Int @id @default(autoincrement())
+  nombre    String
+  archivo   String
+  tipo      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tramiteId Int @map("tramite_id")
+  tramite   Tramite @relation(fields: [tramiteId], references: [id], onDelete: Cascade)
+
+  @@index([tramiteId])
+  @@map("documentos")
+}
+
+model Usuario {
+  id            Int @id @default(autoincrement())
+  nombre        String
+  email         String @unique
+  passwordHash  String @map("password_hash")
+  rol           Rol @default(ADMINISTRADOR)
+  activo        Boolean @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  sectores UsuarioSector[]
+
+  @@map("usuarios")
+}
+
+model UsuarioSector {
+  usuarioId Int @map("usuario_id")
+  sectorId  Int @map("sector_id")
+
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  sector Sector @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, sectorId])
+  @@map("usuario_sector")
+}
+
+model Consulta {
+  id              Int @id @default(autoincrement())
+  textoConsulta   String @map("texto_consulta")
+  encontrado      Boolean @default(false)
+  fecha           DateTime @default(now())
+
+  tramiteId Int? @map("tramite_id")
+  tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)
 }
