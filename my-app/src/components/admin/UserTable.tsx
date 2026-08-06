@@ -1,15 +1,14 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { users, AppUser } from "../../data/mockSiged";
-import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
-
-const roleColors: Record<AppUser["role"], { bg: string; text: string }> = {
-  Administrador: { bg: "#ede9fe", text: "#7c3aed" },
-  Supervisor: { bg: "#fef3c7", text: "#d97706" },
-  Agente: { bg: "#dbeafe", text: "#2563eb" },
-};
+import { useUsers } from "../../context/AppDataContext";
+import { roleColors } from "../../constants/badges";
+import Card from "../common/Card";
+import Badge from "../common/Badge";
+import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
 
 export default function UserTable() {
+  const { items: users } = useUsers();
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.headerRow}>
@@ -27,7 +26,7 @@ export default function UserTable() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.table}>
+      <Card padded={false}>
         {users.map((user, idx) => (
           <View
             key={user.id}
@@ -56,11 +55,13 @@ export default function UserTable() {
 
             {/* Right column */}
             <View style={styles.right}>
-              <View style={[styles.roleBadge, { backgroundColor: roleColors[user.role].bg }]}>
-                <Text style={[styles.roleText, { color: roleColors[user.role].text }]}>
-                  {user.role}
-                </Text>
-              </View>
+              <Badge
+                label={user.role}
+                bg={roleColors[user.role].bg}
+                text={roleColors[user.role].text}
+                paddingHorizontal={6}
+                paddingVertical={2}
+              />
               <View style={styles.statusRow}>
                 <View
                   style={[
@@ -80,7 +81,7 @@ export default function UserTable() {
             </View>
           </View>
         ))}
-      </View>
+      </Card>
     </ScrollView>
   );
 }
@@ -119,14 +120,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     color: Colors.white,
     fontWeight: Typography.medium,
-  },
-  table: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    overflow: "hidden",
-    ...Shadows.sm,
   },
   row: {
     flexDirection: "row",
@@ -174,15 +167,6 @@ const styles = StyleSheet.create({
   right: {
     alignItems: "flex-end",
     gap: 4,
-  },
-  roleBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-  },
-  roleText: {
-    fontSize: 10,
-    fontWeight: Typography.medium,
   },
   statusRow: {
     flexDirection: "row",

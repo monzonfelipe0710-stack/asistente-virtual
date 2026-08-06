@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { MockDocument } from "../../data/mockDocuments";
-import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import Card from "../common/Card";
+import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
 
 interface Props {
   document: MockDocument;
@@ -18,7 +19,7 @@ export default function DocumentCard({ document }: Props) {
   const categoryTag = document.category.slice(0, -1);
 
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       {/* Format icon */}
       <View style={[styles.formatBadge, { backgroundColor: fmt.bg }]}>
         <Text style={[styles.formatText, { color: fmt.text }]}>{fmt.label}</Text>
@@ -49,7 +50,7 @@ export default function DocumentCard({ document }: Props) {
       >
         <Text style={styles.downloadText}>Descargar</Text>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 }
 
@@ -59,12 +60,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: Spacing[3],
     padding: Spacing[3],
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
     borderRadius: Radius.lg,
     marginBottom: Spacing[2],
-    ...Shadows.sm,
   },
   formatBadge: {
     width: 40,

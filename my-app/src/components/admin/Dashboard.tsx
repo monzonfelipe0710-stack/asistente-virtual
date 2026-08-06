@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { users } from "../../data/mockSiged";
-import { sigedRecords } from "../../data/mockSiged";
-import { knowledgeBase } from "../../data/mockKnowledge";
-import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import { useUsers, useKnowledgeBase, useSigedRecords } from "../../context/AppDataContext";
+import { statusConfig } from "../../constants/badges";
+import Card from "../common/Card";
+import Badge from "../common/Badge";
+import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
 
 interface StatCard {
   label: string;
@@ -14,6 +15,10 @@ interface StatCard {
 }
 
 export default function Dashboard() {
+  const { items: users } = useUsers();
+  const { items: knowledgeBase } = useKnowledgeBase();
+  const { items: sigedRecords } = useSigedRecords();
+
   const activeUsers = users.filter((u) => u.status === "Activo").length;
   const activeKb = knowledgeBase.filter((k) => k.active).length;
   const pendingExp = sigedRecords.filter(
@@ -61,19 +66,19 @@ export default function Dashboard() {
       {/* Stats grid */}
       <View style={styles.statsGrid}>
         {stats.map((s) => (
-          <View key={s.label} style={styles.statCard}>
+          <Card key={s.label} style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: s.bg }]}>
               <Ionicons name={s.icon} size={20} color={s.color} />
             </View>
             <Text style={styles.statValue}>{s.value}</Text>
             <Text style={styles.statLabel}>{s.label}</Text>
-          </View>
+          </Card>
         ))}
       </View>
 
       {/* Recent activity */}
       <Text style={styles.sectionTitle}>Actividad Reciente</Text>
-      <View style={styles.table}>
+      <Card padded={false}>
         {recentRecords.map((rec) => (
           <View key={rec.id} style={styles.tableRow}>
             <View style={styles.tableMain}>
@@ -85,26 +90,16 @@ export default function Dashboard() {
                 {rec.applicant}
               </Text>
             </View>
-            <StatusBadge status={rec.status} />
+            <Badge
+              label={rec.status}
+              bg={statusConfig[rec.status].bg}
+              text={statusConfig[rec.status].text}
+              style={{ marginLeft: Spacing[2] }}
+            />
           </View>
         ))}
-      </View>
+      </Card>
     </ScrollView>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { bg: string; text: string }> = {
-    Ingresado: { bg: "#ede9fe", text: "#7c3aed" },
-    "En proceso": { bg: "#dbeafe", text: "#2563eb" },
-    Observado: { bg: "#fef3c7", text: "#d97706" },
-    Finalizado: { bg: "#dcfce7", text: "#16a34a" },
-  };
-  const c = config[status] ?? { bg: Colors.slate100, text: Colors.slate600 };
-  return (
-    <View style={[styles.badge, { backgroundColor: c.bg }]}>
-      <Text style={[styles.badgeText, { color: c.text }]}>{status}</Text>
-    </View>
   );
 }
 
@@ -133,12 +128,6 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: "45%",
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    padding: Spacing[4],
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    ...Shadows.sm,
   },
   statIcon: {
     width: 40,
@@ -163,14 +152,6 @@ const styles = StyleSheet.create({
     fontWeight: Typography.semibold,
     color: Colors.slate800,
     marginBottom: Spacing[3],
-  },
-  table: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    overflow: "hidden",
-    ...Shadows.sm,
   },
   tableRow: {
     flexDirection: "row",
@@ -198,15 +179,5 @@ const styles = StyleSheet.create({
   expApplicant: {
     fontSize: Typography.xs,
     color: Colors.slate500,
-  },
-  badge: {
-    paddingHorizontal: Spacing[2],
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-    marginLeft: Spacing[2],
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: Typography.medium,
   },
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import DocumentCard from "./DocumentCard";
+import FilterPill from "../common/FilterPill";
 import { documents, documentCategories, DocumentCategory } from "../../data/mockDocuments";
 import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
 
@@ -21,29 +22,12 @@ export default function DownloadSection() {
       </View>
 
       {/* Category filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterScroll}
-      >
-        {documentCategories.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            onPress={() => setActiveCategory(cat)}
-            style={[styles.filterBtn, activeCategory === cat && styles.filterBtnActive]}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                activeCategory === cat && styles.filterTextActive,
-              ]}
-            >
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <FilterPill
+        options={documentCategories}
+        active={activeCategory}
+        onChange={(cat) => setActiveCategory(cat as DocumentCategory)}
+        containerStyle={styles.filterScroll}
+      />
 
       {/* Document list */}
       <View style={styles.list}>
@@ -90,26 +74,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.slate50,
     borderBottomWidth: 1,
     borderBottomColor: Colors.slate100,
-  },
-  filterBtn: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[1],
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-  },
-  filterBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: Typography.xs,
-    color: Colors.slate600,
-    fontWeight: Typography.medium,
-  },
-  filterTextActive: {
-    color: Colors.white,
   },
   list: {
     padding: Spacing[4],

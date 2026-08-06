@@ -1,27 +1,20 @@
 import { useState } from "react";
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  knowledgeBase, knowledgeCategories, KnowledgeEntry, KnowledgeCategory,
-} from "../../data/mockKnowledge";
-import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import { knowledgeCategories, type KnowledgeCategory } from "../../data/mockKnowledge";
+import { useKnowledgeBase } from "../../context/AppDataContext";
+import Card from "../common/Card";
+import FilterPill from "../common/FilterPill";
+import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
 
 export default function KnowledgeManager() {
   const [activeCategory, setActiveCategory] = useState<KnowledgeCategory>("Todas");
-  const [entries, setEntries] = useState<KnowledgeEntry[]>(knowledgeBase);
+  const { items: entries, toggleActive } = useKnowledgeBase();
 
   const filtered =
     activeCategory === "Todas"
       ? entries
       : entries.filter((e) => e.category === activeCategory);
-
-  function toggleActive(id: number) {
-    setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, active: !e.active } : e))
-    );
-  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -41,29 +34,17 @@ export default function KnowledgeManager() {
       </View>
 
       {/* Category filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterScroll}
-      >
-        {knowledgeCategories.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            onPress={() => setActiveCategory(cat)}
-            style={[styles.filterBtn, activeCategory === cat && styles.filterBtnActive]}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.filterText, activeCategory === cat && styles.filterTextActive]}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <FilterPill
+        options={knowledgeCategories}
+        active={activeCategory}
+        onChange={(cat) => setActiveCategory(cat as KnowledgeCategory)}
+        containerStyle={styles.filterScroll}
+      />
 
       {/* Entries */}
       <View style={styles.list}>
         {filtered.map((entry) => (
-          <View key={entry.id} style={[styles.card, !entry.active && styles.cardInactive]}>
+          <Card key={entry.id} style={!entry.active && styles.cardInactive}>
             <View style={styles.cardHeader}>
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryText}>{entry.category}</Text>
@@ -82,7 +63,7 @@ export default function KnowledgeManager() {
             <Text style={[styles.answer, !entry.active && styles.textMuted]} numberOfLines={3}>
               {entry.answer}
             </Text>
-          </View>
+          </Card>
         ))}
       </View>
     </ScrollView>
@@ -126,39 +107,9 @@ const styles = StyleSheet.create({
   },
   filterScroll: {
     paddingBottom: Spacing[4],
-    gap: Spacing[2],
-    flexDirection: "row",
-  },
-  filterBtn: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[1],
-    borderRadius: Radius.md,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-  },
-  filterBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: Typography.xs,
-    color: Colors.slate600,
-    fontWeight: Typography.medium,
-  },
-  filterTextActive: {
-    color: Colors.white,
   },
   list: {
     gap: Spacing[3],
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    padding: Spacing[4],
-    ...Shadows.sm,
   },
   cardInactive: {
     opacity: 0.6,

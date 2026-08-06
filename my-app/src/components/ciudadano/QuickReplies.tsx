@@ -6,31 +6,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { quickReplies as options } from "../../data/mockQuickReplies";
 import { Colors, Radius, Spacing, Typography } from "../../constants/theme";
-
-interface QuickReply {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  query: string;
-}
-
-const options: QuickReply[] = [
-  {
-    label: "Preguntas Frecuentes",
-    icon: "chatbubble-ellipses-outline",
-    query: "¿Cuáles son las preguntas frecuentes?",
-  },
-  {
-    label: "Guía de Trámites",
-    icon: "document-text-outline",
-    query: "¿Cuál es la guía de trámites disponibles?",
-  },
-  {
-    label: "Descargar Formularios",
-    icon: "download-outline",
-    query: "Necesito descargar formularios",
-  },
-];
 
 interface Props {
   onSelect: (query: string) => void;

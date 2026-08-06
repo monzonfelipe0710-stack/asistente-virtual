@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors, Typography, Spacing, Radius, Shadows } from "../../constants/theme";
+import Card from "../common/Card";
+import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
 
 interface QuickLink {
   label: string;
@@ -41,7 +42,7 @@ async function openURL(url: string, label: string) {
 
 export default function ExternalAccess() {
   return (
-    <View style={styles.card}>
+    <Card>
       <Text style={styles.title}>Accesos Rápidos</Text>
 
       <View style={styles.list}>
@@ -63,19 +64,11 @@ export default function ExternalAccess() {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    padding: Spacing[4],
-    ...Shadows.sm,
-  },
   title: {
     fontSize: Typography.base,
     fontWeight: Typography.semibold,

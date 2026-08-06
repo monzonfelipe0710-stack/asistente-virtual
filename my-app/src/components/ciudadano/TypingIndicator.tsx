@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/refs -- standard RN Animated.Value-via-useRef idiom; the new
+   react-compiler lint rule flags every .current read of it, including this file's own dots array */
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { Colors, Radius, Spacing } from "../../constants/theme";
