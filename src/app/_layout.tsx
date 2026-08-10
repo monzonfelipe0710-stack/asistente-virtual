@@ -7,7 +7,8 @@ import 'react-native-reanimated';
 import { useColors } from '../constants/theme';
 
 // La app arranca siempre en claro: el tema lo cambia el botón del menú, no el teléfono.
-Appearance.setColorScheme('light');
+// (react-native-web no implementa setColorScheme)
+Appearance.setColorScheme?.('light');
 
 export default function RootLayout() {
   const C = useColors();
