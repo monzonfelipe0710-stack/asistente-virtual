@@ -15,17 +15,14 @@ const formatConfig = {
 
 export default function DocumentCard({ document }: Props) {
   const fmt = formatConfig[document.format] ?? formatConfig.PDF;
-  // Remove trailing 's' from category (e.g. "Formularios" → "Formulario")
   const categoryTag = document.category.slice(0, -1);
 
   return (
     <Card style={styles.card}>
-      {/* Format icon */}
       <View style={[styles.formatBadge, { backgroundColor: fmt.bg }]}>
         <Text style={[styles.formatText, { color: fmt.text }]}>{fmt.label}</Text>
       </View>
 
-      {/* Info */}
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>
           {document.title}
@@ -42,7 +39,6 @@ export default function DocumentCard({ document }: Props) {
         </View>
       </View>
 
-      {/* Download button */}
       <TouchableOpacity
         style={styles.downloadBtn}
         onPress={() => Alert.alert("Descarga", `Descargando: ${document.title}`)}

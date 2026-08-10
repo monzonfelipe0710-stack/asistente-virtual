@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors, Typography } from "../../constants/theme";
 import { AppDataProvider } from "../../context/AppDataContext";
 
-// Maps each tab to its icon
 const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: "grid-outline",
   usuarios: "people-outline",

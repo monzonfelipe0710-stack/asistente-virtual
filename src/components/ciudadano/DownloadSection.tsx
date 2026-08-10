@@ -15,13 +15,11 @@ export default function DownloadSection() {
 
   return (
     <View style={styles.section}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Descargas</Text>
         <Text style={styles.subtitle}>Formularios, guías y plantillas administrativas</Text>
       </View>
 
-      {/* Category filter */}
       <FilterPill
         options={documentCategories}
         active={activeCategory}
@@ -29,7 +27,6 @@ export default function DownloadSection() {
         containerStyle={styles.filterScroll}
       />
 
-      {/* Document list */}
       <View style={styles.list}>
         {filtered.length > 0 ? (
           filtered.map((doc) => <DocumentCard key={doc.id} document={doc} />)

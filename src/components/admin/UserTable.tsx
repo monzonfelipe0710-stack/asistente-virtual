@@ -32,7 +32,6 @@ export default function UserTable() {
             key={user.id}
             style={[styles.row, idx === users.length - 1 && styles.rowLast]}
           >
-            {/* Avatar */}
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
                 {user.name
@@ -44,7 +43,6 @@ export default function UserTable() {
               </Text>
             </View>
 
-            {/* Info */}
             <View style={styles.info}>
               <Text style={styles.name}>{user.name}</Text>
               <Text style={styles.email} numberOfLines={1}>
@@ -53,7 +51,6 @@ export default function UserTable() {
               <Text style={styles.dept}>{user.department}</Text>
             </View>
 
-            {/* Right column */}
             <View style={styles.right}>
               <Badge
                 label={user.role}

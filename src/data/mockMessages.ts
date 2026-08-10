@@ -12,20 +12,8 @@ export interface BotResponse {
   response: string;
 }
 
-export const initialMessages: ChatMessage[] = [
-  {
-    id: 1,
-    type: "bot",
-    text: "¡Hola! Soy ChatAP, el asistente virtual de la Subsecretaría de Recursos Humanos de la Provincia de Formosa. ¿En qué puedo ayudarte?",
-    timestamp: "2026-06-04T09:00:00",
-  },
-  {
-    id: 2,
-    type: "bot",
-    text: "Podés consultarme sobre trámites, documentación requerida, guías de procedimientos o acceder a descargas de formularios.",
-    timestamp: "2026-06-04T09:00:01",
-  },
-];
+// el saludo ahora es el estado vacío del chat, no un mensaje
+export const initialMessages: ChatMessage[] = [];
 
 export const botResponses: BotResponse[] = [
   {

@@ -33,7 +33,6 @@ export default function KnowledgeManager() {
         </TouchableOpacity>
       </View>
 
-      {/* Category filter */}
       <FilterPill
         options={knowledgeCategories}
         active={activeCategory}
@@ -41,7 +40,6 @@ export default function KnowledgeManager() {
         containerStyle={styles.filterScroll}
       />
 
-      {/* Entries */}
       <View style={styles.list}>
         {filtered.map((entry) => (
           <Card key={entry.id} style={!entry.active && styles.cardInactive}>

@@ -1,21 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
+  Modal,
+  Pressable,
+  Animated,
+  Appearance,
+  Switch,
+  useColorScheme,
+  useWindowDimensions,
   Keyboard,
   Platform,
 } from "react-native";
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ChatWindow from "../components/ciudadano/ChatWindow";
 import DownloadSection from "../components/ciudadano/DownloadSection";
 import ExternalAccess from "../components/ciudadano/ExternalAccess";
-import { Colors, Typography, Spacing, Radius } from "../constants/theme";
+import {
+  Palette,
+  Typography,
+  Spacing,
+  Radius,
+  Shadows,
+  useColors,
+} from "../constants/theme";
 
 type Tab = "chat" | "descargas" | "accesos";
 
@@ -31,24 +44,27 @@ const TABS: {
 
 export default function CiudadanoPage() {
   const [activeTab, setActiveTab] = useState<Tab>("chat");
+  const [menuMounted, setMenuMounted] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [chatKey, setChatKey] = useState(0);
 
-  // useSafeAreaInsets está disponible porque @react-navigation/native
-  // incluye SafeAreaProvider automáticamente en el árbol.
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const drawerWidth = Math.min(width * 0.82, 340);
 
-  const keyboardVisible = keyboardHeight > 0;
+  const C = useColors();
+  const styles = useMemo(() => createStyles(C), [C]);
+  const dark = useColorScheme() === "dark";
 
-  // El teclado en iOS reporta su altura desde el borde FÍSICO de la pantalla.
-  // El SafeAreaView ya consume insets.bottom (home indicator, ~34px en iPhone X+).
-  // Si no restamos insets.bottom, el padding quedaría 34px más grande de lo necesario
-  // y aparecería ese hueco entre el input y el teclado.
-  const contentPaddingBottom = Math.max(0, keyboardHeight - insets.bottom);
+  const slide = useRef(new Animated.Value(-1)).current; // -1 cerrado, 0 abierto
+  const headerOpacity = useRef(new Animated.Value(1)).current;
+
+  // sin teclado el chat baja hasta rozar el home indicator; con teclado llega justo hasta él
+  const contentPaddingBottom =
+    keyboardHeight > 0 ? keyboardHeight : Math.max(insets.bottom - 22, Spacing[1]);
 
   useEffect(() => {
-    // keyboardWillShow en iOS dispara ANTES de que el teclado aparezca,
-    // lo que permite animar el layout al mismo tiempo que el teclado sube.
-    // En Android usamos Did (no existe Will).
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent =
@@ -67,55 +83,57 @@ export default function CiudadanoPage() {
     };
   }, []);
 
-  return (
-    // backgroundColor: Colors.white → la safe area superior (donde vive el reloj
-    // y la batería) toma este color y queda continua con el navbar blanco.
-    <SafeAreaView style={styles.safe}>
-      {/* ── Navbar ── */}
-      <View style={styles.navbar}>
-        <View style={styles.brand}>
-          <View style={styles.brandIcon}>
-            <Text style={styles.brandIconText}>AP</Text>
-          </View>
-          <View>
-            <Text style={styles.brandName}>ChatAP</Text>
-            <Text style={styles.brandSub}>Subsec. de Recursos Humanos</Text>
-          </View>
-        </View>
-        <Link href={"/admin" as any} asChild>
-          <TouchableOpacity style={styles.adminLink} activeOpacity={0.7}>
-            <Ionicons name="settings-outline" size={14} color={Colors.primary} />
-            <Text style={styles.adminLinkText}>Admin</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
+  const openMenu = () => {
+    setMenuMounted(true);
+    Animated.timing(slide, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  };
 
-      {/* ── Contenido ──
-          paddingBottom empuja el contenido ENCIMA del teclado cuando está abierto.
-          Se calcula dinámicamente con el listener del teclado de arriba. */}
+  const closeMenu = (then?: () => void) => {
+    Animated.timing(slide, {
+      toValue: -1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      setMenuMounted(false);
+      then?.();
+    });
+  };
+
+  // el header se va al primer mensaje del usuario y no vuelve hasta un chat nuevo
+  const fadeHeader = useCallback(
+    (started: boolean) => {
+      Animated.timing(headerOpacity, {
+        toValue: started ? 0 : 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    },
+    [headerOpacity]
+  );
+
+  const newChat = () => {
+    setActiveTab("chat");
+    setChatKey((k) => k + 1);
+  };
+
+  return (
+    <View style={styles.safe}>
       <View style={[styles.content, { paddingBottom: contentPaddingBottom }]}>
         {activeTab === "chat" && (
-          <View style={styles.chatScreen}>
-            <View style={styles.chatHeader}>
-              <View style={styles.chatAvatar}>
-                <Text style={styles.chatAvatarText}>AP</Text>
-              </View>
-              <View>
-                <Text style={styles.chatTitle}>ChatAP</Text>
-                <Text style={styles.chatOnline}>
-                  <Text style={styles.onlineDot}>● </Text>
-                  En línea
-                </Text>
-              </View>
-            </View>
-            <ChatWindow />
-          </View>
+          <ChatWindow key={chatKey} onConversationStart={fadeHeader} />
         )}
 
         {activeTab === "descargas" && (
           <ScrollView
             style={styles.scrollTab}
-            contentContainerStyle={styles.scrollTabContent}
+            contentContainerStyle={[
+              styles.scrollTabContent,
+              { paddingTop: insets.top + 68 },
+            ]}
             showsVerticalScrollIndicator={false}
           >
             <DownloadSection />
@@ -126,7 +144,10 @@ export default function CiudadanoPage() {
         {activeTab === "accesos" && (
           <ScrollView
             style={styles.scrollTab}
-            contentContainerStyle={styles.scrollTabContent}
+            contentContainerStyle={[
+              styles.scrollTabContent,
+              { paddingTop: insets.top + 68 },
+            ]}
             showsVerticalScrollIndicator={false}
           >
             <ExternalAccess />
@@ -135,199 +156,308 @@ export default function CiudadanoPage() {
         )}
       </View>
 
-      {/* ── Tab bar ──
-          Se oculta cuando el teclado está abierto: de esta forma el chat
-          ocupa toda la pantalla y el input queda pegado al teclado,
-          exactamente como lo hace WhatsApp. */}
-      {!keyboardVisible && (
-        <View style={styles.tabBar}>
-          {TABS.map((tab) => {
-            const active = activeTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={styles.tabItem}
-                onPress={() => setActiveTab(tab.id)}
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.tabIndicator,
-                    active && styles.tabIndicatorActive,
-                  ]}
-                />
-                <Ionicons
-                  name={tab.icon}
-                  size={22}
-                  color={active ? Colors.primary : Colors.slate400}
-                />
-                <Text
-                  style={[styles.tabLabel, active && styles.tabLabelActive]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+      <TouchableOpacity
+        style={[styles.fab, { top: insets.top + Spacing[2] }]}
+        onPress={openMenu}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Abrir menú"
+      >
+        <Ionicons name="menu" size={26} color={C.slate700} />
+      </TouchableOpacity>
+
+      {activeTab === "chat" && (
+        <Animated.View
+          style={[
+            styles.floatingTitle,
+            { top: insets.top + Spacing[2], opacity: headerOpacity },
+          ]}
+          pointerEvents="none"
+        >
+          <Text style={styles.title}>ChatAP</Text>
+        </Animated.View>
       )}
-    </SafeAreaView>
+
+      <Modal
+        visible={menuMounted}
+        transparent
+        animationType="none"
+        onRequestClose={() => closeMenu()}
+      >
+        <Animated.View
+          style={[
+            styles.overlay,
+            {
+              opacity: slide.interpolate({
+                inputRange: [-1, 0],
+                outputRange: [0, 1],
+              }),
+            },
+          ]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => closeMenu()}
+          />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.drawer,
+            {
+              width: drawerWidth,
+              paddingTop: insets.top + Spacing[4],
+              paddingBottom: insets.bottom + Spacing[4],
+              transform: [
+                {
+                  translateX: slide.interpolate({
+                    inputRange: [-1, 0],
+                    outputRange: [-drawerWidth, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.brand}>
+            <View style={styles.brandAvatar}>
+              <Text style={styles.brandAvatarText}>AP</Text>
+            </View>
+            <View style={styles.brandText}>
+              <Text style={styles.brandName}>ChatAP</Text>
+              <Text style={styles.brandSub}>Subsec. de Recursos Humanos</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.newChatBtn}
+            onPress={() => closeMenu(newChat)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Nuevo chat"
+          >
+            <Ionicons name="add" size={20} color="#ffffff" />
+            <Text style={styles.newChatText}>Nuevo chat</Text>
+          </TouchableOpacity>
+
+          <View style={styles.drawerItems}>
+            <Text style={styles.sectionLabel}>Secciones</Text>
+            {TABS.map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[styles.menuItem, active && styles.menuItemActive]}
+                  onPress={() => closeMenu(() => setActiveTab(tab.id))}
+                  activeOpacity={0.7}
+                  accessibilityRole="menuitem"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Ionicons
+                    name={tab.icon}
+                    size={22}
+                    color={active ? C.primary : C.slate600}
+                  />
+                  <Text
+                    style={[styles.menuLabel, active && styles.menuLabelActive]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.drawerFooter}>
+            <Text style={styles.sectionLabel}>Preferencias</Text>
+
+            {/* Switch, no otro ítem de lista: es un ajuste, no una sección */}
+            <View style={styles.menuItem}>
+              <Ionicons
+                name={dark ? "moon" : "moon-outline"}
+                size={22}
+                color={C.slate600}
+              />
+              <Text style={styles.menuLabel}>Modo oscuro</Text>
+              <Switch
+                value={dark}
+                onValueChange={(on) =>
+                  Appearance.setColorScheme(on ? "dark" : "light")
+                }
+                trackColor={{ false: C.slate300, true: C.primary }}
+                thumbColor="#ffffff"
+                accessibilityLabel="Modo oscuro"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => closeMenu(() => router.push("/admin"))}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Panel de administración"
+            >
+              <Ionicons name="settings-outline" size={22} color={C.slate600} />
+              <Text style={styles.menuLabel}>Admin</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={C.slate400}
+              />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </Modal>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    // FIX status bar: la safe area superior hereda este color.
-    // Al igualarlo al navbar (blanco) desaparece el corte visual.
-    backgroundColor: Colors.white,
-  },
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    safe: {
+      flex: 1,
+      backgroundColor: C.white,
+    },
 
-  /* ── Navbar ── */
-  navbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.slate200,
-    paddingHorizontal: Spacing[4],
-    height: 56,
-  },
-  brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[2],
-  },
-  brandIcon: {
-    width: 36,
-    height: 36,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  brandIconText: {
-    color: Colors.white,
-    fontWeight: Typography.bold as any,
-    fontSize: Typography.sm,
-  },
-  brandName: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.semibold as any,
-    color: Colors.slate800,
-    lineHeight: 17,
-  },
-  brandSub: {
-    fontSize: Typography.xs,
-    color: Colors.slate500,
-    lineHeight: 14,
-  },
-  adminLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[1],
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.md,
-  },
-  adminLinkText: {
-    fontSize: Typography.xs,
-    color: Colors.primary,
-    fontWeight: Typography.medium as any,
-  },
+    fab: {
+      position: "absolute",
+      left: Spacing[3],
+      width: 52,
+      height: 52,
+      borderRadius: Radius.full,
+      backgroundColor: C.slate100,
+      justifyContent: "center",
+      alignItems: "center",
+      ...Shadows.sm,
+    },
+    floatingTitle: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      height: 52,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    title: {
+      fontSize: Typography.xl,
+      fontWeight: Typography.bold,
+      color: C.slate800,
+    },
 
-  /* ── Área principal ── */
-  content: {
-    flex: 1,
-    // paddingBottom se aplica dinámicamente en el componente
-  },
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.45)",
+    },
+    drawer: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      bottom: 0,
+      backgroundColor: C.white,
+      paddingHorizontal: Spacing[4],
+      borderTopRightRadius: Radius.xl,
+      borderBottomRightRadius: Radius.xl,
+    },
+    brand: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing[3],
+      paddingHorizontal: Spacing[2],
+      marginBottom: Spacing[5],
+    },
+    brandAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      backgroundColor: C.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    brandAvatarText: {
+      color: "#ffffff",
+      fontSize: Typography.base,
+      fontWeight: Typography.bold,
+    },
+    brandText: {
+      flex: 1,
+    },
+    brandName: {
+      fontSize: Typography.xl,
+      fontWeight: Typography.bold,
+      color: C.slate800,
+    },
+    brandSub: {
+      fontSize: Typography.sm,
+      color: C.slate500,
+    },
+    sectionLabel: {
+      fontSize: Typography.sm,
+      fontWeight: Typography.semibold,
+      color: C.slate500,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+      paddingHorizontal: Spacing[3],
+      marginBottom: Spacing[2],
+    },
+    drawerItems: {
+      flex: 1,
+      gap: 2,
+      marginTop: Spacing[6],
+    },
+    drawerFooter: {
+      gap: 2,
+      borderTopWidth: 1,
+      borderTopColor: C.slate200,
+      paddingTop: Spacing[4],
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing[4],
+      paddingHorizontal: Spacing[3],
+      paddingVertical: Spacing[3],
+      borderRadius: Radius.lg,
+      minHeight: 48,
+    },
+    menuItemActive: {
+      backgroundColor: C.primaryLight,
+    },
+    menuLabel: {
+      flex: 1,
+      fontSize: Typography.md,
+      color: C.slate700,
+      fontWeight: Typography.medium,
+    },
+    menuLabelActive: {
+      color: C.primary,
+      fontWeight: Typography.semibold,
+    },
+    newChatBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: Spacing[2],
+      paddingVertical: Spacing[3],
+      backgroundColor: C.primary,
+      borderRadius: Radius.full,
+    },
+    newChatText: {
+      color: "#ffffff",
+      fontSize: Typography.base,
+      fontWeight: Typography.semibold,
+    },
 
-  /* Chat ocupa todo el alto disponible */
-  chatScreen: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  chatHeader: {
-    backgroundColor: Colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[3],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-  },
-  chatAvatar: {
-    width: 32,
-    height: 32,
-    backgroundColor: Colors.primaryMid,
-    borderRadius: Radius.full,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  chatAvatarText: {
-    color: Colors.white,
-    fontWeight: Typography.semibold as any,
-    fontSize: Typography.xs,
-  },
-  chatTitle: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.semibold as any,
-    color: Colors.white,
-  },
-  chatOnline: {
-    fontSize: Typography.xs,
-    color: "rgba(191,219,254,1)",
-  },
-  onlineDot: {
-    color: Colors.accent,
-  },
+    content: {
+      flex: 1,
+    },
 
-  /* Tabs scrolleables */
-  scrollTab: {
-    flex: 1,
-  },
-  scrollTabContent: {
-    padding: Spacing[4],
-  },
-  tabBottomPad: {
-    height: Spacing[4],
-  },
-
-  /* ── Tab bar inferior ── */
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.slate200,
-    height: 64,
-    paddingBottom: 8,
-  },
-  tabItem: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 3,
-    position: "relative",
-  },
-  tabIndicator: {
-    position: "absolute",
-    top: 0,
-    width: 28,
-    height: 2,
-    borderRadius: Radius.full,
-    backgroundColor: "transparent",
-  },
-  tabIndicatorActive: {
-    backgroundColor: Colors.primary,
-  },
-  tabLabel: {
-    fontSize: 10,
-    color: Colors.slate400,
-    fontWeight: Typography.medium as any,
-  },
-  tabLabelActive: {
-    color: Colors.primary,
-    fontWeight: Typography.semibold as any,
-  },
-});
+    scrollTab: {
+      flex: 1,
+    },
+    scrollTabContent: {
+      padding: Spacing[4],
+    },
+    tabBottomPad: {
+      height: Spacing[4],
+    },
+  });

@@ -1,121 +1,184 @@
-import { Ionicons } from "@expo/vector-icons";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  Keyboard,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Text,
   View,
+  type LayoutChangeEvent,
+  type ListRenderItemInfo,
 } from "react-native";
-import { Colors, Radius, Spacing, Typography } from "../../constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Palette,
+  Radius,
+  Spacing,
+  Typography,
+  useColors,
+} from "../../constants/theme";
+import type { ChatMessage } from "../../data/mockMessages";
 import { useChat } from "../../hooks/useChat";
+import ChatInput from "./ChatInput";
 import MessageBubble from "./MessageBubble";
 import QuickReplies from "./QuickReplies";
 import TypingIndicator from "./TypingIndicator";
 
-export default function ChatWindow() {
-  const {
-    messages,
-    input,
-    setInput,
-    isTyping,
-    listRef,
-    handleSend,
-    handleQuickReply,
-  } = useChat();
+const GREETINGS = [
+  "¿En qué puedo ayudarte?",
+  "¿Cuándo digas, empezamos?",
+  "¿Qué trámite estás buscando?",
+  "Contame tu consulta",
+  "¿Por dónde arrancamos?",
+];
+
+const keyExtractor = (item: ChatMessage) => String(item.id);
+const renderItem = ({ item }: ListRenderItemInfo<ChatMessage>) => (
+  <MessageBubble message={item} />
+);
+
+interface Props {
+  onConversationStart?: (started: boolean) => void;
+}
+
+function ChatWindow({ onConversationStart }: Props) {
+  const { messages, isTyping, listRef, send } = useChat();
+
+  const C = useColors();
+  const styles = useMemo(() => createStyles(C), [C]);
+  const insets = useSafeAreaInsets();
+  const started = messages.some((m) => m.type === "user");
+
+  // una frase al azar por sesión (y por "Nuevo chat", que remonta el componente)
+  const [greeting] = useState(
+    () => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+  );
+  // acá y no en QuickReplies: la lista reserva espacio para los chips
+  const [showQuick, setShowQuick] = useState(true);
+  const hideQuick = useCallback(() => setShowQuick(false), []);
+
+  useEffect(() => {
+    onConversationStart?.(started);
+  }, [started, onConversationStart]);
+
+
+  // rAF: sin esperar al frame siguiente el scroll usa el layout viejo y queda corto
+  const scrollToEnd = useCallback(
+    () =>
+      requestAnimationFrame(() =>
+        listRef.current?.scrollToEnd({ animated: true })
+      ),
+    [listRef]
+  );
+
+  // keyboardDidShow, no onLayout: llega con el teclado ya arriba y el layout estable
+  useEffect(() => {
+    const sub = Keyboard.addListener("keyboardDidShow", scrollToEnd);
+    return () => sub.remove();
+  }, [scrollToEnd]);
+
+  // la altura real del bloque flotante: crece con el input y encoge sin los chips
+  const [dockHeight, setDockHeight] = useState(0);
+  const measureDock = useCallback(
+    (e: LayoutChangeEvent) => setDockHeight(e.nativeEvent.layout.height),
+    []
+  );
+
+  const listContentStyle = useMemo(
+    () => [
+      styles.listContent,
+      { paddingTop: insets.top + 68, paddingBottom: dockHeight },
+      messages.length === 0 && styles.listContentEmpty,
+    ],
+    [styles, insets.top, messages.length, dockHeight]
+  );
 
   return (
-    // KeyboardAvoidingView eliminado: el teclado se maneja desde index.tsx
-    // porque la tab bar estaba fuera del KAV y rompía los cálculos de offset.
     <View style={styles.container}>
       <FlatList
         ref={listRef}
         data={messages}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={keyExtractor}
         style={styles.list}
-        renderItem={({ item }) => <MessageBubble message={item} />}
-        contentContainerStyle={styles.listContent}
-        onContentSizeChange={() =>
-          listRef.current?.scrollToEnd({ animated: true })
+        renderItem={renderItem}
+        contentContainerStyle={listContentStyle}
+        onContentSizeChange={scrollToEnd}
+        // al subir el teclado la lista se achica: vuelve al final en vez de dejarlo tapado
+        onLayout={scrollToEnd}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <View style={styles.emptyAvatar}>
+              <Text style={styles.emptyAvatarText}>AP</Text>
+            </View>
+            <Text style={styles.emptyTitle}>{greeting}</Text>
+          </View>
         }
         ListFooterComponent={isTyping ? <TypingIndicator /> : null}
         showsVerticalScrollIndicator={false}
-        // Permite tocar mensajes sin cerrar el teclado (comportamiento WhatsApp)
         keyboardShouldPersistTaps="handled"
       />
-      <QuickReplies onSelect={handleQuickReply} />
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Escribí tu consulta..."
-          placeholderTextColor={Colors.slate400}
-          multiline
-          maxLength={500}
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
-          blurOnSubmit
-        />
-        <TouchableOpacity
-          onPress={handleSend}
-          disabled={!input.trim()}
-          style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-up" size={18} color={Colors.white} />
-        </TouchableOpacity>
+
+      {/* fuera del flujo: chips e input flotan y los mensajes pasan por debajo */}
+      <View style={styles.dock} onLayout={measureDock} pointerEvents="box-none">
+        {showQuick && <QuickReplies onSelect={send} onDismiss={hideQuick} />}
+        <ChatInput onSend={send} />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  list: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.slate50,
-  },
-  listContent: {
-    // flexGrow + justifyContent: los mensajes se anclan al fondo (como WhatsApp).
-    // Cuando hay pocos mensajes, el espacio vacío queda ARRIBA, no abajo.
-    flexGrow: 1,
-    justifyContent: "flex-end",
-    paddingTop: Spacing[4],
-    paddingBottom: Spacing[2],
-  },
-  inputBar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: Spacing[2],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.slate200,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    fontSize: Typography.base,
-    color: Colors.slate800,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    borderRadius: Radius.lg,
-    maxHeight: 100,
-    minHeight: 40,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sendBtnDisabled: {
-    opacity: 0.4,
-  },
-});
+// memo: el padre re-renderiza con cada evento de teclado; acá cuelga toda la lista
+export default memo(ChatWindow);
+
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    list: {
+      flex: 1,
+    },
+    dock: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      // entra en la medición, así el chat respeta este aire haya chips o no
+      paddingTop: Spacing[2],
+    },
+    container: {
+      flex: 1,
+      backgroundColor: C.white,
+    },
+    listContent: {
+      flexGrow: 1,
+      justifyContent: "flex-end",
+    },
+    listContentEmpty: {
+      justifyContent: "center",
+    },
+    empty: {
+      alignItems: "center",
+      paddingHorizontal: Spacing[6],
+      gap: Spacing[3],
+      // lo despega del centro exacto hacia arriba
+      marginBottom: Spacing[10],
+    },
+    emptyAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: Radius.full,
+      backgroundColor: C.primary,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: Spacing[2],
+    },
+    emptyAvatarText: {
+      color: "#ffffff",
+      fontSize: Typography.lg,
+      fontWeight: Typography.bold,
+    },
+    emptyTitle: {
+      fontSize: 28,
+      lineHeight: 34,
+      fontWeight: Typography.bold,
+      color: C.slate800,
+      textAlign: "center",
+    },
+  });

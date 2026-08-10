@@ -1,10 +1,10 @@
-/* eslint-disable react-hooks/refs -- standard RN Animated.Value-via-useRef idiom; the new
-   react-compiler lint rule flags every .current read of it, including this file's own dots array */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
-import { Colors, Radius, Spacing } from "../../constants/theme";
+import { Palette, Radius, Spacing, useColors } from "../../constants/theme";
 
 export default function TypingIndicator() {
+  const C = useColors();
+  const styles = useMemo(() => createStyles(C), [C]);
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
@@ -57,28 +57,23 @@ export default function TypingIndicator() {
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    alignItems: "flex-start",
-    paddingHorizontal: Spacing[4],
-    marginBottom: Spacing[3],
-  },
-  bubble: {
-    flexDirection: "row",
-    gap: 4,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.slate200,
-    borderRadius: Radius["2xl"],
-    borderBottomLeftRadius: Radius.sm,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.slate400,
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    wrapper: {
+      alignItems: "flex-start",
+      paddingHorizontal: Spacing[4],
+    },
+    // sin fondo, igual que las respuestas del bot
+    bubble: {
+      flexDirection: "row",
+      gap: 4,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: Radius.full,
+      backgroundColor: C.slate400,
+    },
+  });

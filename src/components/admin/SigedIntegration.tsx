@@ -24,7 +24,6 @@ export default function SigedIntegration() {
       <Text style={styles.heading}>SIGED — Expedientes</Text>
       <Text style={styles.subheading}>{sigedRecords.length} registros en el sistema</Text>
 
-      {/* Status filter */}
       <FilterPill
         options={allFilters}
         active={activeStatus}
@@ -32,7 +31,6 @@ export default function SigedIntegration() {
         containerStyle={styles.filterScroll}
       />
 
-      {/* Records */}
       <View style={styles.list}>
         {filtered.map((rec) => {
           const sc = statusConfig[rec.status];

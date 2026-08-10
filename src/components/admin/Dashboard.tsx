@@ -63,7 +63,6 @@ export default function Dashboard() {
       <Text style={styles.heading}>Dashboard</Text>
       <Text style={styles.subheading}>Resumen del sistema</Text>
 
-      {/* Stats grid */}
       <View style={styles.statsGrid}>
         {stats.map((s) => (
           <Card key={s.label} style={styles.statCard}>
@@ -76,7 +75,6 @@ export default function Dashboard() {
         ))}
       </View>
 
-      {/* Recent activity */}
       <Text style={styles.sectionTitle}>Actividad Reciente</Text>
       <Card padded={false}>
         {recentRecords.map((rec) => (

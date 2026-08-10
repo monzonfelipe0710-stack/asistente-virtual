@@ -17,9 +17,4 @@ export const quickReplies: QuickReply[] = [
     icon: "document-text-outline",
     query: "¿Cuál es la guía de trámites disponibles?",
   },
-  {
-    label: "Descargar Formularios",
-    icon: "download-outline",
-    query: "Necesito descargar formularios",
-  },
 ];
