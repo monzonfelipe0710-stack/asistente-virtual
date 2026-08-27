@@ -28,8 +28,8 @@ export default function DownloadSection() {
             onClick={() => setActiveCategory(cat)}
             className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
               activeCategory === cat
-                ? "bg-ink text-paper"
-                : "bg-paper text-ink border border-line hover:border-ink"
+                ? "bg-brand text-paper"
+                : "bg-paper text-ink border border-line hover:border-brand"
             }`}
           >
             {cat}

@@ -1,7 +1,7 @@
 export default function DocumentCard({ document }) {
   const formatIcons = {
     PDF: (
-      <div className="w-10 h-10 bg-ink flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 bg-brand flex items-center justify-center flex-shrink-0">
         <span className="text-paper font-bold text-[10px] tracking-wide">PDF</span>
       </div>
     ),
@@ -38,7 +38,7 @@ export default function DocumentCard({ document }) {
       </div>
 
       <button
-        className="flex-shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-ink cursor-pointer hover:bg-brand transition-colors"
+        className="flex-shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand cursor-pointer hover:bg-brand-dark transition-colors"
         onClick={() => alert(`Descargando: ${document.title}`)}
       >
         Descargar

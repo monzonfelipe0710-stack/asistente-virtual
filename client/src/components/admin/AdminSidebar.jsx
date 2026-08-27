@@ -41,7 +41,7 @@ const links = [
 
 export default function AdminSidebar() {
   return (
-    <aside className="w-60 bg-ink text-paper flex flex-col flex-shrink-0">
+    <aside className="w-60 bg-brand text-paper flex flex-col flex-shrink-0">
       <div className="flex items-center gap-3 px-5 h-16 border-b border-line">
         <div className="w-8 h-8 bg-paper flex items-center justify-center flex-shrink-0">
           <span className="text-ink font-bold text-xs tracking-wide">AP</span>
@@ -58,8 +58,8 @@ export default function AdminSidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-colors ${
                 isActive
-                  ? "bg-brand text-paper"
-                  : "text-muted hover:bg-line hover:text-paper"
+                  ? "bg-white text-brand"
+                  : "text-white/90 hover:bg-brand-dark"
               }`
             }
           >
@@ -72,7 +72,7 @@ export default function AdminSidebar() {
       <div className="px-5 py-4 border-t border-line">
         <NavLink
           to="/"
-          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted hover:text-paper transition-colors no-underline"
+          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/80 hover:text-white transition-colors no-underline"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

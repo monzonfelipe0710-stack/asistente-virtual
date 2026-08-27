@@ -62,7 +62,7 @@ export default function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full bg-paper border border-line">
-      <div className="bg-ink px-5 py-4 flex items-center gap-3">
+      <div className="bg-brand px-5 py-4 flex items-center gap-3">
         <div className="w-9 h-9 bg-paper flex items-center justify-center">
           <span className="text-ink font-bold text-xs tracking-wide">AP</span>
         </div>

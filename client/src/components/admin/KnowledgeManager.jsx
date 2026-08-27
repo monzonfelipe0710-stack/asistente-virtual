@@ -33,7 +33,7 @@ export default function KnowledgeManager() {
           </p>
         </div>
         <button
-          className="px-6 py-3 bg-ink text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand transition-colors self-start"
+          className="px-6 py-3 bg-brand text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-colors self-start"
           onClick={() => alert("Formulario para nuevo artículo")}
         >
           + Nuevo Artículo
@@ -47,8 +47,8 @@ export default function KnowledgeManager() {
             onClick={() => setActiveCategory(cat)}
             className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
               activeCategory === cat
-                ? "bg-ink text-paper"
-                : "bg-paper text-ink border border-line hover:border-ink"
+                ? "bg-brand text-paper"
+                : "bg-paper text-ink border border-line hover:border-brand"
             }`}
           >
             {cat}
@@ -91,7 +91,7 @@ export default function KnowledgeManager() {
                   </button>
                   <button
                     onClick={() => setEditingId(article.id)}
-                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-ink cursor-pointer hover:bg-brand transition-colors"
+                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand cursor-pointer hover:bg-brand-dark transition-colors"
                   >
                     Editar
                   </button>
@@ -165,7 +165,7 @@ export default function KnowledgeManager() {
           {editingId && (
             <button
               onClick={() => setEditingId(null)}
-              className="px-6 py-3 text-xs font-bold uppercase tracking-wide text-ink border border-ink hover:bg-ink hover:text-paper transition-colors ml-2"
+              className="px-6 py-3 text-xs font-bold uppercase tracking-wide text-brand border border-brand hover:bg-brand hover:text-paper transition-colors ml-2"
             >
               Cancelar
             </button>

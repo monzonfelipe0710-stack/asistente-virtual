@@ -14,7 +14,7 @@ export default function CiudadanoPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
             Asistente Virtual
           </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-wide text-ink leading-none m-0">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-wide text-brand leading-none m-0">
             De la Administración Pública
           </h1>
           <p className="text-sm text-muted mt-4 max-w-2xl">
