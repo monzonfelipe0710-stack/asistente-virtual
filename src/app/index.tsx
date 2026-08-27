@@ -8,14 +8,13 @@ import {
   Modal,
   Pressable,
   Animated,
-  Appearance,
   Switch,
-  useColorScheme,
   useWindowDimensions,
   Keyboard,
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import Head from "expo-router/head";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ChatWindow from "../components/ciudadano/ChatWindow";
@@ -28,6 +27,8 @@ import {
   Radius,
   Shadows,
   useColors,
+  useColorScheme,
+  setColorScheme,
 } from "../constants/theme";
 
 type Tab = "chat" | "descargas" | "accesos";
@@ -60,7 +61,6 @@ export default function CiudadanoPage() {
   const slide = useRef(new Animated.Value(-1)).current; // -1 cerrado, 0 abierto
   const headerOpacity = useRef(new Animated.Value(1)).current;
 
-  // sin teclado el chat baja hasta rozar el home indicator; con teclado llega justo hasta él
   const contentPaddingBottom =
     keyboardHeight > 0 ? keyboardHeight : Math.max(insets.bottom - 22, Spacing[1]);
 
@@ -103,7 +103,6 @@ export default function CiudadanoPage() {
     });
   };
 
-  // el header se va al primer mensaje del usuario y no vuelve hasta un chat nuevo
   const fadeHeader = useCallback(
     (started: boolean) => {
       Animated.timing(headerOpacity, {
@@ -122,6 +121,15 @@ export default function CiudadanoPage() {
 
   return (
     <View style={styles.safe}>
+      {/* expo-router maneja el <title> del build web con react-helmet;
+          sin este Head queda el <title data-rh> vacío y Lighthouse lo marca */}
+      <Head>
+        <title>ChatAP · Asistente virtual de trámites</title>
+        <meta
+          name="description"
+          content="Consultá trámites, descargá formularios y accedé a los servicios en línea desde el asistente virtual ChatAP."
+        />
+      </Head>
       <View style={[styles.content, { paddingBottom: contentPaddingBottom }]}>
         {activeTab === "chat" && (
           <ChatWindow key={chatKey} onConversationStart={fadeHeader} />
@@ -282,7 +290,7 @@ export default function CiudadanoPage() {
               <Switch
                 value={dark}
                 onValueChange={(on) =>
-                  Appearance.setColorScheme(on ? "dark" : "light")
+                  setColorScheme(on ? "dark" : "light")
                 }
                 trackColor={{ false: C.slate300, true: C.primary }}
                 thumbColor="#ffffff"

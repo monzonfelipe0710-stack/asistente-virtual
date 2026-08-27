@@ -48,10 +48,13 @@ function ChatWindow({ onConversationStart }: Props) {
   const insets = useSafeAreaInsets();
   const started = messages.some((m) => m.type === "user");
 
-  // una frase al azar por sesión (y por "Nuevo chat", que remonta el componente)
-  const [greeting] = useState(
-    () => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
-  );
+  // una frase al azar por sesión (y por "Nuevo chat", que remonta el componente).
+  // El sorteo va en effect, no en el estado inicial: el prerender estático y el
+  // cliente elegirían frases distintas y eso rompe la hidratación (React #418).
+  const [greeting, setGreeting] = useState(GREETINGS[0]);
+  useEffect(() => {
+    setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+  }, []);
   // acá y no en QuickReplies: la lista reserva espacio para los chips
   const [showQuick, setShowQuick] = useState(true);
   const hideQuick = useCallback(() => setShowQuick(false), []);

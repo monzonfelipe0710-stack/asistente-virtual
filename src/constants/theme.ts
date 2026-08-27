@@ -1,4 +1,5 @@
-import { useColorScheme } from "react-native";
+import { useSyncExternalStore } from "react";
+import { Appearance } from "react-native";
 
 export const Colors = {
   primary: "#1e3a8a",
@@ -76,7 +77,34 @@ export const DarkColors: Palette = {
   border: "#26262c",
 };
 
-/** Paleta activa. Sigue el esquema del sistema y a `Appearance.setColorScheme`. */
+/**
+ * react-native-web no implementa `Appearance.setColorScheme`: su Appearance solo
+ * lee el media query del SO. Por eso el esquema vive acá y no en Appearance, y
+ * arranca en claro: así el switch del menú funciona también en web, y el render
+ * inicial del cliente coincide con el prerender estático (que corre en Node y
+ * siempre sale claro). Si el cliente siguiera al SO, la hidratación rompería.
+ */
+let scheme: "light" | "dark" = "light";
+const listeners = new Set<() => void>();
+
+export function setColorScheme(next: "light" | "dark") {
+  scheme = next;
+  Appearance.setColorScheme?.(next); // en nativo, para el chrome del sistema
+  listeners.forEach((notify) => notify());
+}
+
+function subscribe(notify: () => void) {
+  listeners.add(notify);
+  return () => void listeners.delete(notify);
+}
+
+const getSnapshot = () => scheme;
+
+export function useColorScheme(): "light" | "dark" {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/** Paleta activa. */
 export function useColors(): Palette {
   return useColorScheme() === "dark" ? DarkColors : Colors;
 }

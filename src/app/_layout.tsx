@@ -2,18 +2,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect } from 'react';
-import { Appearance } from 'react-native';
-import 'react-native-reanimated';
 import { useColors } from '../constants/theme';
-
-// La app arranca siempre en claro: el tema lo cambia el botón del menú, no el teléfono.
-// (react-native-web no implementa setColorScheme)
-Appearance.setColorScheme?.('light');
 
 export default function RootLayout() {
   const C = useColors();
 
-  // la franja bajo la pantalla es la vista raíz nativa, no la pantalla: se pinta aparte
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(C.white);
   }, [C]);
@@ -26,8 +19,12 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: C.white },
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="admin" />
+        {/* el title va acá: es lo que llena el <title> que maneja expo-router */}
+        <Stack.Screen
+          name="index"
+          options={{ title: 'ChatAP · Asistente virtual de trámites' }}
+        />
+        <Stack.Screen name="admin" options={{ title: 'ChatAP · Administración' }} />
       </Stack>
       <StatusBar style="auto" />
     </>
