@@ -35,7 +35,7 @@ export default function SigedIntegration() {
             <span className="text-line mx-1">|</span>
             <span>Última sincronización: {new Date().toLocaleString("es-AR")}</span>
           </div>
-          <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-ink cursor-pointer hover:bg-brand transition-colors">
+          <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand cursor-pointer hover:bg-brand-dark transition-colors">
             Sincronizar ahora
           </button>
         </div>
@@ -45,8 +45,8 @@ export default function SigedIntegration() {
             onClick={() => setStatusFilter("Todos")}
             className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
               statusFilter === "Todos"
-                ? "bg-ink text-paper"
-                : "bg-paper text-ink border border-line hover:border-ink"
+                ? "bg-brand text-paper"
+                : "bg-paper text-ink border border-line hover:border-brand"
             }`}
           >
             Todos ({sigedRecords.length})
@@ -59,8 +59,8 @@ export default function SigedIntegration() {
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
                   statusFilter === status
-                    ? "bg-ink text-paper"
-                    : "bg-paper text-ink border border-line hover:border-ink"
+                    ? "bg-brand text-paper"
+                    : "bg-paper text-ink border border-line hover:border-brand"
                 }`}
               >
                 {status} ({count})

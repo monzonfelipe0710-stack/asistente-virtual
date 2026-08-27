@@ -7,7 +7,7 @@ export default function MessageBubble({ message }) {
         className={`max-w-[85%] sm:max-w-[75%] px-4 py-3 text-sm leading-relaxed ${
           isBot
             ? "bg-paper text-ink border border-line"
-            : "bg-ink text-paper"
+            : "bg-brand text-paper"
         }`}
       >
         <p className="m-0 whitespace-pre-wrap">{message.text}</p>
