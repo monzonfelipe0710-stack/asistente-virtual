@@ -44,7 +44,7 @@ export default function QuickReplies({ onSelect }) {
         <button
           key={opt.label}
           onClick={() => onSelect(opt.query)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-paper border border-ink text-ink text-xs font-semibold uppercase tracking-wide cursor-pointer hover:bg-ink hover:text-paper transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-paper border border-brand text-brand text-xs font-semibold uppercase tracking-wide cursor-pointer hover:bg-brand hover:text-paper transition-colors"
         >
           {opt.icon}
           {opt.label}

@@ -21,7 +21,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Link
             to="/admin"
-            className="text-xs font-semibold uppercase tracking-wide text-ink hover:text-muted transition-colors no-underline"
+            className="text-xs font-semibold uppercase tracking-wide text-ink hover:text-brand transition-colors no-underline"
           >
             Acceso Interno
           </Link>
@@ -29,7 +29,7 @@ export default function Navbar() {
             href="https://miportal.formosa.gob.ar"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 border border-line text-ink text-xs font-semibold uppercase tracking-wide hover:bg-mist transition-colors no-underline"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-brand text-brand text-xs font-semibold uppercase tracking-wide hover:bg-brand hover:text-paper transition-colors no-underline"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

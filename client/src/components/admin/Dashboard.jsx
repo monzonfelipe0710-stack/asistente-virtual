@@ -49,7 +49,7 @@ export default function Dashboard() {
   ];
 
   const colorMap = {
-    brand: "bg-ink text-paper",
+    brand: "bg-brand text-paper",
     ok: "bg-ok text-paper",
     "brand-deep": "bg-info text-paper",
     warn: "bg-warn text-paper",
