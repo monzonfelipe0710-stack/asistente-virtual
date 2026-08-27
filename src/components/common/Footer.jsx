@@ -7,13 +7,13 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} Subsecretaría de Recursos Humanos &mdash; Provincia de Formosa
           </p>
           <div className="flex items-center gap-6 text-xs font-semibold uppercase tracking-wide">
-            <a href="#" className="text-muted hover:text-brand transition-colors no-underline">
+            <a href="#" className="text-muted hover:text-ink transition-colors no-underline">
               Términos de uso
             </a>
-            <a href="#" className="text-muted hover:text-brand transition-colors no-underline">
+            <a href="#" className="text-muted hover:text-ink transition-colors no-underline">
               Privacidad
             </a>
-            <a href="#" className="text-muted hover:text-brand transition-colors no-underline">
+            <a href="#" className="text-muted hover:text-ink transition-colors no-underline">
               Contacto
             </a>
           </div>

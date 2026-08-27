@@ -41,7 +41,7 @@ const links = [
 
 export default function AdminSidebar() {
   return (
-    <aside className="w-60 bg-brand text-paper flex flex-col flex-shrink-0">
+    <aside className="w-60 bg-ink text-paper flex flex-col flex-shrink-0">
       <div className="flex items-center gap-3 px-5 h-16 border-b border-line">
         <div className="w-8 h-8 bg-paper flex items-center justify-center flex-shrink-0">
           <span className="text-ink font-bold text-xs tracking-wide">AP</span>
@@ -58,8 +58,8 @@ export default function AdminSidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-colors ${
                 isActive
-                  ? "bg-white text-brand"
-                  : "text-white/90 hover:bg-brand-dark"
+                  ? "bg-white text-ink"
+                  : "text-white/90 hover:bg-[#333333]"
               }`
             }
           >

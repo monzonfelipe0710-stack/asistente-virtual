@@ -10,7 +10,7 @@ export default function SigedIntegration() {
       : sigedRecords.filter((r) => r.status === statusFilter);
 
   const statusColors = {
-    Ingresado: "bg-brand text-paper",
+    Ingresado: "bg-info text-paper",
     "En proceso": "bg-warn text-paper",
     Observado: "bg-bad text-paper",
     Finalizado: "bg-ok text-paper",
@@ -35,7 +35,7 @@ export default function SigedIntegration() {
             <span className="text-line mx-1">|</span>
             <span>Última sincronización: {new Date().toLocaleString("es-AR")}</span>
           </div>
-          <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand cursor-pointer hover:bg-brand-dark transition-colors">
+          <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-ink cursor-pointer hover:bg-[#333333] transition-colors">
             Sincronizar ahora
           </button>
         </div>
@@ -45,8 +45,8 @@ export default function SigedIntegration() {
             onClick={() => setStatusFilter("Todos")}
             className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
               statusFilter === "Todos"
-                ? "bg-brand text-paper"
-                : "bg-paper text-ink border border-line hover:border-brand"
+                ? "bg-ink text-paper"
+                : "bg-paper text-ink border border-line hover:border-ink"
             }`}
           >
             Todos ({sigedRecords.length})
@@ -59,8 +59,8 @@ export default function SigedIntegration() {
                 onClick={() => setStatusFilter(status)}
                 className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
                   statusFilter === status
-                    ? "bg-brand text-paper"
-                    : "bg-paper text-ink border border-line hover:border-brand"
+                    ? "bg-ink text-paper"
+                    : "bg-paper text-ink border border-line hover:border-ink"
                 }`}
               >
                 {status} ({count})
@@ -85,7 +85,7 @@ export default function SigedIntegration() {
             <tbody className="divide-y divide-line">
               {filtered.map((rec) => (
                 <tr key={rec.id} className="hover:bg-mist transition-colors">
-                  <td className="px-6 py-4 font-mono text-xs text-brand font-semibold">
+                  <td className="px-6 py-4 font-mono text-xs text-ink font-semibold">
                     {rec.id}
                   </td>
                   <td className="px-6 py-4 text-ink">{rec.type}</td>
