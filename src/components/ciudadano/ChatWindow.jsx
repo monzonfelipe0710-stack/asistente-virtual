@@ -19,10 +19,11 @@ export default function ChatWindow() {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const bottomRef = useRef(null);
+  const messagesRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, isTyping]);
 
   function addMessage(type, text) {
@@ -62,7 +63,7 @@ export default function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full bg-paper border border-line">
-      <div className="bg-brand px-5 py-4 flex items-center gap-3">
+      <div className="bg-brand px-5 py-4 flex items-center gap-3 animate-fade-in">
         <div className="w-9 h-9 bg-paper flex items-center justify-center">
           <span className="text-ink font-bold text-xs tracking-wide">AP</span>
         </div>
@@ -75,17 +76,17 @@ export default function ChatWindow() {
           </p>
         </div>
         <span className="ml-auto flex items-center gap-2 text-[10px] uppercase tracking-wide text-paper">
-          <span className="w-1.5 h-1.5 bg-ok rounded-full inline-block" />
+          <span className="w-1.5 h-1.5 bg-ok rounded-full inline-block animate-pulse-soft" />
           En línea
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5 bg-paper">
+      <div ref={messagesRef} className="flex-1 overflow-y-auto px-5 py-5 bg-paper">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
         {isTyping && (
-          <div className="flex justify-start mb-4">
+          <div className="flex justify-start mb-4 animate-fade-up">
             <div className="bg-mist px-4 py-3 border border-line">
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: "0s" }} />
@@ -95,7 +96,6 @@ export default function ChatWindow() {
             </div>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       <QuickReplies onSelect={handleQuickReply} />
@@ -112,7 +112,7 @@ export default function ChatWindow() {
         <button
           type="submit"
           disabled={!input.trim()}
-          className="px-6 bg-brand text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-6 bg-brand text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           Enviar
         </button>
