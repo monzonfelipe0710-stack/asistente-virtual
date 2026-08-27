@@ -58,7 +58,7 @@ export default function AdminSidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-colors ${
                 isActive
-                  ? "bg-white text-ink"
+                  ? "bg-brand text-paper"
                   : "text-white/90 hover:bg-[#333333]"
               }`
             }

@@ -62,7 +62,7 @@ export default function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full bg-paper border border-line">
-      <div className="bg-ink px-5 py-4 flex items-center gap-3">
+      <div className="bg-brand px-5 py-4 flex items-center gap-3">
         <div className="w-9 h-9 bg-paper flex items-center justify-center">
           <span className="text-ink font-bold text-xs tracking-wide">AP</span>
         </div>
@@ -112,7 +112,7 @@ export default function ChatWindow() {
         <button
           type="submit"
           disabled={!input.trim()}
-          className="px-6 bg-ink text-paper text-xs font-bold uppercase tracking-wide hover:bg-[#333333] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-6 bg-brand text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Enviar
         </button>

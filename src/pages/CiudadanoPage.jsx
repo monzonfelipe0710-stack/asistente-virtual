@@ -11,7 +11,7 @@ export default function CiudadanoPage() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
         <header className="mb-10 border-b border-line pb-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-3">
             Asistente Virtual
           </p>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold uppercase tracking-wide text-ink leading-none m-0">
