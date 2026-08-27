@@ -13,7 +13,7 @@ export default function DownloadSection() {
   return (
     <section className="bg-paper border border-line">
       <div className="px-5 py-4 border-b border-line">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-1">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-1">
           Documentos
         </p>
         <h2 className="text-xl font-bold uppercase tracking-wide text-ink m-0">
@@ -28,8 +28,8 @@ export default function DownloadSection() {
             onClick={() => setActiveCategory(cat)}
             className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
               activeCategory === cat
-                ? "bg-brand text-paper"
-                : "bg-paper text-ink border border-line hover:border-brand"
+                ? "bg-ink text-paper"
+                : "bg-paper text-ink border border-line hover:border-ink"
             }`}
           >
             {cat}

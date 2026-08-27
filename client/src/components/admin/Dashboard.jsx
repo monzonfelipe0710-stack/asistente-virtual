@@ -49,9 +49,9 @@ export default function Dashboard() {
   ];
 
   const colorMap = {
-    brand: "bg-brand text-paper",
+    brand: "bg-ink text-paper",
     ok: "bg-ok text-paper",
-    "brand-deep": "bg-brand-deep text-paper",
+    "brand-deep": "bg-info text-paper",
     warn: "bg-warn text-paper",
   };
 
@@ -115,7 +115,7 @@ export default function Dashboard() {
 
 function StatusBadge({ status }) {
   const colors = {
-    Ingresado: "bg-brand text-paper",
+    Ingresado: "bg-info text-paper",
     "En proceso": "bg-warn text-paper",
     Observado: "bg-bad text-paper",
     Finalizado: "bg-ok text-paper",

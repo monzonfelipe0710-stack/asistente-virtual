@@ -2,7 +2,7 @@ export default function ExternalAccess() {
   return (
     <div className="bg-paper border border-line">
       <div className="px-5 py-4 border-b border-line">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-1">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted mb-1">
           Accesos
         </p>
         <h2 className="text-xl font-bold uppercase tracking-wide text-ink m-0">
@@ -15,9 +15,9 @@ export default function ExternalAccess() {
           href="https://miportal.formosa.gob.ar"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-4 px-4 py-4 border border-line hover:border-brand transition-colors no-underline"
+          className="flex items-center gap-4 px-4 py-4 border border-line hover:border-ink transition-colors no-underline"
         >
-          <div className="w-10 h-10 bg-brand flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-ink flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5 text-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
