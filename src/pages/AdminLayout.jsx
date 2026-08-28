@@ -55,17 +55,26 @@ export default function AdminLayout() {
   const { role, setRole } = useAdmin();
   const location = useLocation();
   const crumb = BREADCRUMBS[location.pathname] || "Panel";
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div className="min-h-screen flex bg-soft">
-      <AdminSidebar />
+      <AdminSidebar open={sidebarOpen} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-paper border-b border-line h-16 flex items-center px-6 lg:px-8 sticky top-0 z-30">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-brand-deep grid place-items-center lg:hidden">
-              <span className="text-paper font-bold text-xs">AP</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((open) => !open)}
+              className="w-9 h-9 grid place-items-center rounded-lg border border-line text-muted hover:text-ink hover:bg-mist transition-colors"
+              aria-label={sidebarOpen ? "Ocultar panel de navegación" : "Mostrar panel de navegación"}
+              aria-expanded={sidebarOpen}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <div className="min-w-0">
               <h1 className="text-sm font-bold uppercase tracking-wide text-ink m-0 leading-tight truncate">
                 Acceso Interno

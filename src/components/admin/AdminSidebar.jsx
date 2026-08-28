@@ -1,5 +1,4 @@
 import { NavLink } from "react-router-dom";
-import { useRef } from "react";
 import { useAdmin } from "../../context/AdminContext";
 
 const icon = (path) => (
@@ -74,16 +73,11 @@ const sections = [
   },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ open }) {
   const { can } = useAdmin();
-  const navRef = useRef(null);
-
-  function scrollNav(direction) {
-    navRef.current?.scrollBy({ left: direction * 220, behavior: "smooth" });
-  }
 
   return (
-    <aside className="w-64 bg-ink text-paper flex flex-col flex-shrink-0">
+    <aside className={`${open ? "w-64" : "w-0"} bg-ink text-paper flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out`}>
       <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
         <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg flex-shrink-0">
           <span className="text-paper font-bold text-sm tracking-wide">AP</span>
@@ -94,47 +88,24 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      <div className="relative flex flex-1 min-w-0 flex-col">
-        <div className="flex items-center justify-end gap-1 px-3 pt-3" aria-label="Desplazar opciones del panel">
-          <button
-            type="button"
-            onClick={() => scrollNav(-1)}
-            className="grid h-7 w-7 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
-            aria-label="Desplazar opciones hacia la izquierda"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollNav(1)}
-            className="grid h-7 w-7 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
-            aria-label="Desplazar opciones hacia la derecha"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-        <nav ref={navRef} className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden scroll-smooth">
-          <div className="flex flex-row gap-6 px-3 py-5">
+      <nav className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-3 py-5">
+        <div className="flex flex-col gap-6">
           {sections.map((section) => {
             const visible = section.items.filter((it) => can(it.perm));
             if (!visible.length) return null;
             return (
-              <div key={section.title} className="flex flex-col gap-1.5 flex-shrink-0">
+              <div key={section.title} className="flex flex-col gap-1.5">
                 <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-paper/40 mb-1">
                   {section.title}
                 </p>
-                <div className="flex flex-row gap-1.5">
+                <div className="flex flex-col gap-1.5">
                   {visible.map((link) => (
                     <NavLink
                       key={link.to}
                       to={link.to}
                       end={link.to === "/admin"}
                       className={({ isActive }) =>
-                        `group flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium rounded-md no-underline transition-all duration-200 whitespace-nowrap ${
+                          `group flex w-full items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md no-underline transition-all duration-200 whitespace-nowrap ${
                           isActive
                             ? "bg-brand-deep text-paper shadow-sm"
                             : "text-paper/80 hover:bg-white/10 hover:text-paper"
@@ -158,9 +129,8 @@ export default function AdminSidebar() {
               </div>
             );
           })}
-          </div>
-        </nav>
-      </div>
+        </div>
+      </nav>
 
       <div className="px-5 py-4 border-t border-white/10">
         <NavLink
