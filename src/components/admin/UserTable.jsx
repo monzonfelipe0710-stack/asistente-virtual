@@ -22,7 +22,7 @@ export default function UserTable() {
             {users.length} usuarios registrados
           </p>
         </div>
-        <button className="px-6 py-3 bg-brand text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5 self-start">
+        <button className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5 self-start">
           + Nuevo Usuario
         </button>
       </div>
@@ -65,7 +65,7 @@ export default function UserTable() {
                   <td className="px-6 py-4">
                     <span className={`inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                       user.role === "Administrador"
-                        ? "bg-brand text-paper"
+                        ? "bg-brand-deep text-paper"
                         : user.role === "Supervisor"
                         ? "bg-info text-paper"
                         : "bg-mist text-muted"
@@ -84,7 +84,7 @@ export default function UserTable() {
                   </td>
                   <td className="px-6 py-4 text-muted text-xs">{user.lastAccess}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5">
+                    <button className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5">
                       Editar
                     </button>
                   </td>

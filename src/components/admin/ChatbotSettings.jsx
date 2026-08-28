@@ -48,11 +48,11 @@ export default function ChatbotSettings() {
       <div className="flex items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-primary m-0 tracking-tight">Configuración del Chatbot</h1>
-          <p className="text-xs text-slate-400 m-0 mt-0.5 font-medium">Personalizá el comportamiento y los mensajes del asistente virtual</p>
+          <p className="text-xs text-muted m-0 mt-0.5 font-medium">Personalizá el comportamiento y los mensajes del asistente virtual</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg ${settings.autoResponse ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${settings.autoResponse ? "bg-emerald-500" : "bg-slate-300"}`} />
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg ${settings.autoResponse ? "bg-emerald-50 text-emerald-600" : "bg-mist text-muted"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${settings.autoResponse ? "bg-emerald-500" : "bg-line"}`} />
             {settings.autoResponse ? "Respuestas automáticas activas" : "Respuestas automáticas desactivadas"}
           </span>
         </div>
@@ -67,15 +67,15 @@ export default function ChatbotSettings() {
             </h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Nombre del asistente</label>
+                <label className="text-xs font-medium text-muted mb-1 block">Nombre del asistente</label>
                 <input value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} className="input-field" />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Mensaje de bienvenida</label>
+                <label className="text-xs font-medium text-muted mb-1 block">Mensaje de bienvenida</label>
                 <AutoTextarea value={settings.welcomeMessage} onChange={(e) => setSettings({ ...settings, welcomeMessage: e.target.value })} className="input-field" />
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Mensaje secundario</label>
+                <label className="text-xs font-medium text-muted mb-1 block">Mensaje secundario</label>
                 <AutoTextarea value={settings.secondaryMessage} onChange={(e) => setSettings({ ...settings, secondaryMessage: e.target.value })} className="input-field" />
               </div>
             </div>
@@ -89,17 +89,17 @@ export default function ChatbotSettings() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-600 m-0">Respuestas automáticas</p>
-                  <p className="text-[10px] text-slate-400 m-0">El chatbot responde automáticamente basado en la base de conocimiento</p>
+                  <p className="text-xs font-medium text-muted m-0">Respuestas automáticas</p>
+                  <p className="text-[10px] text-muted m-0">El chatbot responde automáticamente basado en la base de conocimiento</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={settings.autoResponse} onChange={(e) => setSettings({ ...settings, autoResponse: e.target.checked })} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                  <div className="w-9 h-5 bg-mist rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-paper after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
                 </label>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Horario de atención</label>
+                <label className="text-xs font-medium text-muted mb-1 block">Horario de atención</label>
                 <select value={settings.workingHours} onChange={(e) => setSettings({ ...settings, workingHours: e.target.value })} className="input-field">
                   <option value="24/7">24/7 — Todos los días</option>
                   <option value="08:00-18:00">08:00 — 18:00 hs</option>
@@ -108,7 +108,7 @@ export default function ChatbotSettings() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Dependencia</label>
+                <label className="text-xs font-medium text-muted mb-1 block">Dependencia</label>
                 <input value={settings.department} onChange={(e) => setSettings({ ...settings, department: e.target.value })} className="input-field" />
               </div>
             </div>

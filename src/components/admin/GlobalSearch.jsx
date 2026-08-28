@@ -41,28 +41,28 @@ export default function GlobalSearch() {
   return (
     <div className="relative" style={{ minWidth: 260 }}>
       <div className="relative">
-        <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <svg className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input ref={ref} type="text" value={query} onChange={(e) => setQuery(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => { setFocused(false); }, 200)} placeholder="Buscar..." className="input-field pl-9 pr-10 text-xs" aria-label="Búsqueda global" />
-        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono font-medium bg-slate-100 text-slate-400 rounded border border-slate-200 leading-none">Ctrl+K</kbd>
+        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono font-medium bg-mist text-muted rounded border border-line leading-none">Ctrl+K</kbd>
       </div>
       {focused && query.trim().length >= 2 && (
         <div className="absolute top-full left-0 right-0 mt-1.5 card card-border overflow-hidden z-50 animate-scale-in shadow-lg">
           {results.length > 0 ? (
             <div className="py-1">
               {results.map((item, i) => (
-                <button key={`${item._type}-${item.id}`} onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }} className="w-full text-left px-3 py-2.5 hover:bg-slate-50 transition-colors flex items-start gap-2.5 border-b border-slate-50 last:border-0 cursor-pointer">
-                  <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border shrink-0 mt-0.5 ${typeStyles[item._type] || "bg-slate-100 text-slate-500"}`}>{item._type === "knowledge" ? "Art." : item._type === "document" ? "Doc." : "SIGED"}</span>
+                <button key={`${item._type}-${item.id}`} onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }} className="w-full text-left px-3 py-2.5 hover:bg-soft transition-colors flex items-start gap-2.5 border-b border-line last:border-0 cursor-pointer">
+                  <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border shrink-0 mt-0.5 ${typeStyles[item._type] || "bg-mist text-muted"}`}>{item._type === "knowledge" ? "Art." : item._type === "document" ? "Doc." : "SIGED"}</span>
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-700 m-0 truncate">{item._label}</p>
-                    <p className="text-[10px] text-slate-400 m-0 mt-0.5 truncate">{item._desc}</p>
+                    <p className="text-xs font-medium text-ink m-0 truncate">{item._label}</p>
+                    <p className="text-[10px] text-muted m-0 mt-0.5 truncate">{item._desc}</p>
                   </div>
                 </button>
               ))}
             </div>
           ) : (
             <div className="px-3 py-4 text-center">
-              <svg className="w-6 h-6 text-slate-200 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <p className="text-xs text-slate-400 font-medium">Sin resultados para "{query}"</p>
+              <svg className="w-6 h-6 text-muted mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <p className="text-xs text-muted font-medium">Sin resultados para "{query}"</p>
             </div>
           )}
         </div>

@@ -13,25 +13,25 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
   }
 
   return (
-    <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-slate-100">
+    <div className="flex items-center justify-center gap-1 px-4 py-3 border-t border-line">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+        className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted hover:bg-mist disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
       >
         Anterior
       </button>
       {pages.map((p, i) =>
         p === "..." ? (
-          <span key={`dots-${i}`} className="px-2 text-xs text-slate-300">...</span>
+          <span key={`dots-${i}`} className="px-2 text-xs text-muted">...</span>
         ) : (
           <button
             key={p}
             onClick={() => onPageChange(p)}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 ${
               p === currentPage
-                ? "bg-primary text-white shadow-sm"
-                : "text-slate-500 hover:bg-slate-100"
+                ? "bg-primary text-paper shadow-sm"
+                : "text-muted hover:bg-mist"
             }`}
           >
             {p}
@@ -41,7 +41,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+        className="px-3 py-1.5 text-xs font-medium rounded-lg text-muted hover:bg-mist disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
       >
         Siguiente
       </button>

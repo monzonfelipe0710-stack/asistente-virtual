@@ -2,7 +2,7 @@ export default function ExternalAccess() {
   return (
     <div className="bg-paper border border-line">
       <div className="px-5 py-4 border-b border-line">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-brand mb-1">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-deep mb-1">
           Accesos
         </p>
         <h2 className="text-xl font-bold uppercase tracking-wide text-ink m-0">
