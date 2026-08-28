@@ -77,7 +77,7 @@ export default function AdminSidebar({ open, onToggle }) {
   const { can } = useAdmin();
 
   return (
-    <aside className={`${open ? "w-64" : "w-0"} bg-ink text-paper flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out`}>
+    <aside className={`${open ? "w-64" : "w-0"} h-screen sticky top-0 bg-ink text-paper flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out`}>
       <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
         <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg flex-shrink-0">
           <span className="text-paper font-bold text-sm tracking-wide">AP</span>
