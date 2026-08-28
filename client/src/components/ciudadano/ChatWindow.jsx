@@ -26,7 +26,6 @@ export default function ChatWindow() {
   const [speakingId, setSpeakingId] = useState(null);
   const [typedText, setTypedText] = useState("");
   const [reaction, setReaction] = useState("idle");
-  const [newChatMenuOpen, setNewChatMenuOpen] = useState(false);
   const messagesRef = useRef(null);
   const recognitionRef = useRef(null);
   const transcriptRef = useRef("");
@@ -229,35 +228,24 @@ export default function ChatWindow() {
             ChatAP
           </span>
         </div>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setNewChatMenuOpen((open) => !open)}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-line text-muted transition-colors hover:bg-mist hover:text-ink"
-            aria-label="Abrir opciones de conversación"
-            aria-expanded={newChatMenuOpen}
-          >
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={resetConversation}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") resetConversation();
+          }}
+          className="group flex h-9 w-9 cursor-pointer items-center overflow-hidden rounded-xl border border-line text-muted transition-all duration-300 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          aria-label="Nueva conversación"
+        >
+          <span className="grid h-9 w-9 flex-shrink-0 place-items-center">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
             </svg>
-          </button>
-          {newChatMenuOpen && (
-            <div className="absolute right-0 top-11 z-20 min-w-44 rounded-xl border border-line bg-paper p-1.5 shadow-lg animate-scale-in">
-              <button
-                type="button"
-                onClick={() => {
-                  resetConversation();
-                  setNewChatMenuOpen(false);
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-ink transition-colors hover:bg-mist"
-              >
-                <svg className="h-4 w-4 text-brand-deep" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 5v14m-7-7h14" />
-                </svg>
-                Nueva conversación
-              </button>
-            </div>
-          )}
+          </span>
+          <span className="whitespace-nowrap pr-3 text-xs font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+            Nueva conversación
+          </span>
         </div>
       </header>
 
