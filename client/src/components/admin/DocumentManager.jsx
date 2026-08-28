@@ -67,7 +67,7 @@ export default function DocumentManager() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-primary m-0 tracking-tight">Gestión Documental</h1>
-          <p className="text-xs text-slate-400 m-0 mt-0.5 font-medium">{localDocs.length} documentos · {localDocs.reduce((s, d) => s + d.downloads, 0).toLocaleString()} descargas totales</p>
+          <p className="text-xs text-muted m-0 mt-0.5 font-medium">{localDocs.length} documentos · {localDocs.reduce((s, d) => s + d.downloads, 0).toLocaleString()} descargas totales</p>
         </div>
         <button onClick={openNew} className="btn-primary flex items-center gap-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -76,10 +76,10 @@ export default function DocumentManager() {
       </div>
 
       <div className="card card-border overflow-hidden">
-        <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-slate-100">
+        <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-line">
           {documentCategories.map((cat) => (
             <button key={cat} onClick={() => { setFilterCat(cat); setPage(1); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 ${filterCat === cat ? "bg-primary text-white shadow-sm" : "bg-white text-slate-500 border border-slate-200/60 hover:border-primary/30 hover:text-primary"}`}>
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 ${filterCat === cat ? "bg-primary text-paper shadow-sm" : "bg-paper text-muted border border-line/60 hover:border-primary/30 hover:text-primary"}`}>
               {cat} ({catCounts[cat] || 0})
             </button>
           ))}
@@ -88,7 +88,7 @@ export default function DocumentManager() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50/80 text-left text-xs text-slate-500 uppercase tracking-wider">
+              <tr className="bg-soft/80 text-left text-xs text-muted uppercase tracking-wider">
                 <TH sortable sortKey="title" label="Título" onSort={toggleSort} indicator={getSortIndicator("title")} />
                 <TH sortable sortKey="category" label="Categoría" onSort={toggleSort} indicator={getSortIndicator("category")} />
                 <TH sortable sortKey="format" label="Formato" onSort={toggleSort} indicator={getSortIndicator("format")} />
@@ -98,25 +98,25 @@ export default function DocumentManager() {
                 <th className="px-4 py-3 font-semibold text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 stagger-children">
+            <tbody className="divide-y divide-line stagger-children">
               {paginatedItems.map((doc) => (
                 <tr key={doc.id} className="table-row">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className={`p-1.5 rounded-lg ${formatColors[doc.format] || "bg-slate-50 text-slate-500"}`}>
+                      <div className={`p-1.5 rounded-lg ${formatColors[doc.format] || "bg-soft text-muted"}`}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-slate-700 m-0">{doc.title}</p>
-                        <p className="text-[10px] text-slate-400 m-0 mt-0.5">{doc.description}</p>
+                        <p className="text-xs font-medium text-ink m-0">{doc.title}</p>
+                        <p className="text-[10px] text-muted m-0 mt-0.5">{doc.description}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 text-[10px] font-medium rounded-lg bg-accent-light text-accent">{doc.category}</span></td>
-                  <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-lg ${formatColors[doc.format] || "bg-slate-100 text-slate-500"}`}>{doc.format}</span></td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{doc.fileSize}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{doc.downloads.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">{doc.updatedAt}</td>
+                  <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 text-[10px] font-semibold rounded-lg ${formatColors[doc.format] || "bg-mist text-muted"}`}>{doc.format}</span></td>
+                  <td className="px-4 py-3 text-xs text-muted">{doc.fileSize}</td>
+                  <td className="px-4 py-3 text-xs text-muted">{doc.downloads.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-xs text-muted">{doc.updatedAt}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => openEdit(doc)} className="px-2.5 py-1 text-[10px] font-medium text-accent bg-accent-light/50 rounded-lg cursor-pointer hover:bg-accent-light transition-colors">Editar</button>
@@ -137,28 +137,28 @@ export default function DocumentManager() {
       <Modal open={formOpen} onClose={() => { setFormOpen(false); setEditDoc(null); }} title={editDoc ? "Editar documento" : "Nuevo documento"} onConfirm={handleSave} confirmText={editDoc ? "Guardar cambios" : "Crear documento"}>
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">Título *</label>
+            <label className="text-xs font-medium text-muted mb-1 block">Título *</label>
             <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" placeholder="Nombre del documento" />
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500 mb-1 block">Descripción</label>
+            <label className="text-xs font-medium text-muted mb-1 block">Descripción</label>
             <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field min-h-[80px] resize-y" placeholder="Breve descripción del documento..." />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Categoría</label>
+              <label className="text-xs font-medium text-muted mb-1 block">Categoría</label>
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-field">
                 {documentCategories.filter((c) => c !== "Todos").map((c) => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Formato</label>
+              <label className="text-xs font-medium text-muted mb-1 block">Formato</label>
               <select value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} className="input-field">
                 {documentFormats.map((f) => <option key={f}>{f}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Tamaño</label>
+              <label className="text-xs font-medium text-muted mb-1 block">Tamaño</label>
               <input value={form.fileSize} onChange={(e) => setForm({ ...form, fileSize: e.target.value })} className="input-field" placeholder="Ej: 245 KB" />
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function DocumentManager() {
       </Modal>
 
       <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} onConfirm={confirmDelete} title="Eliminar documento" confirmText="Eliminar" confirmDanger>
-        <p className="text-sm text-slate-600 m-0">¿Estás seguro de eliminar este documento de la biblioteca?</p>
+        <p className="text-sm text-muted m-0">¿Estás seguro de eliminar este documento de la biblioteca?</p>
       </Modal>
     </div>
   );

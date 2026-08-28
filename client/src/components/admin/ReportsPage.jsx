@@ -14,8 +14,8 @@ function StatCard({ label, value, icon, color, subtitle }) {
         <div className={`p-2.5 rounded-xl ${color}`}>{icon}</div>
         <div>
           <p className="text-2xl font-bold text-primary m-0 tracking-tight animate-counter">{value}</p>
-          <p className="text-xs text-slate-400 m-0 font-medium">{label}</p>
-          {subtitle && <p className="text-[10px] text-slate-400 m-0 mt-0.5">{subtitle}</p>}
+          <p className="text-xs text-muted m-0 font-medium">{label}</p>
+          {subtitle && <p className="text-[10px] text-muted m-0 mt-0.5">{subtitle}</p>}
         </div>
       </div>
     </div>
@@ -39,7 +39,7 @@ export default function ReportsPage() {
   const byCategory = knowledgeCategories.slice(1).map((cat) => ({ label: cat, count: knowledgeBase.filter((k) => k.category === cat).length }));
   const byDept = departments.map((d) => ({ label: d, count: sigedRecords.filter((r) => r.department === d).length }));
   const byStatus = [{ label: "Activos", count: activeUsers, pct: Math.round((activeUsers / users.length) * 100) }, { label: "Inactivos", count: users.length - activeUsers, pct: Math.round(((users.length - activeUsers) / users.length) * 100) }];
-  const byPriority = [{ label: "Alta", count: sigedRecords.filter((r) => r.priority === "Alta").length, color: "bg-red-500" }, { label: "Normal", count: sigedRecords.filter((r) => r.priority === "Normal").length, color: "bg-blue-500" }, { label: "Baja", count: sigedRecords.filter((r) => r.priority === "Baja").length, color: "bg-slate-400" }];
+  const byPriority = [{ label: "Alta", count: sigedRecords.filter((r) => r.priority === "Alta").length, color: "bg-red-500" }, { label: "Normal", count: sigedRecords.filter((r) => r.priority === "Normal").length, color: "bg-blue-500" }, { label: "Baja", count: sigedRecords.filter((r) => r.priority === "Baja").length, color: "bg-line" }];
   const sigedByStatus = ["Ingresado", "En proceso", "Observado", "Finalizado"].map((s) => ({ label: s, count: sigedRecords.filter((r) => r.status === s).length }));
   const topArticles = [...knowledgeBase].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
   const topDocs = [...documents].sort((a, b) => b.downloads - a.downloads).slice(0, 5);
@@ -55,11 +55,11 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-primary m-0 tracking-tight">Reportes y Analíticas</h1>
-          <p className="text-xs text-slate-400 m-0 mt-0.5 font-medium">Métricas detalladas del sistema y contenido</p>
+          <p className="text-xs text-muted m-0 mt-0.5 font-medium">Métricas detalladas del sistema y contenido</p>
         </div>
-        <div className="flex gap-1.5 bg-slate-100 p-0.5 rounded-lg">
+        <div className="flex gap-1.5 bg-mist p-0.5 rounded-lg">
           {[{ v: "7d", l: "7 días" }, { v: "30d", l: "30 días" }, { v: "90d", l: "90 días" }].map(({ v, l }) => (
-            <button key={v} onClick={() => setPeriod(v)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${period === v ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-primary bg-transparent"}`}>{l}</button>
+            <button key={v} onClick={() => setPeriod(v)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer ${period === v ? "bg-paper text-primary shadow-sm" : "text-muted hover:text-primary bg-transparent"}`}>{l}</button>
           ))}
         </div>
       </div>
@@ -77,12 +77,12 @@ export default function ReportsPage() {
           <div className="space-y-2">
             {topArticles.map((a, i) => (
               <div key={a.id} className="flex items-center gap-3 py-1.5">
-                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-slate-100 text-slate-600" : i === 2 ? "bg-orange-50 text-orange-600" : "bg-slate-50 text-slate-400"}`}>{i + 1}</span>
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-mist text-muted" : i === 2 ? "bg-orange-50 text-orange-600" : "bg-soft text-muted"}`}>{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-700 m-0 truncate font-medium">{a.question}</p>
-                  <p className="text-[10px] text-slate-400 m-0">{a.category} · {a.views} vistas</p>
+                  <p className="text-xs text-ink m-0 truncate font-medium">{a.question}</p>
+                  <p className="text-[10px] text-muted m-0">{a.category} · {a.views} vistas</p>
                 </div>
-                <div className="text-xs font-semibold text-slate-500">{a.views}</div>
+                <div className="text-xs font-semibold text-muted">{a.views}</div>
               </div>
             ))}
           </div>
@@ -93,12 +93,12 @@ export default function ReportsPage() {
           <div className="space-y-2">
             {topDocs.map((d, i) => (
               <div key={d.id} className="flex items-center gap-3 py-1.5">
-                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-slate-100 text-slate-600" : i === 2 ? "bg-orange-50 text-orange-600" : "bg-slate-50 text-slate-400"}`}>{i + 1}</span>
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-mist text-muted" : i === 2 ? "bg-orange-50 text-orange-600" : "bg-soft text-muted"}`}>{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-slate-700 m-0 truncate font-medium">{d.title}</p>
-                  <p className="text-[10px] text-slate-400 m-0">{d.category} · {d.format} · {d.fileSize}</p>
+                  <p className="text-xs text-ink m-0 truncate font-medium">{d.title}</p>
+                  <p className="text-[10px] text-muted m-0">{d.category} · {d.format} · {d.fileSize}</p>
                 </div>
-                <div className="text-xs font-semibold text-slate-500">{d.downloads}</div>
+                <div className="text-xs font-semibold text-muted">{d.downloads}</div>
               </div>
             ))}
           </div>
@@ -111,11 +111,11 @@ export default function ReportsPage() {
           <div className="space-y-2">
             {byCategory.map((c) => (
               <div key={c.label} className="flex items-center gap-2">
-                <span className="text-xs text-slate-600 w-20 font-medium">{c.label}</span>
-                <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                <span className="text-xs text-muted w-20 font-medium">{c.label}</span>
+                <div className="flex-1 h-4 bg-mist rounded-full overflow-hidden">
                   <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${(c.count / maxCat) * 100}%`, animation: "bar-fill 0.5s ease-out" }} />
                 </div>
-                <span className="text-xs text-slate-500 font-medium w-6 text-right">{c.count}</span>
+                <span className="text-xs text-muted font-medium w-6 text-right">{c.count}</span>
               </div>
             ))}
           </div>
@@ -126,11 +126,11 @@ export default function ReportsPage() {
           <div className="space-y-2">
             {byDept.map((d) => (
               <div key={d.label} className="flex items-center gap-2">
-                <span className="text-xs text-slate-600 w-24 font-medium truncate">{d.label}</span>
-                <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                <span className="text-xs text-muted w-24 font-medium truncate">{d.label}</span>
+                <div className="flex-1 h-4 bg-mist rounded-full overflow-hidden">
                   <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${(d.count / maxDept) * 100}%`, animation: "bar-fill 0.5s ease-out" }} />
                 </div>
-                <span className="text-xs text-slate-500 font-medium w-6 text-right">{d.count}</span>
+                <span className="text-xs text-muted font-medium w-6 text-right">{d.count}</span>
               </div>
             ))}
           </div>
@@ -141,11 +141,11 @@ export default function ReportsPage() {
           <div className="space-y-2">
             {usersByRole.map((r) => (
               <div key={r.label} className="flex items-center gap-2">
-                <span className="text-xs text-slate-600 w-24 font-medium">{r.label}</span>
-                <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                <span className="text-xs text-muted w-24 font-medium">{r.label}</span>
+                <div className="flex-1 h-4 bg-mist rounded-full overflow-hidden">
                   <div className="h-full bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${(r.count / users.length) * 100}%`, animation: "bar-fill 0.5s ease-out" }} />
                 </div>
-                <span className="text-xs text-slate-500 font-medium w-6 text-right">{r.count}</span>
+                <span className="text-xs text-muted font-medium w-6 text-right">{r.count}</span>
               </div>
             ))}
           </div>
@@ -160,11 +160,11 @@ export default function ReportsPage() {
               const pct = sigedRecords.length ? Math.round((s.count / sigedRecords.length) * 100) : 0;
               const colors = { Ingresado: "bg-blue-500", "En proceso": "bg-amber-500", Observado: "bg-red-500", Finalizado: "bg-emerald-500" };
               return (
-                <div key={s.label} className="text-center p-3 bg-slate-50 rounded-xl">
-                  <div className={`w-3 h-3 rounded-full mx-auto mb-1.5 ${colors[s.label] || "bg-slate-400"}`} />
+                <div key={s.label} className="text-center p-3 bg-soft rounded-xl">
+                  <div className={`w-3 h-3 rounded-full mx-auto mb-1.5 ${colors[s.label] || "bg-line"}`} />
                   <p className="text-lg font-bold text-primary m-0">{s.count}</p>
-                  <p className="text-[10px] text-slate-500 font-medium m-0">{s.label}</p>
-                  <p className="text-[10px] text-slate-400 m-0">{pct}%</p>
+                  <p className="text-[10px] text-muted font-medium m-0">{s.label}</p>
+                  <p className="text-[10px] text-muted m-0">{pct}%</p>
                 </div>
               );
             })}
@@ -175,13 +175,13 @@ export default function ReportsPage() {
           <h2 className="text-sm font-semibold text-primary m-0 mb-3">Distribución de usuarios</h2>
           <div className="grid grid-cols-2 gap-4">
             {byStatus.map((s) => (
-              <div key={s.label} className="text-center p-4 bg-slate-50 rounded-xl">
+              <div key={s.label} className="text-center p-4 bg-soft rounded-xl">
                 <p className="text-2xl font-bold text-primary m-0">{s.count}</p>
-                <p className="text-xs text-slate-500 font-medium m-0">{s.label}</p>
-                <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${s.label === "Activos" ? "bg-emerald-500" : "bg-slate-400"}`} style={{ width: `${s.pct}%` }} />
+                <p className="text-xs text-muted font-medium m-0">{s.label}</p>
+                <div className="mt-2 h-2 bg-mist rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${s.label === "Activos" ? "bg-emerald-500" : "bg-line"}`} style={{ width: `${s.pct}%` }} />
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">{s.pct}% del total</p>
+                <p className="text-[10px] text-muted mt-1">{s.pct}% del total</p>
               </div>
             ))}
           </div>

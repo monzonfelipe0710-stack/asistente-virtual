@@ -1,78 +1,171 @@
 import { NavLink } from "react-router-dom";
+import { useRef } from "react";
+import { useAdmin } from "../../context/AdminContext";
 
-const links = [
+const icon = (path) => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={path} />
+  </svg>
+);
+
+const sections = [
   {
-    to: "/admin",
-    label: "Dashboard",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
-      </svg>
-    ),
+    title: "Principal",
+    items: [
+      {
+        to: "/admin",
+        label: "Dashboard",
+        perm: "dashboard",
+        icon: icon("M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"),
+      },
+      {
+        to: "/admin/mesa-de-entrada",
+        label: "Mesa de Entradas",
+        perm: "mesa_entrada",
+        icon: icon("M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"),
+      },
+    ],
   },
   {
-    to: "/admin/usuarios",
-    label: "Gestión de Usuarios",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-      </svg>
-    ),
+    title: "Gestión",
+    items: [
+      {
+        to: "/admin/usuarios",
+        label: "Usuarios",
+        perm: "usuarios",
+        icon: icon("M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"),
+      },
+      {
+        to: "/admin/conocimiento",
+        label: "Conocimiento",
+        perm: "conocimiento",
+        icon: icon("M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"),
+      },
+      {
+        to: "/admin/documentos",
+        label: "Documentos",
+        perm: "documentos",
+        icon: icon("M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"),
+      },
+    ],
   },
   {
-    to: "/admin/conocimiento",
-    label: "Admin. Conocimiento",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-      </svg>
-    ),
-  },
-  {
-    to: "/admin/siged",
-    label: "Integración SIGED",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v14a1 1 0 001 1z" />
-      </svg>
-    ),
+    title: "Sistema",
+    items: [
+      {
+        to: "/admin/siged",
+        label: "Integración SIGED",
+        perm: "siged",
+        icon: icon("M8 9l3 3-3 3m5 0h3M5 20h14a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v14a1 1 0 001 1z"),
+      },
+      {
+        to: "/admin/configuracion",
+        label: "Configuración",
+        perm: "configuracion",
+        icon: icon("M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"),
+      },
+      {
+        to: "/admin/reportes",
+        label: "Reportes",
+        perm: "reportes",
+        icon: icon("M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"),
+      },
+    ],
   },
 ];
 
 export default function AdminSidebar() {
+  const { can } = useAdmin();
+  const navRef = useRef(null);
+
+  function scrollNav(direction) {
+    navRef.current?.scrollBy({ left: direction * 220, behavior: "smooth" });
+  }
+
   return (
-    <aside className="w-60 bg-ink text-paper flex flex-col flex-shrink-0">
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-line">
-        <div className="w-8 h-8 bg-paper flex items-center justify-center flex-shrink-0">
-          <span className="text-ink font-bold text-xs tracking-wide">AP</span>
+    <aside className="w-64 bg-ink text-paper flex flex-col flex-shrink-0">
+      <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
+        <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg flex-shrink-0">
+          <span className="text-paper font-bold text-sm tracking-wide">AP</span>
         </div>
-        <span className="text-sm font-bold uppercase tracking-wide">ChatAP Admin</span>
+        <div className="leading-tight">
+          <div className="text-sm font-bold uppercase tracking-wide">ChatAP</div>
+          <div className="text-[10px] uppercase tracking-widest text-paper/60">Admin</div>
+        </div>
       </div>
 
-      <nav className="flex-1 py-4 px-3 space-y-1">
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.to === "/admin"}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-3 text-sm font-semibold uppercase tracking-wide no-underline transition-colors ${
-                isActive
-                  ? "bg-brand text-paper"
-                  : "text-white/90 hover:bg-[#333333]"
-              }`
-            }
+      <div className="relative flex flex-1 min-w-0 flex-col">
+        <div className="flex items-center justify-end gap-1 px-3 pt-3" aria-label="Desplazar opciones del panel">
+          <button
+            type="button"
+            onClick={() => scrollNav(-1)}
+            className="grid h-7 w-7 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
+            aria-label="Desplazar opciones hacia la izquierda"
           >
-            {link.icon}
-            {link.label}
-          </NavLink>
-        ))}
-      </nav>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollNav(1)}
+            className="grid h-7 w-7 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
+            aria-label="Desplazar opciones hacia la derecha"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        <nav ref={navRef} className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden scroll-smooth">
+          <div className="flex flex-row gap-6 px-3 py-5">
+          {sections.map((section) => {
+            const visible = section.items.filter((it) => can(it.perm));
+            if (!visible.length) return null;
+            return (
+              <div key={section.title} className="flex flex-col gap-1.5 flex-shrink-0">
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-paper/40 mb-1">
+                  {section.title}
+                </p>
+                <div className="flex flex-row gap-1.5">
+                  {visible.map((link) => (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      end={link.to === "/admin"}
+                      className={({ isActive }) =>
+                        `group flex items-center gap-1.5 px-2.5 py-2 text-xs font-medium rounded-md no-underline transition-all duration-200 whitespace-nowrap ${
+                          isActive
+                            ? "bg-brand-deep text-paper shadow-sm"
+                            : "text-paper/80 hover:bg-white/10 hover:text-paper"
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <span className={isActive ? "text-paper" : "text-paper/70 group-hover:text-paper"}>
+                            {link.icon}
+                          </span>
+                          <span className="truncate">{link.label}</span>
+                          {isActive && (
+                            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-paper/90 animate-pulse-dot" />
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          </div>
+        </nav>
+      </div>
 
-      <div className="px-5 py-4 border-t border-line">
+      <div className="px-5 py-4 border-t border-white/10">
         <NavLink
           to="/"
-          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-white/80 hover:text-white transition-colors no-underline"
+          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-paper/70 hover:text-paper transition-colors no-underline"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

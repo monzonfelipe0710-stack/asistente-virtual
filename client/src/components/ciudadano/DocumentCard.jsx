@@ -38,7 +38,7 @@ export default function DocumentCard({ document }) {
       </div>
 
       <button
-        className="flex-shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5"
+        className="flex-shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5"
         onClick={() => alert(`Descargando: ${document.title}`)}
       >
         Descargar

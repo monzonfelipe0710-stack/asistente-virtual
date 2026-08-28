@@ -35,7 +35,7 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg bg-gradient-to-r text-white text-sm font-medium animate-slide-up ${typeStyles[t.type] || typeStyles.success}`}
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg bg-gradient-to-r text-paper text-sm font-medium animate-slide-up ${typeStyles[t.type] || typeStyles.success}`}
           >
             {t.type === "success" && (
               <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,7 +55,7 @@ export function ToastProvider({ children }) {
             <span className="flex-1">{t.message}</span>
             <button
               onClick={() => removeToast(t.id)}
-              className="text-white/60 hover:text-white cursor-pointer"
+              className="text-paper/60 hover:text-paper cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

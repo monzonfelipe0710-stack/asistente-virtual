@@ -1,10 +1,10 @@
 export function TableSkeleton({ rows = 5, cols = 6 }) {
   return (
     <div className="card card-border overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-100">
+      <div className="px-4 py-3 border-b border-line">
         <div className="animate-shimmer h-9 rounded-lg" />
       </div>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-line">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="flex gap-4 px-4 py-3.5">
             {Array.from({ length: cols }).map((_, j) => (

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-ink: #222222;
   --color-paper: #ffffff;
@@ -15,6 +17,43 @@
   --color-warn: #B7791F;
   --color-bad: #C62828;
   --color-info: #007BC6;
+  --bot-body: #0a0a0c;
+  --bot-eye: #ffffff;
+
+  --color-primary: var(--color-brand);
+  --color-primary-dark: var(--color-brand-dark);
+  --color-primary-deep: var(--color-brand-deep);
+  --color-primary-light: #e6f2fa;
+  --color-primary-lighter: #f2f8fc;
+  --color-accent: var(--color-brand-deep);
+  --color-accent-light: #e6f2fa;
+}
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  --color-ink: #e7e9ee;
+  --color-paper: #0b0e14;
+  --color-mist: #14181f;
+  --color-soft: #0f131a;
+  --color-line: #232a35;
+  --color-muted: #9aa6b6;
+  --color-faint: #6b7480;
+  --color-brand: #38a8e0;
+  --color-brand-dark: #2a93c9;
+  --color-brand-deep: #1f7fb8;
+  --color-ok: #4caf50;
+  --color-warn: #d9933a;
+  --color-bad: #ef5350;
+  --color-info: #38a8e0;
+  --bot-body: #e7e9ee;
+  --bot-eye: #0a0a0c;
+  --color-primary-light: #10212e;
+  --color-primary-lighter: #0c1922;
+  --color-accent-light: #10212e;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -38,8 +77,215 @@
   50% { opacity: 0.45; }
 }
 
+@keyframes eq {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes mic-ripple {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
 @layer utilities {
   .animate-fade-up { animation: fade-up 0.35s ease-out both; }
   .animate-fade-in { animation: fade-in 0.5s ease-out both; }
   .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+  .mic-eq { display: inline-flex; align-items: center; gap: 2px; height: 16px; }
+  .mic-eq span {
+    width: 3px;
+    height: 100%;
+    background: currentColor;
+    border-radius: 9999px;
+    transform-origin: center;
+    animation: eq 0.9s ease-in-out infinite;
+  }
+  .mic-eq span:nth-child(2) { animation-delay: 0.15s; }
+  .mic-eq span:nth-child(3) { animation-delay: 0.3s; }
+  .mic-eq span:nth-child(4) { animation-delay: 0.45s; }
+  .mic-ripple { animation: mic-ripple 1.2s ease-out infinite; }
+
+  .animate-speak { animation: speak 0.9s ease-in-out infinite; }
 }
+
+@keyframes speak {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-2px) scale(1.03); }
+  50% { transform: translateY(0) scale(1); }
+  75% { transform: translateY(-1px) scale(1.02); }
+}
+
+@keyframes rx-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  40% { transform: rotate(-9deg); }
+  70% { transform: rotate(4deg); }
+}
+
+@keyframes rx-bounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-12%); }
+  55% { transform: translateY(0); }
+  75% { transform: translateY(-5%); }
+}
+
+@keyframes rx-squash {
+  0%, 100% { transform: scale(1, 1); }
+  45% { transform: scale(1.08, 0.84); }
+}
+
+@keyframes rx-stretch {
+  0%, 100% { transform: scale(1, 1); }
+  45% { transform: scale(0.92, 1.12); }
+}
+
+@layer utilities {
+  .rx-tilt { animation: rx-tilt 0.9s ease-in-out both; }
+  .rx-bounce { animation: rx-bounce 0.8s ease-in-out both; }
+  .rx-squash { animation: rx-squash 0.8s ease-in-out both; }
+  .rx-stretch { animation: rx-stretch 0.8s ease-in-out both; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scale-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.03) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+@layer components {
+  .card {
+    @apply bg-paper border border-line rounded-2xl shadow-sm;
+  }
+  .card-interactive {
+    @apply bg-paper border border-line rounded-2xl shadow-sm transition-all duration-200
+           hover:-translate-y-0.5 hover:shadow-md;
+  }
+  .card-border {
+    @apply border border-line rounded-2xl;
+  }
+  .input-field {
+    @apply w-full px-4 py-2.5 text-sm bg-paper border border-line rounded-xl text-ink
+           outline-none transition-colors placeholder:text-faint
+           focus:border-brand focus:ring-2 focus:ring-brand/15;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold
+           rounded-xl transition-all duration-200 select-none cursor-pointer;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold
+           rounded-xl transition-all duration-200 cursor-pointer bg-brand-deep text-paper
+           hover:bg-brand-dark hover:-translate-y-0.5 shadow-sm hover:shadow;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold
+           rounded-xl transition-all duration-200 cursor-pointer bg-transparent text-muted
+           border border-line hover:text-ink hover:bg-mist;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold
+           rounded-xl transition-all duration-200 cursor-pointer bg-bad text-paper hover:opacity-90;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full;
+  }
+  .table-row {
+    @apply transition-colors;
+  }
+  .sort-header {
+    @apply cursor-pointer select-none hover:text-ink;
+  }
+  .skeleton {
+    @apply rounded-md;
+    background: linear-gradient(90deg, var(--color-mist) 25%, var(--color-soft) 37%, var(--color-mist) 63%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite linear;
+  }
+}
+
+@layer utilities {
+  .animate-shimmer { animation: shimmer 1.4s infinite linear; }
+  .animate-scale-in { animation: scale-in 0.3s ease-out both; }
+  .animate-scale-out { animation: scale-out 0.2s ease-in both; }
+  .animate-fade-in { animation: fade-in 0.3s ease-out both; }
+  .animate-fade-out { animation: fade-out 0.2s ease-in both; }
+  .animate-slide-up { animation: slide-up 0.4s ease-out both; }
+  .animate-slide-down { animation: slide-down 0.25s ease-out both; }
+  .animate-bounce-in { animation: bounce-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-pulse-dot { animation: pulse-dot 1.2s ease-in-out infinite; }
+  .animate-page-enter { animation: fade-up 0.4s ease-out both; }
+  .animate-list-item { animation: slide-up 0.35s ease-out both; }
+  .stagger-children > * { animation: slide-up 0.4s ease-out both; }
+  .stagger-children > *:nth-child(1) { animation-delay: 0.04s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.08s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.12s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.16s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.20s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.24s; }
+  .stagger-children > *:nth-child(7) { animation-delay: 0.28s; }
+  .stagger-children > *:nth-child(8) { animation-delay: 0.32s; }
+
+  .animate-shake { animation: shake 0.4s ease-in-out; }
+  .row-new { animation: row-flash 1.8s ease-out; }
+  .dot-ping { animation: dot-ping 1.6s ease-out infinite; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes row-flash {
+  0% { background-color: color-mix(in srgb, var(--color-brand) 18%, transparent); }
+  100% { background-color: transparent; }
+}
+
+@keyframes dot-ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
