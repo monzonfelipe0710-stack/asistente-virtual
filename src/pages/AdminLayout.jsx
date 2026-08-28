@@ -60,6 +60,14 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen flex bg-soft">
       <AdminSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((open) => !open)} />
+      {sidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-ink/35 backdrop-blur-[1px] lg:hidden"
+          aria-label="Cerrar panel de navegación"
+        />
+      )}
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-paper border-b border-line h-16 flex items-center px-6 lg:px-8 sticky top-0 z-30">
