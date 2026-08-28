@@ -50,6 +50,7 @@ const POOLS = {
   thinking: ["thinking", "lookLeft", "lookRight", "lookAround", "blink", "tilt", "confus", "wink"],
   respond: ["attention", "bounce", "squash", "blink", "lookLeft", "wink"],
   error: ["error", "worried"],
+  concern: ["worried", "confus", "attention"],
 };
 
 const BASE_DURATION = {
@@ -112,7 +113,7 @@ export class BotReactionController {
   }
 
   /** Eventos que llegan desde ChatWindow. */
-  onEvent(type) {
+  onEvent(type, reaction = "worried") {
     switch (type) {
       case "userMessageSent":
         // El bot "percibe" la pregunta: una atención breve.
@@ -121,6 +122,11 @@ export class BotReactionController {
       case "botThinking":
         this.mode = "thinking";
         this.loop();
+        break;
+      case "botConcern":
+        this.mode = "idle";
+        this.emit(reaction);
+        this.schedule(() => this.loop(), this.durationFor(reaction));
         break;
       case "botResponding":
         this.mode = "respond";

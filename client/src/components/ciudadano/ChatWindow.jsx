@@ -70,11 +70,12 @@ export default function ChatWindow() {
     setTimeout(() => setPhase("chat"), 480);
   }
 
-  function addMessage(type, text) {
+  function addMessage(type, text, action = null) {
     const msg = {
       id: Date.now(),
       type,
       text,
+      action,
       timestamp: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, msg]);
@@ -91,8 +92,8 @@ export default function ChatWindow() {
       clearInterval(typeTimerRef.current);
 
       const response = findResponse(userText);
-      const id = addMessage("bot", response);
-      const long = response.length > 240;
+      const id = addMessage("bot", response.text, response.action);
+      const long = response.text.length > 240;
       const charStep = long ? 2 : 1;
       const charDelay = long ? 16 : 24;
 
@@ -102,6 +103,7 @@ export default function ChatWindow() {
       setTypedText("");
       // El bot "habla": reacción de respuesta (atención / movimiento positivo).
       controllerRef.current?.onEvent("botResponding");
+      if (response.reaction) controllerRef.current?.onEvent("botConcern", response.reaction);
 
       // Typewriter: el texto se escribe solo, fluido, mientras el avatar "habla".
       let i = 0;
@@ -111,8 +113,8 @@ export default function ChatWindow() {
           return;
         }
         i += charStep;
-        setTypedText(response.slice(0, i));
-        if (i >= response.length) {
+        setTypedText(response.text.slice(0, i));
+        if (i >= response.text.length) {
           clearInterval(typeTimerRef.current);
           // Pausa breve al terminar de escribir y luego vuelve a reposo.
           setTimeout(() => {
@@ -198,7 +200,6 @@ export default function ChatWindow() {
         /* noop */
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speechSupported]);
 
   function toggleMic() {
