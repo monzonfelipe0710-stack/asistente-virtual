@@ -221,7 +221,7 @@ export default function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full bg-paper">
-      <header className="flex items-center px-4 sm:px-6 h-14 border-b border-line">
+      <header className="flex items-center justify-end px-4 sm:px-6 h-14">
         <div
           role="button"
           tabIndex={0}
@@ -229,15 +229,15 @@ export default function ChatWindow() {
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") resetConversation();
           }}
-          className="group flex h-9 w-9 cursor-pointer items-center overflow-hidden rounded-xl border border-line text-muted transition-all duration-300 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="group flex h-9 w-9 cursor-pointer items-center justify-end overflow-hidden rounded-xl border border-line text-muted transition-all duration-300 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           aria-label="Nueva conversación"
         >
-          <span className="grid h-9 w-9 flex-shrink-0 place-items-center">
+          <span className="order-2 grid h-9 w-9 flex-shrink-0 place-items-center">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
             </svg>
           </span>
-          <span className="whitespace-nowrap pr-3 text-xs font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="order-1 whitespace-nowrap pl-3 text-xs font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
             Nueva conversación
           </span>
         </div>
