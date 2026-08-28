@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { sigedRecords, sigedStatuses } from "../../data/mockSiged";
+import { formatDate } from "../../utils/date";
 
 export default function SigedIntegration() {
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -92,7 +93,7 @@ export default function SigedIntegration() {
                   <td className="px-6 py-4 text-ink">{rec.applicant}</td>
                   <td className="px-6 py-4 text-xs text-muted">{rec.department}</td>
                   <td className="px-6 py-4 text-xs text-muted">
-                    {new Date(rec.date).toLocaleDateString("es-AR")}
+                    {formatDate(rec.date)}
                   </td>
                   <td className="px-6 py-4">
                     <span

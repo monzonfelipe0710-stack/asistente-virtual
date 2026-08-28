@@ -6,6 +6,7 @@ import Pagination, { usePagination } from "../common/Pagination";
 import EmptyState from "./EmptyState";
 import { TableSkeleton } from "./Skeleton";
 import useSortable from "../../hooks/useSortable";
+import { formatDate } from "../../utils/date";
 
 const emptyDoc = { title: "", description: "", category: "Formularios", format: "PDF", fileSize: "" };
 
@@ -42,7 +43,7 @@ export default function DocumentManager() {
       setLocalDocs((prev) => prev.map((d) => d.id === editDoc.id ? { ...d, ...form } : d));
       addToast("Documento actualizado", "success");
     } else {
-      setLocalDocs((prev) => [...prev, { id: Math.max(...prev.map((d) => d.id), 0) + 1, ...form, downloads: 0, updatedAt: new Date().toLocaleDateString("es-AR") }]);
+      setLocalDocs((prev) => [...prev, { id: Math.max(...prev.map((d) => d.id), 0) + 1, ...form, downloads: 0, updatedAt: formatDate(new Date()) }]);
       addToast("Documento creado", "success");
     }
     return true;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { sigedStatuses } from "../../data/mockSiged";
+import { formatDate } from "../../utils/date";
 
 export default function ExpedienteDetail({ expediente, onClose, onStatusChange }) {
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -42,7 +43,7 @@ export default function ExpedienteDetail({ expediente, onClose, onStatusChange }
             </div>
             <div>
               <p className="text-[10px] text-muted font-medium uppercase tracking-wider mb-0.5">Fecha</p>
-              <p className="text-xs font-medium text-ink m-0">{new Date(expediente.date).toLocaleDateString("es-AR")}</p>
+              <p className="text-xs font-medium text-ink m-0">{formatDate(expediente.date)}</p>
             </div>
           </div>
 

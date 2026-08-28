@@ -17,6 +17,7 @@ import {
   PriorityDot,
   EmptyState,
 } from "./ui";
+import { formatDate } from "../../utils/date";
 
 function Icon({ path }) {
   return (
@@ -216,7 +217,7 @@ export default function MesaDeEntrada() {
                     <td className="px-5 py-3">
                       <StatusPill status={it.estado} />
                     </td>
-                    <td className="px-5 py-3 text-muted whitespace-nowrap">{it.fecha}</td>
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">{formatDate(it.fecha)}</td>
                     <td className="px-5 py-3 text-right">
                       <button
                         className="text-xs font-semibold text-brand hover:underline"
@@ -266,7 +267,7 @@ function MesaFormModal({ onClose, onSubmit }) {
   const [closing, setClosing] = useState(false);
   const maxAsunto = 120;
   const previewId = peekNextMesaId();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatDate(new Date());
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -575,7 +576,7 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
           <Field label="Asunto" value={entry.asunto} />
           <Field label="Tipo" value={entry.tipo} />
           <Field label="Dependencia" value={entry.dependencia} />
-          <Field label="Fecha" value={entry.fecha} />
+          <Field label="Fecha" value={formatDate(entry.fecha)} />
           {entry.observaciones && (
             <div className="col-span-2">
               <Field label="Observaciones" value={entry.observaciones} />
