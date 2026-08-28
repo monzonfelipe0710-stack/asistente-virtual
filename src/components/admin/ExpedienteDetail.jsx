@@ -11,7 +11,7 @@ export default function ExpedienteDetail({ expediente, onClose, onStatusChange }
       <div className="card card-border w-full max-w-lg max-h-[85vh] overflow-y-auto animate-scale-in" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-accent to-primary-lighter rounded-xl flex items-center justify-center text-paper text-xs font-bold font-mono">
+            <div className="w-10 h-10 bg-linear-to-br from-accent to-primary-lighter rounded-xl flex items-center justify-center text-paper text-xs font-bold font-mono">
               {expediente.id.slice(-3)}
             </div>
             <div>
@@ -33,7 +33,7 @@ export default function ExpedienteDetail({ expediente, onClose, onStatusChange }
             <div>
               <p className="text-[10px] text-muted font-medium uppercase tracking-wider mb-0.5">Solicitante</p>
               <p className="text-xs font-medium text-ink m-0 flex items-center gap-1.5">
-                <span className="w-5 h-5 rounded-full bg-gradient-to-br from-muted to-muted flex items-center justify-center text-paper text-[8px] font-bold">{expediente.applicant.charAt(0)}</span>
+                <span className="w-5 h-5 rounded-full bg-linear-to-br from-muted to-muted flex items-center justify-center text-paper text-[8px] font-bold">{expediente.applicant.charAt(0)}</span>
                 {expediente.applicant}
               </p>
             </div>
@@ -69,12 +69,12 @@ export default function ExpedienteDetail({ expediente, onClose, onStatusChange }
             <p className="text-[10px] text-muted font-medium uppercase tracking-wider mb-2">Movimientos</p>
             <div className="relative ml-2 pl-6 border-l-2 border-line space-y-4">
               <div className="relative">
-                <div className="absolute -left-[25px] top-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-paper" />
+                <div className="absolute -left-6.25 top-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-paper" />
                 <p className="text-xs font-medium text-ink m-0">{expediente.status}</p>
                 <p className="text-[10px] text-muted m-0">{expediente.lastMovement}</p>
               </div>
               <div className="relative">
-                <div className="absolute -left-[25px] top-0 w-3 h-3 rounded-full bg-blue-500 ring-2 ring-paper" />
+                <div className="absolute -left-6.25 top-0 w-3 h-3 rounded-full bg-blue-500 ring-2 ring-paper" />
                 <p className="text-xs font-medium text-ink m-0">Ingresado</p>
                 <p className="text-[10px] text-muted m-0">Ingresado por Mesa de Entradas</p>
               </div>

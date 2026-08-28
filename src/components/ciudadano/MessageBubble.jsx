@@ -36,7 +36,7 @@ export default function MessageBubble({ message, speaking = false, typedText = "
           <p className="m-0 whitespace-pre-wrap">
             {shown}
             {typing && (
-              <span className="inline-block w-[2px] h-[1.05em] -mb-[2px] ml-0.5 bg-brand-deep align-middle animate-pulse-soft" />
+              <span className="inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 bg-brand-deep align-middle animate-pulse-soft" />
             )}
           </p>
         </div>

@@ -135,7 +135,7 @@ export default function MesaDeEntrada() {
 
       <div className="card p-5">
         <div className="flex flex-wrap gap-3 mb-4">
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative flex-1 min-w-55">
             <svg className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 110-16 8 8 0 010 16z" />
             </svg>
@@ -204,7 +204,7 @@ export default function MesaDeEntrada() {
                     <td className="px-5 py-3 font-mono text-xs text-muted">{it.id}</td>
                     <td className="px-5 py-3">
                       <div className="font-semibold text-ink">{it.solicitante}</div>
-                      <div className="text-xs text-faint truncate max-w-[200px]">{it.asunto}</div>
+                      <div className="text-xs text-faint truncate max-w-50">{it.asunto}</div>
                     </td>
                     <td className="px-5 py-3 text-muted">{it.tipo}</td>
                     <td className="px-5 py-3 text-muted">{it.dependencia}</td>
@@ -325,7 +325,7 @@ function MesaFormModal({ onClose, onSubmit }) {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 ${closing ? "animate-fade-out" : "animate-fade-in"}`}>
-      <div className={`card w-full max-w-[820px] p-0 ${closing ? "animate-scale-out" : "animate-scale-in"} shadow-2xl ${shake ? "animate-shake" : ""}`}>
+      <div className={`card w-full max-w-205 p-0 ${closing ? "animate-scale-out" : "animate-scale-in"} shadow-2xl ${shake ? "animate-shake" : ""}`}>
         <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line">
           <div className="flex items-center gap-2.5">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 text-brand">
@@ -473,7 +473,7 @@ function MesaFormModal({ onClose, onSubmit }) {
             </label>
             <textarea
               ref={textareaRef}
-              className="input-field min-h-[52px] resize-none leading-relaxed"
+              className="input-field min-h-13 resize-none leading-relaxed"
               style={{ overflowY: "hidden", transition: "height 0.2s ease-out" }}
               value={form.observaciones}
               onChange={(e) => update("observaciones", e.target.value)}
@@ -511,7 +511,7 @@ function MesaFormModal({ onClose, onSubmit }) {
               <ul className="mt-1.5 space-y-1">
                 {adjuntos.map((f, i) => (
                   <li key={i} className="flex items-center gap-2 text-[11px] text-muted bg-mist rounded-lg px-2.5 py-1.5 border border-line">
-                    <svg className="w-3.5 h-3.5 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span className="truncate flex-1 font-medium text-ink">{f.name}</span>
@@ -527,10 +527,10 @@ function MesaFormModal({ onClose, onSubmit }) {
           </div>
 
           <div className="col-span-2 flex items-center justify-end gap-2 pt-1">
-            <button type="button" onClick={handleClose} className="btn-ghost !py-1.5 !px-3 !text-xs">
+            <button type="button" onClick={handleClose} className="btn-ghost py-1.5! px-3! text-xs!">
               Cancelar
             </button>
-            <button type="submit" className="btn-primary !py-1.5 !px-3 !text-xs">
+            <button type="submit" className="btn-primary py-1.5! px-3! text-xs!">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -653,7 +653,7 @@ function Field({ label, value }) {
   return (
     <div>
       <dt className="text-[10px] uppercase tracking-widest text-faint">{label}</dt>
-      <dd className="text-ink font-medium mt-0.5 break-words">{value}</dd>
+      <dd className="text-ink font-medium mt-0.5 wrap-break-word">{value}</dd>
     </div>
   );
 }

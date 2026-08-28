@@ -169,7 +169,7 @@ function DocumentFormModal({ editDoc, form, onChange, onClose, onSave }) {
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 ${closing ? "animate-fade-out" : "animate-fade-in"}`}>
-      <div className={`card w-full max-w-[820px] p-0 shadow-2xl ${closing ? "animate-scale-out" : "animate-scale-in"}`}>
+      <div className={`card w-full max-w-205 p-0 shadow-2xl ${closing ? "animate-scale-out" : "animate-scale-in"}`}>
         <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line">
           <div className="flex items-center gap-2.5">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 text-brand">
@@ -197,7 +197,7 @@ function DocumentFormModal({ editDoc, form, onChange, onClose, onSave }) {
           </div>
           <div className="col-span-2">
             <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Descripción</label>
-            <textarea value={form.description} onChange={(e) => onChange({ ...form, description: e.target.value })} className="input-field min-h-[80px] resize-y" placeholder="Breve descripción del documento..." />
+            <textarea value={form.description} onChange={(e) => onChange({ ...form, description: e.target.value })} className="input-field min-h-20 resize-y" placeholder="Breve descripción del documento..." />
           </div>
           <div>
             <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Categoría</label>
@@ -216,8 +216,8 @@ function DocumentFormModal({ editDoc, form, onChange, onClose, onSave }) {
             <input value={form.fileSize} onChange={(e) => onChange({ ...form, fileSize: e.target.value })} className="input-field" placeholder="Ej: 245 KB" />
           </div>
           <div className="col-span-2 flex items-center justify-end gap-2 pt-1">
-            <button type="button" onClick={handleClose} className="btn-ghost !py-1.5 !px-3 !text-xs">Cancelar</button>
-            <button type="submit" className="btn-primary !py-1.5 !px-3 !text-xs">
+            <button type="button" onClick={handleClose} className="btn-ghost py-1.5! px-3! text-xs!">Cancelar</button>
+            <button type="submit" className="btn-primary py-1.5! px-3! text-xs!">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
