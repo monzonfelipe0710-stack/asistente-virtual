@@ -1,17 +1,17 @@
 export default function DocumentCard({ document }) {
   const formatIcons = {
     PDF: (
-      <div className="w-10 h-10 bg-brand flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 bg-brand flex items-center justify-center shrink-0">
         <span className="text-paper font-bold text-[10px] tracking-wide">PDF</span>
       </div>
     ),
     DOCX: (
-      <div className="w-10 h-10 bg-brand flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 bg-brand flex items-center justify-center shrink-0">
         <span className="text-paper font-bold text-[10px] tracking-wide">DOC</span>
       </div>
     ),
     XLSX: (
-      <div className="w-10 h-10 bg-ok flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 bg-ok flex items-center justify-center shrink-0">
         <span className="text-paper font-bold text-[10px] tracking-wide">XLS</span>
       </div>
     ),
@@ -38,7 +38,7 @@ export default function DocumentCard({ document }) {
       </div>
 
       <button
-        className="flex-shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5"
+        className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5"
         onClick={() => alert(`Descargando: ${document.title}`)}
       >
         Descargar

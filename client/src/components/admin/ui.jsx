@@ -59,7 +59,7 @@ export function StatCard({ label, value, icon, tone = "brand", hint, delay = 0 }
           {hint && <p className="text-xs text-faint mt-1.5 m-0">{hint}</p>}
         </div>
         {icon && (
-          <div className={`w-11 h-11 rounded-xl grid place-items-center flex-shrink-0 ${TONES[tone] || TONES.brand}`}>
+          <div className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${TONES[tone] || TONES.brand}`}>
             {icon}
           </div>
         )}

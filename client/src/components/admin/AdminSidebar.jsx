@@ -77,9 +77,9 @@ export default function AdminSidebar({ open, onToggle }) {
   const { can } = useAdmin();
 
   return (
-    <aside className={`${open ? "translate-x-0 lg:w-64" : "-translate-x-full lg:translate-x-0 lg:w-0"} fixed inset-y-0 left-0 z-40 h-screen w-64 bg-ink text-paper flex flex-col flex-shrink-0 overflow-hidden transition-[width,transform] duration-300 ease-in-out lg:sticky lg:top-0`}>
+    <aside className={`${open ? "translate-x-0 lg:w-64" : "-translate-x-full lg:translate-x-0 lg:w-0"} fixed inset-y-0 left-0 z-40 h-screen w-64 bg-ink text-paper flex flex-col shrink-0 overflow-hidden transition-[width,transform] duration-300 ease-in-out lg:sticky lg:top-0`}>
       <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-        <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg flex-shrink-0">
+        <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg shrink-0">
           <span className="text-paper font-bold text-sm tracking-wide">AP</span>
         </div>
         <div className="leading-tight min-w-0">
@@ -89,7 +89,7 @@ export default function AdminSidebar({ open, onToggle }) {
         <button
           type="button"
           onClick={onToggle}
-          className="ml-auto grid h-8 w-8 flex-shrink-0 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
+          className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
           aria-label="Ocultar panel de navegación"
           aria-expanded={open}
         >

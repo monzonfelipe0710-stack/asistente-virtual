@@ -20,11 +20,11 @@ export default function ContactoPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-soft to-mist/50">
+      <div className="min-h-screen flex flex-col bg-linear-to-br from-soft to-mist/50">
         <Navbar />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="card card-border p-8 max-w-md w-full text-center animate-scale-in">
-            <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200/50 animate-bounce-in">
+            <div className="w-14 h-14 bg-linear-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200/50 animate-bounce-in">
               <svg className="w-7 h-7 text-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -42,11 +42,11 @@ export default function ContactoPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-soft to-mist/50">
+    <div className="min-h-screen flex flex-col bg-linear-to-br from-soft to-mist/50">
       <Navbar />
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 animate-page-enter">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-sm animate-bounce-in">
+          <div className="w-8 h-8 bg-linear-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-sm animate-bounce-in">
             <svg className="w-4 h-4 text-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>

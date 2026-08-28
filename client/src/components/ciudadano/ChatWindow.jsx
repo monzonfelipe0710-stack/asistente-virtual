@@ -232,7 +232,7 @@ export default function ChatWindow() {
           className="group flex h-9 w-9 cursor-pointer items-center justify-end overflow-hidden rounded-xl border border-line text-muted transition-all duration-300 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           aria-label="Nueva conversación"
         >
-          <span className="order-2 grid h-9 w-9 flex-shrink-0 place-items-center">
+          <span className="order-2 grid h-9 w-9 shrink-0 place-items-center">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
             </svg>
