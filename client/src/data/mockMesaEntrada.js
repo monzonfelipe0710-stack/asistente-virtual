@@ -1,3 +1,5 @@
+import { formatDate } from "../utils/date";
+
 // Datos de ejemplo para el módulo "Mesa de Entradas".
 // Un ingreso representa un trámite/expediente registrado en la mesa de entrada.
 
@@ -68,7 +70,7 @@ export function createMesaEntrada(data) {
   return {
     id: nextId(),
     estado: "Ingresado",
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: formatDate(new Date()),
     solicitante: data.solicitante?.trim() || "Sin especificar",
     tipo: data.tipo || "Solicitud",
     dependencia: data.dependencia || "Mesa de Entradas",
