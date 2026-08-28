@@ -37,7 +37,7 @@ export default function DocumentManager() {
   }
 
   function handleSave() {
-    if (!form.title.trim()) { addToast("El título es requerido", "error"); return; }
+    if (!form.title.trim()) { addToast("El título es requerido", "error"); return false; }
     if (editDoc) {
       setLocalDocs((prev) => prev.map((d) => d.id === editDoc.id ? { ...d, ...form } : d));
       addToast("Documento actualizado", "success");
@@ -45,8 +45,7 @@ export default function DocumentManager() {
       setLocalDocs((prev) => [...prev, { id: Math.max(...prev.map((d) => d.id), 0) + 1, ...form, downloads: 0, updatedAt: new Date().toLocaleDateString("es-AR") }]);
       addToast("Documento creado", "success");
     }
-    setFormOpen(false);
-    setEditDoc(null);
+    return true;
   }
 
   function confirmDelete() {
@@ -134,40 +133,98 @@ export default function DocumentManager() {
         <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      <Modal open={formOpen} onClose={() => { setFormOpen(false); setEditDoc(null); }} title={editDoc ? "Editar documento" : "Nuevo documento"} onConfirm={handleSave} confirmText={editDoc ? "Guardar cambios" : "Crear documento"}>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-muted mb-1 block">Título *</label>
-            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input-field" placeholder="Nombre del documento" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted mb-1 block">Descripción</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input-field min-h-[80px] resize-y" placeholder="Breve descripción del documento..." />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted mb-1 block">Categoría</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="input-field">
-                {documentCategories.filter((c) => c !== "Todos").map((c) => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted mb-1 block">Formato</label>
-              <select value={form.format} onChange={(e) => setForm({ ...form, format: e.target.value })} className="input-field">
-                {documentFormats.map((f) => <option key={f}>{f}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted mb-1 block">Tamaño</label>
-              <input value={form.fileSize} onChange={(e) => setForm({ ...form, fileSize: e.target.value })} className="input-field" placeholder="Ej: 245 KB" />
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {formOpen && (
+        <DocumentFormModal
+          editDoc={editDoc}
+          form={form}
+          onChange={setForm}
+          onClose={() => { setFormOpen(false); setEditDoc(null); }}
+          onSave={handleSave}
+        />
+      )}
 
       <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} onConfirm={confirmDelete} title="Eliminar documento" confirmText="Eliminar" confirmDanger>
         <p className="text-sm text-muted m-0">¿Estás seguro de eliminar este documento de la biblioteca?</p>
       </Modal>
+    </div>
+  );
+}
+
+function DocumentFormModal({ editDoc, form, onChange, onClose, onSave }) {
+  const [closing, setClosing] = useState(false);
+
+  function handleClose() {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(onClose, 220);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (!onSave()) return;
+    setClosing(true);
+    setTimeout(onClose, 220);
+  }
+
+  return (
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 ${closing ? "animate-fade-out" : "animate-fade-in"}`}>
+      <div className={`card w-full max-w-[820px] p-0 shadow-2xl ${closing ? "animate-scale-out" : "animate-scale-in"}`}>
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 text-brand">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 5a2 2 0 012-2h8.586a1 1 0 01.707.293l4.414 4.414A1 1 0 0120 8.414V19a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14 3v5h5M8 13h8M8 17h5" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-ink m-0 leading-tight">{editDoc ? "Editar documento" : "Nuevo documento"}</h2>
+              <p className="text-[10px] text-muted mt-0.5 m-0">Completá los datos del documento</p>
+            </div>
+          </div>
+          <button className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink hover:bg-mist transition-colors" onClick={handleClose} aria-label="Cerrar">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form className="p-4 grid grid-cols-2 gap-x-4 gap-y-3" onSubmit={handleSubmit}>
+          <div className="col-span-2">
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Título *</label>
+            <input value={form.title} onChange={(e) => onChange({ ...form, title: e.target.value })} className="input-field" placeholder="Nombre del documento" autoFocus />
+          </div>
+          <div className="col-span-2">
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Descripción</label>
+            <textarea value={form.description} onChange={(e) => onChange({ ...form, description: e.target.value })} className="input-field min-h-[80px] resize-y" placeholder="Breve descripción del documento..." />
+          </div>
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Categoría</label>
+            <select value={form.category} onChange={(e) => onChange({ ...form, category: e.target.value })} className="input-field">
+              {documentCategories.filter((c) => c !== "Todos").map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Formato</label>
+            <select value={form.format} onChange={(e) => onChange({ ...form, format: e.target.value })} className="input-field">
+              {documentFormats.map((f) => <option key={f}>{f}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">Tamaño</label>
+            <input value={form.fileSize} onChange={(e) => onChange({ ...form, fileSize: e.target.value })} className="input-field" placeholder="Ej: 245 KB" />
+          </div>
+          <div className="col-span-2 flex items-center justify-end gap-2 pt-1">
+            <button type="button" onClick={handleClose} className="btn-ghost !py-1.5 !px-3 !text-xs">Cancelar</button>
+            <button type="submit" className="btn-primary !py-1.5 !px-3 !text-xs">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {editDoc ? "Guardar cambios" : "Crear documento"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
