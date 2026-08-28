@@ -19,46 +19,46 @@ function PageFallback() {
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<CiudadanoPage />} />
-          <Route
-            path="/contacto"
-            element={
-              <Suspense fallback={<PageFallback />}>
-                <ContactoPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <AdminProvider>
+      <AdminProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<CiudadanoPage />} />
+            <Route
+              path="/contacto"
+              element={
+                <Suspense fallback={<PageFallback />}>
+                  <ContactoPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
                 <Suspense fallback={<PageFallback />}>
                   <AdminLayout />
                 </Suspense>
-              </AdminProvider>
-            }
-          >
-            <Route index element={<Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense>} />
-            <Route path="usuarios" element={<Suspense fallback={<PageFallback />}><UserTable /></Suspense>} />
-            <Route path="mesa-de-entrada" element={<Suspense fallback={<PageFallback />}><MesaDeEntrada /></Suspense>} />
-            <Route path="conocimiento" element={<Suspense fallback={<PageFallback />}><KnowledgeManager /></Suspense>} />
-            <Route path="siged" element={<Suspense fallback={<PageFallback />}><SigedIntegration /></Suspense>} />
-            <Route path="documentos" element={<Suspense fallback={<PageFallback />}><DocumentManager /></Suspense>} />
-            <Route path="configuracion" element={<Suspense fallback={<PageFallback />}><ChatbotSettings /></Suspense>} />
-            <Route path="reportes" element={<Suspense fallback={<PageFallback />}><ReportsPage /></Suspense>} />
-          </Route>
-          <Route
-            path="*"
-            element={
-              <Suspense fallback={<PageFallback />}>
-                <NotFoundPage />
-              </Suspense>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
+              }
+            >
+              <Route index element={<Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense>} />
+              <Route path="usuarios" element={<Suspense fallback={<PageFallback />}><UserTable /></Suspense>} />
+              <Route path="mesa-de-entrada" element={<Suspense fallback={<PageFallback />}><MesaDeEntrada /></Suspense>} />
+              <Route path="conocimiento" element={<Suspense fallback={<PageFallback />}><KnowledgeManager /></Suspense>} />
+              <Route path="siged" element={<Suspense fallback={<PageFallback />}><SigedIntegration /></Suspense>} />
+              <Route path="documentos" element={<Suspense fallback={<PageFallback />}><DocumentManager /></Suspense>} />
+              <Route path="configuracion" element={<Suspense fallback={<PageFallback />}><ChatbotSettings /></Suspense>} />
+              <Route path="reportes" element={<Suspense fallback={<PageFallback />}><ReportsPage /></Suspense>} />
+            </Route>
+            <Route
+              path="*"
+              element={
+                <Suspense fallback={<PageFallback />}>
+                  <NotFoundPage />
+                </Suspense>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AdminProvider>
     </ToastProvider>
   );
 }

@@ -1,18 +1,7 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import { useAdmin, ROLES } from "../context/AdminContext";
-
-const BREADCRUMBS = {
-  "/admin": "Panel general",
-  "/admin/usuarios": "Usuarios",
-  "/admin/mesa-de-entrada": "Mesa de Entradas",
-  "/admin/conocimiento": "Conocimiento",
-  "/admin/documentos": "Documentos",
-  "/admin/siged": "Integración SIGED",
-  "/admin/configuracion": "Configuración",
-  "/admin/reportes": "Reportes",
-};
 
 function ThemeToggle() {
   const [dark, setDark] = useState(
@@ -53,8 +42,6 @@ function ThemeToggle() {
 
 export default function AdminLayout() {
   const { role, setRole } = useAdmin();
-  const location = useLocation();
-  const crumb = BREADCRUMBS[location.pathname] || "Panel";
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
@@ -63,41 +50,35 @@ export default function AdminLayout() {
       {sidebarOpen && (
         <button
           type="button"
+          aria-label="Cerrar menú"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-ink/35 backdrop-blur-[1px] lg:hidden"
-          aria-label="Cerrar panel de navegación"
+          className="fixed inset-0 z-30 bg-ink/35 lg:hidden"
         />
       )}
+      {!sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Abrir panel lateral"
+          aria-expanded="false"
+          onClick={() => setSidebarOpen(true)}
+          title="Mostrar navegación de ChatAP"
+          className="fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-mist text-muted shadow-sm transition-colors hover:bg-paper hover:text-ink lg:hidden"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      )}
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-paper border-b border-line h-16 flex items-center px-6 lg:px-8 sticky top-0 z-30">
-          <div className="flex items-center gap-3 min-w-0">
-            {!sidebarOpen && (
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="w-9 h-9 grid place-items-center rounded-lg border border-line text-muted hover:text-ink hover:bg-mist transition-colors"
-                aria-label="Mostrar panel de navegación"
-                aria-expanded={sidebarOpen}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            )}
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold uppercase tracking-wide text-ink m-0 leading-tight truncate">
-                Acceso Interno
-              </h1>
-              <nav className="flex items-center gap-1.5 text-[11px] text-muted m-0 leading-tight truncate" aria-label="Migas de pan">
-                <span>Panel</span>
-                <span className="text-faint">/</span>
-                <span className="text-brand-deep font-semibold">{crumb}</span>
-              </nav>
-            </div>
+      <div
+        className="admin-content flex-1 flex flex-col min-w-0"
+      >
+        <header className="bg-paper/95 backdrop-blur border-b border-line h-16 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
+          <div className="hidden sm:block">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">ChatAP</p>
+            <p className="mt-0.5 text-xs text-faint">Centro de operaciones</p>
           </div>
-
-          <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <label className="hidden sm:flex items-center gap-2 text-xs text-muted">
               Rol:
               <select
@@ -117,7 +98,7 @@ export default function AdminLayout() {
         </header>
 
         <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-          <div key={location.pathname} className="animate-page-enter">
+          <div className="animate-page-enter">
             <Outlet />
           </div>
         </main>

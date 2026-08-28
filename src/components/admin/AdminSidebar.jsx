@@ -1,8 +1,8 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAdmin } from "../../context/AdminContext";
 
 const icon = (path) => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={path} />
   </svg>
 );
@@ -55,7 +55,7 @@ const sections = [
         to: "/admin/siged",
         label: "Integración SIGED",
         perm: "siged",
-        icon: icon("M8 9l3 3-3 3m5 0h3M5 20h14a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v14a1 1 0 001 1z"),
+        icon: icon("M8 9l3 3-3 3m5 0h3M5 20h14a1 1 0 001-1V5a2 2 0 00-1-1H5a2 2 0 00-1 1v14a2 2 0 001 1z"),
       },
       {
         to: "/admin/configuracion",
@@ -75,85 +75,108 @@ const sections = [
 
 export default function AdminSidebar({ open, onToggle }) {
   const { can } = useAdmin();
+  const location = useLocation();
 
   return (
-    <aside className={`${open ? "translate-x-0 lg:w-64" : "-translate-x-full lg:translate-x-0 lg:w-0"} fixed inset-y-0 left-0 z-40 h-screen w-64 bg-ink text-paper flex flex-col shrink-0 overflow-hidden transition-[width,transform] duration-300 ease-in-out lg:sticky lg:top-0`}>
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
-        <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg shrink-0">
+    <aside
+      className={[
+        "fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-hidden border-r border-line bg-mist text-ink shadow-[8px_0_24px_rgba(15,23,42,0.06)] transition-[width,transform,box-shadow] duration-300 ease-out motion-reduce:transition-none lg:sticky lg:top-0",
+        open ? "w-65 translate-x-0" : "w-18 -translate-x-full lg:translate-x-0",
+      ].join(" ")}
+    >
+      <div className="flex h-18 items-center justify-between gap-2 border-b border-line px-2.5">
+        <div className={open ? "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-ink shadow-[0_0_0_4px_rgba(0,123,198,0.12)]" : "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-ink"}>
           <span className="text-paper font-bold text-sm tracking-wide">AP</span>
         </div>
-        <div className="leading-tight min-w-0">
-          <div className="text-sm font-bold uppercase tracking-wide">ChatAP</div>
-          <div className="text-[10px] uppercase tracking-widest text-paper/60">Admin</div>
+        <div className={`min-w-0 flex-1 overflow-hidden transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${open ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0"}`}>
+          <span className="block text-sm font-bold tracking-wide truncate">ChatAP</span>
+          <span className="block mt-0.5 text-[10px] uppercase tracking-[0.16em] text-muted truncate">Área interna</span>
         </div>
         <button
           type="button"
           onClick={onToggle}
-          className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
-          aria-label="Ocultar panel de navegación"
+          className="h-8 w-8 flex items-center justify-center rounded-lg text-muted transition-colors hover:bg-paper hover:text-ink shrink-0"
+          aria-label={open ? "Colapsar panel" : "Expandir panel"}
           aria-expanded={open}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 6l-6 6 6 6" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={open ? "M11 19l-7-7 7-7m8 14l-7-7 7-7" : "M4 6h16M4 12h16M4 18h16"} />
           </svg>
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-3 py-5">
-        <div className="flex flex-col gap-6">
-          {sections.map((section) => {
-            const visible = section.items.filter((it) => can(it.perm));
-            if (!visible.length) return null;
-            return (
-              <div key={section.title} className="flex flex-col gap-1.5">
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-paper/40 mb-1">
-                  {section.title}
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {visible.map((link) => (
+      <nav className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-3 py-5 space-y-6">
+        {sections.map((section) => {
+          const visible = section.items.filter((it) => can(it.perm));
+          if (!visible.length) return null;
+          return (
+            <div key={section.title} className="flex flex-col gap-1.5">
+              <p className={`h-4 overflow-hidden px-2 text-[10px] font-semibold uppercase tracking-widest text-muted transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${open ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0"}`}>
+                {section.title}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {visible.map((link) => {
+                  const isActive = location.pathname === link.to || (link.to !== "/admin" && location.pathname.startsWith(link.to));
+                  return (
                     <NavLink
                       key={link.to}
                       to={link.to}
                       end={link.to === "/admin"}
-                      className={({ isActive }) =>
-                          `group flex w-full items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-md no-underline transition-all duration-200 whitespace-nowrap ${
-                          isActive
-                            ? "bg-brand-deep text-paper shadow-sm"
-                            : "text-paper/80 hover:bg-white/10 hover:text-paper"
-                        }`
-                      }
+                      onClick={() => !open && onToggle()}
+                      className={({ isActive: routerActive }) => {
+                        const active = routerActive || isActive;
+                        return `group relative flex items-center px-3 py-2.5 text-sm font-medium rounded-xl no-underline transition-all duration-200 ${
+                          active
+                            ? "bg-brand-deep text-paper shadow-sm ring-1 ring-brand/40"
+                            : open
+                            ? "text-ink/75 hover:bg-paper hover:text-ink"
+                            : "justify-center text-muted hover:bg-paper hover:text-ink"
+                        }`;
+                      }}
+                      title={open ? undefined : link.label}
                     >
-                      {({ isActive }) => (
-                        <>
-                          <span className={isActive ? "text-paper" : "text-paper/70 group-hover:text-paper"}>
-                            {link.icon}
-                          </span>
-                          <span className="truncate">{link.label}</span>
-                          {isActive && (
-                            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-paper/90 animate-pulse-dot" />
-                          )}
-                        </>
-                      )}
+                      {({ isActive: routerActive }) => {
+                        const active = routerActive || isActive;
+                        return (
+                          <>
+                            <span className={active ? "text-paper" : "text-muted group-hover:text-ink transition-colors"}>
+                              {link.icon}
+                            </span>
+                            <span className={`truncate transition-[max-width,margin,opacity,transform] duration-200 ease-out motion-reduce:transition-none ${open ? "ml-3 max-w-45 translate-x-0 opacity-100" : "ml-0 max-w-0 -translate-x-2 opacity-0"}`}>{link.label}</span>
+                            {active && <span className="absolute right-2 w-1.5 h-1.5 rounded-full bg-paper/90 animate-pulse-dot" />}
+                          </>
+                        );
+                      }}
                     </NavLink>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
+
+        <div className="pt-4 border-t border-line">
+          <NavLink
+            to="/"
+            onClick={() => !open && onToggle()}
+            className={({ isActive }) =>
+              `flex items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-wide rounded-lg no-underline transition-colors ${
+                open
+                  ? isActive
+                    ? "bg-brand-deep text-paper ring-1 ring-brand/40"
+                    : "text-ink/70 hover:bg-paper hover:text-ink"
+                  : "justify-center text-muted hover:bg-paper hover:text-ink"
+              }`
+            }
+            title={open ? undefined : "Volver al Chat"}
+          >
+            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className={`truncate transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${open ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0"}`}>Volver al Chat</span>
+          </NavLink>
         </div>
       </nav>
-
-      <div className="px-5 py-4 border-t border-white/10">
-        <NavLink
-          to="/"
-          className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-paper/70 hover:text-paper transition-colors no-underline"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Volver al Chat
-        </NavLink>
-      </div>
     </aside>
   );
 }
