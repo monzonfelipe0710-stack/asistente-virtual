@@ -221,13 +221,7 @@ export default function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full bg-paper">
-      <header className="flex items-center justify-between px-4 sm:px-6 h-14 border-b border-line">
-        <div className="flex items-center gap-2">
-          <ChatBotAvatar reaction={reaction} size={32} speaking={!!speakingId} />
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink">
-            ChatAP
-          </span>
-        </div>
+      <header className="flex items-center px-4 sm:px-6 h-14 border-b border-line">
         <div
           role="button"
           tabIndex={0}
