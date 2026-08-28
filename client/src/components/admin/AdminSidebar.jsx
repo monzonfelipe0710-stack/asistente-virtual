@@ -73,19 +73,30 @@ const sections = [
   },
 ];
 
-export default function AdminSidebar({ open }) {
+export default function AdminSidebar({ open, onToggle }) {
   const { can } = useAdmin();
 
   return (
     <aside className={`${open ? "w-64" : "w-0"} bg-ink text-paper flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out`}>
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-white/10">
+      <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10">
         <div className="w-9 h-9 bg-brand-deep flex items-center justify-center rounded-lg flex-shrink-0">
           <span className="text-paper font-bold text-sm tracking-wide">AP</span>
         </div>
-        <div className="leading-tight">
+        <div className="leading-tight min-w-0">
           <div className="text-sm font-bold uppercase tracking-wide">ChatAP</div>
           <div className="text-[10px] uppercase tracking-widest text-paper/60">Admin</div>
         </div>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="ml-auto grid h-8 w-8 flex-shrink-0 place-items-center rounded-md text-paper/60 transition-colors hover:bg-white/10 hover:text-paper"
+          aria-label="Ocultar panel de navegación"
+          aria-expanded={open}
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 6l-6 6 6 6" />
+          </svg>
+        </button>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-3 py-5">
