@@ -69,12 +69,12 @@ export default function ExpedienteDetail({ expediente, onClose, onStatusChange }
             <p className="text-[10px] text-muted font-medium uppercase tracking-wider mb-2">Movimientos</p>
             <div className="relative ml-2 pl-6 border-l-2 border-line space-y-4">
               <div className="relative">
-                <div className="absolute -left-6.25 top-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-paper" />
+                <div className="absolute -left-6.25 top-0 w-3 h-3 rounded-full bg-ok ring-2 ring-paper" />
                 <p className="text-xs font-medium text-ink m-0">{expediente.status}</p>
                 <p className="text-[10px] text-muted m-0">{expediente.lastMovement}</p>
               </div>
               <div className="relative">
-                <div className="absolute -left-6.25 top-0 w-3 h-3 rounded-full bg-blue-500 ring-2 ring-paper" />
+                <div className="absolute -left-6.25 top-0 w-3 h-3 rounded-full bg-info ring-2 ring-paper" />
                 <p className="text-xs font-medium text-ink m-0">Ingresado</p>
                 <p className="text-[10px] text-muted m-0">Ingresado por Mesa de Entradas</p>
               </div>
@@ -87,6 +87,6 @@ export default function ExpedienteDetail({ expediente, onClose, onStatusChange }
 }
 
 function StatusBadge({ status, size = "sm" }) {
-  const colors = { Ingresado: "bg-blue-50 text-blue-700 border-blue-200/60", "En proceso": "bg-amber-50 text-amber-700 border-amber-200/60", Observado: "bg-red-50 text-red-700 border-red-200/60", Finalizado: "bg-emerald-50 text-emerald-700 border-emerald-200/60" };
+  const colors = { Ingresado: "bg-info/10 text-info border-info/20", "En proceso": "bg-warn/10 text-warn border-warn/20", Observado: "bg-bad/10 text-bad border-bad/20", Finalizado: "bg-ok/10 text-ok border-ok/20" };
   return <span className={`inline-block px-2.5 py-0.5 font-semibold rounded-lg border ${colors[status] || "bg-mist text-muted border-line/60"} ${size === "md" ? "text-xs" : "text-[10px]"}`}>{status}</span>;
 }
