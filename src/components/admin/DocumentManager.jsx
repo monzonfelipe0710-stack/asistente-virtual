@@ -55,7 +55,7 @@ export default function DocumentManager() {
     addToast("Documento eliminado", "info");
   }
 
-  const formatColors = { PDF: "bg-red-50 text-red-600", DOCX: "bg-blue-50 text-blue-600", XLSX: "bg-emerald-50 text-emerald-600" };
+  const formatColors = { PDF: "bg-bad/10 text-bad", DOCX: "bg-info/10 text-info", XLSX: "bg-ok/10 text-ok" };
 
   const catCounts = { Todos: localDocs.length };
   documentCategories.slice(1).forEach((c) => catCounts[c] = localDocs.filter((d) => d.category === c).length);
@@ -120,7 +120,7 @@ export default function DocumentManager() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => openEdit(doc)} className="px-2.5 py-1 text-[10px] font-medium text-accent bg-accent-light/50 rounded-lg cursor-pointer hover:bg-accent-light transition-colors">Editar</button>
-                      <button onClick={() => setDeleteId(doc.id)} className="px-2.5 py-1 text-[10px] font-medium text-red-600 bg-red-50 rounded-lg cursor-pointer hover:bg-red-100 transition-colors">Eliminar</button>
+                      <button onClick={() => setDeleteId(doc.id)} className="px-2.5 py-1 text-[10px] font-medium text-bad bg-bad/10 rounded-lg cursor-pointer hover:bg-bad/20 transition-colors">Eliminar</button>
                     </div>
                   </td>
                 </tr>

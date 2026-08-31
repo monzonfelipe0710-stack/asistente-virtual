@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import { useAdmin, ROLES } from "../context/AdminContext";
@@ -12,6 +12,7 @@ function ThemeToggle() {
 
   useEffect(() => {
     const root = document.documentElement;
+    root.classList.add("animate-theme-transition");
     if (dark) {
       root.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -19,21 +20,59 @@ function ThemeToggle() {
       root.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
+    const timer = setTimeout(
+      () => root.classList.remove("animate-theme-transition"),
+      250
+    );
+    return () => clearTimeout(timer);
   }, [dark]);
 
   return (
     <button
       onClick={() => setDark((d) => !d)}
       aria-label="Cambiar tema"
-      className="w-10 h-10 grid place-items-center rounded-xl border border-line text-muted hover:text-ink hover:bg-mist transition-colors"
+      className="w-10 h-10 grid place-items-center rounded-lg transition-all duration-200 cursor-pointer"
+      style={{
+        border: "1px solid var(--sidebar-border)",
+        color: "var(--sidebar-text)",
+        backgroundColor: "transparent",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = "var(--sidebar-hover)";
+        e.currentTarget.style.color = "var(--sidebar-text-hover)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = "transparent";
+        e.currentTarget.style.color = "var(--sidebar-text)";
+      }}
     >
       {dark ? (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        <svg
+          className="w-5 h-5 transition-transform duration-300 rotate-0 hover:rotate-45"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+          />
         </svg>
       ) : (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+        <svg
+          className="w-5 h-5 transition-transform duration-300 hover:-rotate-45"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+          />
         </svg>
       )}
     </button>
@@ -42,49 +81,94 @@ function ThemeToggle() {
 
 export default function AdminLayout() {
   const { role, setRole } = useAdmin();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sidebar-open");
+      return saved !== null ? saved === "true" : true;
+    } catch (err) {
+      console.warn("No se pudo leer el estado del sidebar", err.message);
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sidebar-open", String(sidebarOpen));
+    } catch (err) {
+      console.warn("No se pudo guardar el estado del sidebar", err.message);
+    }
+  }, [sidebarOpen]);
 
   return (
-    <div className="min-h-screen flex bg-soft">
-      <AdminSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((open) => !open)} />
-      {sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Cerrar menú"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-ink/35 lg:hidden"
-        />
-      )}
-      {!sidebarOpen && (
-        <button
-          type="button"
-          aria-label="Abrir panel lateral"
-          aria-expanded="false"
-          onClick={() => setSidebarOpen(true)}
-          title="Mostrar navegación de ChatAP"
-          className="fixed left-3 top-3 z-50 flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-mist text-muted shadow-sm transition-colors hover:bg-paper hover:text-ink lg:hidden"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      )}
+    <div
+      className="min-h-screen flex transition-colors duration-300"
+      style={{ backgroundColor: "var(--color-paper)" }}
+    >
+      <AdminSidebar
+        open={sidebarOpen}
+        onToggle={() => setSidebarOpen((o) => !o)}
+      />
 
       <div
-        className="admin-content flex-1 flex flex-col min-w-0"
+        className="flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+        style={{
+          marginLeft: sidebarOpen
+            ? "var(--sidebar-width)"
+            : "var(--sidebar-collapsed-width)",
+        }}
       >
-        <header className="bg-paper/95 backdrop-blur border-b border-line h-16 flex items-center justify-between px-6 lg:px-8 sticky top-0 z-30">
-          <div className="hidden sm:block">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">ChatAP</p>
-            <p className="mt-0.5 text-xs text-faint">Centro de operaciones</p>
+        {/* Header */}
+        <header
+          className="h-14 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-md transition-colors duration-300"
+          style={{
+            borderBottom: "1px solid var(--sidebar-border)",
+            backgroundColor: "color-mix(in srgb, var(--color-paper) 80%, transparent)",
+          }}
+        >
+          <div className="hidden sm:flex items-center gap-3">
+            <p
+              className="text-xs font-semibold uppercase tracking-widest m-0"
+              style={{ color: "var(--sidebar-section-text)" }}
+            >
+              ChatAP
+            </p>
+            <span
+              className="text-[10px]"
+              style={{ color: "var(--sidebar-text)" }}
+            >
+              /
+            </span>
+            <p
+              className="text-[10px] font-medium m-0"
+              style={{ color: "var(--sidebar-section-text)" }}
+            >
+              Administración
+            </p>
           </div>
+
           <div className="flex items-center gap-3">
-            <label className="hidden sm:flex items-center gap-2 text-xs text-muted">
+            <label
+              className="hidden sm:flex items-center gap-2 text-xs"
+              style={{ color: "var(--sidebar-text)" }}
+            >
               Rol:
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="input-field w-auto py-2 text-xs"
+                className="px-3 py-1.5 rounded text-xs font-medium transition-colors duration-200 cursor-pointer"
+                style={{
+                  backgroundColor: "var(--sidebar-hover)",
+                  border: "1px solid var(--sidebar-border)",
+                  color: "var(--sidebar-text-hover)",
+                  outline: "none",
+                  appearance: "none",
+                }}
+                onFocus={(e) =>
+                  (e.target.style.borderColor = "var(--sidebar-active-bg)")
+                }
+                onBlur={(e) =>
+                  (e.target.style.borderColor = "var(--sidebar-border)")
+                }
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -97,7 +181,8 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        {/* Main content */}
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
           <div className="animate-page-enter">
             <Outlet />
           </div>
