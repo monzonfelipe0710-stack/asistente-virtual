@@ -12,31 +12,60 @@ const VB = DEMI_VIEWBOX;
 const R = RAYON;
 
 /**
- * Cada reacción se traduce a una configuración del MOTOR (mismo personaje):
- *  - state:  morph del cuerpo (idle / thinking / wide / alert / wink)
- *  - expr:   expresión facial sobre el estado de reposo (attentif, triste, ...)
- *  - look:   mirada (setLook)
- *  - transform: clase CSS de deformación del mismo SVG (tilt/bounce/squash/stretch)
- *  - blink:  parpadeo forzado
- * Nunca se cambia de personaje: todas son animaciones del blob.
+ * Expresión custom de sueño: ojos cerrados (open: 0), cabeza ligeramente inclinada.
+ * Se aplica cuando el bot lleva 5 minutos sin actividad.
  */
+const SLEEP_EXPRESSION = {
+  id: "sleeping",
+  gaze: { yaw: 4, pitch: -6, roll: -3 },
+  split: 16,
+  eyes: [
+    { w: 0.2, h: 0.42, tilt: 0, open: 0 },
+    { w: 0.2, h: 0.42, tilt: 0, open: 0 },
+  ],
+};
+
 const REACTION_CONFIG = {
-  idle: { state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  blink: { blink: true },
-  lookLeft: { look: { yaw: -35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
-  lookRight: { look: { yaw: 35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
-  lookAround: { look: { yaw: 0, pitch: 0, mix: 0, spin: 360, wander: 0 } },
-  tilt: { transform: "rx-tilt", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  bounce: { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  squash: { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  stretch: { transform: "rx-stretch", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  surprised: { state: "wide" },
-  thinking: { state: "thinking" },
-  attention: { expr: "attentif" },
-  error: { state: "alert" },
-  worried: { expr: "triste" },
-  confus: { expr: "confus" },
-  wink: { state: "wink" },
+  idle:        { state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  blink:       { blink: true },
+  lookLeft:    { look: { yaw: -35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
+  lookRight:   { look: { yaw: 35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
+  lookAround:  { look: { yaw: 0, pitch: 0, mix: 0, spin: 360, wander: 0 } },
+  lookUp:      { look: { yaw: 0, pitch: -20, mix: 1, spin: 0, wander: 0 } },
+  lookDown:    { look: { yaw: 0, pitch: 20, mix: 1, spin: 0, wander: 0 } },
+  tilt:        { transform: "rx-tilt", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  tiltLeft:    { transform: "rx-tilt", state: "idle", look: { yaw: -15, pitch: 5, mix: 1, spin: 0, wander: 0 } },
+  tiltRight:   { transform: "rx-tilt", state: "idle", look: { yaw: 15, pitch: 5, mix: 1, spin: 0, wander: 0 } },
+  bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  squash:      { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  stretch:     { transform: "rx-stretch", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  microBounce: { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  microSquash: { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  wink:        { state: "wink" },
+  surprised:   { state: "wide" },
+  thinking:    { state: "thinking" },
+  attention:   { expr: "attentif" },
+  happy:       { expr: "heureux", look: { yaw: 5, pitch: 9, mix: 1, spin: 0, wander: 0 } },
+  excited:     { expr: "excite", state: "idle", look: { yaw: 6, pitch: -14, mix: 1, spin: 0, wander: 0 } },
+  proud:       { expr: "fier", look: { yaw: 5, pitch: 17, mix: 1, spin: 0, wander: 0 } },
+  shy:         { expr: "timide", look: { yaw: -19, pitch: -14, mix: 1, spin: 0, wander: 0 } },
+  relieved:    { expr: "heureux", state: "idle", look: { yaw: 0, pitch: 5, mix: 0.5, spin: 0, wander: 0.5 } },
+  worried:     { expr: "triste" },
+  confus:      { expr: "confus", look: { yaw: -14, pitch: 3, mix: 1, spin: 0, wander: 0 } },
+  curious:     { expr: "curieux", look: { yaw: 16, pitch: -9, mix: 1, spin: 0, wander: 0 } },
+  angry:       { expr: "colere", look: { yaw: 3, pitch: 7, mix: 1, spin: 0, wander: 0 } },
+  scared:      { expr: "effraye", look: { yaw: 2, pitch: -20, mix: 1, spin: 0, wander: 0 } },
+  bored:       { expr: "blase", look: { yaw: -22, pitch: 2, mix: 1, spin: 0, wander: 0 } },
+  sleepy:      { expr: "somnolent", look: { yaw: 6, pitch: -9, mix: 1, spin: 0, wander: 0 } },
+  suspicious:  { expr: "mefiant", look: { yaw: 12, pitch: 6, mix: 1, spin: 0, wander: 0 } },
+  fierce:      { expr: "colere", state: "alert", look: { yaw: 0, pitch: 5, mix: 1, spin: 0, wander: 0 } },
+  notify:      { state: "notify" },
+  exclaim:     { state: "exclaim" },
+  playful:     { state: "wink", expr: "excite", look: { yaw: 8, pitch: -5, mix: 1, spin: 0, wander: 0 } },
+  nod:         { look: { yaw: 0, pitch: 12, mix: 1, spin: 0, wander: 0 } },
+  shake:       { look: { yaw: 0, pitch: 0, mix: 1, spin: 0, wander: 0 }, expr: "confus" },
+  apologetic:  { expr: "triste", look: { yaw: 0, pitch: 15, mix: 1, spin: 0, wander: 0 } },
+  sleep:       { customExpr: SLEEP_EXPRESSION, look: { yaw: 4, pitch: -6, mix: 0.5, spin: 0, wander: 0 } },
 };
 
 const DOT_POOL = 6;
@@ -49,8 +78,28 @@ function applyConfig(engine, cfg, t) {
     return;
   }
   if (cfg.state) engine.setState(cfg.state, t);
-  if (cfg.expr) engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
+  if (cfg.customExpr) {
+    engine.setExpression(cfg.customExpr, t);
+  } else if (cfg.expr) {
+    engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
+  }
   if (cfg.look) engine.setLook(cfg.look, t);
+}
+
+function ZzzOverlay({ size }) {
+  const s = size || 44;
+  const base = s * 0.38;
+  return (
+    <span
+      className="absolute z-10 pointer-events-none select-none"
+      style={{ top: -s * 0.15, right: -s * 0.1 }}
+      aria-hidden="true"
+    >
+      <span className="zzz-letter" style={{ fontSize: base, animationDelay: "0s" }}>Z</span>
+      <span className="zzz-letter" style={{ fontSize: base * 0.8, animationDelay: "0.6s", top: -base * 0.3, left: base * 0.4 }}>z</span>
+      <span className="zzz-letter" style={{ fontSize: base * 0.6, animationDelay: "1.2s", top: -base * 0.7, left: base * 0.8 }}>z</span>
+    </span>
+  );
 }
 
 export default function ChatBotAvatar({
@@ -71,7 +120,6 @@ export default function ChatBotAvatar({
   const colorsRef = useRef({ body: INK, eye: EYE });
   const [rxClass, setRxClass] = useState("");
 
-  // --- montaje: motor, pintura, loop de animación (único rAF), listeners ---
   useEffect(() => {
     const readColors = () => {
       const cs = getComputedStyle(document.documentElement);
@@ -135,7 +183,11 @@ export default function ChatBotAvatar({
       const st = cfg.state || "idle";
       if (!cfg.blink) {
         if (cfg.state) engine.setState(cfg.state, 0);
-        if (cfg.expr) engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, 0);
+        if (cfg.customExpr) {
+          engine.setExpression(cfg.customExpr, 0);
+        } else if (cfg.expr) {
+          engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, 0);
+        }
         if (cfg.look) engine.setLook(cfg.look, 0);
       }
       paint(engine.sample(POSES[st] ?? 1));
@@ -191,8 +243,6 @@ export default function ChatBotAvatar({
       else if (!(reduceMQ && reduceMQ.matches)) start();
     };
 
-    // La mirada sigue al cursor SOLO en reposo (reacción idle). Si el bot está
-    // reaccionando, la reacción controla la mirada y no debe pelearse con el mouse.
     const onMove = (e) => {
       if (reactionRef.current !== "idle") return;
       const el = svgRef.current;
@@ -229,7 +279,6 @@ export default function ChatBotAvatar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStatic]);
 
-  // --- cambio de reacción: aplica la configuración al motor ---
   useEffect(() => {
     reactionRef.current = reaction;
     const engine = engineRef.current;
@@ -238,8 +287,6 @@ export default function ChatBotAvatar({
     const t = clockRef.current;
     applyConfig(engine, cfg, t);
 
-    // Transformaciones CSS (mismo SVG). Se suprimen mientras "habla" para no
-    // pelear con el balanceo de lectura (animate-speak).
     const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
     const transform = cfg.transform && !speaking && !reduce ? cfg.transform : "";
     setRxClass(transform);
@@ -247,6 +294,37 @@ export default function ChatBotAvatar({
     if (reduce || isStatic) drawRef.current?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reaction, speaking, isStatic]);
+
+  const isSleeping = reaction === "sleep";
+
+  if (isSleeping) {
+    return (
+      <div className="relative inline-flex">
+        <ZzzOverlay size={size} />
+        <svg
+          ref={svgRef}
+          width={size}
+          height={size}
+          viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`}
+          role="img"
+          aria-label="Avatar animado del asistente ChatAP"
+          className="block opacity-70"
+        >
+          <path ref={bodyRef} fill={INK} />
+          <path ref={eyeARef} fill={EYE} />
+          <path ref={eyeBRef} fill={EYE} />
+          {Array.from({ length: DOT_POOL }).map((_, i) => (
+            <circle
+              key={i}
+              ref={(el) => (dotRefs.current[i] = el)}
+              fill={INK}
+              style={{ display: "none" }}
+            />
+          ))}
+        </svg>
+      </div>
+    );
+  }
 
   return (
     <svg

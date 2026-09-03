@@ -9,11 +9,11 @@ const mockNotifications = [
 ];
 
 const typeColors = {
-  siged: "bg-amber-500",
-  user: "bg-blue-500",
-  knowledge: "bg-purple-500",
-  document: "bg-emerald-500",
-  settings: "bg-soft0",
+  siged: "bg-info",
+  user: "bg-ok",
+  knowledge: "bg-warn",
+  document: "bg-info",
+  settings: "bg-muted",
 };
 
 export default function NotificationCenter({ unread = 0 }) {

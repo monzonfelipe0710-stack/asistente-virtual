@@ -81,71 +81,28 @@ function ThemeToggle() {
 
 export default function AdminLayout() {
   const { role, setRole } = useAdmin();
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    try {
-      const saved = localStorage.getItem("sidebar-open");
-      return saved !== null ? saved === "true" : true;
-    } catch (err) {
-      console.warn("No se pudo leer el estado del sidebar", err.message);
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("sidebar-open", String(sidebarOpen));
-    } catch (err) {
-      console.warn("No se pudo guardar el estado del sidebar", err.message);
-    }
-  }, [sidebarOpen]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <div
       className="min-h-screen flex transition-colors duration-300"
       style={{ backgroundColor: "var(--color-paper)" }}
     >
-      <AdminSidebar
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen((o) => !o)}
-      />
+      <AdminSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
 
       <div
         className="flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
         style={{
-          marginLeft: sidebarOpen
-            ? "var(--sidebar-width)"
-            : "var(--sidebar-collapsed-width)",
+          marginLeft: sidebarOpen ? "var(--sidebar-width)" : "var(--sidebar-collapsed-width)",
         }}
       >
         {/* Header */}
         <header
-          className="h-14 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-md transition-colors duration-300"
+          className="h-14 flex items-center justify-end px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-md"
           style={{
-            borderBottom: "1px solid var(--sidebar-border)",
             backgroundColor: "color-mix(in srgb, var(--color-paper) 80%, transparent)",
           }}
         >
-          <div className="hidden sm:flex items-center gap-3">
-            <p
-              className="text-xs font-semibold uppercase tracking-widest m-0"
-              style={{ color: "var(--sidebar-section-text)" }}
-            >
-              ChatAP
-            </p>
-            <span
-              className="text-[10px]"
-              style={{ color: "var(--sidebar-text)" }}
-            >
-              /
-            </span>
-            <p
-              className="text-[10px] font-medium m-0"
-              style={{ color: "var(--sidebar-section-text)" }}
-            >
-              Administración
-            </p>
-          </div>
-
           <div className="flex items-center gap-3">
             <label
               className="hidden sm:flex items-center gap-2 text-xs"

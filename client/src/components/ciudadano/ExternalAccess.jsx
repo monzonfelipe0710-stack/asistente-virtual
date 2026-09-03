@@ -12,7 +12,7 @@ export default function ExternalAccess() {
 
       <div className="p-5 space-y-3">
         <a
-          href="https://miportal.formosa.gob.ar"
+          href="https://www.formosa.gob.ar/miportal/login"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-4 px-4 py-4 border border-line hover:border-brand transition-all duration-300 hover:-translate-y-0.5 no-underline"

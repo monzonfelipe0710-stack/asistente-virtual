@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useAdmin } from "../../context/AdminContext";
+import ChatBotAvatar from "../ChatBotAvatar";
 
 const sections = [
   {
@@ -107,14 +108,14 @@ export default function AdminSidebar({ open, onToggle }) {
       role="navigation"
       aria-label="Panel de administración"
     >
-      {/* Header: Toggle + Logo */}
+      {/* Header: toggle de la barra. */}
       <div
-        className="flex items-center gap-3 px-3 py-4 border-b shrink-0 transition-colors duration-200"
-        style={{ borderColor: "var(--sidebar-border)" }}
+        className="flex items-center justify-start shrink-0 overflow-hidden"
+        style={{ height: "64px", padding: open ? "0 12px" : "0 12px" }}
       >
         <button
           onClick={onToggle}
-          className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 cursor-pointer transition-colors duration-200 hover:opacity-80"
+          className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 cursor-pointer transition-all duration-200 hover:opacity-80"
           style={{
             backgroundColor: "var(--sidebar-hover)",
             color: "var(--sidebar-text)",
@@ -133,59 +134,32 @@ export default function AdminSidebar({ open, onToggle }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-
-        {open && (
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white font-bold text-xs"
-              style={{ backgroundColor: "var(--sidebar-active-bg)" }}
-            >
-              AP
-            </div>
-            <div className="flex flex-col min-w-0 overflow-hidden">
-              <span
-                className="text-sm font-bold tracking-tight leading-none truncate opacity-0 animate-sidebar-expand-text"
-                style={{ color: "var(--sidebar-text-hover)" }}
-              >
-                ChatAP
-              </span>
-              <span
-                className="text-[10px] font-medium uppercase tracking-wider mt-0.5 truncate opacity-0 animate-sidebar-expand-text"
-                style={{ color: "var(--sidebar-section-text)" }}
-              >
-                Administración
-              </span>
-            </div>
-          </div>
-        )}
-
-        {!open && (
-          <div className="flex items-center justify-center w-9 h-9 shrink-0">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white font-bold text-xs"
-              style={{ backgroundColor: "var(--sidebar-active-bg)" }}
-            >
-              AP
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Navegación */}
-      <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3 space-y-5">
+      {/* Navegación: flex-1, layout vertical estable */}
+      <nav
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ padding: open ? "16px 12px" : "16px 0" }}
+      >
         {sections.map((section) => {
           const visible = section.items.filter((it) => can(it.perm));
           if (!visible.length) return null;
           return (
-            <div key={section.title} className="space-y-1">
-              {open && (
-                <p
-                  className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest"
-                  style={{ color: "var(--sidebar-section-text)" }}
-                >
-                  {section.title}
-                </p>
-              )}
+            <div
+              key={section.title}
+              style={{ marginBottom: open ? "24px" : "12px" }}
+            >
+              <p
+                className="h-[18px] mb-1.5 text-[10px] font-semibold uppercase tracking-widest overflow-hidden whitespace-nowrap transition-opacity duration-300"
+                style={{
+                  color: "var(--sidebar-section-text)",
+                  opacity: open ? 1 : 0,
+                  paddingLeft: open ? "20px" : "0",
+                }}
+              >
+                {section.title}
+              </p>
+              <div className="flex flex-col">
               {visible.map((link) => (
                 <NavLink
                   key={link.to}
@@ -193,10 +167,9 @@ export default function AdminSidebar({ open, onToggle }) {
                   end={link.to === "/admin"}
                   className={({ isActive }) =>
                     [
-                      "group relative flex items-center gap-3 rounded-lg no-underline",
-                      "transition-all duration-200",
+                      "group side-nav-link relative flex items-center rounded-lg no-underline",
+                      "transition-colors duration-200",
                       isActive ? "font-semibold" : "font-medium",
-                      open ? "px-3 py-2.5" : "justify-center mx-auto",
                       !open && "sidebar-tooltip",
                     ].join(" ")
                   }
@@ -207,7 +180,9 @@ export default function AdminSidebar({ open, onToggle }) {
                     color: isActive
                       ? "var(--sidebar-active-text)"
                       : "var(--sidebar-text)",
-                    width: !open ? "44px" : undefined,
+padding: open ? "10px 20px" : "8px 14px",
+                    columnGap: open ? "12px" : 0,
+                    justifyContent: open ? undefined : "flex-start",
                   })}
                   data-tooltip={!open ? link.label : undefined}
                   onMouseEnter={(e) => {
@@ -228,21 +203,29 @@ export default function AdminSidebar({ open, onToggle }) {
                     <>
                       {isActive && (
                         <span
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                          className="absolute left-1 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
                           style={{ backgroundColor: "var(--sidebar-active-text)" }}
                         />
                       )}
-                      <span className="shrink-0 transition-transform duration-150 group-hover:scale-110">
-                        <SidebarIcon path={link.icon} />
-                      </span>
-                      {open && (
-                        <span className="truncate text-sm opacity-0 animate-sidebar-expand-text">
-                          {link.label}
-                        </span>
-                      )}
-                      {open && isActive && (
+                      <span className="relative shrink-0">
                         <span
-                          className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
+                          className="nav-icon-ring pointer-events-none absolute left-1/2 top-1/2 w-[150%] h-[150%] rounded-full"
+                          style={{ border: "2px solid var(--sidebar-active-bg)" }}
+                        />
+                        <SidebarIcon path={link.icon} className="nav-icon" />
+                      </span>
+                      <span
+                        className={`truncate text-sm whitespace-nowrap overflow-hidden transition-all duration-300 ${
+                          open ? "opacity-100 max-w-40" : "opacity-0 max-w-0"
+                        }`}
+                      >
+                        {link.label}
+                      </span>
+                      {isActive && (
+                        <span
+                          className={`ml-auto w-1.5 h-1.5 rounded-full shrink-0 transition-opacity duration-300 ${
+                            open ? "opacity-100" : "opacity-0"
+                          }`}
                           style={{ backgroundColor: "var(--sidebar-active-text)" }}
                         />
                       )}
@@ -250,52 +233,69 @@ export default function AdminSidebar({ open, onToggle }) {
                   )}
                 </NavLink>
               ))}
+              </div>
             </div>
           );
         })}
       </nav>
 
-      {/* Footer: Volver al Chat */}
+      {/* Footer: navegación secundaria y avatar anclados abajo. */}
       <div
-        className="border-t px-2.5 py-3"
+        className="border-t shrink-0"
         style={{ borderColor: "var(--sidebar-border)" }}
       >
-        <NavLink
-          to="/"
-          className={() =>
-            [
-              "group flex items-center gap-3 rounded-lg no-underline",
-              "transition-all duration-200",
-              open ? "px-3 py-2.5" : "justify-center mx-auto",
-              !open && "sidebar-tooltip",
-            ].join(" ")
-          }
-          style={({ isActive }) => ({
-            color: isActive
-              ? "var(--sidebar-text-hover)"
-              : "var(--sidebar-text)",
-            backgroundColor: isActive ? "var(--sidebar-hover)" : "transparent",
-            width: !open ? "44px" : undefined,
-          })}
-          data-tooltip={!open ? "Volver al Chat" : undefined}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--sidebar-hover)";
-            e.currentTarget.style.color = "var(--sidebar-text-hover)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.color = "var(--sidebar-text)";
-          }}
-        >
-          <span className="shrink-0 transition-transform duration-150 group-hover:scale-110">
-            <SidebarIcon path="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </span>
-          {open && (
-            <span className="text-xs font-semibold uppercase tracking-wide truncate opacity-0 animate-sidebar-expand-text">
+        <div style={{ padding: open ? "16px 20px" : "16px 12px" }}>
+          <NavLink
+            to="/"
+            className={() =>
+              [
+                "group side-nav-link flex items-center rounded-lg no-underline",
+                "transition-colors duration-200",
+                !open && "sidebar-tooltip",
+              ].join(" ")
+            }
+            style={({ isActive }) => ({
+              color: isActive
+                ? "var(--sidebar-text-hover)"
+                : "var(--sidebar-text)",
+              backgroundColor: isActive ? "var(--sidebar-hover)" : "transparent",
+              padding: open ? "10px 0px" : "10px 2px",
+              columnGap: open ? "12px" : 0,
+              justifyContent: open ? undefined : "center",
+            })}
+            data-tooltip={!open ? "Volver al Chat" : undefined}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--sidebar-hover)";
+              e.currentTarget.style.color = "var(--sidebar-text-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--sidebar-text)";
+            }}
+          >
+            <span className="relative shrink-0">
+              <span
+                className="nav-icon-ring pointer-events-none absolute left-1/2 top-1/2 w-[150%] h-[150%] rounded-full"
+                style={{ border: "2px solid var(--sidebar-active-bg)" }}
+              />
+              <SidebarIcon path="M10 19l-7-7m0 0l7-7m-7 7h18" className="nav-icon" />
+            </span>
+            <span
+              className={`text-xs font-semibold uppercase tracking-wide truncate whitespace-nowrap overflow-hidden transition-all duration-300 ${
+                open ? "opacity-100 max-w-40" : "opacity-0 max-w-0"
+              }`}
+            >
               Volver al Chat
             </span>
-          )}
-        </NavLink>
+          </NavLink>
+        </div>
+        <div
+          className="flex items-center justify-center"
+          style={{ padding: open ? "0 20px 20px" : "0 0 20px" }}
+          aria-label="Asistente virtual"
+        >
+          <ChatBotAvatar size={48} />
+        </div>
       </div>
     </aside>
   );

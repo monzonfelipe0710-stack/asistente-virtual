@@ -474,7 +474,7 @@ function MesaFormModal({ onClose, onSubmit }) {
             <textarea
               ref={textareaRef}
               className="input-field min-h-13 resize-none leading-relaxed"
-              style={{ overflowY: "hidden", transition: "height 0.2s ease-out" }}
+              style={{ resize: "none" }}
               value={form.observaciones}
               onChange={(e) => update("observaciones", e.target.value)}
               placeholder="Notas adicionales (opcional)"

@@ -24,7 +24,7 @@ export default function ContactoPage() {
         <Navbar />
         <main className="flex-1 flex items-center justify-center px-4">
           <div className="card card-border p-8 max-w-md w-full text-center animate-scale-in">
-            <div className="w-14 h-14 bg-linear-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200/50 animate-bounce-in">
+            <div className="w-14 h-14 bg-linear-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200/50 animate-scale-in">
               <svg className="w-7 h-7 text-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -46,20 +46,20 @@ export default function ContactoPage() {
       <Navbar />
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 animate-page-enter">
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-8 h-8 bg-linear-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-sm animate-bounce-in">
+          <div className="w-8 h-8 bg-linear-to-br from-primary to-primary-light rounded-xl flex items-center justify-center shadow-sm animate-scale-in">
             <svg className="w-4 h-4 text-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <div className="animate-slide-right">
+          <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-primary m-0 tracking-tight">Contacto</h1>
             <p className="text-sm text-muted m-0 mt-0.5 font-medium">Completá el formulario y te responderemos a la brevedad</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="card card-border p-6 space-y-4 mt-8 animate-list-item stagger-1">
+        <form onSubmit={handleSubmit} className="card card-border p-6 space-y-4 mt-8 stagger-children">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="animate-list-item stagger-2">
+            <div>
               <label className="block text-xs font-medium text-muted mb-1">Nombre *</label>
               <input
                 type="text"
@@ -68,7 +68,7 @@ export default function ContactoPage() {
                 className="input-field"
               />
             </div>
-            <div className="animate-list-item stagger-3">
+            <div>
               <label className="block text-xs font-medium text-muted mb-1">Email *</label>
               <input
                 type="email"
@@ -78,7 +78,7 @@ export default function ContactoPage() {
               />
             </div>
           </div>
-          <div className="animate-list-item stagger-4">
+          <div>
             <label className="block text-xs font-medium text-muted mb-1">Asunto</label>
             <input
               type="text"
@@ -87,7 +87,7 @@ export default function ContactoPage() {
               className="input-field"
             />
           </div>
-          <div className="animate-list-item stagger-5">
+          <div>
             <label className="block text-xs font-medium text-muted mb-1">Mensaje *</label>
             <textarea
               rows={5}
@@ -96,7 +96,7 @@ export default function ContactoPage() {
               className="input-field resize-none"
             />
           </div>
-          <button type="submit" className="btn-primary animate-list-item stagger-6">
+          <button type="submit" className="btn-primary">
             Enviar consulta
           </button>
         </form>
