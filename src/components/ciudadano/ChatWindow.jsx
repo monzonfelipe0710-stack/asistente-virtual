@@ -17,6 +17,11 @@ function findResponse(input) {
   return botResponses.find((e) => e.keywords.includes("default")).response;
 }
 
+function isErrorResponse(response) {
+  const text = (response?.text || "").toLowerCase();
+  return /no encontr|no disponible|error|no se pudo|no tengo/.test(text);
+}
+
 export default function ChatWindow() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -34,6 +39,7 @@ export default function ChatWindow() {
   const speakingIdRef = useRef(null);
   const typeTimerRef = useRef(0);
   const controllerRef = useRef(null);
+  const typingTimerRef = useRef(null);
 
   const [speechSupported] = useState(
     () =>
@@ -46,7 +52,6 @@ export default function ChatWindow() {
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, isTyping, phase, typedText]);
 
-  // Controlador único de reacciones del avatar (historial, cooldown, contexto).
   useEffect(() => {
     const controller = new BotReactionController({
       emit: setReaction,
@@ -57,9 +62,26 @@ export default function ChatWindow() {
     });
     controllerRef.current = controller;
     controller.start();
+
+    // Track mouse movement as activity (throttled)
+    let mouseThrottle = null;
+    const onMouseMove = () => {
+      if (mouseThrottle) return;
+      mouseThrottle = setTimeout(() => { mouseThrottle = null; }, 2000);
+      if (controllerRef.current) {
+        controllerRef.current.lastActivityTime = Date.now();
+        if (controllerRef.current.isSleeping) {
+          controllerRef.current.wakeUp();
+        }
+      }
+    };
+    window.addEventListener("mousemove", onMouseMove);
+
     return () => {
       controller.stop();
       controllerRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      clearTimeout(mouseThrottle);
     };
   }, []);
 
@@ -84,11 +106,11 @@ export default function ChatWindow() {
 
   function simulateBotResponse(userText) {
     setIsTyping(false);
-    // El bot empieza a procesar la pregunta.
+    clearInterval(typingTimerRef.current);
+
     controllerRef.current?.onEvent("botThinking");
     const delay = 900 + Math.random() * 800;
     setTimeout(() => {
-      // Limpia hablas anteriores que pudieran quedar colgadas.
       clearInterval(typeTimerRef.current);
 
       const response = findResponse(userText);
@@ -101,11 +123,15 @@ export default function ChatWindow() {
       speakingIdRef.current = id;
       setSpeakingId(id);
       setTypedText("");
-      // El bot "habla": reacción de respuesta (atención / movimiento positivo).
-      controllerRef.current?.onEvent("botResponding");
-      if (response.reaction) controllerRef.current?.onEvent("botConcern", response.reaction);
 
-      // Typewriter: el texto se escribe solo, fluido, mientras el avatar "habla".
+      // Pasamos la respuesta completa al controller para que detecte el tono
+      controllerRef.current?.onEvent("botResponding", response);
+
+      // Reacción de concern si la respuesta tiene reaction explícita
+      if (response.reaction) {
+        controllerRef.current?.onEvent("botConcern", response.reaction);
+      }
+
       let i = 0;
       typeTimerRef.current = setInterval(() => {
         if (speakingIdRef.current !== id) {
@@ -116,14 +142,19 @@ export default function ChatWindow() {
         setTypedText(response.text.slice(0, i));
         if (i >= response.text.length) {
           clearInterval(typeTimerRef.current);
-          // Pausa breve al terminar de escribir y luego vuelve a reposo.
           setTimeout(() => {
             if (speakingIdRef.current !== id) return;
             speakingRef.current = false;
             speakingIdRef.current = null;
             setSpeakingId(null);
             setTypedText("");
-            controllerRef.current?.onEvent("botFinished");
+
+            // Si no hubo error, celebración sutil
+            if (!isErrorResponse(response) && !response.reaction) {
+              controllerRef.current?.onEvent("botSuccess");
+            } else {
+              controllerRef.current?.onEvent("botFinished");
+            }
           }, 550);
         }
       }, charDelay);
@@ -135,8 +166,8 @@ export default function ChatWindow() {
     if (!t) return;
     beginChat();
     addMessage("user", t);
-    // El bot percibe la pregunta.
-    controllerRef.current?.onEvent("userMessageSent");
+    // Pasamos el texto del usuario para que el controller detecte contexto
+    controllerRef.current?.onEvent("userMessageSent", { text: t });
     simulateBotResponse(t);
   }
 
@@ -149,6 +180,12 @@ export default function ChatWindow() {
 
   function handleInputChange(e) {
     setInput(e.target.value);
+
+    // Notificar al controller que el usuario está escribiendo
+    clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => {
+      controllerRef.current?.onEvent("userTyping");
+    }, 800);
   }
 
   function handleQuickReply(query) {
@@ -157,6 +194,7 @@ export default function ChatWindow() {
 
   function resetConversation() {
     clearInterval(typeTimerRef.current);
+    clearTimeout(typingTimerRef.current);
     setMessages([]);
     setIsTyping(false);
     setSpeakingId(null);
@@ -186,8 +224,6 @@ export default function ChatWindow() {
       setInput(txt);
     };
     rec.onend = () => {
-      // Dejamos el texto transcrito en el input para que el usuario lo revise
-      // y lo envíe manualmente (no se manda solo).
       setListening(false);
       transcriptRef.current = "";
     };
@@ -246,11 +282,11 @@ export default function ChatWindow() {
       <div ref={messagesRef} className="flex-1 overflow-y-auto relative">
         {phase !== "chat" && (
           <div
-            className={`absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-500 ease-out ${
+            className={`welcome-content absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-500 ease-out ${
               phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
             }`}
           >
-            <ChatBotAvatar size={72} />
+            <ChatBotAvatar size={60} reaction={reaction} />
             <h1 className="text-2xl sm:text-3xl font-semibold text-ink m-0">
               ¿En qué puedo ayudarte?
             </h1>
@@ -276,56 +312,62 @@ export default function ChatWindow() {
         )}
       </div>
 
-      <div className="border-t border-line bg-paper">
+      <div className="bg-paper">
         {phase === "welcome" && (
           <div className="max-w-3xl mx-auto px-4 pt-4">
             <QuickReplies onSelect={handleQuickReply} />
           </div>
         )}
-        <form onSubmit={handleSend} className="max-w-3xl mx-auto flex items-end gap-2 p-4">
-          {speechSupported && (
-            <button
-              type="button"
-              onClick={toggleMic}
-              aria-label={listening ? "Detener dictado" : "Hablar con el asistente"}
-              className={`relative shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl border transition-all active:scale-95 ${
-                listening
-                  ? "border-bad text-bad bg-bad/10"
-                  : "border-line text-muted hover:text-ink hover:border-muted"
-              }`}
-            >
-              {listening ? (
-                <>
-                  <span className="mic-ripple absolute inset-0 rounded-2xl bg-bad/40" aria-hidden="true" />
-                  <span className="mic-eq relative text-bad" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                </>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
-                </svg>
-              )}
-            </button>
-          )}
+        <form onSubmit={handleSend} className="container-ia-chat max-w-3xl mx-auto">
           <input
             type="text"
             value={input}
             onChange={handleInputChange}
             placeholder={listening ? "Escuchando…" : "Escribí tu consulta…"}
-            className="flex-1 rounded-2xl border border-line bg-soft px-4 py-3 text-sm text-ink placeholder:text-muted outline-none focus:border-brand transition-colors"
+            className="input-text"
             aria-label="Mensaje"
+            required
           />
+          {speechSupported && (
+            <button
+              type="button"
+              onClick={toggleMic}
+              aria-label={listening ? "Detener dictado" : "Hablar con el asistente"}
+              title={listening ? "Detener dictado" : "Hablar con el asistente"}
+              className={`label-voice ${
+                listening
+                  ? "is-listening"
+                  : ""
+              }`}
+            >
+              {listening ? (
+                <>
+                  <span className="mic-ripple absolute inset-0 rounded-full bg-bad/30" aria-hidden="true" />
+                  <svg className="icon-voice icon-voice-listening" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11a7 7 0 0014 0M12 18v3m-4 0h8" />
+                  </svg>
+                  <span className="text-voice" aria-hidden="true">
+                    Conversación iniciada · presioná para cancelar
+                  </span>
+                </>
+              ) : (
+                <svg className="icon-voice icon-voice-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11a7 7 0 0014 0M12 18v3m-4 0h8" />
+                </svg>
+              )}
+            </button>
+          )}
           <button
             type="submit"
             disabled={!input.trim()}
-            className="rounded-2xl bg-brand-deep px-5 py-3 text-sm font-semibold text-paper hover:bg-brand transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="label-text"
+            aria-label="Enviar mensaje"
           >
-            Enviar
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m5 12l7-7l7 7m-7 7V5" />
+            </svg>
           </button>
         </form>
       </div>
