@@ -1,15 +1,203 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 const preloadAdmin = () => {
   import("../../pages/AdminLayout");
   import("../admin/Dashboard");
 };
 
+function ProfileMenu({ user, isStaff, logout }) {
+  const [open, setOpen] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const menuRef = useRef(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  const firstName = (user?.name || "").split(" ")[0];
+
+  function handleLogout() {
+    setOpen(false);
+    setShowProfile(false);
+    logout();
+    navigate("/");
+  }
+
+  function handleItem(action) {
+    setOpen(false);
+    action();
+  }
+
+  return (
+    <>
+      <div className="relative hidden sm:block" ref={menuRef}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Menú de perfil"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          className="flex items-center gap-2 rounded-xl border border-line bg-paper px-2 py-1.5 transition-all hover:bg-mist cursor-pointer"
+        >
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">
+            {user.name ? user.name[0] : "?"}
+          </span>
+          <span className="hidden lg:block text-xs font-semibold text-ink max-w-[9rem] truncate">
+            {firstName}
+          </span>
+          <svg
+            className={`w-4 h-4 text-muted transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {open && (
+          <div
+            role="menu"
+            className="absolute right-0 top-[calc(100%+8px)] w-56 rounded-xl border border-line bg-paper shadow-lg overflow-hidden animate-fade-up"
+          >
+            <div className="px-4 py-3 border-b border-line bg-mist">
+              <p className="text-sm font-semibold text-ink m-0 truncate">{user.name}</p>
+              <p className="text-xs text-muted m-0 mt-0.5 truncate">{user.email}</p>
+            </div>
+
+            <div className="py-1">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => handleItem(() => setShowProfile(true))}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-mist transition-colors text-left cursor-pointer"
+              >
+                <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Mi perfil
+              </button>
+
+              <a
+                href="https://www.formosa.gob.ar/miportal/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                role="menuitem"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-mist transition-colors no-underline"
+              >
+                <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                MiPortal
+              </a>
+
+              {isStaff && (
+                <Link
+                  to="/admin"
+                  onMouseEnter={preloadAdmin}
+                  onFocus={preloadAdmin}
+                  onClick={() => setOpen(false)}
+                  role="menuitem"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-mist transition-colors no-underline"
+                >
+                  <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  </svg>
+                  Acceso Interno
+                </Link>
+              )}
+            </div>
+
+            <div className="border-t border-line py-1">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-bad hover:bg-bad/10 transition-colors text-left cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showProfile && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowProfile(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
+          <div
+            className="relative w-full max-w-sm rounded-2xl border border-line bg-paper p-6 shadow-xl animate-fade-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-deep text-paper text-lg font-bold uppercase">
+                {user.name ? user.name[0] : "?"}
+              </span>
+              <div>
+                <p className="text-base font-semibold text-ink m-0 leading-tight">{user.name}</p>
+                <p className="text-xs text-muted m-0">Mi perfil</p>
+              </div>
+            </div>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted">Nombre</dt>
+                <dd className="text-ink font-medium text-right">{user.name}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted">Correo</dt>
+                <dd className="text-ink font-medium text-right break-all">{user.email}</dd>
+              </div>
+              {isStaff && (
+                <div className="flex justify-between">
+                  <dt className="text-muted">Rol</dt>
+                  <dd className="text-ink font-medium">Personal interno</dd>
+                </div>
+              )}
+            </dl>
+            <button
+              type="button"
+              onClick={() => setShowProfile(false)}
+              className="mt-6 w-full py-2.5 rounded-xl border border-line text-sm font-semibold text-muted hover:bg-mist hover:text-ink transition-all cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Navbar() {
   const [dark, setDark] = useState(
     typeof document !== "undefined" && document.documentElement.classList.contains("dark")
   );
+  const { user, isAuthenticated, isStaff, logout } = useAuth();
 
   function toggleTheme() {
     const next = !dark;
@@ -41,6 +229,19 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {isAuthenticated && user ? (
+            <ProfileMenu user={user} isStaff={isStaff} logout={logout} />
+          ) : (
+            <Link
+              to="/login"
+              className="navbar-action inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-deep text-paper text-xs font-semibold hover:bg-brand-dark transition-all no-underline"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Iniciar sesión
+            </Link>
+          )}
           <button
             type="button"
             onClick={toggleTheme}
@@ -57,28 +258,6 @@ export default function Navbar() {
               </svg>
             )}
           </button>
-          <Link
-            to="/admin"
-            onMouseEnter={preloadAdmin}
-            onFocus={preloadAdmin}
-            className="navbar-action flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-xl transition-all no-underline border border-line text-muted hover:bg-mist hover:border-brand hover:text-brand-deep"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            </svg>
-            Acceso Interno
-          </Link>
-          <a
-            href="https://www.formosa.gob.ar/miportal/login"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="navbar-action inline-flex items-center gap-2 px-4 py-2 border border-line text-muted text-xs font-medium rounded-xl hover:bg-mist hover:border-brand hover:text-brand-deep transition-all no-underline"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            MiPortal
-          </a>
         </div>
       </div>
     </nav>

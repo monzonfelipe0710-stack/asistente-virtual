@@ -241,8 +241,8 @@ function detectResponseTone(response) {
 /* ──────────────────── CONTROLLER ──────────────────── */
 
 // Tiempo de inactividad antes de dormir (ms)
-const SLEEPY_AFTER_MS = 180000;  // 3 min → empieza a parpadear lento
-const SLEEP_AFTER_MS = 300000;   // 5 min → cierra ojos + Zzz
+const SLEEPY_AFTER_MS = 10000;   // 10 s → empieza a cabecear (somnoliento)
+const SLEEP_AFTER_MS = 15000;    // 15 s → cierra ojos + Zzz
 
 export class BotReactionController {
   constructor({ emit, isReducedMotion }) {
@@ -330,13 +330,21 @@ export class BotReactionController {
         this.clearTimer();
         this.emit("sleep");
       } else if (elapsed >= SLEEPY_AFTER_MS && elapsed < SLEEP_AFTER_MS && !this.isSleeping) {
-        // Modo sleepy: micro-reacciones de sueño
-        if (Math.random() < 0.2) {
+        // Fase somnolienta: cabeceos progresivos hasta quedarse dormido.
+        // Cada vez más frecuentes y con la cabeza más abajo a medida que
+        // se acerca el momento de dormir (SLEEP_AFTER_MS).
+        const progress = (elapsed - SLEEPY_AFTER_MS) / (SLEEP_AFTER_MS - SLEEPY_AFTER_MS);
+        // A mayor progreso, mayor probabilidad de cabecear (0.3 → 1)
+        const prob = 0.3 + progress * 0.7;
+        if (Math.random() < prob) {
           this.emit("sleepy");
-          setTimeout(() => this.emit("idle"), 800);
+          // Mantener la postura somnolienta un rato según el avance
+          setTimeout(() => {
+            if (!this.isSleeping) this.emit("idle");
+          }, 600 + progress * 900);
         }
       }
-    }, 5000);
+    }, 1000);
   }
 
   stopSleepCheck() {
