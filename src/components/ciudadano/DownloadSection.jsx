@@ -11,25 +11,25 @@ export default function DownloadSection() {
       : documents.filter((d) => d.category === activeCategory);
 
   return (
-    <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-100">
-        <h2 className="text-sm font-semibold text-slate-800 m-0">
+    <section className="bg-paper border border-line">
+      <div className="px-5 py-4 border-b border-line">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-deep mb-1">
+          Documentos
+        </p>
+        <h2 className="text-xl font-bold uppercase tracking-wide text-ink m-0">
           Descargas
         </h2>
-        <p className="text-xs text-slate-500 m-0 mt-0.5">
-          Formularios, guías y plantillas administrativas
-        </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-slate-100 bg-slate-50">
+      <div className="flex flex-wrap gap-2 px-5 py-4 border-b border-line">
         {documentCategories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`px-3 py-1 text-xs rounded-md cursor-pointer transition-colors ${
+            className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
               activeCategory === cat
-                ? "bg-blue-800 text-white"
-                : "bg-white text-slate-600 border border-slate-200 hover:border-blue-200 hover:text-blue-800"
+                ? "bg-brand-deep text-paper"
+                : "bg-paper text-ink border border-line hover:border-brand"
             }`}
           >
             {cat}
@@ -37,12 +37,12 @@ export default function DownloadSection() {
         ))}
       </div>
 
-      <div className="p-4 space-y-2">
+      <div className="p-5 space-y-3">
         {filtered.map((doc) => (
           <DocumentCard key={doc.id} document={doc} />
         ))}
         {filtered.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-6">
+          <p className="text-sm text-muted text-center py-6 m-0">
             No hay documentos en esta categoría.
           </p>
         )}

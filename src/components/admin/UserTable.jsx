@@ -13,22 +13,24 @@ export default function UserTable() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800 m-0">Gestión de Usuarios</h1>
-          <p className="text-xs text-slate-500 m-0 mt-1">
+          <h1 className="text-3xl font-bold uppercase tracking-wide text-ink m-0">
+            Gestión de Usuarios
+          </h1>
+          <p className="text-xs uppercase tracking-wide text-muted m-0 mt-2">
             {users.length} usuarios registrados
           </p>
         </div>
-        <button className="px-4 py-2 bg-blue-800 text-white text-sm rounded-lg cursor-pointer hover:bg-blue-900 transition-colors self-start">
+        <button className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5 self-start">
           + Nuevo Usuario
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100">
+      <div className="bg-paper border border-line">
+        <div className="p-6 border-b border-line">
           <div className="relative max-w-xs">
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -36,7 +38,7 @@ export default function UserTable() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar usuarios..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-colors"
+              className="w-full pl-9 pr-3 py-3 text-sm border border-line outline-none bg-paper text-ink placeholder:text-muted focus:border-brand transition-colors"
               aria-label="Buscar usuarios"
             />
           </div>
@@ -45,46 +47,44 @@ export default function UserTable() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                <th className="px-4 py-3 font-medium">Nombre</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Rol</th>
-                <th className="px-4 py-3 font-medium">Departamento</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Último acceso</th>
-                <th className="px-4 py-3 font-medium text-right">Acción</th>
+              <tr className="bg-mist text-left text-[10px] uppercase tracking-widest text-muted">
+                <th className="px-6 py-3 font-semibold">Nombre</th>
+                <th className="px-6 py-3 font-semibold">Email</th>
+                <th className="px-6 py-3 font-semibold">Rol</th>
+                <th className="px-6 py-3 font-semibold">Departamento</th>
+                <th className="px-6 py-3 font-semibold">Estado</th>
+                <th className="px-6 py-3 font-semibold">Último acceso</th>
+                <th className="px-6 py-3 font-semibold text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {filtered.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-800">{user.name}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{user.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 text-xs rounded-md ${
+                <tr key={user.id} className="hover:bg-mist transition-colors">
+                  <td className="px-6 py-4 font-semibold text-ink">{user.name}</td>
+                  <td className="px-6 py-4 text-muted text-xs">{user.email}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                       user.role === "Administrador"
-                        ? "bg-purple-50 text-purple-700"
+                        ? "bg-brand-deep text-paper"
                         : user.role === "Supervisor"
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-slate-100 text-slate-600"
+                        ? "bg-info text-paper"
+                        : "bg-mist text-muted"
                     }`}>
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{user.department}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 text-xs ${
-                      user.status === "Activo" ? "text-emerald-700" : "text-slate-400"
+                  <td className="px-6 py-4 text-muted text-xs">{user.department}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${
+                      user.status === "Activo" ? "text-ok" : "text-muted"
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        user.status === "Activo" ? "bg-emerald-500" : "bg-slate-300"
-                      }`} />
+                      <span className={`w-1.5 h-1.5 ${user.status === "Activo" ? "bg-ok" : "bg-line"}`} />
                       {user.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-400 text-xs">{user.lastAccess}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="px-3 py-1 text-xs text-blue-700 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-colors">
+                  <td className="px-6 py-4 text-muted text-xs">{user.lastAccess}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5">
                       Editar
                     </button>
                   </td>
@@ -95,7 +95,7 @@ export default function UserTable() {
         </div>
 
         {filtered.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-8">
+          <p className="text-sm text-muted text-center py-8 m-0">
             No se encontraron usuarios con ese criterio de búsqueda.
           </p>
         )}
