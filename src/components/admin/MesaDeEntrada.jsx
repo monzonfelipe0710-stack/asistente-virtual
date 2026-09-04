@@ -440,7 +440,7 @@ function MesaFormModal({ onClose, onSubmit }) {
                     key={p}
                     type="button"
                     onClick={() => togglePrioridad(p)}
-                    className={`px-1.5 py-1.5 text-[10px] font-bold rounded-md border transition-all ${
+                    className={`px-1.5 py-1.5 text-[10px] font-bold rounded-md border transition-colors ${
                       active ? `${tone} shadow-sm` : "border-line text-muted hover:bg-mist bg-paper"
                     }`}
                   >
@@ -634,7 +634,7 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
                 <button
                   key={s}
                   onClick={() => onChangeStatus(s)}
-                  className={`badge cursor-pointer border transition-all ${
+                  className={`badge cursor-pointer border transition-colors ${
                     active ? activeCls : "bg-mist text-muted border-line hover:bg-soft"
                   }`}
                 >

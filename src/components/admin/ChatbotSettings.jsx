@@ -94,7 +94,7 @@ export default function ChatbotSettings() {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={settings.autoResponse} onChange={(e) => setSettings({ ...settings, autoResponse: e.target.checked })} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-mist rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-paper after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                  <div className="w-9 h-5 bg-mist rounded-full peer peer-checked:bg-accent after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-paper after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-4" />
                 </label>
               </div>
 

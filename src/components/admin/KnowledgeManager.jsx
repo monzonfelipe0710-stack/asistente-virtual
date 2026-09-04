@@ -33,7 +33,7 @@ export default function KnowledgeManager() {
           </p>
         </div>
         <button
-          className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5 self-start"
+          className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5 self-start"
           onClick={() => alert("Formulario para nuevo artículo")}
         >
           + Nuevo Artículo
@@ -91,7 +91,7 @@ export default function KnowledgeManager() {
                   </button>
                   <button
                     onClick={() => setEditingId(article.id)}
-                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5"
+                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
                   >
                     Editar
                   </button>

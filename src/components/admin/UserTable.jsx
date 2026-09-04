@@ -1,15 +1,60 @@
 import { useState } from "react";
-import { users } from "../../data/mockUsers";
+import { users as seedUsers } from "../../data/mockUsers";
+import { useToast } from "../common/Toast";
+import UserFormModal from "./UserFormModal";
 
 export default function UserTable() {
   const [search, setSearch] = useState("");
+  const [rows, setRows] = useState(seedUsers);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [justUpdated, setJustUpdated] = useState(null);
+  const push = useToast();
 
-  const filtered = users.filter(
+  const filtered = rows.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
       u.department.toLowerCase().includes(search.toLowerCase())
   );
+
+  function openCreate() {
+    setEditUser(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(user) {
+    setEditUser(user);
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditUser(null);
+  }
+
+  function handleSave(form) {
+    if (editUser) {
+      setRows((prev) => prev.map((u) => (u.id === editUser.id ? { ...u, ...form } : u)));
+      push(`Usuario "${form.name}" actualizado.`, "success");
+      setJustUpdated(editUser.id);
+    } else {
+      const nextId = Math.max(...rows.map((u) => u.id), 0) + 1;
+      const created = {
+        ...form,
+        id: nextId,
+        lastAccess: "—",
+        avatar: null,
+        phone: "",
+        createdAt: new Date().toLocaleDateString("es-AR"),
+      };
+      setRows((prev) => [created, ...prev]);
+      push(`Usuario "${form.name}" creado.`, "success");
+      setJustUpdated(nextId);
+    }
+    setTimeout(() => setJustUpdated(null), 2000);
+    closeModal();
+  }
 
   return (
     <div>
@@ -19,10 +64,13 @@ export default function UserTable() {
             Gestión de Usuarios
           </h1>
           <p className="text-xs uppercase tracking-wide text-muted m-0 mt-2">
-            {users.length} usuarios registrados
+            {rows.length} usuarios registrados
           </p>
         </div>
-        <button className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5 self-start">
+        <button
+          onClick={openCreate}
+          className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5 self-start cursor-pointer"
+        >
           + Nuevo Usuario
         </button>
       </div>
@@ -59,15 +107,18 @@ export default function UserTable() {
             </thead>
             <tbody className="divide-y divide-line">
               {filtered.map((user) => (
-                <tr key={user.id} className="hover:bg-mist transition-colors">
+                <tr
+                  key={user.id}
+                  className={`hover:bg-mist transition-colors ${justUpdated === user.id ? "row-new" : ""}`}
+                >
                   <td className="px-6 py-4 font-semibold text-ink">{user.name}</td>
                   <td className="px-6 py-4 text-muted text-xs">{user.email}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                      user.role === "Administrador"
+                      user.role === "Superadmin"
+                        ? "bg-ink text-paper"
+                        : user.role === "Administrador"
                         ? "bg-brand-deep text-paper"
-                        : user.role === "Supervisor"
-                        ? "bg-info text-paper"
                         : "bg-mist text-muted"
                     }`}>
                       {user.role}
@@ -84,7 +135,10 @@ export default function UserTable() {
                   </td>
                   <td className="px-6 py-4 text-muted text-xs">{user.lastAccess}</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5">
+                    <button
+                      onClick={() => openEdit(user)}
+                      className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
+                    >
                       Editar
                     </button>
                   </td>
@@ -100,6 +154,13 @@ export default function UserTable() {
           </p>
         )}
       </div>
+
+      <UserFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onSave={handleSave}
+        editUser={editUser}
+      />
     </div>
   );
 }

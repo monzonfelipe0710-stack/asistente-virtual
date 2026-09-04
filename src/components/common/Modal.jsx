@@ -18,7 +18,7 @@ export default function Modal({ open, onClose, title, children, onConfirm, confi
           <button onClick={onClose} className="btn-ghost">{cancelText}</button>
           <button
             onClick={() => { onConfirm?.(); onClose(); }}
-            className={`px-4 py-2 text-sm font-medium text-paper rounded-lg cursor-pointer transition-all duration-200 ${
+            className={`px-4 py-2 text-sm font-medium text-paper rounded-lg cursor-pointer transition-colors duration-200 ${
               confirmDanger
                 ? "bg-linear-to-r from-red-500 to-red-600 hover:shadow-md hover:shadow-red-200/50"
                 : "bg-linear-to-r from-primary to-primary-light hover:shadow-md"

@@ -15,7 +15,7 @@ export default function ExternalAccess() {
           href="https://www.formosa.gob.ar/miportal/login"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-4 px-4 py-4 border border-line hover:border-brand transition-all duration-300 hover:-translate-y-0.5 no-underline"
+          className="flex items-center gap-4 px-4 py-4 border border-line hover:border-brand transition duration-200 hover:-translate-y-0.5 no-underline"
         >
           <div className="w-10 h-10 bg-brand flex items-center justify-center shrink-0">
             <svg className="w-5 h-5 text-paper" fill="none" stroke="currentColor" viewBox="0 0 24 24">
