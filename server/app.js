@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import authRoutes from './src/routes/auth.routes.js'
 import { errorHandler } from './src/middlewares/error.middleware.js';
+import usuarioRoutes from './routes/usuario.routes.js';
 
 const app = express();
 
@@ -17,6 +18,8 @@ app.get('/api/health', (req, res) =>{
 });
 
 app.use('/api/auth', authRoutes);
+
+app.use('/api/usuarios', usuarioRoutes);
 
 app.use(errorHandler);
 

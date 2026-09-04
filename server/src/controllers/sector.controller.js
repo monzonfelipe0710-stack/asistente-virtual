@@ -1,4 +1,4 @@
-import * as sectorService from '../services/sector.services.js';
+import * as sectorService from '../services/sector.service.js';
 import { crearSectorSchema, actualizarSectorSchema, crearSectorSchema } from '../validators/sector.validator.js';
 
 export const crear = async (req, res) => {

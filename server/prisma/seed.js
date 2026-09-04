@@ -18,6 +18,7 @@ async function main() {
       email,
       passwordHash,
       rol: 'SUPERUSUARIO',
+      estado: 'APROBADO',
     },
   });
 

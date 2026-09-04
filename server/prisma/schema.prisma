@@ -25,6 +25,12 @@ enum TipoSector {
   DEPARTAMENTO
 }
 
+enum EstadoUsuario {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
 model Sector {
   id        Int @id @default(autoincrement())
   nombre    String
@@ -128,7 +134,7 @@ model Usuario {
   email         String @unique
   passwordHash  String @map("password_hash")
   rol           Rol @default(ADMINISTRADOR)
-  activo        Boolean @default(true)
+  estado        EstadoUsuario @default(PENDIENTE)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
