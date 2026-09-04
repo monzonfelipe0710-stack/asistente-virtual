@@ -297,36 +297,7 @@ export default function ChatBotAvatar({
 
   const isSleeping = reaction === "sleep";
 
-  if (isSleeping) {
-    return (
-      <div className="relative inline-flex">
-        <ZzzOverlay size={size} />
-        <svg
-          ref={svgRef}
-          width={size}
-          height={size}
-          viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`}
-          role="img"
-          aria-label="Avatar animado del asistente ChatAP"
-          className="block opacity-70"
-        >
-          <path ref={bodyRef} fill={INK} />
-          <path ref={eyeARef} fill={EYE} />
-          <path ref={eyeBRef} fill={EYE} />
-          {Array.from({ length: DOT_POOL }).map((_, i) => (
-            <circle
-              key={i}
-              ref={(el) => (dotRefs.current[i] = el)}
-              fill={INK}
-              style={{ display: "none" }}
-            />
-          ))}
-        </svg>
-      </div>
-    );
-  }
-
-  return (
+  const svg = (
     <svg
       ref={svgRef}
       width={size}
@@ -334,7 +305,7 @@ export default function ChatBotAvatar({
       viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`}
       role="img"
       aria-label="Avatar animado del asistente ChatAP"
-      className={`block ${speaking ? "animate-speak" : ""} ${rxClass}`}
+      className={`block ${speaking ? "animate-speak" : ""} ${rxClass} ${isSleeping ? "opacity-70" : ""}`}
     >
       <path ref={bodyRef} fill={INK} />
       <path ref={eyeARef} fill={EYE} />
@@ -349,4 +320,15 @@ export default function ChatBotAvatar({
       ))}
     </svg>
   );
+
+  if (isSleeping) {
+    return (
+      <div className="relative inline-flex">
+        <ZzzOverlay size={size} />
+        {svg}
+      </div>
+    );
+  }
+
+  return svg;
 }
