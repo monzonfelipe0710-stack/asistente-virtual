@@ -4,6 +4,8 @@ import QuickReplies from "./QuickReplies";
 import ChatBotAvatar from "../ChatBotAvatar";
 import { BotReactionController } from "./BotReactionController";
 import { botResponses } from "../../data/mockMessages";
+import { useChat } from "../../context/ChatContext";
+import { useAuth } from "../../context/AuthContext";
 
 function findResponse(input) {
   const text = input.toLowerCase();
@@ -23,7 +25,8 @@ function isErrorResponse(response) {
 }
 
 export default function ChatWindow() {
-  const [messages, setMessages] = useState([]);
+  const { messages, addMessage, clearHistory } = useChat();
+  const { user, isAuthenticated } = useAuth();
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [phase, setPhase] = useState("welcome");
@@ -40,6 +43,7 @@ export default function ChatWindow() {
   const typeTimerRef = useRef(0);
   const controllerRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const greetedRef = useRef(false);
 
   const [speechSupported] = useState(
     () =>
@@ -75,33 +79,47 @@ export default function ChatWindow() {
         }
       }
     };
+    // Track keyboard as activity
+    const onKeyDown = () => {
+      if (controllerRef.current) {
+        controllerRef.current.lastActivityTime = Date.now();
+        if (controllerRef.current.isSleeping) {
+          controllerRef.current.wakeUp();
+        }
+      }
+    };
     window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("keydown", onKeyDown);
 
     return () => {
       controller.stop();
       controllerRef.current = null;
       window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("keydown", onKeyDown);
       clearTimeout(mouseThrottle);
     };
   }, []);
+
+  // Si el usuario autenticado vuelve con historial guardado,
+  // entramos directamente al chat en lugar del saludo inicial.
+  useEffect(() => {
+    if (messages.length > 0 && !startedRef.current) {
+      startedRef.current = true;
+      setPhase("chat");
+    }
+  }, [messages.length]);
+
+  // Al cambiar de usuario (login/logout) reiniciamos el saludo personalizado.
+  const userId = user?.id ?? null;
+  useEffect(() => {
+    greetedRef.current = false;
+  }, [userId]);
 
   function beginChat() {
     if (startedRef.current) return;
     startedRef.current = true;
     setPhase("leaving");
     setTimeout(() => setPhase("chat"), 480);
-  }
-
-  function addMessage(type, text, action = null) {
-    const msg = {
-      id: Date.now(),
-      type,
-      text,
-      action,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, msg]);
-    return msg.id;
   }
 
   function simulateBotResponse(userText) {
@@ -114,8 +132,18 @@ export default function ChatWindow() {
       clearInterval(typeTimerRef.current);
 
       const response = findResponse(userText);
-      const id = addMessage("bot", response.text, response.action);
-      const long = response.text.length > 240;
+      // Si el usuario está autenticado, en su primer mensaje de la sesión el
+      // bot lo reconoce por su nombre de forma natural.
+      let botText = response.text;
+      if (isAuthenticated && user?.name && !greetedRef.current && !isErrorResponse(response)) {
+        greetedRef.current = true;
+        const firstName = user.name.split(" ")[0];
+        if (!/^(hola|buenas|buen)/i.test(botText)) {
+          botText = `Claro, ${firstName}. ` + botText.charAt(0).toLowerCase() + botText.slice(1);
+        }
+      }
+      const id = addMessage("bot", botText, response.action);
+      const long = botText.length > 240;
       const charStep = long ? 2 : 1;
       const charDelay = long ? 16 : 24;
 
@@ -139,8 +167,8 @@ export default function ChatWindow() {
           return;
         }
         i += charStep;
-        setTypedText(response.text.slice(0, i));
-        if (i >= response.text.length) {
+        setTypedText(botText.slice(0, i));
+        if (i >= botText.length) {
           clearInterval(typeTimerRef.current);
           setTimeout(() => {
             if (speakingIdRef.current !== id) return;
@@ -195,7 +223,7 @@ export default function ChatWindow() {
   function resetConversation() {
     clearInterval(typeTimerRef.current);
     clearTimeout(typingTimerRef.current);
-    setMessages([]);
+    clearHistory();
     setIsTyping(false);
     setSpeakingId(null);
     setTypedText("");
@@ -206,6 +234,7 @@ export default function ChatWindow() {
     setInput("");
     setPhase("welcome");
     startedRef.current = false;
+    greetedRef.current = false;
   }
 
   useEffect(() => {
@@ -288,11 +317,15 @@ export default function ChatWindow() {
           >
             <ChatBotAvatar size={60} reaction={reaction} />
             <h1 className="text-2xl sm:text-3xl font-semibold text-ink m-0">
-              ¿En qué puedo ayudarte?
+              {isAuthenticated && user?.name
+                ? `¡Hola, ${user.name.split(" ")[0]}! ¿En qué puedo ayudarte?`
+                : "¿En qué puedo ayudarte?"}
             </h1>
             <p className="text-muted max-w-md m-0">
               Soy ChatAP, el asistente virtual de la Administración Pública.
-              Consultá trámites, documentación y servicios.
+              {isAuthenticated
+                ? " Recordá tus consultas anteriores: continuá donde lo dejaste."
+                : " Consultá trámites, documentación y servicios."}
             </p>
           </div>
         )}

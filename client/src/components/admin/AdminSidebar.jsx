@@ -97,25 +97,31 @@ export default function AdminSidebar({ open, onToggle }) {
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-40 flex h-screen flex-col overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+      className="fixed top-0 left-0 bottom-0 z-40 flex flex-col overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
       style={{
         backgroundColor: "var(--sidebar-bg)",
         borderRight: "1px solid var(--sidebar-border)",
         width: open
           ? "var(--sidebar-width)"
           : "var(--sidebar-collapsed-width)",
+        height: "100vh",
       }}
       role="navigation"
       aria-label="Panel de administración"
     >
       {/* Header: toggle de la barra. */}
       <div
-        className="flex items-center justify-start shrink-0 overflow-hidden"
-        style={{ height: "64px", padding: open ? "0 12px" : "0 12px" }}
+        className="flex items-center shrink-0 overflow-hidden"
+        style={{
+          height: "72px",
+          padding: "16px 0 0",
+          paddingLeft: "20px",
+          justifyContent: "flex-start",
+        }}
       >
         <button
           onClick={onToggle}
-          className="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 cursor-pointer transition-all duration-200 hover:opacity-80"
+          className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 cursor-pointer transition-all duration-200 hover:opacity-80"
           style={{
             backgroundColor: "var(--sidebar-hover)",
             color: "var(--sidebar-text)",
@@ -139,7 +145,7 @@ export default function AdminSidebar({ open, onToggle }) {
       {/* Navegación: flex-1, layout vertical estable */}
       <nav
         className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
-        style={{ padding: open ? "16px 12px" : "16px 0" }}
+        style={{ padding: "20px 0" }}
       >
         {sections.map((section) => {
           const visible = section.items.filter((it) => can(it.perm));
@@ -147,19 +153,19 @@ export default function AdminSidebar({ open, onToggle }) {
           return (
             <div
               key={section.title}
-              style={{ marginBottom: open ? "24px" : "12px" }}
+              style={{ marginBottom: "32px" }}
             >
               <p
                 className="h-[18px] mb-1.5 text-[10px] font-semibold uppercase tracking-widest overflow-hidden whitespace-nowrap transition-opacity duration-300"
                 style={{
                   color: "var(--sidebar-section-text)",
                   opacity: open ? 1 : 0,
-                  paddingLeft: open ? "20px" : "0",
+                  paddingLeft: "20px",
                 }}
               >
                 {section.title}
               </p>
-              <div className="flex flex-col">
+              <div className="flex flex-col" style={{ rowGap: "10px" }}>
               {visible.map((link) => (
                 <NavLink
                   key={link.to}
@@ -180,9 +186,9 @@ export default function AdminSidebar({ open, onToggle }) {
                     color: isActive
                       ? "var(--sidebar-active-text)"
                       : "var(--sidebar-text)",
-padding: open ? "10px 20px" : "8px 14px",
-                    columnGap: open ? "12px" : 0,
-                    justifyContent: open ? undefined : "flex-start",
+                    padding: "14px 20px",
+                    columnGap: "16px",
+                    justifyContent: "flex-start",
                   })}
                   data-tooltip={!open ? link.label : undefined}
                   onMouseEnter={(e) => {
@@ -244,8 +250,7 @@ padding: open ? "10px 20px" : "8px 14px",
         className="border-t shrink-0"
         style={{ borderColor: "var(--sidebar-border)" }}
       >
-        <div style={{ padding: open ? "16px 20px" : "16px 12px" }}>
-          <NavLink
+        <div style={{ padding: "18px 0" }}><NavLink
             to="/"
             className={() =>
               [
@@ -259,9 +264,9 @@ padding: open ? "10px 20px" : "8px 14px",
                 ? "var(--sidebar-text-hover)"
                 : "var(--sidebar-text)",
               backgroundColor: isActive ? "var(--sidebar-hover)" : "transparent",
-              padding: open ? "10px 0px" : "10px 2px",
-              columnGap: open ? "12px" : 0,
-              justifyContent: open ? undefined : "center",
+              padding: "14px 20px",
+              columnGap: "16px",
+              justifyContent: "flex-start",
             })}
             data-tooltip={!open ? "Volver al Chat" : undefined}
             onMouseEnter={(e) => {
@@ -291,7 +296,7 @@ padding: open ? "10px 20px" : "8px 14px",
         </div>
         <div
           className="flex items-center justify-center"
-          style={{ padding: open ? "0 20px 20px" : "0 0 20px" }}
+          style={{ padding: open ? "0 20px 24px" : "0 0 24px" }}
           aria-label="Asistente virtual"
         >
           <ChatBotAvatar size={48} />
