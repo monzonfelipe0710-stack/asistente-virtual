@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import AdminSidebar from "../components/admin/AdminSidebar";
-import { useAdmin, ROLES } from "../context/AdminContext";
+import { useAuth } from "../context/AuthContext";
 
 function ThemeToggle() {
   const [dark, setDark] = useState(
@@ -31,7 +31,7 @@ function ThemeToggle() {
     <button
       onClick={() => setDark((d) => !d)}
       aria-label="Cambiar tema"
-      className="w-10 h-10 grid place-items-center rounded-lg transition-all duration-200 cursor-pointer"
+      className="w-10 h-10 grid place-items-center rounded-lg transition-colors duration-200 cursor-pointer"
       style={{
         border: "1px solid var(--sidebar-border)",
         color: "var(--sidebar-text)",
@@ -80,67 +80,98 @@ function ThemeToggle() {
 }
 
 export default function AdminLayout() {
-  const { role, setRole } = useAdmin();
+  const { user, userRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const mainRef = useRef(null);
+  const { pathname } = useLocation();
+
+  // Al cambiar de sección, la vista arranca arriba al instante y sin saltos.
+  // El panel (sidebar, header) persiste: no se recarga en cada click.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
+
+  // Solo Superadmin y Administrador pueden ver el Acceso Interno.
+  // El Ciudadano (o visitante sin sesión) ve esta pantalla de bloqueo.
+  const allowed = !!user && (userRole === "Superadmin" || userRole === "Administrador");
+
+  if (!allowed) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{ backgroundColor: "var(--color-paper)" }}
+      >
+        <div className="card w-full max-w-md p-8 text-center animate-scale-in">
+          <div className="w-12 h-12 mx-auto rounded-xl grid place-items-center bg-bad/10 text-bad mb-4">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h1 className="text-lg font-bold text-ink m-0">Acceso restringido</h1>
+          <p className="text-sm text-muted mt-2 m-0">
+            {!user
+              ? "Iniciá sesión con una cuenta de Administrador o Superadmin para entrar al Acceso Interno."
+              : "Tu cuenta de Ciudadano no tiene permiso para entrar al Acceso Interno."}
+          </p>
+          <div className="flex items-center justify-center gap-2 mt-6">
+            {!user && (
+              <Link to="/login" className="btn-primary no-underline">
+                Iniciar sesión
+              </Link>
+            )}
+            <Link to="/" className="btn-ghost no-underline">
+              Volver al inicio
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className="min-h-screen flex transition-colors duration-300"
+      className="h-screen overflow-hidden flex transition-colors duration-200"
       style={{ backgroundColor: "var(--color-paper)" }}
     >
       <AdminSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
 
       <div
-        className="flex-1 flex flex-col min-w-0 transition-[margin] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+        className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden transition-[margin] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]"
         style={{
           marginLeft: sidebarOpen ? "var(--sidebar-width)" : "var(--sidebar-collapsed-width)",
         }}
       >
         {/* Header */}
         <header
-          className="h-14 flex items-center justify-end px-4 lg:px-6 sticky top-0 z-30 backdrop-blur-md"
+          className="h-14 shrink-0 flex items-center justify-end px-4 lg:px-6 backdrop-blur-md"
           style={{
             backgroundColor: "color-mix(in srgb, var(--color-paper) 80%, transparent)",
           }}
         >
           <div className="flex items-center gap-3">
-            <label
-              className="hidden sm:flex items-center gap-2 text-xs"
-              style={{ color: "var(--sidebar-text)" }}
-            >
-              Rol:
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="px-3 py-1.5 rounded text-xs font-medium transition-colors duration-200 cursor-pointer"
-                style={{
-                  backgroundColor: "var(--sidebar-hover)",
-                  border: "1px solid var(--sidebar-border)",
-                  color: "var(--sidebar-text-hover)",
-                  outline: "none",
-                  appearance: "none",
-                }}
-                onFocus={(e) =>
-                  (e.target.style.borderColor = "var(--sidebar-active-bg)")
-                }
-                onBlur={(e) =>
-                  (e.target.style.borderColor = "var(--sidebar-border)")
-                }
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {user && (
+              <span className="hidden sm:flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">
+                  {user.name ? user.name[0] : "?"}
+                </span>
+                <span
+                  className="text-xs font-semibold truncate max-w-32"
+                  style={{ color: "var(--sidebar-text-hover)" }}
+                >
+                  {user.name}
+                </span>
+                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full ${userRole === "Superadmin" ? "bg-ink text-paper" : "bg-brand-deep/10 text-brand-deep"}`}>
+                  {userRole}
+                </span>
+              </span>
+            )}
             <ThemeToggle />
           </div>
         </header>
 
         {/* Main content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          <div className="animate-page-enter">
+        <main ref={mainRef} className="flex-1 min-h-0 p-4 lg:p-6 overflow-y-auto overflow-x-hidden">
+          <div key={pathname} className="animate-page-enter">
             <Outlet />
           </div>
         </main>

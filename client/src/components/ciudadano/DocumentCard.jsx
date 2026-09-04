@@ -18,7 +18,7 @@ export default function DocumentCard({ document }) {
   };
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-paper border border-line hover:border-brand transition-all duration-300 hover:-translate-y-0.5">
+    <div className="flex items-center gap-4 p-4 bg-paper border border-line hover:border-brand transition duration-200 hover:-translate-y-0.5">
       {formatIcons[document.format] || formatIcons.PDF}
 
       <div className="flex-1 min-w-0">
@@ -38,7 +38,7 @@ export default function DocumentCard({ document }) {
       </div>
 
       <button
-        className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5"
+        className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
         onClick={() => alert(`Descargando: ${document.title}`)}
       >
         Descargar

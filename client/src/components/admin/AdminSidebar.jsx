@@ -24,6 +24,12 @@ const sections = [
     title: "GESTIÓN",
     items: [
       {
+        to: "/admin/solicitudes",
+        label: "Solicitudes",
+        perm: "solicitudes",
+        icon: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+      },
+      {
         to: "/admin/usuarios",
         label: "Usuarios",
         perm: "usuarios",
@@ -121,7 +127,7 @@ export default function AdminSidebar({ open, onToggle }) {
       >
         <button
           onClick={onToggle}
-          className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 cursor-pointer transition-all duration-200 hover:opacity-80"
+          className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 cursor-pointer transition-colors duration-200 hover:opacity-80"
           style={{
             backgroundColor: "var(--sidebar-hover)",
             color: "var(--sidebar-text)",
@@ -221,7 +227,7 @@ export default function AdminSidebar({ open, onToggle }) {
                         <SidebarIcon path={link.icon} className="nav-icon" />
                       </span>
                       <span
-                        className={`truncate text-sm whitespace-nowrap overflow-hidden transition-all duration-300 ${
+                        className={`truncate text-sm whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-200 ${
                           open ? "opacity-100 max-w-40" : "opacity-0 max-w-0"
                         }`}
                       >
@@ -286,7 +292,7 @@ export default function AdminSidebar({ open, onToggle }) {
               <SidebarIcon path="M10 19l-7-7m0 0l7-7m-7 7h18" className="nav-icon" />
             </span>
             <span
-              className={`text-xs font-semibold uppercase tracking-wide truncate whitespace-nowrap overflow-hidden transition-all duration-300 ${
+              className={`text-xs font-semibold uppercase tracking-wide truncate whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-200 ${
                 open ? "opacity-100 max-w-40" : "opacity-0 max-w-0"
               }`}
             >

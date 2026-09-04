@@ -9,7 +9,7 @@ export default function NotFoundPage() {
         <p className="text-base text-muted mb-8 font-medium">Página no encontrada</p>
         <Link
           to="/"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-paper text-sm font-medium rounded-xl no-underline hover:bg-primary-light transition-all duration-200 shadow-sm hover:shadow-md"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-paper text-sm font-medium rounded-xl no-underline hover:bg-primary-light transition duration-200 shadow-sm hover:shadow-md"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

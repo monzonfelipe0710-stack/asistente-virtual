@@ -294,7 +294,7 @@ export default function ChatWindow() {
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") resetConversation();
           }}
-          className="group flex h-9 w-9 cursor-pointer items-center justify-end overflow-hidden rounded-xl border border-line text-muted transition-all duration-300 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          className="group flex h-9 w-9 cursor-pointer items-center justify-end overflow-hidden rounded-xl border border-line text-muted transition-all duration-200 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           aria-label="Nueva conversación"
         >
           <span className="order-2 grid h-9 w-9 shrink-0 place-items-center">
@@ -311,7 +311,7 @@ export default function ChatWindow() {
       <div ref={messagesRef} className="flex-1 overflow-y-auto relative">
         {phase !== "chat" && (
           <div
-            className={`welcome-content absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-500 ease-out ${
+            className={`welcome-content absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-300 ease-out ${
               phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
             }`}
           >

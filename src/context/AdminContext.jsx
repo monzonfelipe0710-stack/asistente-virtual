@@ -1,10 +1,23 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext } from "react";
+import { useAuth } from "./AuthContext";
 
 const AdminContext = createContext(null);
 
-export const ROLES = ["Administrador", "Supervisor", "Agente"];
+// Únicos roles del sistema. El Ciudadano no tiene acceso al panel interno.
+export const ROLES = ["Superadmin", "Administrador", "Ciudadano"];
 
 const PERMISSIONS = {
+  Superadmin: [
+    "dashboard",
+    "mesa_entrada",
+    "usuarios",
+    "solicitudes",
+    "conocimiento",
+    "siged",
+    "documentos",
+    "configuracion",
+    "reportes",
+  ],
   Administrador: [
     "dashboard",
     "mesa_entrada",
@@ -15,15 +28,22 @@ const PERMISSIONS = {
     "configuracion",
     "reportes",
   ],
-  Supervisor: ["dashboard", "usuarios", "conocimiento", "siged", "documentos", "reportes"],
-  Agente: ["dashboard", "siged", "conocimiento"],
+  Ciudadano: [],
 };
 
 export function AdminProvider({ children }) {
-  const [role, setRole] = useState("Administrador");
+  // El rol sale siempre del usuario logueado (sin selector manual).
+  let role = "Ciudadano";
+  try {
+    role = useAuth()?.userRole || "Ciudadano";
+  } catch {
+    role = "Ciudadano";
+  }
+  if (!ROLES.includes(role)) role = "Ciudadano";
+
   const can = (perm) => (PERMISSIONS[role] || []).includes(perm);
   return (
-    <AdminContext.Provider value={{ role, setRole, can }}>
+    <AdminContext.Provider value={{ role, can }}>
       {children}
     </AdminContext.Provider>
   );

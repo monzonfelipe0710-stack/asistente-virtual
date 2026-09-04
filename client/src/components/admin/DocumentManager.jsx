@@ -79,7 +79,7 @@ export default function DocumentManager() {
         <div className="flex flex-wrap gap-1.5 px-4 py-3 border-b border-line">
           {documentCategories.map((cat) => (
             <button key={cat} onClick={() => { setFilterCat(cat); setPage(1); }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 ${filterCat === cat ? "bg-primary text-paper shadow-sm" : "bg-paper text-muted border border-line/60 hover:border-primary/30 hover:text-primary"}`}>
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors duration-200 ${filterCat === cat ? "bg-primary text-paper shadow-sm" : "bg-paper text-muted border border-line/60 hover:border-primary/30 hover:text-primary"}`}>
               {cat} ({catCounts[cat] || 0})
             </button>
           ))}

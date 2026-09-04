@@ -28,7 +28,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
           <button
             key={p}
             onClick={() => onPageChange(p)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-all duration-200 ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors duration-200 ${
               p === currentPage
                 ? "bg-primary text-paper shadow-sm"
                 : "text-muted hover:bg-mist"

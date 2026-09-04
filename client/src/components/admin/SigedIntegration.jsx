@@ -36,7 +36,7 @@ export default function SigedIntegration() {
             <span className="text-line mx-1">|</span>
             <span>Última sincronización: {new Date().toLocaleString("es-AR")}</span>
           </div>
-          <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition-all duration-300 hover:-translate-y-0.5">
+          <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5">
             Sincronizar ahora
           </button>
         </div>

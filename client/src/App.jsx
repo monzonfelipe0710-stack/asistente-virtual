@@ -1,12 +1,12 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, Routes } from "react-router-dom";
 import { ToastProvider } from "./components/common/Toast";
 import { AdminProvider } from "./context/AdminContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ChatProvider } from "./context/ChatContext";
 import CiudadanoPage from "./pages/CiudadanoPage";
 import LoginRegisterPage from "./pages/LoginRegisterPage";
-import AnimatedRoutes from "./components/common/AnimatedRoutes";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { Route } from "react-router-dom";
 
 const AdminLayout = lazy(() => import("./pages/AdminLayout"));
@@ -28,9 +28,10 @@ export default function App() {
         <ChatProvider>
           <AdminProvider>
             <BrowserRouter>
-              <AnimatedRoutes>
+              <Routes>
                 <Route path="/" element={<CiudadanoPage />} />
                 <Route path="/login" element={<LoginRegisterPage />} />
+                <Route path="/restablecer" element={<ResetPasswordPage />} />
                 <Route
                   path="/contacto"
                   element={
@@ -48,6 +49,7 @@ export default function App() {
                   }
                 >
                   <Route index element={<Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense>} />
+                  <Route path="solicitudes" element={<Suspense fallback={<PageFallback />}><EmployeeApprovals /></Suspense>} />
                   <Route path="usuarios" element={<Suspense fallback={<PageFallback />}><UserTable /></Suspense>} />
                   <Route path="mesa-de-entrada" element={<Suspense fallback={<PageFallback />}><MesaDeEntrada /></Suspense>} />
                   <Route path="conocimiento" element={<Suspense fallback={<PageFallback />}><KnowledgeManager /></Suspense>} />
@@ -64,7 +66,7 @@ export default function App() {
                     </Suspense>
                   }
                 />
-              </AnimatedRoutes>
+              </Routes>
             </BrowserRouter>
           </AdminProvider>
         </ChatProvider>
@@ -74,6 +76,7 @@ export default function App() {
 }
 
 const AdminDashboard = lazy(() => import("./components/admin/Dashboard"));
+const EmployeeApprovals = lazy(() => import("./components/admin/EmployeeApprovals"));
 const UserTable = lazy(() => import("./components/admin/UserTable"));
 const KnowledgeManager = lazy(() => import("./components/admin/KnowledgeManager"));
 const SigedIntegration = lazy(() => import("./components/admin/SigedIntegration"));

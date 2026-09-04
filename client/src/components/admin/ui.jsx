@@ -8,7 +8,7 @@ export function useReducedMotion() {
   );
 }
 
-export function CountUp({ value, duration = 900, className = "" }) {
+export function CountUp({ value, duration = 550, className = "" }) {
   const [display, setDisplay] = useState(useReducedMotion() ? value : 0);
   const fromRef = useRef(0);
 

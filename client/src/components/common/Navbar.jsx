@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 const preloadAdmin = () => {
@@ -7,26 +7,47 @@ const preloadAdmin = () => {
   import("../admin/Dashboard");
 };
 
-function ProfileMenu({ user, isStaff, logout }) {
+function ProfileMenu({ user, isStaff, userRole, isSuperadmin, logout }) {
   const [open, setOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const menuRef = useRef(null);
+  const logoutTimer = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Si se navega (ej: click en "Acceso Interno"), cerrar el menú.
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!open) return;
-    function onClickOutside(e) {
+    function onPointerDownOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("mousedown", onPointerDownOutside);
+    document.addEventListener("touchstart", onPointerDownOutside);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDownOutside);
+      document.removeEventListener("touchstart", onPointerDownOutside);
+    };
   }, [open]);
 
   useEffect(() => {
+    return () => {
+      if (logoutTimer.current) clearTimeout(logoutTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
     function onKey(e) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        setShowProfile(false);
+      }
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -35,10 +56,14 @@ function ProfileMenu({ user, isStaff, logout }) {
   const firstName = (user?.name || "").split(" ")[0];
 
   function handleLogout() {
+    if (loggingOut) return;
     setOpen(false);
     setShowProfile(false);
-    logout();
-    navigate("/");
+    setLoggingOut(true);
+    logoutTimer.current = setTimeout(() => {
+      logout();
+      navigate("/");
+    }, 550);
   }
 
   function handleItem(action) {
@@ -48,14 +73,14 @@ function ProfileMenu({ user, isStaff, logout }) {
 
   return (
     <>
-      <div className="relative hidden sm:block" ref={menuRef}>
+      <div className="relative block" ref={menuRef}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-label="Menú de perfil"
           aria-haspopup="menu"
           aria-expanded={open}
-          className="flex items-center gap-2 rounded-xl border border-line bg-paper px-2 py-1.5 transition-all hover:bg-mist cursor-pointer"
+          className="flex items-center gap-2 rounded-xl border border-line bg-paper px-2 py-1.5 transition-colors hover:bg-mist cursor-pointer"
         >
           <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">
             {user.name ? user.name[0] : "?"}
@@ -77,11 +102,16 @@ function ProfileMenu({ user, isStaff, logout }) {
         {open && (
           <div
             role="menu"
-            className="absolute right-0 top-[calc(100%+8px)] w-56 rounded-xl border border-line bg-paper shadow-lg overflow-hidden animate-fade-up"
+            className="absolute right-0 top-[calc(100%+8px)] z-50 w-56 rounded-xl border border-line bg-paper shadow-lg overflow-hidden animate-fade-up"
           >
             <div className="px-4 py-3 border-b border-line bg-mist">
               <p className="text-sm font-semibold text-ink m-0 truncate">{user.name}</p>
               <p className="text-xs text-muted m-0 mt-0.5 truncate">{user.email}</p>
+              {userRole && (
+                <span className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full ${isSuperadmin ? "bg-ink text-paper" : userRole === "Administrador" ? "bg-brand-deep/10 text-brand-deep" : "bg-mist text-muted"}`}>
+                  {userRole}
+                </span>
+              )}
             </div>
 
             <div className="py-1">
@@ -102,6 +132,7 @@ function ProfileMenu({ user, isStaff, logout }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 role="menuitem"
+                onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-ink hover:bg-mist transition-colors no-underline"
               >
                 <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -146,8 +177,11 @@ function ProfileMenu({ user, isStaff, logout }) {
 
       {showProfile && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
           onClick={() => setShowProfile(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mi perfil"
         >
           <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
           <div
@@ -172,20 +206,38 @@ function ProfileMenu({ user, isStaff, logout }) {
                 <dt className="text-muted">Correo</dt>
                 <dd className="text-ink font-medium text-right break-all">{user.email}</dd>
               </div>
-              {isStaff && (
+              {userRole && (
                 <div className="flex justify-between">
                   <dt className="text-muted">Rol</dt>
-                  <dd className="text-ink font-medium">Personal interno</dd>
+                  <dd className="text-ink font-medium">{userRole}</dd>
                 </div>
               )}
             </dl>
             <button
               type="button"
               onClick={() => setShowProfile(false)}
-              className="mt-6 w-full py-2.5 rounded-xl border border-line text-sm font-semibold text-muted hover:bg-mist hover:text-ink transition-all cursor-pointer"
+              className="mt-6 w-full py-2.5 rounded-xl border border-line text-sm font-semibold text-muted hover:bg-mist hover:text-ink transition-colors cursor-pointer"
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {loggingOut && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center animate-fade-in"
+          style={{ backgroundColor: "var(--color-paper)" }}
+          role="status"
+          aria-label="Cerrando sesión"
+        >
+          <div className="flex flex-col items-center gap-3 animate-scale-in">
+            <span
+              className="block w-10 h-10 rounded-full border-2 animate-spin"
+              style={{ borderColor: "var(--color-line)", borderTopColor: "var(--color-brand-deep)" }}
+              aria-hidden="true"
+            />
+            <p className="text-sm text-muted m-0 font-medium">Cerrando sesión…</p>
           </div>
         </div>
       )}
@@ -197,7 +249,7 @@ export default function Navbar() {
   const [dark, setDark] = useState(
     typeof document !== "undefined" && document.documentElement.classList.contains("dark")
   );
-  const { user, isAuthenticated, isStaff, logout } = useAuth();
+  const { user, isAuthenticated, isStaff, userRole, isSuperadmin, logout } = useAuth();
 
   function toggleTheme() {
     const next = !dark;
@@ -230,11 +282,11 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {isAuthenticated && user ? (
-            <ProfileMenu user={user} isStaff={isStaff} logout={logout} />
+            <ProfileMenu user={user} isStaff={isStaff} userRole={userRole} isSuperadmin={isSuperadmin} logout={logout} />
           ) : (
             <Link
               to="/login"
-              className="navbar-action inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-deep text-paper text-xs font-semibold hover:bg-brand-dark transition-all no-underline"
+              className="navbar-action inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-deep text-paper text-xs font-semibold hover:bg-brand-dark no-underline"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -246,7 +298,7 @@ export default function Navbar() {
             type="button"
             onClick={toggleTheme}
             aria-label="Cambiar tema claro/oscuro"
-            className="navbar-action w-10 h-10 flex items-center justify-center rounded-xl border border-line text-muted hover:text-ink hover:bg-mist hover:border-muted transition-all"
+            className="navbar-action w-10 h-10 flex items-center justify-center rounded-xl border border-line text-muted hover:text-ink hover:bg-mist hover:border-muted"
           >
             {dark ? (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
