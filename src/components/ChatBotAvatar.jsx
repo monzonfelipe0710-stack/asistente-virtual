@@ -72,6 +72,17 @@ const DOT_POOL = 6;
 const MAX_YAW = 35;
 const MAX_PITCH = 28;
 
+const AUTO_REACTIONS = [
+  "blink", "wink", "blink", "wink",
+  "lookLeft", "lookRight", "lookUp", "lookDown",
+  "tiltLeft", "tiltRight",
+  "microBounce", "microSquash", "stretch",
+  "surprised", "thinking", "attention",
+  "happy", "excited", "proud", "shy", "relieved",
+  "curious", "confus", "playful", "nod",
+  "bored", "sleepy", "exclaim", "suspicious",
+];
+
 function applyConfig(engine, cfg, t) {
   if (cfg.blink) {
     engine.forceBlink(t);
@@ -119,6 +130,7 @@ export default function ChatBotAvatar({
   const clockRef = useRef(0);
   const colorsRef = useRef({ body: INK, eye: EYE });
   const [rxClass, setRxClass] = useState("");
+  const [autoReaction, setAutoReaction] = useState(null);
 
   useEffect(() => {
     const readColors = () => {
@@ -244,7 +256,6 @@ export default function ChatBotAvatar({
     };
 
     const onMove = (e) => {
-      if (reactionRef.current !== "idle") return;
       const el = svgRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
@@ -276,14 +287,14 @@ export default function ChatBotAvatar({
       engineRef.current = null;
       drawRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStatic]);
 
   useEffect(() => {
-    reactionRef.current = reaction;
+    const eff = reaction === "idle" && autoReaction ? autoReaction : reaction;
+    reactionRef.current = eff;
     const engine = engineRef.current;
     if (!engine) return;
-    const cfg = REACTION_CONFIG[reaction] || REACTION_CONFIG.idle;
+    const cfg = REACTION_CONFIG[eff] || REACTION_CONFIG.idle;
     const t = clockRef.current;
     applyConfig(engine, cfg, t);
 
@@ -292,8 +303,36 @@ export default function ChatBotAvatar({
     setRxClass(transform);
 
     if (reduce || isStatic) drawRef.current?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reaction, speaking, isStatic]);
+  }, [reaction, autoReaction, speaking, isStatic]);
+
+  useEffect(() => {
+    if (isStatic || reaction !== "idle") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    let timer = null;
+    const clear = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+    const schedule = () => {
+      clear();
+      timer = setTimeout(() => {
+        const pick = AUTO_REACTIONS[Math.floor(Math.random() * AUTO_REACTIONS.length)];
+        setAutoReaction(pick);
+        timer = setTimeout(() => {
+          setAutoReaction(null);
+          timer = setTimeout(schedule, 3200 + Math.random() * 3000);
+        }, 1100 + Math.random() * 900);
+      }, 2400 + Math.random() * 3200);
+    };
+    schedule();
+    return () => {
+      clear();
+      setAutoReaction(null);
+    };
+  }, [isStatic, reaction]);
 
   const isSleeping = reaction === "sleep";
 

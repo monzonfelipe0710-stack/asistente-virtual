@@ -1,4 +1,27 @@
-export default function QuickReplies({ onSelect }) {
+function QuickReplyCard({ opt, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(opt.query)}
+      className="quick-reply-card"
+    >
+      <span className="quick-reply-icon" aria-hidden="true">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d={opt.icon} />
+        </svg>
+      </span>
+      <span className="quick-reply-copy">
+        <span className="quick-reply-label">{opt.label}</span>
+        <span className="quick-reply-description">{opt.description}</span>
+      </span>
+      <svg className="quick-reply-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+}
+
+export default function QuickReplies({ onSelect, suggested = [] }) {
   const options = [
     {
       label: "¿Cómo sigo mi expediente?",
@@ -28,29 +51,21 @@ export default function QuickReplies({ onSelect }) {
 
   return (
     <div className="quick-replies">
+      {suggested.length > 0 && (
+        <>
+          <p className="quick-replies-title">Continuá donde quedaste</p>
+          <div className="quick-replies-grid">
+            {suggested.map((opt) => (
+              <QuickReplyCard key={opt.label} opt={opt} onSelect={onSelect} />
+            ))}
+          </div>
+        </>
+      )}
       <p className="quick-replies-title">Preguntas frecuentes</p>
       <div className="quick-replies-grid">
-      {options.map((opt) => (
-        <button
-          key={opt.label}
-          type="button"
-          onClick={() => onSelect(opt.query)}
-          className="quick-reply-card"
-        >
-          <span className="quick-reply-icon" aria-hidden="true">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d={opt.icon} />
-            </svg>
-          </span>
-          <span className="quick-reply-copy">
-            <span className="quick-reply-label">{opt.label}</span>
-            <span className="quick-reply-description">{opt.description}</span>
-          </span>
-          <svg className="quick-reply-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-      ))}
+        {options.map((opt) => (
+          <QuickReplyCard key={opt.label} opt={opt} onSelect={onSelect} />
+        ))}
       </div>
     </div>
   );

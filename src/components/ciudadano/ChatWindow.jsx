@@ -4,24 +4,96 @@ import QuickReplies from "./QuickReplies";
 import ChatBotAvatar from "../ChatBotAvatar";
 import { BotReactionController } from "./BotReactionController";
 import { botResponses } from "../../data/mockMessages";
+import { wizards, wizardLabels } from "../../data/wizard";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
+import {
+  scoreKnowledge,
+  relateDocument,
+  officeFor,
+  officeAction,
+  officeInfo,
+  documentDownloadAction,
+} from "../../lib/knowledgeEngine";
+import {
+  resolveFollowUp,
+  wizardFor,
+  buildRelated,
+  buildRecoverChips,
+} from "../../lib/chatFollowUp";
+import {
+  rememberMessage,
+  rememberAnswer,
+  loadMemory,
+  buildReminder,
+  suggestedTopics,
+  detectOffice,
+  detectTopic,
+  topicLabel,
+} from "../../lib/chatMemory";
 
-function findResponse(input) {
+const KB_STRONG = 3.5;
+const KB_WEAK = 1.5;
+
+function findIntent(input) {
   const text = input.toLowerCase();
   for (const entry of botResponses) {
+    if (entry.keywords.includes("default")) continue;
     for (const kw of entry.keywords) {
       if (text.includes(kw)) {
-        return entry.response;
+        return entry;
       }
     }
   }
-  return botResponses.find((e) => e.keywords.includes("default")).response;
+  return null;
 }
 
-function isErrorResponse(response) {
-  const text = (response?.text || "").toLowerCase();
-  return /no encontr|no disponible|error|no se pudo|no tengo/.test(text);
+function tidyLabel(text) {
+  return String(text || "")
+    .replace(/^¿/, "")
+    .replace(/\?+$/, "")
+    .trim();
+}
+
+function isErrorText(text) {
+  return /no encontr|no disponible|error|no se pudo|no tengo/.test((text || "").toLowerCase());
+}
+
+/**
+ * Resuelve una consulta del ciudadano con prioridad:
+ * 1) intent exacto, 2) base de conocimiento, 3) null (se resuelve después).
+ */
+function resolveResponse(userText) {
+  const kb = scoreKnowledge(userText);
+  const intent = findIntent(userText);
+
+  if (intent) {
+    const r = intent.response;
+    const interactive = Boolean(r.action || r.reaction);
+    const bypassSecurity =
+      r.reaction === "worried" &&
+      /olvid|recuperar|resetear|restablecer/i.test(userText);
+
+    if (!bypassSecurity) {
+      if (interactive) {
+        // Si el intent es una descarga genérica pero hay un artículo muy
+        // específico, ganamos precisión con el conocimiento.
+        if (kb && kb.score >= KB_STRONG && r.action?.type === "download") {
+          return { kind: "knowledge", article: kb.article };
+        }
+        return { kind: "intent", entry: intent, query: userText };
+      }
+      if (kb && kb.score >= KB_WEAK) {
+        return { kind: "knowledge", article: kb.article };
+      }
+      return { kind: "intent", entry: intent, query: userText };
+    }
+  }
+
+  if (kb && kb.score >= KB_WEAK) {
+    return { kind: "knowledge", article: kb.article };
+  }
+  return null;
 }
 
 export default function ChatWindow() {
@@ -44,6 +116,9 @@ export default function ChatWindow() {
   const controllerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const greetedRef = useRef(false);
+  const ctxRef = useRef({ officeData: null });
+  const wizardRef = useRef(null);
+  const [welcomeMem, setWelcomeMem] = useState(null);
 
   const [speechSupported] = useState(
     () =>
@@ -115,11 +190,26 @@ export default function ChatWindow() {
     greetedRef.current = false;
   }, [userId]);
 
+  // Memoria: cargamos el contexto del usuario para personalizar la bienvenida.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setWelcomeMem(userId ? loadMemory(userId) : null);
+  }, [userId]);
+
   function beginChat() {
     if (startedRef.current) return;
     startedRef.current = true;
     setPhase("leaving");
     setTimeout(() => setPhase("chat"), 480);
+  }
+
+  function buildChipsAction(options) {
+    if (!options || options.length === 0) return null;
+    return {
+      type: "chips",
+      title: "También te puede servir:",
+      options: options.map((o) => ({ label: o.label, value: o.value ?? o.label })),
+    };
   }
 
   function simulateBotResponse(userText) {
@@ -131,19 +221,128 @@ export default function ChatWindow() {
     setTimeout(() => {
       clearInterval(typeTimerRef.current);
 
-      const response = findResponse(userText);
-      // Si el usuario está autenticado, en su primer mensaje de la sesión el
-      // bot lo reconoce por su nombre de forma natural.
-      let botText = response.text;
-      if (isAuthenticated && user?.name && !greetedRef.current && !isErrorResponse(response)) {
-        greetedRef.current = true;
-        const firstName = user.name.split(" ")[0];
-        if (!/^(hola|buenas|buen)/i.test(botText)) {
-          botText = `Claro, ${firstName}. ` + botText.charAt(0).toLowerCase() + botText.slice(1);
+      const mem = userId ? loadMemory(userId) : null;
+      const topic = detectTopic(userText);
+      const resolved = resolveResponse(userText);
+
+      let finalText;
+      let finalActions;
+      let ctx;
+      let isClarification = false;
+
+      if (resolved?.kind === "knowledge") {
+        const article = resolved.article;
+        finalText = article.answer;
+        const actions = [];
+
+        const doc = relateDocument(`${article.question} ${article.answer}`);
+        if (doc) actions.push(documentDownloadAction(doc, article));
+
+        const officeName = officeFor(`${article.question} ${article.answer}`);
+        const oa = officeName ? officeAction(officeName) : null;
+        if (oa) actions.push(oa);
+
+        const wz = wizardFor(`${article.question} ${article.answer}`);
+        if (wz) {
+          actions.push({ type: "wizard", wizardId: wz.id, label: wizardLabels()[wz.id] });
+        }
+        const relatedAction = buildChipsAction(
+          buildRelated({ kind: "knowledge", category: article.category, articleId: article.id })
+        );
+        if (relatedAction) actions.push(relatedAction);
+
+        finalActions = actions;
+        ctx = {
+          kind: "knowledge",
+          category: article.category,
+          articleId: article.id,
+          label: tidyLabel(article.question),
+          officeData: officeName
+            ? { name: officeName, ...officeInfo(officeName) }
+            : null,
+        };
+      } else if (resolved?.kind === "intent") {
+        const r = resolved.entry.response;
+        const actions = r.action ? [r.action] : [];
+        finalText = r.text;
+
+        const wk = wizardFor(userText);
+        if (wk) {
+          actions.push({ type: "wizard", wizardId: wk.id, label: wizardLabels()[wk.id] });
+        }
+        const relatedIntentAction = buildChipsAction(
+          buildRelated({ kind: "intent", topic })
+        );
+        if (relatedIntentAction) actions.push(relatedIntentAction);
+
+        finalActions = actions.length ? actions : null;
+        const officeName =
+          r.action?.type === "location"
+            ? detectOffice(`${r.action.place} ${r.action.address}`)
+            : null;
+        ctx = {
+          kind: "intent",
+          topic,
+          label: topic ? topicLabel(topic) : resolved.entry.keywords[0],
+          officeData: officeName
+            ? {
+                name: officeName,
+                place: r.action.place,
+                address: r.action.address,
+                hours: r.action.hours,
+              }
+            : null,
+        };
+      } else {
+        const followUp = resolveFollowUp(userText, ctxRef.current);
+        if (followUp) {
+          finalText = followUp.text;
+          finalActions = [followUp.action];
+          ctx = { ...ctxRef.current };
+        } else if (mem?.lastAnswer?.label) {
+          finalText = `No entendí del todo la consulta, pero vi que la última vez preguntabas sobre "${mem.lastAnswer.label}". ¿Retomamos eso?`;
+          finalActions = buildChipsAction(suggestedTopics(mem).map((s) => ({ label: s.label, value: s.query })));
+          ctx = { kind: "memory", suggested: suggestedTopics(mem), officeData: null };
+          isClarification = true;
+        } else if (mem?.lastTopic) {
+          finalText = `No entendí del todo la consulta, pero veo que la última vez estabas viendo ${topicLabel(
+            mem.lastTopic
+          )}. ¿Retomamos eso?`;
+          finalActions = buildChipsAction(
+            suggestedTopics(mem).map((s) => ({ label: s.label, value: s.query }))
+          );
+          ctx = { kind: "memory", suggested: suggestedTopics(mem), officeData: null };
+          isClarification = true;
+        } else {
+          finalText = "No entendí la consulta. ¿Podés reescribirla con otras palabras? O elegí una opción para empezar:";
+          finalActions = { type: "chips", options: buildRecoverChips() };
+          ctx = { kind: "default", officeData: null };
+          isClarification = true;
         }
       }
-      const id = addMessage("bot", botText, response.action);
-      const long = botText.length > 240;
+
+      // Si el usuario está autenticado, en su primer mensaje de la sesión el
+      // bot lo reconoce por su nombre y/o le recuerda lo que venía haciendo.
+      if (
+        isAuthenticated &&
+        user?.name &&
+        !greetedRef.current &&
+        !isErrorText(finalText) &&
+        !isClarification &&
+        resolved?.kind !== "knowledge"
+      ) {
+        greetedRef.current = true;
+        const firstName = user.name.split(" ")[0];
+        const reminder = mem && mem.count > 0 ? buildReminder(mem, user.name) : null;
+        if (reminder) {
+          finalText = reminder + " " + finalText.charAt(0).toLowerCase() + finalText.slice(1);
+        } else if (!/^(hola|buenas|buen)/i.test(finalText)) {
+          finalText = `Claro, ${firstName}. ` + finalText.charAt(0).toLowerCase() + finalText.slice(1);
+        }
+      }
+
+      const id = addMessage("bot", finalText, finalActions);
+      const long = finalText.length > 240;
       const charStep = long ? 2 : 1;
       const charDelay = long ? 16 : 24;
 
@@ -153,11 +352,25 @@ export default function ChatWindow() {
       setTypedText("");
 
       // Pasamos la respuesta completa al controller para que detecte el tono
-      controllerRef.current?.onEvent("botResponding", response);
+      const intentReaction =
+        resolved?.kind === "intent" ? resolved.entry.response.reaction : undefined;
+      controllerRef.current?.onEvent("botResponding", {
+        text: finalText,
+        reaction: intentReaction,
+      });
 
-      // Reacción de concern si la respuesta tiene reaction explícita
-      if (response.reaction) {
-        controllerRef.current?.onEvent("botConcern", response.reaction);
+      if (intentReaction) {
+        controllerRef.current?.onEvent("botConcern", intentReaction);
+      }
+
+      ctxRef.current = ctx || { officeData: null };
+      if (userId) {
+        rememberAnswer(userId, {
+          label: (ctx && ctx.label) || (resolved?.kind === "knowledge" ? tidyLabel(resolved.article.question) : null),
+          topic,
+          category: ctx?.category ?? null,
+          kind: resolved?.kind ?? ctx?.kind ?? "default",
+        });
       }
 
       let i = 0;
@@ -167,8 +380,8 @@ export default function ChatWindow() {
           return;
         }
         i += charStep;
-        setTypedText(botText.slice(0, i));
-        if (i >= botText.length) {
+        setTypedText(finalText.slice(0, i));
+        if (i >= finalText.length) {
           clearInterval(typeTimerRef.current);
           setTimeout(() => {
             if (speakingIdRef.current !== id) return;
@@ -178,7 +391,7 @@ export default function ChatWindow() {
             setTypedText("");
 
             // Si no hubo error, celebración sutil
-            if (!isErrorResponse(response) && !response.reaction) {
+            if (!isErrorText(finalText) && !intentReaction) {
               controllerRef.current?.onEvent("botSuccess");
             } else {
               controllerRef.current?.onEvent("botFinished");
@@ -194,6 +407,11 @@ export default function ChatWindow() {
     if (!t) return;
     beginChat();
     addMessage("user", t);
+    if (wizardRef.current) {
+      runWizardStep(t);
+      return;
+    }
+    if (userId) rememberMessage(userId, t);
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
     simulateBotResponse(t);
@@ -220,6 +438,87 @@ export default function ChatWindow() {
     sendText(query);
   }
 
+  function handleFollowUp(payload) {
+    if (!payload) return;
+    if (typeof payload === "string") {
+      sendText(payload);
+      return;
+    }
+    if (payload.type === "wizard" && payload.wizardId) {
+      startWizard(payload.wizardId);
+    }
+  }
+
+  function askWizardStep() {
+    const w = wizardRef.current;
+    if (!w) return;
+    const flow = wizards[w.id];
+    const step = flow.steps[w.step];
+    if (step?.final) {
+      finishWizard();
+      return;
+    }
+    addMessage("bot", step.question, {
+      type: "chips",
+      options: step.chips.map((c) => ({ label: c, value: c })),
+    });
+  }
+
+  function startWizard(id) {
+    const flow = wizards[id];
+    if (!flow) return;
+    beginChat();
+    wizardRef.current = { id, step: 0, data: {} };
+    askWizardStep();
+  }
+
+  function runWizardStep(input) {
+    const w = wizardRef.current;
+    if (!w) return;
+    const flow = wizards[w.id];
+    const step = flow.steps[w.step];
+    w.data[`step${w.step}`] = input;
+    if (step?.final) {
+      finishWizard();
+      return;
+    }
+    w.step += 1;
+    const next = flow.steps[w.step];
+    if (next?.final) {
+      finishWizard();
+      return;
+    }
+    addMessage("bot", next.question, {
+      type: "chips",
+      options: next.chips.map((c) => ({ label: c, value: c })),
+    });
+  }
+
+  function finishWizard() {
+    const w = wizardRef.current;
+    wizardRef.current = null;
+    if (!w) return;
+    const flow = wizards[w.id];
+    const final = flow.steps[flow.steps.length - 1];
+    const summary = final.summary(w.data);
+
+    const actions = [];
+    const doc = relateDocument(flow.downloadText);
+    if (doc) {
+      actions.push(
+        documentDownloadAction(doc, {
+          question: flow.title,
+          answer: summary,
+          category: "Trámites",
+        })
+      );
+    }
+    const oa = officeAction(flow.office);
+    if (oa) actions.push(oa);
+
+    addMessage("bot", summary, actions.length ? actions : null);
+  }
+
   function resetConversation() {
     clearInterval(typeTimerRef.current);
     clearTimeout(typingTimerRef.current);
@@ -235,6 +534,8 @@ export default function ChatWindow() {
     setPhase("welcome");
     startedRef.current = false;
     greetedRef.current = false;
+    wizardRef.current = null;
+    ctxRef.current = { officeData: null };
   }
 
   useEffect(() => {
@@ -324,7 +625,9 @@ export default function ChatWindow() {
             <p className="text-muted max-w-md m-0">
               Soy ChatAP, el asistente virtual de la Administración Pública.
               {isAuthenticated
-                ? " Recordá tus consultas anteriores: continuá donde lo dejaste."
+                ? welcomeMem && welcomeMem.count > 0
+                  ? ` ${buildReminder(welcomeMem)}`
+                  : " Recordá tus consultas anteriores: continuá donde lo dejaste."
                 : " Consultá trámites, documentación y servicios."}
             </p>
           </div>
@@ -339,6 +642,7 @@ export default function ChatWindow() {
                 speaking={msg.id === speakingId}
                 typedText={msg.id === speakingId ? typedText : ""}
                 reaction={reaction}
+                onFollowUp={handleFollowUp}
               />
             ))}
           </div>
@@ -348,7 +652,10 @@ export default function ChatWindow() {
       <div className="bg-paper">
         {phase === "welcome" && (
           <div className="max-w-3xl mx-auto px-4 pt-4">
-            <QuickReplies onSelect={handleQuickReply} />
+            <QuickReplies
+              onSelect={handleQuickReply}
+              suggested={welcomeMem && welcomeMem.count > 0 ? suggestedTopics(welcomeMem) : []}
+            />
           </div>
         )}
         <form onSubmit={handleSend} className="container-ia-chat max-w-3xl mx-auto">
