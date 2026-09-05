@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/common/Toast";
+import PasswordField from "../components/common/PasswordField";
 import ChatBotAvatar from "../components/ChatBotAvatar";
 import { employeeDepartments } from "../data/mockEmployeeApprovals";
 
@@ -153,7 +154,7 @@ export default function LoginRegisterPage() {
               opacity: phase === "leave" ? 0.5 : 1,
             }}
           >
-            <ChatBotAvatar size={64} reaction={mode === "register" ? "happy" : "idle"} static />
+            <ChatBotAvatar size={64} reaction={mode === "register" ? "happy" : "idle"} />
           </div>
           <h1 key={`${recovery ? "recovery" : mode}-${phase}`} className={`text-2xl font-bold text-ink m-0 ${headerAnim}`}>
             {recovery ? "Recuperar contraseña" : isLogin ? "Bienvenido de nuevo" : "Creá tu cuenta"}
@@ -303,13 +304,13 @@ export default function LoginRegisterPage() {
               placeholder="tucorreo@ejemplo.com"
               autoComplete={isLogin ? "email" : "email"}
             />
-            <Field
+            <PasswordField
               label="Contraseña"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={isLogin ? "Tu contraseña" : "Mínimo 6 caracteres"}
               autoComplete={isLogin ? "current-password" : "new-password"}
+              animate={phase === "enter"}
             />
             {!isLogin && (
               <label className="flex items-start gap-2.5 rounded-xl border border-line bg-paper px-3.5 py-3 cursor-pointer">

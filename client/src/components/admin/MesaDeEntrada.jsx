@@ -1,6 +1,10 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useAdmin } from "../../context/AdminContext";
 import { useToast } from "../common/Toast";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 import {
   initialMesaEntradas,
   createMesaEntrada,
@@ -545,18 +549,53 @@ function MesaFormModal({ onClose, onSubmit }) {
 
 const STATUS_ORDER = ["Ingresado", "En proceso", "Observado", "Finalizado"];
 
+function downloadFile(file, e) {
+  e?.stopPropagation();
+  if (file instanceof File) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } else if (file?.url) {
+    const a = document.createElement("a");
+    a.href = file.url;
+    a.download = file.name || "documento";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.click();
+  }
+}
+
 function MesaDetailModal({ entry, onClose, onChangeStatus }) {
   const currentIdx = STATUS_ORDER.indexOf(entry.estado);
+  const [viewer, setViewer] = useState(null);
+  const [closing, setClosing] = useState(false);
+  const hasAdjuntos = Array.isArray(entry.adjuntos) && entry.adjuntos.length > 0;
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(onClose, 200);
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 animate-fade-in">
-      <div className="card w-full max-w-lg p-6 animate-scale-in">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 ${
+        closing ? "animate-fade-out" : "animate-fade-in"
+      }`}
+    >
+      <div
+        className={`card w-full max-w-lg p-6 ${
+          closing ? "animate-scale-out" : "animate-scale-in"
+        }`}
+      >
         <div className="flex items-start justify-between mb-4">
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-ink m-0 truncate">{entry.solicitante}</h2>
             <p className="text-xs font-mono text-muted mt-0.5">{entry.id}</p>
           </div>
-          <button className="text-muted hover:text-ink" onClick={onClose} aria-label="Cerrar">
+          <button className="text-muted hover:text-ink" onClick={handleClose} aria-label="Cerrar">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -583,6 +622,44 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
             </div>
           )}
         </dl>
+
+        {hasAdjuntos && (
+          <div className="mt-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-faint mb-2">
+              Documentación adjunta ({entry.adjuntos.length})
+            </p>
+            <ul className="space-y-1.5">
+              {entry.adjuntos.map((f, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-[11px] bg-mist rounded-lg px-2.5 py-2 border border-line">
+                  <FileBadge file={f} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-ink m-0">{f.name}</p>
+                    <p className="text-[9px] text-faint m-0">
+                      {fileKind(f.name) === "pdf"
+                        ? "PDF"
+                        : f.type
+                        ? f.type.split("/")[1]?.toUpperCase()
+                        : "Archivo"}
+                      {formatFileSize(f.size) ? ` · ${formatFileSize(f.size)}` : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setViewer(f)}
+                    className="text-[10px] font-bold text-brand hover:underline px-1.5 py-1 rounded hover:bg-brand/10 transition-colors"
+                  >
+                    Ver
+                  </button>
+                  <button
+                    onClick={(e) => downloadFile(f, e)}
+                    className="text-[10px] font-bold text-muted hover:text-brand-deep hover:underline px-1.5 py-1 rounded hover:bg-brand/10 transition-colors"
+                  >
+                    Descargar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-6">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-faint mb-2">
@@ -644,9 +721,228 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
             })}
           </div>
         </div>
+
+        {viewer && <DocumentViewerModal file={viewer} onClose={() => setViewer(null)} />}
       </div>
     </div>
   );
+}
+
+function DocumentViewerModal({ file, onClose }) {
+  const [closing, setClosing] = useState(false);
+  const url = useMemo(() => {
+    if (file?.url) return file.url;
+    if (file instanceof File) return URL.createObjectURL(file);
+    return null;
+  }, [file]);
+
+  const kind = fileKind(file.name);
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(onClose, 200);
+  }
+
+  return (
+    <div
+      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink/60 ${
+        closing ? "animate-fade-out" : "animate-fade-in"
+      }`}
+    >
+      <div
+        className={`card w-full max-w-4xl p-0 overflow-hidden flex flex-col max-h-[92vh] ${
+          closing ? "animate-scale-out" : "animate-scale-in"
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-line shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileBadge file={file} />
+            <div className="min-w-0">
+              <p className="truncate font-bold text-sm text-ink m-0">{file.name}</p>
+              <p className="text-[10px] text-faint m-0">
+                {kind === "pdf"
+                  ? "Documento PDF"
+                  : kind === "img"
+                  ? "Imagen"
+                  : "Documento adjunto"}
+              </p>
+            </div>
+          </div>
+          <button className="text-muted hover:text-ink p-1" onClick={handleClose} aria-label="Cerrar">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 bg-ink/5 overflow-auto">
+          {kind === "pdf" ? (
+            <PdfPreview file={file} url={url} />
+          ) : url && kind === "img" ? (
+            <div className="flex items-center justify-center p-4 min-h-80">
+              <img src={url} alt={file.name} className="max-w-full max-h-[68vh] object-contain" />
+            </div>
+          ) : (
+            <div className="text-center p-8">
+              <div className="text-4xl mb-3">📄</div>
+              <p className="text-sm font-semibold text-ink m-0">No se puede previsualizar este archivo</p>
+              <p className="text-xs text-muted mt-1">
+                Usá "Descargar" para abrirlo con el programa adecuado.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-line shrink-0">
+          <button
+            onClick={(e) => downloadFile(file, e)}
+            className="btn-primary py-1.5! px-3! text-xs!"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0-12l-4 4m4-4l4 4M4 20h16" />
+            </svg>
+            Descargar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PdfPreview({ file, url }) {
+  const containerRef = useRef(null);
+  const [status, setStatus] = useState("loading");
+  const [pages, setPages] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function render() {
+      try {
+        const source =
+          file instanceof File
+            ? { data: await file.arrayBuffer() }
+            : { url };
+        const pdf = await pdfjsLib.getDocument(source).promise;
+        if (cancelled) return;
+        setPages(pdf.numPages);
+        const el = containerRef.current;
+        if (!el) return;
+        el.innerHTML = "";
+
+        const dpr = window.devicePixelRatio || 1;
+        const page = await pdf.getPage(1);
+        const base = page.getViewport({ scale: 1 });
+        const fitWidth = Math.max(320, el.clientWidth - 12);
+        const scale = Math.min(fitWidth / base.width, 2);
+
+        for (let n = 1; n <= pdf.numPages && !cancelled; n++) {
+          const p = n === 1 ? page : await pdf.getPage(n);
+          const vp = p.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          const wrap = document.createElement("div");
+          canvas.width = Math.floor(vp.width * dpr);
+          canvas.height = Math.floor(vp.height * dpr);
+          canvas.style.width = "100%";
+          canvas.style.height = "auto";
+          wrap.style.padding = "14px 6px";
+          wrap.style.display = "flex";
+          wrap.style.justifyContent = "center";
+          wrap.style.background = "#8b99ab1f";
+          wrap.appendChild(canvas);
+          el.appendChild(wrap);
+
+          const ctx = canvas.getContext("2d");
+          await p.render({
+            canvasContext: ctx,
+            viewport: vp,
+            transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+          }).promise;
+        }
+        if (!cancelled) setStatus("done");
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    }
+
+    render();
+    return () => {
+      cancelled = true;
+    };
+  }, [file, url]);
+
+  if (status === "error") {
+    return (
+      <div className="text-center p-8">
+        <div className="text-4xl mb-3">📄</div>
+        <p className="text-sm font-semibold text-ink m-0">No se pudo leer este PDF</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-70">
+      <div ref={containerRef} />
+      {status === "loading" && (
+        <div className="flex items-center justify-center gap-2 py-16">
+          <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-muted m-0">Cargando documento…</p>
+        </div>
+      )}
+      {status === "done" && (
+        <div className="flex items-center justify-center gap-1.5 py-2 pb-3">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-ok" />
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-faint m-0">
+            {pages} página{pages === 1 ? "" : "s"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FileBadge({ file }) {
+  const kind = fileKind(file.name);
+  const tone =
+    kind === "pdf"
+      ? "bg-bad/12 text-bad"
+      : kind === "img"
+      ? "bg-ok/12 text-ok-dark"
+      : kind === "doc"
+      ? "bg-info/12 text-info"
+      : "bg-brand/12 text-brand";
+  const label =
+    kind === "pdf"
+      ? "PDF"
+      : kind === "img"
+      ? "IMG"
+      : kind === "doc"
+      ? "DOC"
+      : kind === "sheet"
+      ? "XLS"
+      : "FILE";
+
+  return (
+    <div className={`w-9 h-9 shrink-0 rounded-md flex items-center justify-center font-bold text-[9px] tracking-wide ${tone}`}>
+      {label}
+    </div>
+  );
+}
+
+function fileKind(name) {
+  const n = String(name || "").toLowerCase();
+  if (n.endsWith(".pdf")) return "pdf";
+  if (/\.(png|jpe?g|gif|webp|svg|bmp)$/.test(n)) return "img";
+  if (/\.docx?$/.test(n)) return "doc";
+  if (/\.(xlsx?|csv)$/.test(n)) return "sheet";
+  return "file";
+}
+
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return "";
+  const kb = bytes / 1024;
+  if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+  return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
 }
 
 function Field({ label, value }) {

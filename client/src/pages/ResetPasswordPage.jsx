@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/common/Toast";
+import PasswordField from "../components/common/PasswordField";
 import ChatBotAvatar from "../components/ChatBotAvatar";
 
 export default function ResetPasswordPage() {
@@ -41,7 +42,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="mb-4">
-            <ChatBotAvatar size={64} reaction={done ? "happy" : "idle"} static />
+            <ChatBotAvatar size={64} reaction={done ? "happy" : "idle"} />
           </div>
           <h1 className="text-2xl font-bold text-ink m-0 animate-type-in">
             {!valid.ok
@@ -95,34 +96,20 @@ export default function ResetPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 animate-form-in">
-              <label className="block">
-                <span className="block text-xs font-semibold uppercase tracking-wide text-muted mb-1.5">
-                  Nueva contraseña
-                </span>
-                <input
-                  type="password"
-                  value={pw}
-                  onChange={(e) => setPw(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  autoComplete="new-password"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-line bg-paper text-sm text-ink placeholder:text-faint transition-colors duration-200 focus:border-brand focus:ring-2 focus:ring-brand/15 focus:outline-none"
-                />
-              </label>
-              <label className="block">
-                <span className="block text-xs font-semibold uppercase tracking-wide text-muted mb-1.5">
-                  Repetir contraseña
-                </span>
-                <input
-                  type="password"
-                  value={pw2}
-                  onChange={(e) => setPw2(e.target.value)}
-                  placeholder="Repetí la contraseña"
-                  autoComplete="new-password"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-line bg-paper text-sm text-ink placeholder:text-faint transition-colors duration-200 focus:border-brand focus:ring-2 focus:ring-brand/15 focus:outline-none"
-                />
-              </label>
+              <PasswordField
+                label="Nueva contraseña"
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                autoComplete="new-password"
+              />
+              <PasswordField
+                label="Repetir contraseña"
+                value={pw2}
+                onChange={(e) => setPw2(e.target.value)}
+                placeholder="Repetí la contraseña"
+                autoComplete="new-password"
+              />
               <button
                 type="submit"
                 disabled={submitting}
