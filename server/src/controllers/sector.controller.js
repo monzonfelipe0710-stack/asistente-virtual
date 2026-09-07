@@ -28,9 +28,23 @@ export const obtener = async (req, res) => {
 export const actualizar = async (req, res) => {
   const id = Number(req.params.id);
   const datos = actualizarSectorSchema.parse(req.body);
-  const sector = await sectorService.obtenerSectorPorId(id) ;
-  return sector = await sectorService.actualizarSector(id, datos);
-  res.json(sector)
+  const existente = await sectorService.obtenerSectorPorId(id);
+  if (!existente) {
+    const e = new Error('Sector no encontrado.')
+    e.statusCode = 404;
+    throw e;
+  }
+  // Solo el update puede cerrar un ciclo: un sector recién creado todavía no
+  // tiene descendientes que puedan apuntarle de vuelta. Se saltea cuando el
+  // campo no vino (no se toca el padre) o vino null (pasa a ser raíz), porque
+  // ninguno de los dos casos puede formar un bucle.
+  if (datos.parentId != null && await sectorService.generariaCiclo(id, datos.parentId)) {
+    const e = new Error('El sector no puede depender de sí mismo ni de uno de sus descendientes.');
+    e.statusCode = 409;
+    throw e;
+  }
+
+  res.json(await sectorService.actualizarSector(id, datos));
 };
 
 export const eliminar = async (req, res) => {

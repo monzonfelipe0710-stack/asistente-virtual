@@ -37,3 +37,12 @@ export const cambiarEstado = async (id, nuevoEstado) => {
 export const obtenerPorId = async (id) => {
   return prisma.usuario.findUnique({ where: {id} });
 };
+
+// Lista usuarios, opcionalmente filtrados por estado. Nunca devuelve passwordHash.
+export const listarUsuarios = async (estado) => {
+  return prisma.usuario.findMany({
+    where: estado ? { estado } : undefined,
+    select: { id: true, nombre: true, email: true, rol: true, estado: true, createdAt: true },
+    orderBy: [{ estado: 'asc' }, { nombre: 'asc' }],
+  });
+};
