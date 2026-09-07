@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useAdmin } from "../../context/AdminContext";
-import ChatBotAvatar from "../ChatBotAvatar";
 
 const sections = [
   {
@@ -171,7 +170,7 @@ export default function AdminSidebar({ open, onToggle }) {
               >
                 {section.title}
               </p>
-              <div className="flex flex-col" style={{ rowGap: "10px" }}>
+              <div className="flex flex-col" style={{ rowGap: "12px" }}>
               {visible.map((link) => (
                 <NavLink
                   key={link.to}
@@ -179,7 +178,7 @@ export default function AdminSidebar({ open, onToggle }) {
                   end={link.to === "/admin"}
                   className={({ isActive }) =>
                     [
-                      "group side-nav-link relative flex items-center rounded-lg no-underline",
+                      "group side-nav-link relative flex items-center rounded-xl no-underline",
                       "transition-colors duration-200",
                       isActive ? "font-semibold" : "font-medium",
                       !open && "sidebar-tooltip",
@@ -274,7 +273,7 @@ export default function AdminSidebar({ open, onToggle }) {
               columnGap: "16px",
               justifyContent: "flex-start",
             })}
-            data-tooltip={!open ? "Volver al Chat" : undefined}
+            data-tooltip={!open ? "Volver al inicio" : undefined}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = "var(--sidebar-hover)";
               e.currentTarget.style.color = "var(--sidebar-text-hover)";
@@ -296,16 +295,9 @@ export default function AdminSidebar({ open, onToggle }) {
                 open ? "opacity-100 max-w-40" : "opacity-0 max-w-0"
               }`}
             >
-              Volver al Chat
+              Volver al inicio
             </span>
           </NavLink>
-        </div>
-        <div
-          className="flex items-center justify-center"
-          style={{ padding: open ? "0 20px 24px" : "0 0 24px" }}
-          aria-label="Asistente virtual"
-        >
-          <ChatBotAvatar size={48} />
         </div>
       </div>
     </aside>

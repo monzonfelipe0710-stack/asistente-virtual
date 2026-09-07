@@ -15,6 +15,17 @@ import {
   buildRequestFromUser,
 } from "../lib/employeeRequests";
 import { sendResetEmail } from "../lib/email";
+import {
+  recordSession,
+  deleteUserSessions,
+  buildDeviceLabel,
+} from "../lib/sessions";
+import { pushActivity, removeUserActivity } from "../lib/activity";
+import {
+  pushNotification,
+  deleteNotifications,
+} from "../lib/notifications";
+import { deletePreferences } from "../lib/preferences";
 
 const AuthContext = createContext(null);
 
@@ -40,7 +51,7 @@ const SUPERADMIN_PASSWORD = "Superadmin123*";
 const RESET_KEY = "chatap.pwreset";
 const RESET_TTL_MS = 60 * 60 * 1000;
 
-// Emails autorizados a acceder al panel interno (Acceso Interno).
+// Emails autorizados a acceder al panel interno (Panel de Administración).
 // Agregá aquí los correos de administradores / moderadores.
 const STAFF_EMAILS = [
   "admin@formosa.gob.ar",
@@ -70,7 +81,11 @@ function restoreSession() {
   if (session && session.userId) {
     const users = loadUsers();
     const found = users.find((u) => u.id === session.userId) || null;
-    if (found) return { ...found, role: roleForEmail(found.email, found.role) };
+    if (found && found.status === "Suspendido") return null;
+    if (found) {
+      recordSession(found.id, session.token, buildDeviceLabel());
+      return { ...found, role: roleForEmail(found.email, found.role) };
+    }
     return null;
   }
   return null;
@@ -119,12 +134,16 @@ export function AuthProvider({ children }) {
     const found = users.find((u) => u.email === normalized);
     if (!found) throw new Error("No existe una cuenta con ese correo. Registrate primero.");
 
+    if (found.status === "Suspendido")
+      throw new Error("Tu cuenta está suspendida. Contactá a un Administrador.");
+
     const hashed = await hashPassword(password);
     if (hashed !== found.password) throw new Error("Correo o contraseña incorrectos.");
 
     const withRole = { ...found, role: roleForEmail(found.email, found.role), lastAccessAt: new Date().toISOString() };
     saveUsers(users.map((u) => (u.id === found.id ? withRole : u)));
-    makeSession(withRole);
+    const session = makeSession(withRole);
+    recordSession(withRole.id, session.token, buildDeviceLabel());
     setUser(withRole);
     return withRole;
   }, []);
@@ -185,12 +204,29 @@ export function AuthProvider({ children }) {
     saveUsers([...users, newUser]);
 
     // Si pidió alta como empleado, se crea su solicitud pendiente para el Superadmin.
+    let requestId = null;
     if (employeeData) {
       const list = loadEmployeeRequests();
-      saveEmployeeRequests([buildRequestFromUser(newUser, employeeData, list), ...list]);
+      const request = buildRequestFromUser(newUser, employeeData, list);
+      saveEmployeeRequests([request, ...list]);
+      requestId = request.id;
+      pushNotification(newUser.id, {
+        title: "Solicitud de acceso registrada",
+        body: `Tu solicitud ${request.id} quedó pendiente de revisión. Te avisaremos cuando haya novedades.`,
+        type: "solicitud",
+      });
     }
 
-    makeSession(newUser);
+    pushActivity({
+      userId: newUser.id,
+      actor: cleanName,
+      action: "creó su cuenta",
+      target: requestId ? `con solicitud ${requestId}` : "",
+      type: "user",
+    });
+
+    const session = makeSession(newUser);
+    recordSession(newUser.id, session.token, buildDeviceLabel());
     setUser(newUser);
     return newUser;
   }, []);
@@ -271,6 +307,111 @@ export function AuthProvider({ children }) {
     return true;
   }, []);
 
+  const updateProfile = useCallback(async ({ name, phone, department, position }) => {
+    if (!user) throw new Error("Sesión requerida.");
+
+    const cleanName = (name ?? user.name).trim();
+    if (!cleanName) throw new Error("El nombre no puede estar vacío.");
+    if (phone && phone.trim().length < 6)
+      throw new Error("Ingresá un teléfono válido.");
+
+    const updatable = {
+      name: cleanName,
+      phone: phone?.trim() || "",
+      department: department || "",
+      position: position?.trim() || "",
+    };
+    const nextUser = { ...user, ...updatable };
+    const users = loadUsers();
+    saveUsers(users.map((u) => (u.id === user.id ? nextUser : u)));
+
+    // Mantiene sincronizada la solicitud de empleado asociada (si existe).
+    const requests = loadEmployeeRequests();
+    if (requests.some((r) => r.userId === user.id)) {
+      saveEmployeeRequests(
+        requests.map((r) => (r.userId === user.id ? { ...r, ...updatable } : r))
+      );
+    }
+
+    pushActivity({
+      userId: user.id,
+      actor: cleanName,
+      action: "actualizó su perfil",
+      target: ["nombre", "teléfono", "dependencia", "puesto"]
+        .filter((k, i) => [cleanName !== user.name, updatable.phone !== user.phone, updatable.department !== user.department, updatable.position !== user.position][i])
+        .join(", "),
+      type: "user",
+    });
+
+    setUser(nextUser);
+    return nextUser;
+  }, [user]);
+
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    if (!user) throw new Error("Sesión requerida.");
+    if (!newPassword || newPassword.length < 6)
+      throw new Error("La contraseña nueva debe tener al menos 6 caracteres.");
+
+    const hashedCurrent = await hashPassword(currentPassword || "");
+    if (hashedCurrent !== user.password)
+      throw new Error("La contraseña actual es incorrecta.");
+
+    const hashed = await hashPassword(newPassword);
+    const users = loadUsers();
+    if (!users.some((u) => u.id === user.id))
+      throw new Error("La cuenta ya no existe.");
+
+    saveUsers(users.map((u) => (u.id === user.id ? { ...u, password: hashed } : u)));
+    pushActivity({
+      userId: user.id,
+      actor: user.name,
+      action: "cambió su contraseña",
+      target: "",
+      type: "seguridad",
+    });
+    return true;
+  }, [user]);
+
+  const deleteAccount = useCallback(async () => {
+    if (!user) return false;
+
+    const users = loadUsers();
+    saveUsers(users.filter((u) => u.id !== user.id));
+
+    // Quita la solicitud de empleado asociada (si existe).
+    const requests = loadEmployeeRequests();
+    const filtered = requests.filter((r) => r.userId !== user.id);
+    if (filtered.length !== requests.length) saveEmployeeRequests(filtered);
+
+    // Invalida enlaces de recuperación pendientes del usuario.
+    const stored = readJSON(RESET_KEY, []);
+    const resets = Array.isArray(stored) ? stored.filter((r) => r.userId !== user.id) : [];
+    writeJSON(RESET_KEY, resets);
+
+    pushActivity({
+      userId: user.id,
+      actor: user.name,
+      action: "eliminó su cuenta",
+      target: "",
+      type: "seguridad",
+    });
+
+    // Limpieza de datos personales asociados a la cuenta.
+    deleteUserSessions(user.id);
+    deleteNotifications(user.id);
+    deletePreferences(user.id);
+    removeUserActivity(user.id);
+    try {
+      window.localStorage.removeItem(`chatap.history.${user.id}`);
+    } catch {
+      /* noop */
+    }
+
+    writeJSON(SESSION_KEY, null);
+    setUser(null);
+    return true;
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -286,6 +427,9 @@ export function AuthProvider({ children }) {
         requestPasswordReset,
         validateResetToken,
         resetPassword,
+        updateProfile,
+        changePassword,
+        deleteAccount,
       }}
     >
       {children}

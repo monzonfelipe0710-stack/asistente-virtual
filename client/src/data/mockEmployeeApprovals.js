@@ -1,4 +1,4 @@
-export const employeeRequestStatuses = ["Pendiente", "Activo", "Rechazado"];
+export const employeeRequestStatuses = ["Pendiente", "Activo", "Suspendido", "Rechazado"];
 
 export const employeeDepartments = [
   "Mesa de Entradas",
@@ -9,6 +9,24 @@ export const employeeDepartments = [
 ];
 
 export const initialEmployeeRequests = [
+  {
+    id: "SOL-2026-032",
+    name: "Gastón Roldán",
+    email: "groldan@rrhh.gob.ar",
+    dni: "33.918.420",
+    cuil: "20-33918420-6",
+    phone: "3704 55-0121",
+    department: "Sistemas",
+    position: "Mesa de ayuda",
+    role: "Administrador",
+    requestedAt: "2026-08-29T08:40:00",
+    status: "Suspendido",
+    submittedBy: "Superadmin",
+    reason: "Alta para Mesa de Ayuda de sistemas.",
+    reviewedBy: "Superadmin",
+    reviewedAt: "2026-08-30T10:00:00",
+    reviewNote: "Suspensión preventiva por inasistencias sin justificar desde el 02/09.",
+  },
   {
     id: "SOL-2026-031",
     name: "Valeria Quiroga",

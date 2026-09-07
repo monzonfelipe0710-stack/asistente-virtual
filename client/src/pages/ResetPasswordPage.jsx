@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/common/Toast";
@@ -18,6 +18,13 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   const valid = validateResetToken(token);
+
+  // Al cambiar la contraseña, redirigí directo al login para iniciar sesión.
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => navigate("/login", { replace: true }), 1200);
+    return () => clearTimeout(t);
+  }, [done, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -55,7 +62,7 @@ export default function ResetPasswordPage() {
             {!valid.ok
               ? "Ese enlace venció o ya fue usado."
               : done
-                ? "Ya podés iniciar sesión con tu nueva contraseña."
+                ? "Te redirigimos al login para iniciar sesión…"
                 : "Elegí una contraseña de al menos 6 caracteres."}
           </p>
         </div>

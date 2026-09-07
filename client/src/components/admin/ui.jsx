@@ -70,10 +70,11 @@ export function StatCard({ label, value, icon, tone = "brand", hint, delay = 0 }
 
 export function PageHeader({ title, description, children }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+    <div className="flex flex-wrap items-end justify-between gap-4 mb-8 border-b border-line/70 pb-8">
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold text-ink m-0 truncate">{title}</h1>
-        {description && <p className="text-sm text-muted mt-1 m-0">{description}</p>}
+        <p className="kicker m-0">[ Administración ]</p>
+        <h1 className="display-3 text-ink m-0 mt-3 uppercase">{title}</h1>
+        {description && <p className="text-[15px] text-muted mt-3 m-0 max-w-2xl">{description}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
     </div>

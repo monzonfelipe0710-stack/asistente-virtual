@@ -6,6 +6,18 @@ const AdminContext = createContext(null);
 // Únicos roles del sistema. El Ciudadano no tiene acceso al panel interno.
 export const ROLES = ["Superadmin", "Administrador", "Ciudadano"];
 
+export const PERMISSION_LABELS = {
+  dashboard: { label: "Ver panel general", desc: "Resumen de la actividad del sistema." },
+  mesa_entrada: { label: "Mesa de Entradas", desc: "Ingreso y seguimiento de trámites y expedientes." },
+  usuarios: { label: "Gestionar usuarios", desc: "Crear, editar y suspender cuentas." },
+  solicitudes: { label: "Gestionar solicitudes", desc: "Aprobar, suspender o rechazar altas de empleados." },
+  conocimiento: { label: "Gestionar conocimiento", desc: "Editar la base de respuestas del chatbot." },
+  siged: { label: "Integración SIGED", desc: "Consultar y sincronizar expedientes." },
+  documentos: { label: "Gestionar documentos", desc: "Cargar y administrar la documentación." },
+  configuracion: { label: "Configuración del sistema", desc: "Ajustes del chatbot y del panel." },
+  reportes: { label: "Reportes", desc: "Métricas y exportaciones de actividad." },
+};
+
 const PERMISSIONS = {
   Superadmin: [
     "dashboard",
@@ -30,6 +42,13 @@ const PERMISSIONS = {
   ],
   Ciudadano: [],
 };
+
+export function permissionsForRole(role) {
+  return (PERMISSIONS[role] || []).map((key) => ({
+    key,
+    ...(PERMISSION_LABELS[key] || { label: key, desc: "" }),
+  }));
+}
 
 export function AdminProvider({ children }) {
   // El rol sale siempre del usuario logueado (sin selector manual).
