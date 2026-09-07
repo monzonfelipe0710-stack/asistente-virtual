@@ -1,5 +1,5 @@
 import * as sectorService from '../services/sector.service.js';
-import { crearSectorSchema, actualizarSectorSchema, crearSectorSchema } from '../validators/sector.validator.js';
+import { actualizarSectorSchema, crearSectorSchema } from '../validators/sector.validator.js';
 
 export const crear = async (req, res) => {
   const datos = crearSectorSchema.parse(req.body);
@@ -25,11 +25,12 @@ export const obtener = async (req, res) => {
   res.json(sector);
 };
 
-const actualizar = async (req, res) => {
+export const actualizar = async (req, res) => {
   const id = Number(req.params.id);
   const datos = actualizarSectorSchema.parse(req.body);
-  const sector = await sectorService.obtenerSectorPorId(id);
-  res.json(sector);
+  const sector = await sectorService.obtenerSectorPorId(id) ;
+  return sector = await sectorService.actualizarSector(id, datos);
+  res.json(sector)
 };
 
 export const eliminar = async (req, res) => {

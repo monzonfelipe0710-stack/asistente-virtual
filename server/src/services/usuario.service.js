@@ -15,7 +15,7 @@ export const registrarSolicitud = async (datos) => {
 };
 
 export const buscarPorEmail = async (email) => {
-  return prisma.usurio.findUnique({ where: {email} });
+  return prisma.usuario.findUnique({ where: {email} });
 };
 
 export const listarPendientes = async () => {

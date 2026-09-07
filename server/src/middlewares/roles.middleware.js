@@ -1,4 +1,4 @@
-export const authorize = (...rolesPermitidos) => {
+export const autorizar = (...rolesPermitidos) => {
   return (req, res, next) => {
     if (!req.usuario) {
       const error = new Error ('No autorizado.');

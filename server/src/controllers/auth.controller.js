@@ -8,7 +8,7 @@ export const login = async (req, res) => {
 
   const usuario = await prisma.usuario.findUnique({ where: { email } });
 
-  if (!usuario || !usuario.activo) {
+  if (!usuario || usuario.estado !== 'APROBADO') {
     const error = new Error('Credenciales inválidas');
     error.statusCode = 401;
     throw error;

@@ -35,10 +35,29 @@ export const aprobar = async (req, res) => {
   const usuario = await usuarioService.obtenerPorId(id);
   if (!usuario) {
     const error = new Error('La solicitud ya fue procesada.');
-    error.statuscode = 409;
+    error.statusCode = 409;
     throw error;
   }
 
   const actualizado = await usuarioService.cambiarEstado(id, 'APROBADO');
   res.json({ mensaje: 'Administrador aprobado', usuario: actualizado});
+};
+
+export const rechazar = async (req, res) => {
+  const id = Number(req.params.id);
+
+  const usuario = await usuarioService.obtenerPorId(id);
+  if (!usuario) {
+    const error = new Error('Usuario no encontrado.');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (usuario.estado !== 'PENDIENTE') {
+    const error = new Error('La solicitud ya fue procesada.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const actualizado = await usuarioService.cambiarEstado(id, 'RECHAZADO');
+  res.json({ mensaje: 'Solicitud rechazada.', usuario: actualizado});
 };
