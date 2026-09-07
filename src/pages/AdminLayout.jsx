@@ -79,6 +79,18 @@ function ThemeToggle() {
   );
 }
 
+const SECTION_TITLES = {
+  "/admin": "Resumen",
+  "/admin/mesa-de-entrada": "Mesa de Entradas",
+  "/admin/solicitudes": "Solicitudes",
+  "/admin/usuarios": "Usuarios",
+  "/admin/conocimiento": "Conocimiento",
+  "/admin/documentos": "Documentos",
+  "/admin/siged": "Integración SIGED",
+  "/admin/configuracion": "Configuración",
+  "/admin/reportes": "Reportes",
+};
+
 export default function AdminLayout() {
   const { user, userRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -91,9 +103,16 @@ export default function AdminLayout() {
     mainRef.current?.scrollTo({ top: 0 });
   }, [pathname]);
 
-  // Solo Superadmin y Administrador pueden ver el Acceso Interno.
+  // Solo Superadmin y Administrador pueden ver el Panel de Administración.
   // El Ciudadano (o visitante sin sesión) ve esta pantalla de bloqueo.
-  const allowed = !!user && (userRole === "Superadmin" || userRole === "Administrador");
+  const allowed =
+    !!user &&
+    user.status !== "Suspendido" &&
+    (userRole === "Superadmin" || userRole === "Administrador");
+
+  const sectionTitle = Object.entries(SECTION_TITLES).find(([path]) =>
+    pathname === path || (path !== "/admin" && pathname.startsWith(path))
+  )?.[1] || "Administración";
 
   if (!allowed) {
     return (
@@ -101,19 +120,20 @@ export default function AdminLayout() {
         className="min-h-screen flex items-center justify-center p-4"
         style={{ backgroundColor: "var(--color-paper)" }}
       >
-        <div className="card w-full max-w-md p-8 text-center animate-scale-in">
-          <div className="w-12 h-12 mx-auto rounded-xl grid place-items-center bg-bad/10 text-bad mb-4">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-full max-w-md text-center animate-scale-in">
+          <div className="w-14 h-14 mx-auto rounded-2xl grid place-items-center bg-bad/10 text-bad mb-6">
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h1 className="text-lg font-bold text-ink m-0">Acceso restringido</h1>
-          <p className="text-sm text-muted mt-2 m-0">
+          <p className="kicker m-0">[ Panel de administración ]</p>
+          <h1 className="display-3 text-ink m-0 mt-4">ACCESO RESTRINGIDO.</h1>
+          <p className="text-sm text-muted mt-4 m-0 max-w-sm mx-auto">
             {!user
-              ? "Iniciá sesión con una cuenta de Administrador o Superadmin para entrar al Acceso Interno."
-              : "Tu cuenta de Ciudadano no tiene permiso para entrar al Acceso Interno."}
+              ? "Iniciá sesión con una cuenta de Administrador o Superadmin para entrar al Panel de Administración."
+              : "Tu cuenta de Ciudadano no tiene permiso para entrar al Panel de Administración."}
           </p>
-          <div className="flex items-center justify-center gap-2 mt-6">
+          <div className="flex items-center justify-center gap-2 mt-8">
             {!user && (
               <Link to="/login" className="btn-primary no-underline">
                 Iniciar sesión
@@ -143,25 +163,36 @@ export default function AdminLayout() {
       >
         {/* Header */}
         <header
-          className="h-14 shrink-0 flex items-center justify-end px-4 lg:px-6 backdrop-blur-md"
+          className="h-16 shrink-0 flex items-center justify-between px-5 lg:px-8 border-b border-line/70 backdrop-blur-md"
           style={{
-            backgroundColor: "color-mix(in srgb, var(--color-paper) 80%, transparent)",
+            backgroundColor: "color-mix(in srgb, var(--color-paper) 85%, transparent)",
           }}
         >
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-faint m-0">
+              Panel de administración
+            </p>
+            <h1 className="text-[15px] font-bold leading-tight tracking-tight m-0 truncate"
+                style={{ color: "var(--sidebar-text-hover)" }}>
+              {sectionTitle}
+            </h1>
+          </div>
+
           <div className="flex items-center gap-3">
             {user && (
               <span className="hidden sm:flex items-center gap-2">
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">
                   {user.name ? user.name[0] : "?"}
                 </span>
-                <span
-                  className="text-xs font-semibold truncate max-w-32"
-                  style={{ color: "var(--sidebar-text-hover)" }}
-                >
-                  {user.name}
-                </span>
-                <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-full ${userRole === "Superadmin" ? "bg-ink text-paper" : "bg-brand-deep/10 text-brand-deep"}`}>
-                  {userRole}
+                <span className="flex flex-col leading-none">
+                  <span className="text-xs font-semibold truncate max-w-32"
+                        style={{ color: "var(--sidebar-text-hover)" }}>
+                    {user.name}
+                  </span>
+                  <span className="mt-1 text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: "var(--sidebar-text)" }}>
+                    {userRole}
+                  </span>
                 </span>
               </span>
             )}
@@ -170,7 +201,7 @@ export default function AdminLayout() {
         </header>
 
         {/* Main content */}
-        <main ref={mainRef} className="flex-1 min-h-0 p-4 lg:p-6 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} className="flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
           <div key={pathname} className="animate-page-enter">
             <Outlet />
           </div>

@@ -7,21 +7,21 @@ export const mesaStatuses = ["Ingresado", "En proceso", "Observado", "Finalizado
 
 export const mesaPriorities = ["Alta", "Normal", "Baja"];
 
-export const mesaTipoDocumento = [
-  "Nota",
-  "Solicitud",
-  "Expediente",
-  "Escrito",
-  "Declaración jurada",
-  "Formulario",
-];
-
-export const mesaDependencias = [
+export const mesaSectores = [
   "Mesa de Entradas",
   "Recursos Humanos",
   "Legajos",
   "Liquidaciones",
   "Sistemas",
+];
+
+export const mesaIdentificadores = [
+  "Mesa 1",
+  "Mesa 2",
+  "Mesa 3",
+  "Mesa 4",
+  "Mesa 5",
+  "Mesa 6",
 ];
 
 let seq = 14;
@@ -33,36 +33,42 @@ export const peekNextMesaId = () =>
 export const initialMesaEntradas = [
   {
     id: "EXP-2026-001",
-    solicitante: "María González",
-    tipo: "Solicitud",
-    dependencia: "Recursos Humanos",
-    prioridad: "Normal",
-    asunto: "Solicitud de licencia anual",
+    nombre: "Solicitud de licencia anual",
+    descripcion: "La solicitante presenta certificado médico para justificar la licencia.",
+    costo: "Gratuito",
+    encargado: "María González",
+    sector: "Recursos Humanos",
+    requisitos: "Certificado médico, formulario de licencia firmado.",
+    mesa: "Mesa 1",
     estado: "Ingresado",
+    prioridad: "Normal",
     fecha: "2026-08-24",
-    observaciones: "Presenta certificado médico adjunto.",
   },
   {
     id: "EXP-2026-007",
-    solicitante: "Carlos Pérez",
-    tipo: "Expediente",
-    dependencia: "Legajos",
-    prioridad: "Alta",
-    asunto: "Actualización de datos personales",
+    nombre: "Actualización de datos personales",
+    descripcion: "Actualización de datos en el legajo personal del empleado.",
+    costo: "Gratuito",
+    encargado: "Carlos Pérez",
+    sector: "Legajos",
+    requisitos: "DNI vigente, partida de nacimiento (si aplica).",
+    mesa: "Mesa 3",
     estado: "En proceso",
+    prioridad: "Alta",
     fecha: "2026-08-22",
-    observaciones: "",
   },
   {
     id: "EXP-2026-011",
-    solicitante: "Laura Ramírez",
-    tipo: "Nota",
-    dependencia: "Liquidaciones",
-    prioridad: "Baja",
-    asunto: "Consulta sobre recibo de sueldo",
+    nombre: "Consulta sobre recibo de sueldo",
+    descripcion: "Consulta sobre la liquidación y el recibo de sueldo del mes.",
+    costo: "Gratuito",
+    encargado: "Laura Ramírez",
+    sector: "Liquidaciones",
+    requisitos: "CUIL y última constancia de recibo.",
+    mesa: "Mesa 5",
     estado: "Finalizado",
+    prioridad: "Baja",
     fecha: "2026-08-19",
-    observaciones: "Derivado a liquidaciones.",
   },
 ];
 
@@ -71,12 +77,14 @@ export function createMesaEntrada(data) {
     id: nextId(),
     estado: "Ingresado",
     fecha: formatDate(new Date()),
-    solicitante: data.solicitante?.trim() || "Sin especificar",
-    tipo: data.tipo || "Solicitud",
-    dependencia: data.dependencia || "Mesa de Entradas",
-    prioridad: data.prioridad || "Normal",
-    asunto: data.asunto?.trim() || "Sin asunto",
-    observaciones: data.observaciones?.trim() || "",
+    nombre: data.nombre?.trim() || "Sin especificar",
+    descripcion: data.descripcion?.trim() || "",
+    costo: data.costo?.trim() || "Gratuito",
+    encargado: data.encargado?.trim() || "Sin asignar",
+    sector: data.sector || "Mesa de Entradas",
+    requisitos: data.requisitos?.trim() || "",
+    mesa: data.mesa || "Mesa 1",
+    prioridad: "Normal",
     adjuntos: data.adjuntos || [],
   };
 }

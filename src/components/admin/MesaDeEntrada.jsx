@@ -10,9 +10,8 @@ import {
   createMesaEntrada,
   peekNextMesaId,
   mesaStatuses,
-  mesaPriorities,
-  mesaTipoDocumento,
-  mesaDependencias,
+  mesaSectores,
+  mesaIdentificadores,
 } from "../../data/mockMesaEntrada";
 import {
   PageHeader,
@@ -48,8 +47,10 @@ export default function MesaDeEntrada() {
     return items.filter((it) => {
       const matchQ =
         !q ||
-        it.solicitante.toLowerCase().includes(q) ||
-        it.asunto.toLowerCase().includes(q) ||
+        it.nombre.toLowerCase().includes(q) ||
+        it.descripcion.toLowerCase().includes(q) ||
+        it.encargado.toLowerCase().includes(q) ||
+        it.sector.toLowerCase().includes(q) ||
         it.id.toLowerCase().includes(q);
       const matchS = filterStatus === "todos" || it.estado === filterStatus;
       return matchQ && matchS;
@@ -145,7 +146,7 @@ export default function MesaDeEntrada() {
             </svg>
             <input
               className="input-field pl-9"
-              placeholder="Buscar por solicitante, asunto o nº…"
+              placeholder="Buscar por nombre, encargado, sector o nº…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -187,10 +188,10 @@ export default function MesaDeEntrada() {
               <thead>
                 <tr className="text-[10px] uppercase tracking-widest text-muted border-b border-line">
                   <th className="text-left font-semibold px-5 py-3">Nº</th>
-                  <th className="text-left font-semibold px-5 py-3">Solicitante</th>
-                  <th className="text-left font-semibold px-5 py-3">Tipo</th>
-                  <th className="text-left font-semibold px-5 py-3">Dependencia</th>
-                  <th className="text-left font-semibold px-5 py-3">Prioridad</th>
+                  <th className="text-left font-semibold px-5 py-3">Nombre</th>
+                  <th className="text-left font-semibold px-5 py-3">Encargado</th>
+                  <th className="text-left font-semibold px-5 py-3">Sector</th>
+                  <th className="text-left font-semibold px-5 py-3">Costo</th>
                   <th className="text-left font-semibold px-5 py-3">Estado</th>
                   <th className="text-left font-semibold px-5 py-3">Fecha</th>
                   <th className="text-right font-semibold px-5 py-3">Acciones</th>
@@ -207,17 +208,12 @@ export default function MesaDeEntrada() {
                   >
                     <td className="px-5 py-3 font-mono text-xs text-muted">{it.id}</td>
                     <td className="px-5 py-3">
-                      <div className="font-semibold text-ink">{it.solicitante}</div>
-                      <div className="text-xs text-faint truncate max-w-50">{it.asunto}</div>
+                      <div className="font-semibold text-ink">{it.nombre}</div>
+                      <div className="text-xs text-faint truncate max-w-50">{it.descripcion}</div>
                     </td>
-                    <td className="px-5 py-3 text-muted">{it.tipo}</td>
-                    <td className="px-5 py-3 text-muted">{it.dependencia}</td>
-                    <td className="px-5 py-3">
-                      <span className="inline-flex items-center gap-2 text-muted">
-                        <PriorityDot priority={it.prioridad} />
-                        {it.prioridad}
-                      </span>
-                    </td>
+                    <td className="px-5 py-3 text-muted">{it.encargado}</td>
+                    <td className="px-5 py-3 text-muted">{it.sector}</td>
+                    <td className="px-5 py-3 text-muted">{it.costo}</td>
                     <td className="px-5 py-3">
                       <StatusPill status={it.estado} />
                     </td>
@@ -258,38 +254,43 @@ export default function MesaDeEntrada() {
 
 function MesaFormModal({ onClose, onSubmit }) {
   const [form, setForm] = useState({
-    solicitante: "",
-    tipo: mesaTipoDocumento[0],
-    dependencia: "Mesa de Entradas",
-    prioridad: "Normal",
-    asunto: "",
-    observaciones: "",
+    nombre: "",
+    descripcion: "",
+    costo: "",
+    encargado: "",
+    sector: mesaSectores[0],
+    requisitos: "",
+    mesa: mesaIdentificadores[0],
   });
   const [errors, setErrors] = useState({});
   const [shake, setShake] = useState(false);
   const [adjuntos, setAdjuntos] = useState([]);
   const [closing, setClosing] = useState(false);
-  const maxAsunto = 120;
   const previewId = peekNextMesaId();
   const today = formatDate(new Date());
-  const textareaRef = useRef(null);
+  const descripcionRef = useRef(null);
+  const requisitosRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useLayoutEffect(() => {
-    const el = textareaRef.current;
+    const el = descripcionRef.current;
     if (!el) return;
     el.style.height = "auto";
-    const nextHeight = Math.max(72, el.scrollHeight);
+    const nextHeight = Math.max(64, el.scrollHeight);
     el.style.height = `${nextHeight}px`;
-  }, [form.observaciones]);
+  }, [form.descripcion]);
+
+  useLayoutEffect(() => {
+    const el = requisitosRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const nextHeight = Math.max(64, el.scrollHeight);
+    el.style.height = `${nextHeight}px`;
+  }, [form.requisitos]);
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
-  }
-
-  function togglePrioridad(p) {
-    update("prioridad", p);
   }
 
   function handleAddFiles() {
@@ -314,8 +315,7 @@ function MesaFormModal({ onClose, onSubmit }) {
   function submit(e) {
     e.preventDefault();
     const next = {};
-    if (!form.solicitante.trim()) next.solicitante = "El solicitante es obligatorio.";
-    if (!form.asunto.trim()) next.asunto = "El asunto es obligatorio.";
+    if (!form.nombre.trim()) next.nombre = "El nombre del trámite es obligatorio.";
     setErrors(next);
     if (Object.keys(next).length) {
       setShake(true);
@@ -377,82 +377,47 @@ function MesaFormModal({ onClose, onSubmit }) {
           <div>
             <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
               <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Solicitante
-            </label>
-            <input
-              className={`input-field ${errors.solicitante ? "border-bad focus:border-bad ring-bad/15" : ""}`}
-              value={form.solicitante}
-              onChange={(e) => update("solicitante", e.target.value)}
-              placeholder="Nombre y apellido"
-            />
-            {errors.solicitante && <p className="text-[10px] text-bad mt-0.5 font-medium">{errors.solicitante}</p>}
-          </div>
-
-          <div>
-            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
-              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
               </svg>
-              Asunto
+              Nombre
             </label>
             <input
-              className={`input-field ${errors.asunto ? "border-bad focus:border-bad ring-bad/15" : ""}`}
-              value={form.asunto}
-              maxLength={maxAsunto}
-              onChange={(e) => update("asunto", e.target.value)}
-              placeholder="Motivo del ingreso"
+              className={`input-field ${errors.nombre ? "border-bad focus:border-bad ring-bad/15" : ""}`}
+              value={form.nombre}
+              onChange={(e) => update("nombre", e.target.value)}
+              placeholder="Nombre del trámite"
             />
-            <div className="flex justify-between mt-0.5">
-              {errors.asunto ? (
-                <p className="text-[10px] text-bad font-medium">{errors.asunto}</p>
-              ) : (
-                <span />
-              )}
-              <span className="text-[9px] text-faint tabular-nums">{form.asunto.length}/{maxAsunto}</span>
-            </div>
+            {errors.nombre && <p className="text-[10px] text-bad mt-0.5 font-medium">{errors.nombre}</p>}
           </div>
 
           <div>
             <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
               <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Tipo
+              Costo
             </label>
-            <select className="input-field" value={form.tipo} onChange={(e) => update("tipo", e.target.value)}>
-              {mesaTipoDocumento.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
+            <input
+              className="input-field"
+              value={form.costo}
+              onChange={(e) => update("costo", e.target.value)}
+              placeholder="Ej: Gratuito o $2.000"
+            />
           </div>
+
           <div>
             <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
               <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              Prioridad
+              Encargado
             </label>
-            <div className="grid grid-cols-3 gap-1">
-              {mesaPriorities.map((p) => {
-                const active = form.prioridad === p;
-                const tone =
-                  p === "Alta" ? "bg-bad/12 text-bad border-bad/30" : p === "Baja" ? "bg-muted/12 text-muted border-muted/30" : "bg-brand/12 text-brand border-brand/30";
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => togglePrioridad(p)}
-                    className={`px-1.5 py-1.5 text-[10px] font-bold rounded-md border transition-colors ${
-                      active ? `${tone} shadow-sm` : "border-line text-muted hover:bg-mist bg-paper"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-            </div>
+            <input
+              className="input-field"
+              value={form.encargado}
+              onChange={(e) => update("encargado", e.target.value)}
+              placeholder="Nombre y apellido del encargado"
+            />
           </div>
 
           <div>
@@ -460,28 +425,60 @@ function MesaFormModal({ onClose, onSubmit }) {
               <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              Dependencia destino
+              Sector
             </label>
-            <select className="input-field" value={form.dependencia} onChange={(e) => update("dependencia", e.target.value)}>
-              {mesaDependencias.map((d) => (
-                <option key={d}>{d}</option>
+            <select className="input-field" value={form.sector} onChange={(e) => update("sector", e.target.value)}>
+              {mesaSectores.map((s) => (
+                <option key={s}>{s}</option>
               ))}
             </select>
           </div>
+
           <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Mesa
+            </label>
+            <select className="input-field" value={form.mesa} onChange={(e) => update("mesa", e.target.value)}>
+              {mesaIdentificadores.map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-span-2">
             <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
               <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
-              Observaciones
+              Descripción
             </label>
             <textarea
-              ref={textareaRef}
+              ref={descripcionRef}
               className="input-field min-h-13 resize-none leading-relaxed"
               style={{ resize: "none" }}
-              value={form.observaciones}
-              onChange={(e) => update("observaciones", e.target.value)}
-              placeholder="Notas adicionales (opcional)"
+              value={form.descripcion}
+              onChange={(e) => update("descripcion", e.target.value)}
+              placeholder="Detalle del trámite (opcional)"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              Requisitos
+            </label>
+            <textarea
+              ref={requisitosRef}
+              className="input-field min-h-13 resize-none leading-relaxed"
+              style={{ resize: "none" }}
+              value={form.requisitos}
+              onChange={(e) => update("requisitos", e.target.value)}
+              placeholder="Documentación y requisitos necesarios (opcional)"
             />
           </div>
 
@@ -592,7 +589,7 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
       >
         <div className="flex items-start justify-between mb-4">
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-ink m-0 truncate">{entry.solicitante}</h2>
+            <h2 className="text-lg font-bold text-ink m-0 truncate">{entry.nombre}</h2>
             <p className="text-xs font-mono text-muted mt-0.5">{entry.id}</p>
           </div>
           <button className="text-muted hover:text-ink" onClick={handleClose} aria-label="Cerrar">
@@ -612,13 +609,19 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
         </div>
 
         <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
-          <Field label="Asunto" value={entry.asunto} />
-          <Field label="Tipo" value={entry.tipo} />
-          <Field label="Dependencia" value={entry.dependencia} />
+          <Field label="Costo" value={entry.costo} />
+          <Field label="Encargado" value={entry.encargado} />
+          <Field label="Sector" value={entry.sector} />
+          <Field label="Mesa" value={entry.mesa} />
           <Field label="Fecha" value={formatDate(entry.fecha)} />
-          {entry.observaciones && (
+          {entry.descripcion && (
             <div className="col-span-2">
-              <Field label="Observaciones" value={entry.observaciones} />
+              <Field label="Descripción" value={entry.descripcion} />
+            </div>
+          )}
+          {entry.requisitos && (
+            <div className="col-span-2">
+              <Field label="Requisitos" value={entry.requisitos} />
             </div>
           )}
         </dl>
