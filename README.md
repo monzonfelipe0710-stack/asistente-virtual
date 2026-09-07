@@ -1,16 +1,27 @@
-# React + Vite
+# ChatAP — Asistente Virtual
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Proyecto final de Práctica Profesional III. Asistente virtual para trámites de la Subsecretaría de Recursos Humanos de la Provincia de Formosa. Expo + React Native, corre en Android y iOS desde el mismo código.
 
-Currently, two official plugins are available:
+## Desarrollo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npx expo start
+```
 
-## React Compiler
+Presioná `a` (Android), `i` (iOS) o `w` (web) en la terminal, o escaneá el QR con Expo Go.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Estructura
 
-## Expanding the ESLint configuration
+- `src/app/` — rutas (Expo Router, basado en archivos). `/` es la vista ciudadano, `/admin/*` el panel admin.
+- `src/components/{admin,ciudadano,common}/` — componentes de UI.
+- `src/context/AppDataContext.tsx` — estado global del panel admin.
+- `src/data/` — datos simulados (mock), todavía no hay backend real.
+- `src/constants/` — tokens de diseño (colores, espaciados) y mapas de color de badges.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Verificación
+
+```bash
+npm run lint
+npm run typecheck
+```
