@@ -1,182 +1,217 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useUsers } from "../../context/AppDataContext";
-import { roleColors } from "../../constants/badges";
-import Card from "../common/Card";
-import Badge from "../common/Badge";
-import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
+import { useMemo, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+
+import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
+import { users as seedUsers, type AppUser } from "../../data/mockUsers";
+import { useToast } from "../common/Toast";
+import UserFormModal, { type UserForm } from "./UserFormModal";
+import {
+  AdminScreen,
+  Avatar,
+  Btn,
+  EmptyState,
+  Input,
+  ListCard,
+  PageHeader,
+  Row,
+} from "./ui";
 
 export default function UserTable() {
-  const { items: users } = useUsers();
+  const C = useAdminColors();
+  const push = useToast();
+
+  const [search, setSearch] = useState("");
+  const [rows, setRows] = useState<AppUser[]>(seedUsers);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editUser, setEditUser] = useState<AppUser | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.department.toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditUser(null);
+  }
+
+  function handleSave(form: UserForm) {
+    if (editUser) {
+      setRows((prev) =>
+        prev.map((u) => (u.id === editUser.id ? { ...u, ...form } : u))
+      );
+      push(`Usuario "${form.name}" actualizado.`, "success");
+    } else {
+      const nextId = Math.max(0, ...rows.map((u) => u.id)) + 1;
+      const created: AppUser = {
+        ...form,
+        id: nextId,
+        lastAccess: "—",
+        avatar: null,
+        phone: "",
+        createdAt: new Date().toLocaleDateString("es-AR"),
+      };
+      setRows((prev) => [created, ...prev]);
+      push(`Usuario "${form.name}" creado.`, "success");
+    }
+    closeModal();
+  }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.heading}>Usuarios</Text>
-          <Text style={styles.subheading}>{users.length} usuarios registrados</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => Alert.alert("Nuevo Usuario", "Funcionalidad en desarrollo.")}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={16} color={Colors.white} />
-          <Text style={styles.addBtnText}>Agregar</Text>
-        </TouchableOpacity>
-      </View>
+    <AdminScreen>
+      <PageHeader
+        title="Usuarios"
+        description={`${rows.length} usuarios registrados`}
+      >
+        <Btn
+          label="Nuevo usuario"
+          icon="add"
+          onPress={() => {
+            setEditUser(null);
+            setModalOpen(true);
+          }}
+        />
+      </PageHeader>
 
-      <Card padded={false}>
-        {users.map((user, idx) => (
-          <View
+      <Input
+        icon="search"
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Buscar por nombre, correo o departamento"
+        autoCapitalize="none"
+      />
+
+      <ListCard style={{ marginTop: Spacing[3] }}>
+        {filtered.map((user, i) => (
+          <Row
             key={user.id}
-            style={[styles.row, idx === users.length - 1 && styles.rowLast]}
+            first={i === 0}
+            onPress={() => {
+              setEditUser(user);
+              setModalOpen(true);
+            }}
+            accessibilityLabel={`Editar ${user.name}`}
           >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </Text>
-            </View>
+            <View style={styles.line}>
+              <Avatar name={user.name} />
 
-            <View style={styles.info}>
-              <Text style={styles.name}>{user.name}</Text>
-              <Text style={styles.email} numberOfLines={1}>
-                {user.email}
-              </Text>
-              <Text style={styles.dept}>{user.department}</Text>
-            </View>
+              <View style={styles.body}>
+                <View style={styles.nameLine}>
+                  <Text style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]} numberOfLines={1}>
+                    {user.name}
+                  </Text>
+                  <RoleTag role={user.role} />
+                </View>
 
-            <View style={styles.right}>
-              <Badge
-                label={user.role}
-                bg={roleColors[user.role].bg}
-                text={roleColors[user.role].text}
-                paddingHorizontal={6}
-                paddingVertical={2}
-              />
-              <View style={styles.statusRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: user.status === "Activo" ? Colors.statusActive : Colors.statusInactive },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: user.status === "Activo" ? Colors.statusActive : Colors.statusInactive },
-                  ]}
-                >
-                  {user.status}
+                <Text style={[Type.meta, { color: C.muted }]} numberOfLines={1}>
+                  {user.email}
+                </Text>
+
+                <View style={styles.footLine}>
+                  <View style={styles.status}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: user.status === "Activo" ? C.ok : C.faint },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        Type.meta,
+                        { color: user.status === "Activo" ? C.ok : C.muted },
+                      ]}
+                    >
+                      {user.status}
+                    </Text>
+                  </View>
+                  <Text style={[Type.meta, { color: C.faint, flexShrink: 1 }]} numberOfLines={1}>
+                    {user.department}
+                  </Text>
+                </View>
+
+                <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
+                  Último acceso: {user.lastAccess}
                 </Text>
               </View>
+
+              <Ionicons name="chevron-forward" size={18} color={C.faint} />
             </View>
-          </View>
+          </Row>
         ))}
-      </Card>
-    </ScrollView>
+
+        {filtered.length === 0 && (
+          <EmptyState
+            icon="people-outline"
+            title="Sin usuarios"
+            description="No se encontraron usuarios con ese criterio de búsqueda."
+          />
+        )}
+      </ListCard>
+
+      <UserFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        onSave={handleSave}
+        editUser={editUser}
+      />
+    </AdminScreen>
   );
 }
 
+/**
+ * El rol es lo que decide qué puede hacer la persona, así que se lee de un
+ * golpe: Superadmin en tinta plena, Administrador en el azul de marca, y
+ * Ciudadano sin relleno, porque no tiene acceso al panel.
+ */
+function RoleTag({ role }: { role: AppUser["role"] }) {
+  const C = useAdminColors();
+
+  // Sin pastilla: el rol se distingue por color y peso. Superadmin en tinta
+  // plena, Administrador en el azul de marca, Ciudadano apagado porque no
+  // entra al panel.
+  const color =
+    role === "Superadmin" ? C.ink : role === "Administrador" ? C.brandDeep : C.faint;
+
+  return <Text style={[Type.metaStrong, { color }]}>{role}</Text>;
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing[4],
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing[5],
-  },
-  heading: {
-    fontSize: Typography.xl,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-  },
-  subheading: {
-    fontSize: Typography.sm,
-    color: Colors.slate500,
-    marginTop: 2,
-  },
-  addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
-  },
-  addBtnText: {
-    fontSize: Typography.sm,
-    color: Colors.white,
-    fontWeight: Typography.medium,
-  },
-  row: {
+  line: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[3],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.slate100,
   },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-  avatarText: {
-    fontSize: Typography.xs,
-    fontWeight: Typography.semibold,
-    color: Colors.primary,
-  },
-  info: {
+  body: {
     flex: 1,
-    gap: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  name: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-    color: Colors.slate800,
-  },
-  email: {
-    fontSize: 11,
-    color: Colors.slate500,
-  },
-  dept: {
-    fontSize: 11,
-    color: Colors.slate400,
-  },
-  right: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  statusRow: {
+  nameLine: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: Spacing[2],
+  },
+  footLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[3],
+    marginTop: 2,
+  },
+  status: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: Radius.full,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: Typography.medium,
   },
 });

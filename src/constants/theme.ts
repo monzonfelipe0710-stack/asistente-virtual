@@ -109,6 +109,116 @@ export function useColors(): Palette {
   return useColorScheme() === "dark" ? DarkColors : Colors;
 }
 
+/**
+ * Paleta del panel admin: son los mismos tokens semánticos que usaba el panel
+ * web (`--color-ink`, `--sidebar-bg`, …), traídos tal cual para que el panel se
+ * vea igual. Van aparte de `Colors` porque el lado ciudadano usa la escala
+ * slate y este usa nombres por rol.
+ */
+/**
+ * Paleta del panel admin.
+ *
+ * Los nombres son semánticos (`ink`, `line`, `brand`) porque el panel se piensa
+ * por rol y no por tono, pero los VALORES salen de `Colors`: el azul de marca,
+ * los grises y los estados son los mismos que usa el lado ciudadano. Antes el
+ * panel traía su propio celeste (#0284c7) y su propio gris de texto (#172033),
+ * y con dos azules en pantalla la app se leía como dos productos distintos.
+ *
+ * Regla de uso: el color marca ESTADO, no decora. Un ícono, un borde o un fondo
+ * teñido tienen que significar algo (activo, pendiente, error); si no, van en
+ * neutro.
+ */
+export const AdminColors = {
+  ink: Colors.slate900,
+  /** Fondo de la pantalla. Va un escalón por debajo de `paper` para que la
+   *  tarjeta se despegue por contraste y no necesite un borde dibujado. */
+  canvas: Colors.slate100,
+  paper: Colors.white,
+  mist: Colors.slate100,
+  soft: Colors.slate50,
+  line: Colors.slate200,
+  muted: Colors.slate500,
+  faint: Colors.slate400,
+
+  brand: Colors.primary,
+  brandDark: Colors.primaryDark,
+  brandDeep: Colors.primary,
+
+  ok: Colors.statusActive,
+  warn: Colors.statusObserved,
+  bad: "#dc2626",
+  info: Colors.statusProcess,
+
+  sidebarBg: Colors.slate50,
+  sidebarBorder: Colors.slate200,
+  sidebarHover: Colors.slate100,
+  sidebarText: Colors.slate600,
+  sidebarTextHover: Colors.slate900,
+  sidebarSectionText: Colors.slate400,
+  sidebarActiveBg: Colors.primary,
+  sidebarActiveText: "#ffffff",
+} as const;
+
+export type AdminPalette = Record<keyof typeof AdminColors, string>;
+
+/** Mismo criterio en oscuro: los valores salen de `DarkColors`. */
+export const AdminDarkColors: AdminPalette = {
+  ...AdminColors,
+
+  ink: DarkColors.slate900,
+  // En oscuro se invierte la relación: el lienzo es el negro y la tarjeta sube
+  // un escalón. Así la tarjeta sigue estando por encima del fondo.
+  canvas: DarkColors.slate50,
+  paper: DarkColors.slate100,
+  mist: DarkColors.slate200,
+  soft: DarkColors.slate200,
+  line: DarkColors.slate300,
+  muted: DarkColors.slate500,
+  faint: DarkColors.slate400,
+
+  brand: DarkColors.primary,
+  brandDark: DarkColors.primaryMid,
+  brandDeep: DarkColors.primary,
+
+  // Los estados suben de luminosidad sobre fondo negro; en los valores claros
+  // quedarían por debajo del contraste mínimo.
+  ok: "#4ade80",
+  warn: "#fbbf24",
+  bad: "#f87171",
+  info: "#60a5fa",
+
+  sidebarBg: DarkColors.slate100,
+  sidebarBorder: DarkColors.slate200,
+  sidebarHover: DarkColors.slate200,
+  sidebarText: DarkColors.slate600,
+  sidebarTextHover: DarkColors.slate900,
+  sidebarSectionText: DarkColors.slate400,
+  sidebarActiveBg: DarkColors.primary,
+};
+
+export function useAdminColors(): AdminPalette {
+  return useColorScheme() === "dark" ? AdminDarkColors : AdminColors;
+}
+
+/**
+ * El panel web pintaba los fondos suaves con `bg-ok/10`. React Native no tiene
+ * esa sintaxis, así que el alfa se aplica acá: `withAlpha(C.ok, 0.1)`.
+ */
+export function withAlpha(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export const Typography = {
   xs: 10,
   sm: 12,
@@ -122,6 +232,57 @@ export const Typography = {
   medium: "500" as const,
   semibold: "600" as const,
   bold: "700" as const,
+} as const;
+
+/**
+ * Estilos de texto por rol, compartidos entre el inicio y el panel admin.
+ *
+ * Existe porque el panel venía inventando tamaños sueltos (10 y 11 px) y
+ * mayúsculas con tracking en cada etiqueta. Con una familia tipográfica única
+ * en toda la app, esa mezcla de tamaños y cajas es lo que hacía parecer que el
+ * admin usaba otra fuente. Acá el piso son 12 px y la caja es normal: la
+ * jerarquía la dan el peso y el color, no el grito.
+ *
+ * `pageTitle` sale de `2xl`, `cardTitle` de `md`, `body` de `base`, `meta` de
+ * `sm`: son los mismos escalones que ya usaba la pantalla de inicio.
+ */
+export const Type = {
+  pageTitle: {
+    fontSize: Typography["2xl"],
+    lineHeight: 30,
+    fontWeight: Typography.bold,
+  },
+  cardTitle: {
+    fontSize: Typography.md,
+    lineHeight: 22,
+    fontWeight: Typography.semibold,
+  },
+  /** Cifra grande de las tarjetas de resumen: es el dato, no la etiqueta. */
+  figure: {
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: Typography.bold,
+  },
+  body: {
+    fontSize: Typography.base,
+    lineHeight: 20,
+    fontWeight: Typography.normal,
+  },
+  bodyStrong: {
+    fontSize: Typography.base,
+    lineHeight: 20,
+    fontWeight: Typography.semibold,
+  },
+  meta: {
+    fontSize: Typography.sm,
+    lineHeight: 17,
+    fontWeight: Typography.normal,
+  },
+  metaStrong: {
+    fontSize: Typography.sm,
+    lineHeight: 17,
+    fontWeight: Typography.semibold,
+  },
 } as const;
 
 export const Spacing = {

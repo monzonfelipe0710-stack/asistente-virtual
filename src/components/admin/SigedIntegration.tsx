@@ -1,157 +1,189 @@
-import { useState } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { sigedStatuses, type SigedStatus } from "../../data/mockSiged";
-import { useSigedRecords } from "../../context/AppDataContext";
-import { statusConfig } from "../../constants/badges";
-import Card from "../common/Card";
-import Badge from "../common/Badge";
-import FilterPill from "../common/FilterPill";
-import { Colors, Typography, Spacing } from "../../constants/theme";
+import { useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+
+import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
+import { sigedRecords, sigedStatuses, type SigedStatus } from "../../data/mockSiged";
+import { formatDate } from "../../utils/date";
+import { useToast } from "../common/Toast";
+import {
+  AdminScreen,
+  Btn,
+  Card,
+  EmptyState,
+  FilterChip,
+  KeyValue,
+  ListCard,
+  PageHeader,
+  PriorityDot,
+  Row,
+  SectionTitle,
+  StatusPill,
+} from "./ui";
+
+type Filter = "Todos" | SigedStatus;
 
 export default function SigedIntegration() {
-  const [activeStatus, setActiveStatus] = useState<"Todos" | SigedStatus>("Todos");
-  const { items: sigedRecords } = useSigedRecords();
+  const C = useAdminColors();
+  const push = useToast();
 
-  const filtered =
-    activeStatus === "Todos"
-      ? sigedRecords
-      : sigedRecords.filter((r) => r.status === activeStatus);
+  const [statusFilter, setStatusFilter] = useState<Filter>("Todos");
+  const [syncedAt, setSyncedAt] = useState(() => new Date());
 
-  const allFilters: ("Todos" | SigedStatus)[] = ["Todos", ...sigedStatuses];
+  const filtered = useMemo(
+    () =>
+      statusFilter === "Todos"
+        ? sigedRecords
+        : sigedRecords.filter((r) => r.status === statusFilter),
+    [statusFilter]
+  );
+
+  const todayCount = sigedRecords.filter((r) => r.date === "2026-06-04").length;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.heading}>SIGED — Expedientes</Text>
-      <Text style={styles.subheading}>{sigedRecords.length} registros en el sistema</Text>
-
-      <FilterPill
-        options={allFilters}
-        active={activeStatus}
-        onChange={(status) => setActiveStatus(status as "Todos" | SigedStatus)}
-        containerStyle={styles.filterScroll}
+    <AdminScreen>
+      <PageHeader
+        title="Integración SIGED"
+        description="Sistema de Gestión Documental · Mesa de Entradas"
       />
 
-      <View style={styles.list}>
-        {filtered.map((rec) => {
-          const sc = statusConfig[rec.status];
-          return (
-            <Card key={rec.id} style={styles.card}>
-              <View style={styles.cardTop}>
-                <Text style={styles.expId}>{rec.id}</Text>
-                <Badge label={rec.status} bg={sc.bg} text={sc.text} weight="semibold" />
-              </View>
+      {/* Estado de la conexión: lo primero que se necesita saber acá */}
+      <Card padded>
+        <View style={styles.syncTop}>
+          <View style={styles.statusRow}>
+            <View style={[styles.dot, { backgroundColor: C.ok }]} />
+            <Text style={[Type.bodyStrong, { color: C.ink }]}>API conectada</Text>
+          </View>
+          <Btn
+            label="Sincronizar"
+            variant="ghost"
+            icon="sync-outline"
+            onPress={() => {
+              setSyncedAt(new Date());
+              push("Sincronización con SIGED completada.", "success");
+            }}
+          />
+        </View>
 
-              <Text style={styles.expType}>{rec.type}</Text>
+        <View style={[styles.syncMeta, { borderTopColor: C.line }]}>
+          <KeyValue
+            label="Última sincronización"
+            value={syncedAt.toLocaleString("es-AR")}
+          />
+          <KeyValue label="Latencia" value="45 ms · operativa" />
+          <KeyValue label="Consultas hoy" value={String(todayCount)} />
+        </View>
+      </Card>
 
-              <View style={styles.metaRow}>
-                <MetaItem icon="👤" label={rec.applicant} />
-                <MetaItem icon="🏢" label={rec.department} />
-              </View>
+      {/* Los filtros van sobre la lista, no adentro: se ven aunque se scrollee */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chips}
+        style={{ marginTop: Spacing[4] }}
+      >
+        <FilterChip
+          label="Todos"
+          count={sigedRecords.length}
+          active={statusFilter === "Todos"}
+          onPress={() => setStatusFilter("Todos")}
+        />
+        {sigedStatuses.map((status) => (
+          <FilterChip
+            key={status}
+            label={status}
+            count={sigedRecords.filter((r) => r.status === status).length}
+            active={statusFilter === status}
+            onPress={() => setStatusFilter(status)}
+          />
+        ))}
+      </ScrollView>
 
-              <View style={styles.metaRow}>
-                <MetaItem icon="📅" label={rec.date} />
-              </View>
+      <ListCard style={{ marginTop: Spacing[3] }}>
+        {filtered.map((rec, i) => (
+          <Row key={rec.id} first={i === 0}>
+            <View style={styles.rowTop}>
+              <Text style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]} numberOfLines={1}>
+                {rec.type}
+              </Text>
+              <StatusPill status={rec.status} />
+            </View>
 
-              <View style={styles.lastMovement}>
-                <Text style={styles.lastMovementLabel}>Último movimiento:</Text>
-                <Text style={styles.lastMovementValue}>{rec.lastMovement}</Text>
-              </View>
-            </Card>
-          );
-        })}
+            <Text style={[Type.meta, { color: C.muted, marginTop: 2 }]} numberOfLines={1}>
+              {rec.applicant} · {rec.department}
+            </Text>
+
+            <View style={styles.rowFoot}>
+              <PriorityDot priority={rec.priority} showLabel />
+              <Text style={[Type.meta, { color: C.faint }]}>{rec.id}</Text>
+              <Text style={[Type.meta, { color: C.faint }]}>{formatDate(rec.date)}</Text>
+            </View>
+
+            <Text style={[Type.meta, { color: C.faint, marginTop: 2 }]} numberOfLines={2}>
+              {rec.lastMovement}
+            </Text>
+          </Row>
+        ))}
 
         {filtered.length === 0 && (
-          <Text style={styles.empty}>No hay expedientes con este estado.</Text>
+          <EmptyState
+            icon="document-text-outline"
+            title="Sin expedientes"
+            description="No hay expedientes con ese estado."
+          />
         )}
-      </View>
-    </ScrollView>
+      </ListCard>
+
+      <SectionTitle>Cómo funciona</SectionTitle>
+      <Card padded>
+        <Text style={[Type.body, { color: C.muted }]}>
+          Los expedientes ingresados son recibidos y asignados por Mesa de Entradas
+          para su procesamiento.
+        </Text>
+      </Card>
+    </AdminScreen>
   );
 }
-
-function MetaItem({ icon, label }: { icon: string; label: string }) {
-  return (
-    <View style={metaStyles.row}>
-      <Text style={metaStyles.icon}>{icon}</Text>
-      <Text style={metaStyles.label}>{label}</Text>
-    </View>
-  );
-}
-
-const metaStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flex: 1,
-  },
-  icon: { fontSize: 11 },
-  label: {
-    fontSize: Typography.xs,
-    color: Colors.slate500,
-  },
-});
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing[4],
+  syncTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: Spacing[3],
   },
-  heading: {
-    fontSize: Typography.xl,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-  },
-  subheading: {
-    fontSize: Typography.sm,
-    color: Colors.slate500,
-    marginTop: 2,
-    marginBottom: Spacing[4],
-  },
-  filterScroll: {
-    paddingBottom: Spacing[4],
-  },
-  list: { gap: Spacing[3] },
-  card: {
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing[2],
   },
-  cardTop: {
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: Radius.full,
+  },
+  syncMeta: {
+    marginTop: Spacing[4],
+    paddingTop: Spacing[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: Spacing[2],
+  },
+  chips: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: Spacing[2],
+    paddingRight: Spacing[4],
+  },
+  rowTop: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing[2],
   },
-  expId: {
-    fontSize: Typography.xs,
-    fontWeight: Typography.semibold,
-    color: Colors.primary,
-  },
-  expType: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-  },
-  metaRow: {
+  rowFoot: {
     flexDirection: "row",
-    gap: Spacing[4],
-  },
-  lastMovement: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.slate100,
-    paddingTop: Spacing[2],
-    marginTop: Spacing[1],
-  },
-  lastMovementLabel: {
-    fontSize: Typography.xs,
-    color: Colors.slate400,
-  },
-  lastMovementValue: {
-    fontSize: Typography.xs,
-    color: Colors.slate600,
-    fontWeight: Typography.medium,
-  },
-  empty: {
-    textAlign: "center",
-    color: Colors.slate400,
-    fontSize: Typography.sm,
-    paddingVertical: Spacing[6],
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: Spacing[3],
+    marginTop: Spacing[2],
   },
 });

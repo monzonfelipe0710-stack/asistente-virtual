@@ -11,13 +11,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Palette,
-  Radius,
   Spacing,
   Typography,
   useColors,
 } from "../../constants/theme";
 import type { ChatMessage } from "../../data/mockMessages";
 import { useChat } from "../../hooks/useChat";
+import ChatBotAvatar from "../ChatBotAvatar";
 import ChatInput from "./ChatInput";
 import MessageBubble from "./MessageBubble";
 import QuickReplies from "./QuickReplies";
@@ -109,9 +109,7 @@ function ChatWindow({ onConversationStart }: Props) {
         onLayout={scrollToEnd}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <View style={styles.emptyAvatar}>
-              <Text style={styles.emptyAvatarText}>AP</Text>
-            </View>
+            <ChatBotAvatar size={112} />
             <Text style={styles.emptyTitle}>{greeting}</Text>
           </View>
         }
@@ -162,20 +160,6 @@ const createStyles = (C: Palette) =>
       gap: Spacing[3],
       // lo despega del centro exacto hacia arriba
       marginBottom: Spacing[10],
-    },
-    emptyAvatar: {
-      width: 56,
-      height: 56,
-      borderRadius: Radius.full,
-      backgroundColor: C.primary,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: Spacing[2],
-    },
-    emptyAvatarText: {
-      color: "#ffffff",
-      fontSize: Typography.lg,
-      fontWeight: Typography.bold,
     },
     emptyTitle: {
       fontSize: 28,

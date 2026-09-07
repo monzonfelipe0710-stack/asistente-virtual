@@ -305,8 +305,8 @@ export default function CiudadanoPage() {
               accessibilityRole="button"
               accessibilityLabel="Panel de administración"
             >
-              <Ionicons name="settings-outline" size={22} color={C.slate600} />
-              <Text style={styles.menuLabel}>Admin</Text>
+              <Ionicons name="shield-outline" size={22} color={C.slate600} />
+              <Text style={styles.menuLabel}>Acceso interno</Text>
               <Ionicons
                 name="chevron-forward"
                 size={18}

@@ -1,181 +1,118 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useUsers, useKnowledgeBase, useSigedRecords } from "../../context/AppDataContext";
-import { statusConfig } from "../../constants/badges";
-import Card from "../common/Card";
-import Badge from "../common/Badge";
-import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
+import { StyleSheet, Text, View } from "react-native";
 
-interface StatCard {
-  label: string;
-  value: string;
+import { Spacing, Type, useAdminColors } from "../../constants/theme";
+import { knowledgeBase } from "../../data/mockKnowledge";
+import { sigedRecords } from "../../data/mockSiged";
+import { users } from "../../data/mockUsers";
+import {
+  AdminScreen,
+  CardHeader,
+  ListCard,
+  PageHeader,
+  Row,
+  StatGrid,
+  StatCard,
+  StatusPill,
+  type Tone,
+} from "./ui";
+
+interface Stat {
+  title: string;
+  value: number;
   icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  bg: string;
+  tone: Tone;
+  hint?: string;
 }
 
 export default function Dashboard() {
-  const { items: users } = useUsers();
-  const { items: knowledgeBase } = useKnowledgeBase();
-  const { items: sigedRecords } = useSigedRecords();
+  const C = useAdminColors();
 
-  const activeUsers = users.filter((u) => u.status === "Activo").length;
-  const activeKb = knowledgeBase.filter((k) => k.active).length;
-  const pendingExp = sigedRecords.filter(
-    (r) => r.status === "En proceso" || r.status === "Ingresado"
-  ).length;
-
-  const stats: StatCard[] = [
+  const stats: Stat[] = [
     {
-      label: "Usuarios Activos",
-      value: String(activeUsers),
+      title: "Usuarios activos",
+      value: users.filter((u) => u.status === "Activo").length,
       icon: "people-outline",
-      color: Colors.primary,
-      bg: Colors.primaryLight,
+      tone: "brand",
+      hint: `de ${users.length} usuarios`,
     },
     {
-      label: "Base de Conocimiento",
-      value: `${activeKb} entradas`,
-      icon: "library-outline",
-      color: "#7c3aed",
-      bg: "#ede9fe",
+      title: "Artículos publicados",
+      value: knowledgeBase.filter((k) => k.active).length,
+      icon: "bulb-outline",
+      tone: "ok",
+      hint: `de ${knowledgeBase.length} artículos`,
     },
     {
-      label: "Expedientes Activos",
-      value: String(pendingExp),
-      icon: "document-outline",
-      color: Colors.statusProcess,
-      bg: "#dbeafe",
+      title: "Expedientes SIGED",
+      value: sigedRecords.length,
+      icon: "documents-outline",
+      tone: "info",
+      hint: "en el sistema",
     },
     {
-      label: "Total Expedientes",
-      value: String(sigedRecords.length),
-      icon: "folder-outline",
-      color: Colors.statusFinished,
-      bg: "#dcfce7",
+      title: "Pendientes",
+      value: sigedRecords.filter(
+        (r) => r.status === "En proceso" || r.status === "Ingresado"
+      ).length,
+      icon: "time-outline",
+      tone: "warn",
+      hint: "requieren atención",
     },
   ];
 
-  const recentRecords = sigedRecords.slice(0, 4);
-
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.heading}>Dashboard</Text>
-      <Text style={styles.subheading}>Resumen del sistema</Text>
+    <AdminScreen>
+      <PageHeader
+        title="Panel general"
+        description="Resumen de la actividad del Acceso Interno."
+      />
 
-      <View style={styles.statsGrid}>
-        {stats.map((s) => (
-          <Card key={s.label} style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: s.bg }]}>
-              <Ionicons name={s.icon} size={20} color={s.color} />
-            </View>
-            <Text style={styles.statValue}>{s.value}</Text>
-            <Text style={styles.statLabel}>{s.label}</Text>
-          </Card>
+      <StatGrid>
+        {stats.map((stat) => (
+          <StatCard
+            key={stat.title}
+            label={stat.title}
+            value={stat.value}
+            tone={stat.tone}
+            hint={stat.hint}
+            icon={stat.icon}
+          />
         ))}
-      </View>
+      </StatGrid>
 
-      <Text style={styles.sectionTitle}>Actividad Reciente</Text>
-      <Card padded={false}>
-        {recentRecords.map((rec) => (
-          <View key={rec.id} style={styles.tableRow}>
-            <View style={styles.tableMain}>
-              <Text style={styles.expId}>{rec.id}</Text>
-              <Text style={styles.expType} numberOfLines={1}>
+      <ListCard style={{ marginTop: Spacing[8] }}>
+        <CardHeader
+          title="Últimos movimientos"
+          subtitle="Sistema de Gestión Documental"
+        />
+        {sigedRecords.slice(0, 4).map((rec) => (
+          <Row key={rec.id}>
+            <View style={styles.rowTop}>
+              <Text style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]} numberOfLines={1}>
                 {rec.type}
               </Text>
-              <Text style={styles.expApplicant} numberOfLines={1}>
-                {rec.applicant}
-              </Text>
+              <StatusPill status={rec.status} />
             </View>
-            <Badge
-              label={rec.status}
-              bg={statusConfig[rec.status].bg}
-              text={statusConfig[rec.status].text}
-              style={{ marginLeft: Spacing[2] }}
-            />
-          </View>
+
+            <Text style={[Type.meta, { color: C.muted, marginTop: 2 }]} numberOfLines={1}>
+              {rec.applicant}
+            </Text>
+            <Text style={[Type.meta, { color: C.faint }]} numberOfLines={2}>
+              {rec.id} — {rec.lastMovement}
+            </Text>
+          </Row>
         ))}
-      </Card>
-    </ScrollView>
+      </ListCard>
+    </AdminScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing[4],
-  },
-  heading: {
-    fontSize: Typography.xl,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-  },
-  subheading: {
-    fontSize: Typography.sm,
-    color: Colors.slate500,
-    marginBottom: Spacing[5],
-    marginTop: 2,
-  },
-  statsGrid: {
+  rowTop: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing[3],
-    marginBottom: Spacing[6],
-  },
-  statCard: {
-    flex: 1,
-    minWidth: "45%",
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.lg,
-    justifyContent: "center",
     alignItems: "center",
-    marginBottom: Spacing[3],
-  },
-  statValue: {
-    fontSize: Typography.lg,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-  },
-  statLabel: {
-    fontSize: Typography.xs,
-    color: Colors.slate500,
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-    marginBottom: Spacing[3],
-  },
-  tableRow: {
-    flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.slate100,
-  },
-  tableMain: {
-    flex: 1,
-    gap: 2,
-  },
-  expId: {
-    fontSize: Typography.xs,
-    color: Colors.slate400,
-    fontWeight: Typography.medium,
-  },
-  expType: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-    color: Colors.slate800,
-  },
-  expApplicant: {
-    fontSize: Typography.xs,
-    color: Colors.slate500,
+    gap: Spacing[2],
   },
 });
