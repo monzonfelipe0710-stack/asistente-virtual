@@ -1,24 +1,38 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="lenis">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      ::selection {
+        color: #171717;
+        background: #FF4000;
+      }
+      html, body {
+        background-color: #f1f0e8;
+      }
+      html.dark, html.dark body {
+        background-color: #171717;
+      }
+    </style>
     <script>
       (function () {
         try {
           var t = localStorage.getItem("theme");
-          if (t === "dark") document.documentElement.classList.add("dark");
+          if (t === "dark" || !t) document.documentElement.classList.add("dark");
         } catch (e) {}
       })();
     </script>
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#171717" />
     <meta
       name="description"
       content="ChatAP, el asistente virtual de la Administración Pública de Formosa. Consultá trámites, documentación y servicios de la Subsecretaría de Recursos Humanos."
     />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.emailjs.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" />
-    <title>ChatAP - Asistente Virtual de la Administración Pública</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.emailjs.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" />
+    <title>ChatAP — Asistente Virtual de la Administración Pública</title>
   </head>
   <body>
     <div id="root"></div>
