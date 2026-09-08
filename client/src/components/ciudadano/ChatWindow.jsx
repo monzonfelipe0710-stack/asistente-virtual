@@ -651,7 +651,7 @@ export default function ChatWindow() {
 
       <div className="bg-paper">
         {phase === "welcome" && (
-          <div className="max-w-3xl mx-auto px-4 pt-4">
+          <div className="max-w-3xl mx-auto px-4 pt-4" data-tour="chat-here">
             <QuickReplies
               onSelect={handleQuickReply}
               suggested={welcomeMem && welcomeMem.count > 0 ? suggestedTopics(welcomeMem) : []}

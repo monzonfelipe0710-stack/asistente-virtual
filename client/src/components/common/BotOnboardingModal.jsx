@@ -1,10 +1,91 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import ChatBotAvatar from "../ChatBotAvatar";
 
 const STORAGE_KEY_PREFIX = "chatap_tutorial_completed_";
 const TRIGGER_KEY_PREFIX = "chatap_tutorial_trigger_";
+
+const STEPS = [
+  {
+    reaction: "excited",
+    kicker: "¡Bienvenido/a a ChatAP!",
+    title: (user) => `¡Hola, ${user?.name ? user.name.split(" ")[0] : "amigo/a"}!`,
+    description:
+      "Soy tu Asistente Virtual Oficial. Te voy a mostrar cómo funciona la plataforma en pocos pasos.",
+    tip: "Esta breve guía no volverá a molestarte.",
+    badge: "Paso 1 de 7",
+    badgeColor: "bg-brand-deep/10 text-brand-deep",
+  },
+  {
+    reaction: "curious",
+    kicker: "Sección 1 · Inicio",
+    title: "Todo lo importante en un solo lugar",
+    description:
+      "El Inicio es el punto de partida: novedades, trámites frecuentes y métricas en tiempo real. ¡Ya estamos ahí!",
+    tip: "El siguiente paso te muestra dónde arrancar a chatear.",
+    badge: "Paso 2 de 7",
+    badgeColor: "bg-brand-deep/10 text-brand-deep",
+    route: "/",
+  },
+  {
+    reaction: "playful",
+    kicker: "Sección 2 · Chatear (24/7)",
+    title: "Acá arrancá tu consulta",
+    description:
+      "El botón iluminado, 'Preguntar a ChatAP', te lleva directo a la pantalla de chat. Un solo clic y estás adentro.",
+    tip: "También llegás desde el menú superior, en la pestaña 'Chatear'.",
+    badge: "Paso 3 de 7",
+    badgeColor: "bg-emerald-50 text-emerald-700",
+    route: "/",
+    target: "#chat-cta",
+  },
+  {
+    reaction: "attention",
+    kicker: "Dentro del chat",
+    title: "Esto es lo que podés hacer acá",
+    description:
+      "Preguntá por trámites y expedientes, consultá recibos, pedí certificados o empezá tocando una pregunta sugerida. También podés dictar con el micrófono.",
+    tip: "Escribí como hablarías con una persona: entendemos tu idioma.",
+    badge: "Paso 4 de 7",
+    badgeColor: "bg-sky-50 text-sky-700",
+    route: "/chat",
+    target: "#chat-here",
+  },
+  {
+    reaction: "attention",
+    kicker: "Sección 3 · Soporte & Ayuda",
+    title: "Atención humana y canales directos",
+    description:
+      "En 'Soporte' tenés WhatsApp oficial, línea 0800 gratuita y un formulario para hablar con nuestro equipo.",
+    tip: "WhatsApp es el canal más rápido para inconvenientes técnicos.",
+    badge: "Paso 5 de 7",
+    badgeColor: "bg-amber-50 text-amber-700",
+    route: "/contacto",
+  },
+  {
+    reaction: "proud",
+    kicker: "Sección 4 · Mi Perfil",
+    title: "Tu espacio personal y seguro",
+    description:
+      "En 'Mi Perfil' podés revisar tus datos, cambiar tu contraseña y seguir el estado de tus gestiones.",
+    tip: "Tu información es confidencial.",
+    badge: "Paso 6 de 7",
+    badgeColor: "bg-purple-50 text-purple-700",
+    route: "/perfil",
+  },
+  {
+    reaction: "happy",
+    kicker: "¡Todo listo para comenzar!",
+    title: "Ya conocés lo fundamental",
+    description:
+      "Este tutorial no volverá a aparecer. Podés explorar la plataforma o hacer tu primera consulta en el chat.",
+    tip: "¿Hacemos la primera pregunta juntos?",
+    badge: "Completado",
+    badgeColor: "bg-emerald-100 text-emerald-800",
+    isFinal: true,
+  },
+];
 
 export function triggerOnboardingForUser(userId) {
   try {
@@ -22,6 +103,8 @@ export default function BotOnboardingModal() {
   const [isClosing, setIsClosing] = useState(false);
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState("next"); // "next" | "prev"
+  const [spotlight, setSpotlight] = useState(null); // { rect, placement }
+  const measureRef = useRef(null);
 
   const checkShouldOpen = useCallback(() => {
     if (!isAuthenticated || !user?.id) {
@@ -53,6 +136,7 @@ export default function BotOnboardingModal() {
       localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${user.id}`);
     }
     setIsClosing(true);
+    setSpotlight(null);
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
@@ -62,14 +146,99 @@ export default function BotOnboardingModal() {
     }, 200);
   }, [user?.id, navigate]);
 
+  // Mide el elemento a resaltar cuando el paso tiene un target.
+  useEffect(() => {
+    if (!isOpen) return;
+    const current = STEPS[step];
+    if (!current?.target) {
+      const raf0 = requestAnimationFrame(() => setSpotlight(null));
+      return () => cancelAnimationFrame(raf0);
+    }
+    const maxAttempts = 150; // ~2,5s (transición de página ~0,7s)
+    let attempts = 0;
+    let lastRect = null;
+    let stableFrames = 0;
+    let raf = 0;
+
+    const measure = () => {
+      const el = document.querySelector(current.target);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          const rect = {
+            top: r.top,
+            left: r.left,
+            width: r.width,
+            height: r.height,
+            bottom: r.bottom,
+            right: r.right,
+          };
+          if (
+            lastRect &&
+            Math.abs(rect.top - lastRect.top) < 0.5 &&
+            Math.abs(rect.left - lastRect.left) < 0.5 &&
+            Math.abs(rect.width - lastRect.width) < 0.5
+          ) {
+            stableFrames += 1;
+          } else {
+            stableFrames = 0;
+          }
+          lastRect = rect;
+          setSpotlight({
+            rect,
+            placement: rect.bottom + 280 < window.innerHeight ? "below" : "above",
+          });
+          if (stableFrames >= 8) {
+            measureRef.current = null;
+            return;
+          }
+        }
+      }
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        raf = requestAnimationFrame(measure);
+      } else {
+        measureRef.current = null;
+      }
+    };
+
+    measureRef.current = measure;
+    raf = requestAnimationFrame(measure);
+    return () => {
+      cancelAnimationFrame(raf);
+      measureRef.current = null;
+    };
+  }, [step, isOpen]);
+
+  // Recalcula el spotlight si la ventana cambia de tamaño.
+  useEffect(() => {
+    if (!isOpen || !STEPS[step]?.target) return;
+    const onChange = () => {
+      const measure = measureRef.current;
+      if (measure) measure();
+    };
+    window.addEventListener("resize", onChange);
+    return () => window.removeEventListener("resize", onChange);
+  }, [step, isOpen]);
+
   function goToNext() {
+    const nextIndex = Math.min(step + 1, STEPS.length - 1);
+    const nextRoute = STEPS[nextIndex]?.route;
+    if (nextRoute) {
+      navigate(nextRoute);
+    }
     setDirection("next");
-    setStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+    setStep(nextIndex);
   }
 
   function goToPrev() {
+    const prevIndex = Math.max(step - 1, 0);
+    const prevRoute = STEPS[prevIndex]?.route;
+    if (prevRoute) {
+      navigate(prevRoute);
+    }
     setDirection("prev");
-    setStep((prev) => Math.max(prev - 1, 0));
+    setStep(prevIndex);
   }
 
   // Navegación por teclado
@@ -90,216 +259,145 @@ export default function BotOnboardingModal() {
 
   if (!isOpen) return null;
 
-  const STEPS = [
-    {
-      reaction: "excited",
-      kicker: "¡BIENVENIDO/A A CHATAP!",
-      title: `¡Hola, ${user?.name ? user.name.split(" ")[0] : "amigo/a"}! 👋`,
-      subtitle: "Soy tu Asistente Virtual Oficial",
-      description:
-        "Te voy a mostrar en 4 pasos muy simples cómo funciona la plataforma para que encuentres todo lo que necesites al instante.",
-      tip: "✨ Esta breve guía te tomará solo 30 segundos y no volverá a molestarte.",
-      badge: "Paso 1 de 5",
-      badgeColor: "bg-brand-deep/10 text-brand-deep",
-    },
-    {
-      reaction: "curious",
-      kicker: "SECCIÓN 1 · INICIO",
-      title: "Todo lo importante en un solo lugar",
-      subtitle: "Página Principal & Novedades",
-      description:
-        "En el Inicio podés conocer las últimas noticias de Recursos Humanos, acceder a los trámites más frecuentes y consultar métricas en tiempo real.",
-      tip: "💡 Consejo: Si estás buscando algo rápido, la barra de búsqueda del inicio te lleva directo a la respuesta.",
-      badge: "Paso 2 de 5",
-      badgeColor: "bg-brand-deep/10 text-brand-deep",
-    },
-    {
-      reaction: "playful",
-      kicker: "SECCIÓN 2 · CHATEAR (24/7)",
-      title: "Preguntame lo que necesites, las 24 horas",
-      subtitle: "Inteligencia Artificial Especializada",
-      description:
-        "En la pestaña 'Chatear' podés preguntarme sobre recibos de haberes, cómo solicitar licencias, régimen horario o normativas provinciales. ¡Te respondo de forma inmediata!",
-      tip: "🤖 Podés escribir como hablás habitualmente o usar las preguntas sugeridas de un solo clic.",
-      badge: "Paso 3 de 5",
-      badgeColor: "bg-emerald-50 text-emerald-700",
-    },
-    {
-      reaction: "attention",
-      kicker: "SECCIÓN 3 · SOPORTE & AYUDA",
-      title: "Atención humana y canales directos",
-      subtitle: "WhatsApp, 0800 y Mesa de Ayuda",
-      description:
-        "Si necesitás hablar con una persona de nuestro equipo, en 'Soporte' tenés acceso directo a nuestro WhatsApp oficial, línea 0800 gratuita y un formulario simple para enviarnos tu consulta.",
-      tip: "📱 WhatsApp es el canal más rápido para resolver inconvenientes técnicos o de acceso.",
-      badge: "Paso 4 de 5",
-      badgeColor: "bg-amber-50 text-amber-700",
-    },
-    {
-      reaction: "proud",
-      kicker: "SECCIÓN 4 · MI PERFIL",
-      title: "Tu espacio personal y seguro",
-      subtitle: "Tus datos, trámites y seguridad",
-      description:
-        "Arriba a la derecha, en tu menú de usuario, podés ingresar a 'Mi Perfil' para revisar tus datos registrados, cambiar tu contraseña y seguir el estado de tus gestiones.",
-      tip: "🔒 Tu información es confidencial y podés actualizar tus preferencias cuando quieras.",
-      badge: "Paso 5 de 5",
-      badgeColor: "bg-purple-50 text-purple-700",
-    },
-    {
-      reaction: "happy",
-      kicker: "¡TODO LISTO PARA COMENZAR!",
-      title: "¡Ya conocés lo fundamental!",
-      subtitle: "Tu asistente está listo para ayudarte",
-      description:
-        "Este tutorial no volverá a aparecer. Podés empezar a explorar la plataforma ahora mismo o hacer tu primera consulta en el chat.",
-      tip: "🎉 ¿Hacemos la primera pregunta juntos?",
-      badge: "Completado",
-      badgeColor: "bg-emerald-100 text-emerald-800",
-      isFinal: true,
-    },
-  ];
-
-  const current = STEPS[step];
+  const hasSpotlight = !!spotlight;
+  const placement = hasSpotlight ? spotlight.placement : null;
+  const current = {
+    ...STEPS[step],
+    title: typeof STEPS[step].title === "function" ? STEPS[step].title(user) : STEPS[step].title,
+  };
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
+
+  let wrapStyle = null;
+  if (hasSpotlight) {
+    wrapStyle =
+      placement === "below"
+        ? { marginTop: spotlight.rect.bottom + 20 }
+        : {
+            marginTop: "auto",
+            marginBottom: Math.max(20, window.innerHeight - spotlight.rect.top + 20),
+          };
+  }
+
+  const dots = (
+    <div className="flex items-center gap-1.5">
+      {STEPS.map((_, i) => (
+        <span
+          key={i}
+          className={i === step ? "tour-dot is-active" : "tour-dot"}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Tutorial de bienvenida"
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-ink/65 backdrop-blur-md transition-opacity duration-200 ${
-        isClosing ? "animate-fade-out" : "animate-fade-in"
-      }`}
+      className={`fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${
+        hasSpotlight ? "" : "justify-center"
+      } ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
     >
+      {/* Spotlight: oscurece todo menos el elemento señalado */}
+      {hasSpotlight && (
+        <>
+          <div className="tour-dim" style={{ top: 0, left: 0, width: "100%", height: spotlight.rect.top }} />
+          <div className="tour-dim" style={{ top: 0, left: 0, height: "100%", width: spotlight.rect.left }} />
+          <div
+            className="tour-dim"
+            style={{ top: spotlight.rect.bottom, left: 0, width: "100%", height: `calc(100% - ${spotlight.rect.bottom}px)` }}
+          />
+          <div
+            className="tour-dim"
+            style={{ top: 0, left: spotlight.rect.right, height: "100%", width: `calc(100% - ${spotlight.rect.right}px)` }}
+          />
+          <div
+            className="tour-ring"
+            style={{
+              top: spotlight.rect.top - 8,
+              left: spotlight.rect.left - 8,
+              width: spotlight.rect.width + 16,
+              height: spotlight.rect.height + 16,
+            }}
+          />
+        </>
+      )}
+
+      {/* El bot junto a su nube de texto */}
       <div
-        className={`relative w-full max-w-lg rounded-3xl border border-line bg-paper shadow-2xl overflow-hidden ${
-          isClosing ? "animate-scale-out" : "animate-scale-in"
-        }`}
+        className={`relative z-[60] flex flex-col items-center gap-3 w-full ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
+        style={wrapStyle}
       >
-        {/* Barra superior de progreso y botón omitir */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-line/60 bg-mist/30">
-          <div className="flex items-center gap-2">
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors duration-200 ${current.badgeColor}`}>
-              {current.badge}
-            </span>
-            <div className="flex items-center gap-1 ml-2">
-              {STEPS.map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === step
-                      ? "w-6 bg-brand-deep"
-                      : i < step
-                      ? "w-1.5 bg-brand-deep/40"
-                      : "w-1.5 bg-line"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleFinish()}
-            className="text-muted hover:text-ink text-xs font-semibold uppercase tracking-wider py-1 px-2.5 rounded-lg hover:bg-mist transition-all duration-180 cursor-pointer"
-          >
-            Omitir
-          </button>
-        </div>
-
-        {/* Contenido principal del paso animado */}
-        <div
-          key={step}
-          className={`p-6 sm:p-8 text-center ${
-            direction === "next" ? "animate-step-next" : "animate-step-prev"
-          }`}
-        >
-          {/* Avatar del bot con reacción y animación suave al cambiar */}
-          <div className="relative inline-block mb-5">
+        <div className="flex items-center gap-3 w-full" style={{ maxWidth: 400 }}>
+          <div className="relative inline-block shrink-0">
             <div
               key={`avatar-${step}`}
-              className="w-28 h-28 mx-auto rounded-3xl bg-mist/60 border border-line/80 flex items-center justify-center shadow-soft relative overflow-hidden animate-avatar-pop"
+              className="w-16 h-16 rounded-2xl bg-paper border border-line shadow-soft flex items-center justify-center overflow-hidden animate-avatar-pop"
             >
-              <ChatBotAvatar size={105} reaction={current.reaction} followMouse={false} />
+              <ChatBotAvatar size={44} reaction={current.reaction} followMouse={false} />
             </div>
-            <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full bg-paper border border-line text-[10px] font-bold text-brand-deep shadow-xs">
+            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-px rounded-full bg-paper border border-line text-[9px] font-bold text-brand-deep shadow-xs whitespace-nowrap">
               ChatAP
             </span>
           </div>
 
-          {/* Textos del paso */}
-          <p className="kicker mb-1.5 text-xs text-brand-deep font-bold tracking-widest">
-            {current.kicker}
-          </p>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-ink tracking-tight m-0 leading-tight">
-            {current.title}
-          </h2>
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mt-1 m-0">
-            {current.subtitle}
-          </p>
-
-          <p className="text-sm text-ink/80 mt-4 leading-relaxed max-w-md mx-auto m-0 font-normal">
-            {current.description}
-          </p>
-
-          {/* Tip / Consejo si existe */}
-          {current.tip && (
-            <div className="mt-5 p-3 rounded-2xl bg-mist/50 border border-line/70 text-xs text-muted text-left flex items-start gap-2.5">
-              <span>{current.tip}</span>
+          <div
+            className={`tour-bubble ${direction === "next" ? "animate-step-next" : "animate-step-prev"}`}
+            data-placement={placement}
+          >
+            <div key={step} className="animate-fade-in">
+              <p className="tour-kicker m-0">{current.kicker}</p>
+              <h2 className="tour-title m-0">{current.title}</h2>
+              <p className="tour-desc m-0">{current.description}</p>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Barra inferior de acciones */}
-        <div className="px-6 py-4 border-t border-line/60 bg-mist/20 flex items-center justify-between gap-3">
-          <div>
-            {!isFirst && !isLast && (
-              <button
-                type="button"
-                onClick={goToPrev}
-                className="px-4 py-2.5 rounded-xl border border-line bg-paper text-xs font-bold uppercase tracking-wider text-muted hover:text-ink hover:bg-mist transition-all duration-180 cursor-pointer"
-              >
-                Anterior
-              </button>
-            )}
-          </div>
+        {/* Controles mínimos */}
+        <div className="tour-controls">
+          {!isFirst && (
+            <button
+              type="button"
+              onClick={goToPrev}
+              className="tour-btn"
+              aria-label="Paso anterior"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
 
-          <div className="flex items-center gap-2 ml-auto">
-            {isLast ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleFinish()}
-                  className="px-4 py-2.5 rounded-xl border border-line bg-paper text-xs font-bold uppercase tracking-wider text-ink hover:bg-mist transition-all duration-180 cursor-pointer"
-                >
-                  Explorar Plataforma
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFinish("/chat")}
-                  className="px-5 py-2.5 rounded-xl bg-brand-deep text-paper text-xs font-bold uppercase tracking-wider hover:bg-brand transition-all duration-180 cursor-pointer shadow-soft flex items-center gap-1.5"
-                >
-                  <span>Ir al Chat</span>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
-              </>
-            ) : (
+          {dots}
+
+          {isLast ? (
+            <>
+              <button type="button" onClick={() => handleFinish()} className="tour-btn tour-btn-ghost">
+                Explorar
+              </button>
               <button
                 type="button"
-                onClick={goToNext}
-                className="px-6 py-2.5 rounded-xl bg-brand-deep text-paper text-xs font-bold uppercase tracking-wider hover:bg-brand transition-all duration-180 cursor-pointer shadow-soft flex items-center gap-2"
+                onClick={() => handleFinish("/chat")}
+                className="tour-btn tour-btn-primary"
               >
-                <span>{isFirst ? "Comenzar" : "Siguiente"}</span>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                Ir al Chat
               </button>
-            )}
-          </div>
+            </>
+          ) : (
+            <button type="button" onClick={goToNext} className="tour-btn tour-btn-primary">
+              {isFirst ? "Comenzar" : "Siguiente"}
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+
+          {!isLast && (
+            <button type="button" onClick={() => handleFinish()} className="tour-skip">
+              Omitir
+            </button>
+          )}
         </div>
       </div>
     </div>

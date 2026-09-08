@@ -1,54 +1,146 @@
 @import "tailwindcss";
 
+/* PP Neue Montreal Typeface Family */
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Thin.woff2") format("woff2");
+  font-weight: 250;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Book.woff2") format("woff2");
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Black.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal";
+  src: url("/fonts/PPNeueMontreal-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal Text";
+  src: url("/fonts/PPNeueMontreal-Text-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PP Neue Montreal Text";
+  src: url("/fonts/PPNeueMontreal-Text-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  /* Texto y superficies: neutros editoriales */
-  --color-ink: #0e1526;
-  --color-paper: #ffffff;
-  --color-mist: #f7f8fa;
-  --color-soft: #f2f4f6;
-  --color-line: #e7e9ee;
-  --color-muted: #5f6b7a;
-  --color-faint: #9aa3b2;
+  --font-sans: "PP Neue Montreal", "PP Neue Montreal Text", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-neue: "PP Neue Montreal", sans-serif;
+  --font-neue-text: "PP Neue Montreal Text", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* Institucional */
-  --color-brand: #0284c7;
-  --color-brand-dark: #0369a1;
-  --color-brand-deep: #0a4d94;
-  --color-ok: #10a05a;
-  --color-warn: #c47f0a;
-  --color-bad: #cf2f45;
-  --color-info: #0284c7;
-  --bot-body: #0a0a0c;
-  --bot-eye: #ffffff;
+  /* Paleta claro · specimen PP Neue Montreal */
+  --color-ink: #171717;
+  --color-paper: #f1f0e8;
+  --color-mist: #eae8dd;
+  --color-soft: #e4e0d2;
+  --color-line: rgba(23, 23, 23, 0.16);
+  --color-muted: #6c675d;
+  --color-faint: #99927e;
+
+  /* Acentos de espécimen Pangram Pangram */
+  --color-dark: #1a1a1a;
+  --color-pitch: #000000;
+  --color-cream: #f0e7d4;
+  --color-cream-ink: #1a1a1a;
+  --color-orange: #ff4000;
+  --color-crimson: #d82f2f;
+  --color-cobalt: #4365ff;
+  --color-lime: #18bc42;
+  --color-violet: #6157bd;
+
+  /* Institucional con identidad Neue Montreal */
+  --color-brand: #ff4000;
+  --color-brand-dark: #e03800;
+  --color-brand-deep: #ff4000;
+  --color-ok: #18bc42;
+  --color-warn: #efc21e;
+  --color-bad: #d82f2f;
+  --color-info: #4365ff;
+  --bot-body: #171717;
+  --bot-eye: #f1f0e8;
 
   --color-primary: var(--color-brand);
   --color-primary-dark: var(--color-brand-dark);
   --color-primary-deep: var(--color-brand-deep);
-  --color-primary-light: #e9f2fb;
-  --color-primary-lighter: #f3f8fd;
+  --color-primary-light: #ffd9c4;
+  --color-primary-lighter: #fff1e9;
   --color-accent: var(--color-brand-deep);
-  --color-accent-light: #e9f2fb;
+  --color-accent-light: #ffd9c4;
 
-  --sidebar-bg: #f7f8fa;
-  --sidebar-border: #e6e9ee;
-  --sidebar-hover: #eceef2;
-  --sidebar-text: #5f6b7a;
-  --sidebar-text-hover: #0e1526;
-  --sidebar-section-text: #9aa3b2;
-  --sidebar-active-bg: var(--color-brand-deep);
-  --sidebar-active-text: #ffffff;
-  --sidebar-header-bg: #f1f3f6;
+  --sidebar-bg: #141414;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-hover: #222222;
+  --sidebar-text: #9e9e9e;
+  --sidebar-text-hover: #ffffff;
+  --sidebar-section-text: #5e5e5e;
+  --sidebar-active-bg: var(--color-brand);
+  --sidebar-active-text: #1a1a1a;
+  --sidebar-header-bg: #161616;
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 72px;
 
-  --radius-control: 12px;
-  --radius-card: 18px;
+  --radius-control: 0px;
+  --radius-card: 0px;
 
-  /* Sombras casi inexistentes: superficies "flush", solo elevación sutil */
-  --shadow-soft: 0 1px 2px rgba(14, 21, 38, 0.04);
-  --shadow-hover: 0 1px 3px rgba(14, 21, 38, 0.05), 0 18px 44px -24px rgba(14, 21, 38, 0.16);
+  /* Bandas oscuras estables (ritmo claro/oscuro en ambos temas) */
+  --color-band: #171717;
+  --color-band-fg: #f3f1e9;
+
+  /* Estética Swiss: sin sombras difusas, arquitectura pura de líneas */
+  --shadow-soft: none;
+  --shadow-hover: none;
 }
 
 :root {
@@ -56,58 +148,50 @@
 }
 
 .dark {
-  --color-ink: #e8eaef;
-  --color-paper: #0a0d13;
-  --color-mist: #12161e;
-  --color-soft: #0e1219;
-  --color-line: #20262f;
-  --color-muted: #9aa4b3;
-  --color-faint: #6a7484;
-  --color-brand: #4ab2e8;
-  --color-brand-dark: #3aa0d9;
-  --color-brand-deep: #2a88c4;
-  --color-ok: #3ecf8e;
-  --color-warn: #d9933a;
-  --color-bad: #f2747f;
-  --color-info: #4ab2e8;
-  --bot-body: #e8eaef;
-  --bot-eye: #0a0a0c;
-  --color-primary-light: #0f1b26;
-  --color-primary-lighter: #0c1620;
-  --color-accent-light: #0f1b26;
-
-  --sidebar-bg: #0d1016;
-  --sidebar-border: #1c2028;
-  --sidebar-hover: #151a23;
-  --sidebar-text: #8b939f;
-  --sidebar-text-hover: #e6e8ed;
-  --sidebar-section-text: #4e5562;
-  --sidebar-active-bg: var(--color-brand-deep);
-  --sidebar-active-text: #ffffff;
-  --sidebar-header-bg: #10141b;
+  --color-ink: #f3f1e9;
+  --color-paper: #171717;
+  --color-mist: #212120;
+  --color-soft: #1b1b1b;
+  --color-line: rgba(243, 241, 233, 0.15);
+  --color-muted: #a3a096;
+  --color-faint: #63615a;
+  --color-brand: #ff4000;
+  --color-brand-dark: #e03800;
+  --color-brand-deep: #ff4000;
+  --color-ok: #18bc42;
+  --color-warn: #efc21e;
+  --color-bad: #d82f2f;
+  --color-info: #4365ff;
+  --bot-body: #f3f1e9;
+  --bot-eye: #171717;
+  --color-primary-light: #2b170e;
+  --color-primary-lighter: #20110a;
+  --color-accent-light: #2b170e;
   color-scheme: dark;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
   }
 
   body {
     @apply m-0 font-sans text-ink bg-paper antialiased;
     font-family: var(--font-sans);
     text-rendering: optimizeLegibility;
-    font-feature-settings: "cv11", "ss01";
+    font-feature-settings: "cv03", "cv04", "cv09", "cv11";
   }
 
   ::selection {
-    background: var(--color-primary-light);
-    color: var(--color-brand-deep);
+    background: #ff4000;
+    color: #1a1a1a;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 3px;
+    outline: 1px solid var(--color-brand);
+    outline-offset: 2px;
   }
 }
 
@@ -711,29 +795,29 @@
            focus:border-brand focus:ring-2 focus:ring-brand/12;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
-           rounded-full select-none cursor-pointer;
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider
+           rounded-none select-none cursor-pointer border border-line bg-mist text-ink hover:bg-soft;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
-           rounded-full cursor-pointer bg-brand-deep text-paper
-           hover:bg-brand-dark hover:-translate-y-0.5;
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-widest
+           rounded-none cursor-pointer bg-[#FF4000] text-[#1A1A1A] border border-[#FF4000]
+           hover:bg-[#EBEBEB] hover:text-[#1A1A1A] hover:border-[#EBEBEB];
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
-           rounded-full cursor-pointer bg-transparent text-muted
-           border border-line hover:text-ink hover:bg-mist;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-widest
+           rounded-none cursor-pointer bg-transparent text-ink border border-line
+           hover:bg-[#EBEBEB] hover:text-[#1A1A1A] hover:border-[#EBEBEB];
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
-           rounded-full cursor-pointer bg-bad text-paper hover:opacity-90;
-    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider
+           rounded-none cursor-pointer bg-bad text-paper hover:opacity-90;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
   }
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-none border border-line;
   }
   .table-row {
     @apply transition-colors;
@@ -898,13 +982,9 @@
 }
 
 /* ============================================================
-   DIRECCIÓN DE ARTE EDITORIAL (inspirada en MONO)
+   DIRECCIÓN DE ARTE EDITORIAL · SPECIMEN PP NEUE MONTREAL
    Escala tipográfica en vw, kickers, leads, reveal al scroll.
    ============================================================ */
-
-@theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
 
 @keyframes reveal-up {
   from { opacity: 0; transform: translateY(30px); }
@@ -967,48 +1047,91 @@
   to { opacity: 0; transform: translateY(-14px) scale(0.995); }
 }
 
+@keyframes tour-glow {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-brand) 18%, transparent); }
+  50% { box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-brand) 32%, transparent); }
+}
+
+@keyframes word-swap {
+  from { opacity: 0; transform: translateY(0.5em); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes swap-line {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
 @layer utilities {
-  /* Escala tipográfica editorial */
+  /* Escala tipográfica editorial PP Neue Montreal */
   .display-1 {
-    font-size: clamp(3rem, 12vw, 9rem);
-    line-height: 0.92;
-    letter-spacing: -0.05em;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(3.25rem, 12vw, 9.5rem);
+    line-height: 0.88;
+    letter-spacing: -0.045em;
     font-weight: 800;
     text-wrap: balance;
   }
   .display-2 {
-    font-size: clamp(2.25rem, 6.5vw, 5rem);
-    line-height: 0.98;
-    letter-spacing: -0.035em;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(2.4rem, 6.5vw, 5.2rem);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
     font-weight: 700;
     text-wrap: balance;
   }
   .display-3 {
-    font-size: clamp(1.75rem, 4.25vw, 3rem);
-    line-height: 1.04;
-    letter-spacing: -0.03em;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(1.75rem, 4.25vw, 3.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
     font-weight: 700;
   }
 
   .kicker {
+    font-family: "PP Neue Montreal", sans-serif;
     font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.24em;
+    font-weight: 600;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--color-muted);
   }
 
   .lead {
-    font-size: clamp(1.05rem, 1.6vw, 1.45rem);
-    line-height: 1.55;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(1.1rem, 1.7vw, 1.45rem);
+    line-height: 1.45;
     color: var(--color-muted);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
   .editorial-text {
-    font-size: 0.98rem;
-    line-height: 1.7;
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
     color: var(--color-muted);
+  }
+
+  /* Utilidades de espécimen y grilla técnica (neuemontreal.com) */
+  .font-neue { font-family: "PP Neue Montreal", sans-serif; }
+  .font-neue-text { font-family: "PP Neue Montreal Text", sans-serif; }
+  .hairline { border: 1px solid var(--color-line); }
+  .hairline-t { border-top: 1px solid var(--color-line); }
+  .hairline-b { border-bottom: 1px solid var(--color-line); }
+  .hairline-l { border-left: 1px solid var(--color-line); }
+  .hairline-r { border-right: 1px solid var(--color-line); }
+
+  .specimen-tag {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .specimen-mono {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
   }
 
   /* Ritmo de la grilla editorial */
@@ -1060,6 +1183,34 @@
   .animate-arrow-slide { animation: slide-arrow 1.6s ease-in-out infinite; }
   .animate-page-enter { animation: page-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-page-exit { animation: page-exit 0.24s ease-in both; }
+  .animate-word-swap { animation: word-swap 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-swap-line { transform-origin: top; animation: swap-line 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* Palabra gigante de espécimen (neumonteal.com) */
+  .giant-outline {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(4rem, 17vw, 15rem);
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: transparent;
+    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--color-ink) 25%, transparent);
+    user-select: none;
+    white-space: nowrap;
+    caret-color: transparent;
+  }
+  .giant-outline.is-strong {
+    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--color-ink) 70%, transparent);
+  }
+
+  /* Marcas técnicas: nº de sección y pie de figura */
+  .fig-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--color-faint);
+  }
   .wave-bar {
     transform-origin: bottom;
     animation: wave-bar 1.2s ease-in-out infinite;
@@ -1069,6 +1220,145 @@
   .wave-bar:nth-child(4) { animation-delay: 0.45s; }
   .wave-bar:nth-child(5) { animation-delay: 0.6s; }
 
+  /* Spotlight del tutorial */
+  .tour-dim {
+    position: fixed;
+    background: rgba(5, 10, 25, 0.22);
+    z-index: 30;
+  }
+  .tour-ring {
+    position: fixed;
+    z-index: 31;
+    border: 2px solid var(--color-brand);
+    border-radius: 16px;
+    animation: tour-glow 1.8s ease-in-out infinite;
+    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  }
+
+  /* Nube de texto del tutorial */
+  .tour-bubble {
+    position: relative;
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--color-paper);
+    border: 1px solid var(--color-line);
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(14, 21, 38, 0.05), 0 14px 30px -18px rgba(14, 21, 38, 0.22);
+    color: var(--color-ink);
+  }
+  .tour-bubble[data-placement="below"]::before,
+  .tour-bubble[data-placement="below"]::after {
+    content: "";
+    position: absolute;
+    left: 26px;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+  }
+  .tour-bubble[data-placement="below"]::before {
+    top: -9px;
+    border-bottom: 9px solid var(--color-line);
+  }
+  .tour-bubble[data-placement="below"]::after {
+    top: -8px;
+    border-bottom: 8px solid var(--color-paper);
+  }
+  .tour-bubble[data-placement="above"]::before,
+  .tour-bubble[data-placement="above"]::after {
+    content: "";
+    position: absolute;
+    left: 26px;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+  }
+  .tour-bubble[data-placement="above"]::before {
+    bottom: -9px;
+    border-top: 9px solid var(--color-line);
+  }
+  .tour-bubble[data-placement="above"]::after {
+    bottom: -8px;
+    border-top: 8px solid var(--color-paper);
+  }
+  .tour-kicker {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-brand-deep);
+  }
+  .tour-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  .tour-desc {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--color-muted);
+    font-weight: 500;
+  }
+
+  /* Controles mínimos del tutorial */
+  .tour-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 6px 8px;
+    background: color-mix(in srgb, var(--color-paper) 85%, transparent);
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(8px);
+  }
+  .tour-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 30px;
+    padding: 0 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: color 0.18s ease, background 0.18s ease;
+  }
+  .tour-btn:hover { color: var(--color-ink); background: var(--color-mist); }
+  .tour-btn-primary {
+    background: var(--color-brand-deep);
+    border-color: var(--color-brand-deep);
+    color: #ffffff;
+  }
+  .tour-btn-primary:hover { background: var(--color-brand); color: #ffffff; }
+  .tour-btn-ghost { color: var(--color-ink); }
+  .tour-skip {
+    background: none;
+    border: 0;
+    padding: 0 0.4rem;
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: color 0.18s ease;
+  }
+  .tour-skip:hover { color: var(--color-ink); }
+  .tour-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--color-line);
+    transition: all 0.3s ease;
+  }
+  .tour-dot.is-active { width: 18px; background: var(--color-brand-deep); }
+
   .delay-100 { animation-delay: 100ms; }
   .delay-200 { animation-delay: 200ms; }
   .delay-300 { animation-delay: 300ms; }
@@ -1076,6 +1366,207 @@
   .delay-500 { animation-delay: 500ms; }
   .delay-600 { animation-delay: 600ms; }
   .delay-700 { animation-delay: 700ms; }
+}
+
+/* ============================================================
+   SISTEMA DE DISEÑO LANDING · CHATAP
+   Etiquetas técnicas, chips, paneles y microinteracciones.
+   ============================================================ */
+
+@layer components {
+  .tech-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .tech-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.7rem;
+    border: 1px solid var(--color-line);
+    background: color-mix(in srgb, var(--color-paper) 72%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    white-space: nowrap;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .tech-badge:hover {
+    color: var(--color-ink);
+    border-color: color-mix(in srgb, var(--color-ink) 35%, transparent);
+  }
+
+  .status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    flex: 0 0 auto;
+  }
+
+  .chip-suggest {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid var(--color-line);
+    background: transparent;
+    color: var(--color-ink);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease, background-color 0.18s ease;
+  }
+  .chip-suggest:hover,
+  .chip-suggest:focus-visible {
+    border-color: var(--color-brand);
+    background: color-mix(in srgb, var(--color-brand) 8%, transparent);
+    transform: translateX(3px);
+    outline: none;
+  }
+  .chip-suggest .chip-arrow {
+    margin-left: auto;
+    color: var(--color-faint);
+    transition: color 0.18s ease, transform 0.18s ease;
+  }
+  .chip-suggest:hover .chip-arrow,
+  .chip-suggest:focus-visible .chip-arrow {
+    color: var(--color-brand);
+    transform: translateX(2px);
+  }
+
+  .panel-tech {
+    border: 1px solid var(--color-line);
+    background: color-mix(in srgb, var(--color-paper) 88%, transparent);
+    box-shadow: 0 1px 2px rgba(23, 23, 23, 0.05), 0 18px 40px -24px rgba(23, 23, 23, 0.22);
+    backdrop-filter: blur(14px);
+  }
+
+  .service-row {
+    transition: background-color 0.2s ease;
+  }
+  .service-row:hover {
+    background: color-mix(in srgb, var(--color-brand) 7%, transparent);
+  }
+  .service-row:hover .service-title {
+    transform: translateX(8px);
+  }
+  .service-row:hover .service-tag {
+    color: var(--color-brand);
+    border-color: color-mix(in srgb, var(--color-brand) 55%, var(--color-line));
+  }
+  .service-title {
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .service-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid var(--color-line);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+}
+
+@layer utilities {
+  /* Textura tipográfica de fondo (TechnologyTexture) */
+  .band-dark { background-color: var(--color-band); color: var(--color-band-fg); }
+  .band-dark ::selection { background: #ff4000; color: #171717; }
+
+  .texture-words {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    font-family: var(--font-mono);
+    font-size: clamp(0.6rem, 0.8vw, 0.8rem);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    opacity: 0.05;
+    line-height: 2.1;
+    white-space: pre;
+  }
+  .texture-word {
+    display: inline-block;
+    margin-right: 2.2rem;
+    will-change: transform;
+  }
+
+  /* Enlace de navegación técnica (navbar flotante) */
+  .nav-tab {
+    position: relative;
+    padding: 0.35rem 0.8rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    transition: color 0.18s ease;
+  }
+  .nav-tab:hover {
+    color: var(--color-ink);
+  }
+  .nav-tab::after {
+    content: "";
+    position: absolute;
+    left: 0.8rem;
+    right: 0.8rem;
+    bottom: 0.1rem;
+    height: 1px;
+    background: var(--color-brand);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-tab:hover::after,
+  .nav-tab.is-active::after {
+    transform: scaleX(1);
+  }
+  .nav-tab.is-active {
+    color: var(--color-ink);
+  }
+
+  /* Entrada progresiva de palabras (AnimatedText) */
+  .word-reveal {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(0.55em) rotate(1.5deg);
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .is-revealed .word-reveal {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+
+  /* Escala progresiva por scroll en bloques de marca */
+  .scale-on-scroll {
+    transform: translateY(6vh) scale(0.86);
+    opacity: 0.45;
+    transform-origin: center top;
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.9s ease;
+    will-change: transform, opacity;
+  }
+  .scale-on-scroll.is-settled {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
