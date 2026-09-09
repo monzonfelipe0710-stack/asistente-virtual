@@ -1,6 +1,8 @@
 import { initialEmployeeRequests } from "../data/mockEmployeeApprovals";
 
-export const EMPLOYEE_REQUESTS_KEY = "chatap.employeeRequests";
+// v2: suma el estado "Suspendido" a los datos de ejemplo. Se cambia la clave
+// Force reseed con el ejemplo suspendido (borra datos previos de prueba).
+export const EMPLOYEE_REQUESTS_KEY = "chatap.employeeRequests.v2";
 
 function readLS() {
   try {

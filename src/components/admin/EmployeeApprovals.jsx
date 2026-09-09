@@ -1,16 +1,19 @@
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../context/AdminContext";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../common/Toast";
 import {
   loadEmployeeRequests,
   saveEmployeeRequests,
 } from "../../lib/employeeRequests";
 import { loadUsers, saveUsers } from "../../lib/auth";
+import { pushNotification } from "../../lib/notifications";
+import { pushActivity } from "../../lib/activity";
 import { employeeDepartments, initialsOf } from "../../data/mockEmployeeApprovals";
 import { PageHeader, StatCard, EmptyState } from "./ui";
 import { formatDate } from "../../utils/date";
 
-const TABS = ["Pendiente", "Activo", "Rechazado"];
+const TABS = ["Pendiente", "Activo", "Suspendido", "Rechazado"];
 
 const STATUS_META = {
   Pendiente: {
@@ -22,6 +25,11 @@ const STATUS_META = {
     badge: "bg-ok/10 text-ok",
     dot: "bg-ok",
     label: "Empleado activo",
+  },
+  Suspendido: {
+    badge: "bg-muted/15 text-muted",
+    dot: "bg-muted",
+    label: "Acceso suspendido",
   },
   Rechazado: {
     badge: "bg-bad/10 text-bad",
@@ -65,6 +73,7 @@ function RoleBadge({ role }) {
 
 export default function EmployeeApprovals() {
   const { can, role } = useAdmin();
+  const { user } = useAuth();
   const push = useToast();
 
   const [requests, setRequests] = useState(() => loadEmployeeRequests());
@@ -83,6 +92,7 @@ export default function EmployeeApprovals() {
       total: requests.length,
       Pendiente: requests.filter((r) => r.status === "Pendiente").length,
       Activo: requests.filter((r) => r.status === "Activo").length,
+      Suspendido: requests.filter((r) => r.status === "Suspendido").length,
       Rechazado: requests.filter((r) => r.status === "Rechazado").length,
     }),
     [requests]
@@ -122,14 +132,19 @@ export default function EmployeeApprovals() {
 
   function openConfirm(req, action) {
     setDetail(null);
-    setNote(action === "Rechazado" ? req.reviewNote || "" : "");
+    setNote("");
     setConfirm({ id: req.id, action, name: req.name });
   }
 
   function applyDecision() {
     if (!confirm) return;
-    if (confirm.action === "Rechazado" && !note.trim()) {
-      push("Indicá el motivo del rechazo para dejar constancia.", "error");
+    if ((confirm.action === "Rechazado" || confirm.action === "Suspendido") && !note.trim()) {
+      push(
+        confirm.action === "Rechazado"
+          ? "Indicá el motivo del rechazo para dejar constancia."
+          : "Indicá el motivo de la suspensión para dejar constancia.",
+        "error"
+      );
       return;
     }
     const now = new Date().toISOString();
@@ -152,7 +167,7 @@ export default function EmployeeApprovals() {
     saveEmployeeRequests(updated);
 
     // Si la solicitud vino del registro, se actualiza esa cuenta real:
-    // aprobado → pasa a Administrador; rechazado → sigue como Ciudadano.
+    // aprobado/reactivado → pasa a Administrador; suspendido/rechazado → se le quita el acceso.
     if (target?.userId) {
       const users = loadUsers();
       if (users.some((u) => u.id === target.userId)) {
@@ -174,14 +189,49 @@ export default function EmployeeApprovals() {
 
     setJustUpdated(confirm.id);
     setTimeout(() => setJustUpdated(null), 2000);
+
+    // Notifica al afectado y registra la decisión en la auditoría.
+    if (target?.userId) {
+      const t = target.status;
+      pushNotification(target.userId, {
+        title:
+          confirm.action === "Activo"
+            ? t === "Suspendido"
+              ? "Acceso restablecido"
+              : "Solicitud aprobada"
+            : confirm.action === "Suspendido"
+            ? "Acceso suspendido"
+            : "Solicitud rechazada",
+        body:
+          confirm.action === "Activo"
+            ? `Tu acceso como empleado fue ${t === "Suspendido" ? "restablecido" : "aprobado"}. ${finalNote ? "Detalle: " + finalNote : ""}`.trim()
+            : confirm.action === "Suspendido"
+            ? `Tu acceso fue suspendido. ${finalNote}`.trim()
+            : `Tu solicitud fue rechazada. ${finalNote}`.trim(),
+        type: "solicitud",
+      });
+    }
+    pushActivity({
+      userId: user?.id || null,
+      actor: user?.name || "Superadmin",
+      action:
+        confirm.action === "Activo"
+          ? "aprobó la solicitud"
+          : confirm.action === "Suspendido"
+          ? "suspendió la solicitud"
+          : "rechazó la solicitud",
+      target: `${confirm.id} (${confirm.name})`,
+      type: "solicitud",
+    });
+
     push(
       confirm.action === "Activo"
         ? `${confirm.name} fue aprobado como empleado.`
+        : confirm.action === "Suspendido"
+        ? `Acceso de ${confirm.name} suspendido.`
         : `Solicitud de ${confirm.name} rechazada.`,
       confirm.action === "Activo" ? "success" : "error"
     );
-    if (confirm.action === "Activo") setTab("Activo");
-    if (confirm.action === "Rechazado") setTab("Rechazado");
     setConfirm(null);
     setNote("");
   }
@@ -199,7 +249,7 @@ export default function EmployeeApprovals() {
       </PageHeader>
 
       {/* Resumen */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6 stagger-children">
         <StatCard
           label="Pendientes"
           value={counts.Pendiente}
@@ -213,6 +263,13 @@ export default function EmployeeApprovals() {
           tone="ok"
           hint="empleados aprobados"
           icon={<Icon path="M5 13l4 4L19 7" />}
+        />
+        <StatCard
+          label="Suspendidos"
+          value={counts.Suspendido}
+          tone="warn"
+          hint="acceso suspendido"
+          icon={<Icon path="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />}
         />
         <StatCard
           label="Rechazados"
@@ -369,8 +426,17 @@ export default function EmployeeApprovals() {
                         >
                           Ver
                         </button>
-                        {r.status === "Pendiente" ? (
-                          <>
+                        {r.status === "Suspendido"
+                          ? (
+                            <button
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-ok text-paper hover:opacity-90 transition cursor-pointer"
+                              onClick={() => openConfirm(r, "Activo")}
+                              title={`Reactivar a ${r.name}`}
+                            >
+                              <Icon path="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" className="w-3.5 h-3.5" />
+                              Reactivar
+                            </button>
+                          ) : (
                             <button
                               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-ok text-paper hover:opacity-90 transition cursor-pointer"
                               onClick={() => openConfirm(r, "Activo")}
@@ -378,6 +444,15 @@ export default function EmployeeApprovals() {
                             >
                               <Icon path="M5 13l4 4L19 7" className="w-3.5 h-3.5" />
                               Aprobar
+                            </button>
+                          )}
+                            <button
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-paper text-warn border border-warn/30 hover:bg-warn/10 transition cursor-pointer"
+                              onClick={() => openConfirm(r, "Suspendido")}
+                              title={`Suspender a ${r.name}`}
+                            >
+                              <Icon path="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" className="w-3.5 h-3.5" />
+                              Suspender
                             </button>
                             <button
                               className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-paper text-bad border border-bad/30 hover:bg-bad/10 transition cursor-pointer"
@@ -387,16 +462,6 @@ export default function EmployeeApprovals() {
                               <Icon path="M6 18L18 6M6 6l12 12" className="w-3.5 h-3.5" />
                               Rechazar
                             </button>
-                          </>
-                        ) : (
-                          <button
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-paper text-muted border border-line hover:text-ink hover:bg-mist transition cursor-pointer"
-                            onClick={() => openConfirm(r, r.status === "Activo" ? "Rechazado" : "Activo")}
-                            title="Cambiar estado"
-                          >
-                            Cambiar
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -478,24 +543,27 @@ export default function EmployeeApprovals() {
               <button className="btn-ghost py-2! px-3.5! text-[13px]!" onClick={() => setDetail(null)}>
                 Cerrar
               </button>
-              {detail.status === "Pendiente" && (
-                <>
-                  <button
-                    className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold rounded-xl bg-paper text-bad border border-bad/30 hover:bg-bad/10 transition cursor-pointer"
-                    onClick={() => openConfirm(detail, "Rechazado")}
-                  >
-                    <Icon path="M6 18L18 6M6 6l12 12" className="w-4 h-4" />
-                    Rechazar
-                  </button>
-                  <button
-                    className="btn-primary py-2! px-3.5! text-[13px]!"
-                    onClick={() => openConfirm(detail, "Activo")}
-                  >
-                    <Icon path="M5 13l4 4L19 7" className="w-4 h-4" />
-                    Aprobar empleado
-                  </button>
-                </>
-              )}
+              <button
+                className={`inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold rounded-xl bg-paper text-bad border border-bad/30 hover:bg-bad/10 transition cursor-pointer`}
+                onClick={() => openConfirm(detail, "Rechazado")}
+              >
+                <Icon path="M6 18L18 6M6 6l12 12" className="w-4 h-4" />
+                Rechazar
+              </button>
+              <button
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-[13px] font-semibold rounded-xl bg-paper text-warn border border-warn/30 hover:bg-warn/10 transition cursor-pointer"
+                onClick={() => openConfirm(detail, "Suspendido")}
+              >
+                <Icon path="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" className="w-4 h-4" />
+                Suspender
+              </button>
+              <button
+                className="btn-primary py-2! px-3.5! text-[13px]!"
+                onClick={() => openConfirm(detail, "Activo")}
+              >
+                <Icon path={detail.status === "Suspendido" ? "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" : "M5 13l4 4L19 7"} className="w-4 h-4" />
+                {detail.status === "Suspendido" ? "Reactivar empleado" : "Aprobar empleado"}
+              </button>
             </div>
           </div>
         </div>
@@ -509,27 +577,58 @@ export default function EmployeeApprovals() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 px-5 pt-5">
-              <div className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${confirm.action === "Activo" ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad"}`}>
-                <Icon path={confirm.action === "Activo" ? "M5 13l4 4L19 7" : "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"} className="w-5 h-5" />
+              <div className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${
+                confirm.action === "Activo"
+                  ? "bg-ok/10 text-ok"
+                  : confirm.action === "Suspendido"
+                  ? "bg-warn/10 text-warn"
+                  : "bg-bad/10 text-bad"
+              }`}>
+                <Icon
+                  path={
+                    confirm.action === "Activo"
+                      ? "M5 13l4 4L19 7"
+                      : confirm.action === "Suspendido"
+                      ? "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      : "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  }
+                  className="w-5 h-5"
+                />
               </div>
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-ink m-0 leading-tight">
-                  {confirm.action === "Activo" ? "Aprobar empleado" : "Rechazar solicitud"}
+                  {confirm.action === "Activo"
+                    ? "Aprobar empleado"
+                    : confirm.action === "Suspendido"
+                    ? "Suspender acceso"
+                    : "Rechazar solicitud"}
                 </h2>
-                <p className="text-xs text-muted m-0 mt-0.5 truncate">{confirm.name} · pasará a <span className={`font-semibold ${confirm.action === "Activo" ? "text-ok" : "text-bad"}`}>{confirm.action === "Activo" ? "Activo" : "Rechazado"}</span></p>
+                <p className="text-xs text-muted m-0 mt-0.5 truncate">{confirm.name} · pasará a <span className={`font-semibold ${confirm.action === "Activo" ? "text-ok" : confirm.action === "Suspendido" ? "text-warn" : "text-bad"}`}>
+                  {confirm.action === "Activo" ? "Activo" : confirm.action === "Suspendido" ? "Suspendido" : "Rechazado"}
+                </span></p>
               </div>
             </div>
 
             <div className="px-5 pt-3 pb-4">
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted mb-1.5">
-                {confirm.action === "Activo" ? "Nota de aprobación (opcional)" : "Motivo del rechazo (obligatorio)"}
+                {confirm.action === "Activo"
+                  ? "Nota de aprobación (opcional)"
+                  : confirm.action === "Suspendido"
+                  ? "Motivo de la suspensión (obligatorio)"
+                  : "Motivo del rechazo (obligatorio)"}
               </label>
               <textarea
                 rows={2}
                 className="input-field min-h-14 resize-none leading-relaxed"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder={confirm.action === "Activo" ? "Ej.: Legajo verificado, alta confirmada." : "Ej.: Documentación incompleta, falta constancia de CUIL."}
+                placeholder={
+                  confirm.action === "Activo"
+                    ? "Ej.: Legajo verificado, alta confirmada."
+                    : confirm.action === "Suspendido"
+                    ? "Ej.: Falta de presentismo (45 días), se suspende hasta nuevo aviso."
+                    : "Ej.: Documentación incompleta, falta constancia de CUIL."
+                }
               />
             </div>
 
@@ -538,10 +637,14 @@ export default function EmployeeApprovals() {
                 Cancelar
               </button>
               <button
-                className={`${confirm.action === "Activo" ? "btn-primary" : "btn-danger"} py-2! px-3.5! text-[13px]!`}
+                className={`${confirm.action === "Activo" ? "btn-primary" : confirm.action === "Suspendido" ? "btn bg-warn text-paper border-warn hover:bg-warn/90" : "btn-danger"} py-2! px-3.5! text-[13px]!`}
                 onClick={applyDecision}
               >
-                {confirm.action === "Activo" ? "Confirmar aprobación" : "Confirmar rechazo"}
+                {confirm.action === "Activo"
+                  ? "Confirmar aprobación"
+                  : confirm.action === "Suspendido"
+                  ? "Confirmar suspensión"
+                  : "Confirmar rechazo"}
               </button>
             </div>
           </div>

@@ -3,11 +3,13 @@
 // Para activarlo completá estos pasos UNA sola vez:
 //   1. Creá una cuenta en https://www.emailjs.com (plan gratis alcanza).
 //   2. En "Email Services" agregá Gmail y conectá tu cuenta de correo.
-//   3. En "Email Templates" creá una plantilla con estos campos tal cual:
-//        Para:      {{to_email}}
-//        Asunto:    Recuperá tu contraseña de ChatAP
-//        Mensaje:   Hola {{user_name}}, pediste restablecer tu contraseña.
-//                   Entrá acá (válido por 1 hora): {{reset_link}}
+//   3. En "Email Templates" creá una plantilla HTML con estos campos:
+//        Para:        {{to_email}}
+//        Asunto:      Recuperá tu contraseña de ChatAP
+//        Variables:   {{user_name}}  → nombre del usuario
+//                     {{reset_link}} → enlace de restablecimiento
+//                     {{email}}      → correo del usuario
+//      Ver HTML del template en: emailjs-recovery-template.html
 //   4. Copiá tu Public Key (Account → General), el Service ID y el Template ID,
 //      pegalos acá abajo y poné enabled: true.
 //

@@ -118,6 +118,7 @@ export default function ChatBotAvatar({
   size = 44,
   speaking = false,
   static: isStatic = false,
+  followMouse = false,
 }) {
   const svgRef = useRef(null);
   const bodyRef = useRef(null);
@@ -274,20 +275,24 @@ export default function ChatBotAvatar({
       start();
     }
 
-    window.addEventListener("mousemove", onMove);
+    if (followMouse) {
+      window.addEventListener("mousemove", onMove);
+    }
     reduceMQ?.addEventListener("change", onReduce);
     document.addEventListener("visibilitychange", onVis);
 
     return () => {
       stop();
-      window.removeEventListener("mousemove", onMove);
+      if (followMouse) {
+        window.removeEventListener("mousemove", onMove);
+      }
       reduceMQ?.removeEventListener("change", onReduce);
       document.removeEventListener("visibilitychange", onVis);
       themeObserver.disconnect();
       engineRef.current = null;
       drawRef.current = null;
     };
-  }, [isStatic]);
+  }, [isStatic, followMouse]);
 
   useEffect(() => {
     const eff = reaction === "idle" && autoReaction ? autoReaction : reaction;
