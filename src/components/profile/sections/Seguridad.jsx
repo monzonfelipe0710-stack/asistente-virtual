@@ -32,20 +32,25 @@ export default function Seguridad() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  if (!data || !user) return null;
-
-  const currentPrefs = prefs ?? data.prefs;
-  const currentSessions = sessions ?? data.sessions;
+  const currentPrefs = prefs ?? data?.prefs;
+  const currentSessions = sessions ?? data?.sessions;
   const activeSessionId = currentSession()?.sessionId;
 
   // Aplica la preferencia de tema y sigue al sistema si corresponde.
   // Solo fuerza el tema cuando el usuario elige uno explícito; si no hay
   // preferencia guardada, respeta el tema actual del documento (Navbar/Admin).
   useEffect(() => {
-    applyTheme(currentPrefs.theme);
-    if (currentPrefs.theme === "system") return watchSystemTheme(true);
+    if (!data || !user) return;
+    const prefs = currentPrefs || {};
+    applyTheme(prefs.theme);
+    if (prefs.theme === "system") {
+      const stop = watchSystemTheme(true);
+      return () => stop && stop();
+    }
     return undefined;
-  }, [currentPrefs.theme]);
+  }, [currentPrefs, data, user]);
+
+  if (!data || !user) return null;
 
   function setPref(name, value) {
     const next = { ...currentPrefs, [name]: value };

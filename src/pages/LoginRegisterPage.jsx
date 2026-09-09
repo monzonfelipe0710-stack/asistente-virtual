@@ -237,7 +237,7 @@ export default function LoginRegisterPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3.5 rounded-full bg-brand-deep text-paper text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
+                      className="w-full py-3.5 rounded-none bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
                     >
                       {submitting ? "Enviando…" : "Enviar enlace"}
                     </button>
@@ -277,13 +277,13 @@ export default function LoginRegisterPage() {
                           <button
                             type="button"
                             onClick={copyRecoveryLink}
-                            className="flex-1 py-2 rounded-full border border-line text-xs font-semibold text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+                            className="flex-1 py-2 border border-line text-xs font-semibold text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
                           >
                             Copiar enlace
                           </button>
                           <a
                             href={recoveryLink}
-                            className="flex-1 py-2 rounded-full bg-brand-deep text-paper text-xs font-semibold text-center no-underline hover:bg-brand-dark transition-colors"
+                            className="flex-1 py-2 bg-brand-deep text-[#171717] text-xs font-semibold text-center no-underline hover:bg-brand-dark transition-colors"
                           >
                             Probar ahora
                           </a>
@@ -303,16 +303,16 @@ export default function LoginRegisterPage() {
             ) : (
               <>
                 {/* Pestañas con indicador deslizante */}
-                <div className="relative grid grid-cols-2 mb-8 rounded-full bg-mist p-1">
+                <div className="relative grid grid-cols-2 mb-8 border border-line bg-mist p-0.5">
                   <span
-                    className="auth-tab-slider absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-brand-deep"
-                    style={{ left: isLogin ? "4px" : "calc(50% + 0px)" }}
+                    className="auth-tab-slider absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] bg-brand-deep"
+                    style={{ left: isLogin ? "2px" : "calc(50% + 0px)" }}
                   />
                   <button
                     type="button"
                     onClick={() => switchMode("login")}
-                    className={`relative z-10 py-2.5 rounded-full text-sm font-semibold transition-colors duration-300 cursor-pointer ${
-                      isLogin ? "text-paper" : "text-muted hover:text-ink"
+                    className={`relative z-10 py-2.5 text-sm font-semibold transition-colors duration-300 cursor-pointer ${
+                      isLogin ? "text-[#171717]" : "text-muted hover:text-ink"
                     }`}
                   >
                     Iniciar sesión
@@ -320,8 +320,8 @@ export default function LoginRegisterPage() {
                   <button
                     type="button"
                     onClick={() => switchMode("register")}
-                    className={`relative z-10 py-2.5 rounded-full text-sm font-semibold transition-colors duration-300 cursor-pointer ${
-                      !isLogin ? "text-paper" : "text-muted hover:text-ink"
+                    className={`relative z-10 py-2.5 text-sm font-semibold transition-colors duration-300 cursor-pointer ${
+                      !isLogin ? "text-[#171717]" : "text-muted hover:text-ink"
                     }`}
                   >
                     Registrarme
@@ -438,7 +438,7 @@ export default function LoginRegisterPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 rounded-full bg-brand-deep text-paper text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
+                    className="w-full py-3.5 rounded-none bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
                   >
                     {submitting
                       ? "Procesando…"

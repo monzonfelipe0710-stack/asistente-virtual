@@ -15,7 +15,7 @@ const DEFAULT_WORDS = [
   "24/7",
 ];
 
-export default function TechnologyTexture({ words = DEFAULT_WORDS, className = "" }) {
+export default function TechnologyTexture({ words = DEFAULT_WORDS, className = "", repeat = 1 }) {
   const containerRef = useRef(null);
   const rafRef = useRef(0);
   const activeRef = useRef(false);
@@ -69,8 +69,10 @@ export default function TechnologyTexture({ words = DEFAULT_WORDS, className = "
           className="texture-row flex flex-wrap py-[1.1em] will-change-transform"
           style={{ marginTop: rowIdx === 0 ? "1.5em" : "0" }}
         >
-          {words.map((w, i) =>
-            i % 2 === rowIdx ? <span key={`${rowIdx}-${i}`} className="texture-word">{w}</span> : null
+          {Array.from({ length: repeat }, (_, copy) =>
+            words.map((w, i) =>
+              i % 2 === rowIdx ? <span key={`${rowIdx}-${copy}-${i}`} className="texture-word">{w}</span> : null
+            )
           )}
         </div>
       ))}

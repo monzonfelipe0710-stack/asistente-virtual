@@ -86,23 +86,21 @@ export default function MessageBubble({ message, speaking = false, typedText = "
       {isBot && (
         <ChatBotAvatar
           reaction={speaking ? reaction : "idle"}
-          size={30}
+          size={32}
           static={!speaking}
           speaking={speaking}
         />
       )}
-      <div className="max-w-[80%] sm:max-w-[70%]">
-        <div
-          className={`px-4 py-3 text-sm leading-relaxed rounded-2xl ${
-            isBot
-              ? "bg-mist text-ink border border-line rounded-tl-sm"
-              : "bg-brand-deep text-paper rounded-tr-sm"
-          }`}
-        >
+      <div className={`chat-msg ${isBot ? "" : "chat-msg--user"}`}>
+        <div className="chat-msg__body">
           <p className="m-0 whitespace-pre-wrap">
             {shown}
             {typing && (
-              <span className="inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 bg-brand-deep align-middle animate-pulse-soft" />
+              <span
+                className={`inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 align-middle animate-pulse-soft ${
+                  isBot ? "bg-brand-deep" : "bg-[#171717]"
+                }`}
+              />
             )}
           </p>
         </div>
@@ -122,11 +120,9 @@ export default function MessageBubble({ message, speaking = false, typedText = "
             }
             return null;
           })}
-        <span
-          className={`block text-[10px] uppercase tracking-wide mt-1 ${
-            isBot ? "text-muted text-left" : "text-muted text-right"
-          }`}
-        >
+        <span className={`chat-msg__meta ${isBot ? "" : "chat-msg__meta--end"}`}>
+          {isBot && <span className="ui-dot" style={{ background: "var(--color-brand)" }} aria-hidden="true" />}
+          {isBot ? "Asistente" : "Vos"} ·{" "}
           {new Date(message.timestamp).toLocaleTimeString("es-AR", {
             hour: "2-digit",
             minute: "2-digit",

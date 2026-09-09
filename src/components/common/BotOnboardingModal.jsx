@@ -87,6 +87,7 @@ const STEPS = [
   },
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function triggerOnboardingForUser(userId) {
   try {
     localStorage.setItem(`${TRIGGER_KEY_PREFIX}${userId}`, "true");
@@ -97,7 +98,7 @@ export function triggerOnboardingForUser(userId) {
 }
 
 export default function BotOnboardingModal() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -107,7 +108,7 @@ export default function BotOnboardingModal() {
   const measureRef = useRef(null);
 
   const checkShouldOpen = useCallback(() => {
-    if (!isAuthenticated || !user?.id) {
+    if (!user?.id) {
       setIsOpen(false);
       return;
     }
@@ -120,13 +121,16 @@ export default function BotOnboardingModal() {
       setStep(0);
       setDirection("next");
     }
-  }, [isAuthenticated, user?.id]);
+  }, [user]);
 
   useEffect(() => {
-    checkShouldOpen();
+    const raf = requestAnimationFrame(() => checkShouldOpen());
     const handleEvent = () => checkShouldOpen();
     window.addEventListener("chatap-trigger-onboarding", handleEvent);
-    return () => window.removeEventListener("chatap-trigger-onboarding", handleEvent);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("chatap-trigger-onboarding", handleEvent);
+    };
   }, [checkShouldOpen]);
 
   // Cierre animado y fluido
@@ -144,7 +148,7 @@ export default function BotOnboardingModal() {
         navigate(destination);
       }
     }, 200);
-  }, [user?.id, navigate]);
+  }, [user, navigate]);
 
   // Mide el elemento a resaltar cuando el paso tiene un target.
   useEffect(() => {
@@ -221,7 +225,7 @@ export default function BotOnboardingModal() {
     return () => window.removeEventListener("resize", onChange);
   }, [step, isOpen]);
 
-  function goToNext() {
+  const goToNext = useCallback(() => {
     const nextIndex = Math.min(step + 1, STEPS.length - 1);
     const nextRoute = STEPS[nextIndex]?.route;
     if (nextRoute) {
@@ -229,9 +233,9 @@ export default function BotOnboardingModal() {
     }
     setDirection("next");
     setStep(nextIndex);
-  }
+  }, [step, navigate]);
 
-  function goToPrev() {
+  const goToPrev = useCallback(() => {
     const prevIndex = Math.max(step - 1, 0);
     const prevRoute = STEPS[prevIndex]?.route;
     if (prevRoute) {
@@ -239,7 +243,7 @@ export default function BotOnboardingModal() {
     }
     setDirection("prev");
     setStep(prevIndex);
-  }
+  }, [step, navigate]);
 
   // Navegación por teclado
   useEffect(() => {
@@ -255,7 +259,7 @@ export default function BotOnboardingModal() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isClosing, step, handleFinish]);
+  }, [isOpen, isClosing, step, handleFinish, goToNext, goToPrev]);
 
   if (!isOpen) return null;
 

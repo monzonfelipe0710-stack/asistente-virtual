@@ -1,98 +1,135 @@
-import { useNavigate } from "react-router-dom";
-import Reveal from "../common/Reveal";
-import ChatPreview from "./ChatPreview";
-import SectionLabel from "./SectionLabel";
-import TechnicalBadge from "./TechnicalBadge";
-import TechnologyTexture from "./TechnologyTexture";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import DotGrid from "./DotGrid";
 import AnimatedText from "./AnimatedText";
-import StatusIndicator from "./StatusIndicator";
+import OrbitRings from "./OrbitRings";
+import ChatBotAvatar from "../ChatBotAvatar";
 
-const BADGES = ["CHAT", "AI", "01", "24/7", "ONLINE", "SERVICIOS", "CIUDADANÍA"];
-
+/**
+ * Hero — split layout (left cream / right dark).
+ *
+ * Perf notes:
+ * - OrbitRings SVG animates with CSS only (no JS loop, GPU-composited transform).
+ * - ChatBotAvatar runs its own rAF loop but only when visible (visibility API).
+ * - All entrance animations are pure CSS (no JS spring libs).
+ * - `will-change: opacity, transform` is set via CSS class only during animation,
+ *   removed afterward via `animation-fill-mode: both` with opacity→1 as final state.
+ */
 export default function Hero() {
-  const navigate = useNavigate();
+  const [ready, setReady] = useState(false);
+
+  /* Trigger entrance sequence one frame after mount so the initial
+     paint completes first — avoids a flash of un-styled content. */
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  function scrollNext() {
+    document.getElementById("que-es")?.scrollIntoView({ behavior: "smooth" });
+  }
 
   return (
-    <section id="inicio" className="relative overflow-hidden border-b border-line" aria-label="Presentación de ChatAP">
-      <TechnologyTexture words={["CHATAP", "ADMINISTRACIÓN", "PÚBLICA", "TRÁMITES", "CIUDADANÍA", "SERVICIOS", "CHAT", "AI", "FORMOSA", "ASISTENCIA", "INFORMACIÓN"]} />
+    <section
+      id="inicio"
+      aria-label="Presentación de ChatAP"
+      className="hero-split"
+    >
+      {/* ── LEFT — cream ─────────────────────────────────────────── */}
+      <div className="hero-split__left flex flex-col justify-between px-6 pb-10 pt-32 sm:px-10 lg:px-16 lg:pt-40">
 
-      <div className="ed-max section-bleed relative z-10 grid min-h-[calc(100svh-3.5rem)] grid-cols-1 lg:grid-cols-12 items-stretch">
-        {/* Columna tipográfica */}
-        <div className="lg:col-span-8 flex flex-col justify-center py-24 lg:py-28">
-          <Reveal variant="blur">
-            <SectionLabel num="01">Administración Pública · Formosa</SectionLabel>
-          </Reveal>
-          <Reveal variant="up" delay={90}>
-            <h1 className="display-1 text-ink m-0 mt-8 font-neue">
-              CHATAP<span className="text-brand">.</span>
-            </h1>
-          </Reveal>
-          <Reveal variant="up" delay={180}>
-            <p className="display-3 text-ink m-0 mt-6 max-w-2xl font-neue">
-              <AnimatedText text="Asistente Virtual de la Administración Pública." as="span" />
-            </p>
-          </Reveal>
-          <Reveal variant="up" delay={300}>
-            <p className="mt-7 max-w-xl m-0 text-[1.05rem] leading-relaxed text-muted font-neue-text">
-              El punto de contacto directo entre la ciudadanía y el Estado: consultá
-              trámites, documentación y servicios oficiales en lenguaje claro, sin
-              filas y sin horarios.
-            </p>
-          </Reveal>
+        {/* Eyebrow — slot 0 */}
+        <p className={`hero-eyebrow m-0 ${ready ? "hero-enter-0" : "opacity-0"}`}>
+          <span className="hero-eyebrow-dot" aria-hidden="true" />
+          Subsecretaría de Recursos Humanos · Formosa
+        </p>
 
-          <Reveal variant="up" delay={400}>
-            <div className="mt-12 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={() => navigate("/chat")}
-                id="chat-cta"
-                data-tour="chat-cta"
-                className="btn-primary px-8! py-4! text-sm!"
-              >
-                Comenzar
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </button>
-              <a href="#que-es" className="btn-ghost px-8! py-4! text-sm! no-underline">
-                Conocer ChatAP
-              </a>
-            </div>
-          </Reveal>
+        {/* Headline block — slots 1-3 */}
+        <div className="my-auto py-12">
+          <h1 className={`hero-headline m-0 font-neue text-ink ${ready ? "hero-enter-1" : "opacity-0"}`}>
+            <AnimatedText text="El Estado que responde." as="span" wordDelay={42} />
+          </h1>
 
-          <Reveal variant="up" delay={500}>
-            <div className="mt-12 flex items-center gap-4">
-              <StatusIndicator label="Servicio activo 24/7" tone="ok" />
-              <span className="hidden sm:inline-block h-3 w-px bg-line" aria-hidden="true" />
-              <p className="m-0 text-[11px] font-mono uppercase tracking-[0.18em] text-faint">
-                Banda {">>"} disponible
-              </p>
-            </div>
-          </Reveal>
+          <p className={`hero-lead mt-8 m-0 max-w-sm text-muted font-neue-text ${ready ? "hero-enter-2" : "opacity-0"}`}>
+            Trámites, información y asistencia de la Administración Pública de
+            Formosa. En lenguaje claro, sin filas, las 24 horas.
+          </p>
 
-          <Reveal variant="up" delay={560}>
-            <div className="mt-10 flex flex-wrap gap-2.5" aria-hidden="true">
-              {BADGES.map((b) => (
-                <TechnicalBadge key={b}>{b}</TechnicalBadge>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-
-        {/* Columna panel de chat */}
-        <div className="hidden lg:flex lg:col-span-4 items-center justify-center py-16 lg:pl-12 xl:pl-16">
-          <div className="relative w-full max-w-md">
-            <Reveal variant="blur" delay={250}>
-              <ChatPreview />
-            </Reveal>
-            <Reveal variant="up" delay={420}>
-              <div className="mt-5 flex items-center justify-between">
-                <p className="fig-num m-0">FIG. 01 — Interfaz de consulta</p>
-                <p className="fig-num m-0 text-[#18bc42]">● listo</p>
-              </div>
-            </Reveal>
+          {/* CTAs */}
+          <div className={`mt-10 flex flex-wrap items-center gap-3 ${ready ? "hero-enter-3" : "opacity-0"}`}>
+            <Link to="/chat" className="hero-btn-primary group">
+              Empezar
+              <span className="hero-btn-arrow" aria-hidden="true">→</span>
+            </Link>
+            <Link to="/login" className="hero-btn-ghost">
+              Ingresar
+            </Link>
           </div>
         </div>
+
+        {/* Bottom meta bar — slot 4 */}
+        <div className={`hero-meta-bar ${ready ? "hero-enter-4" : "opacity-0"}`}>
+          <span>ChatAP v1.0</span>
+          <span className="hero-meta-sep" aria-hidden="true" />
+          <span className="flex items-center gap-1.5">
+            <span className="hero-status-dot" aria-hidden="true" />
+            EN LÍNEA
+          </span>
+          <span className="hero-meta-sep" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={scrollNext}
+            className="hover:text-ink transition-colors cursor-pointer bg-transparent border-0 p-0 font-mono text-[10px] uppercase tracking-[0.2em] text-faint"
+          >
+            Explorar ↓
+          </button>
+        </div>
+      </div>
+
+      {/* ── RIGHT — dark with dot grid + avatar + orbit rings ────── */}
+      <div className="hero-split__right relative overflow-hidden">
+        {/* Dot texture */}
+        <DotGrid />
+
+        {/* Orbit rings + avatar centred */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* Orbit rings */}
+          <OrbitRings rings={6} className="hero-orbit" />
+
+          {/* Avatar at the centre — the rings revolve around it */}
+          <div
+            className={`absolute z-10 flex items-center justify-center hero-avatar-wrap ${ready ? "hero-enter-avatar" : "opacity-0"}`}
+            aria-hidden="true"
+          >
+            <ChatBotAvatar
+              size={140}
+              reaction="idle"
+              followMouse
+            />
+          </div>
+        </div>
+
+        {/* Top-left terminal badge */}
+        <div className={`absolute top-8 left-8 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-[#f3f1e9]/40 ${ready ? "hero-enter-0" : "opacity-0"}`}>
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#18bc42] animate-pulse-dot" aria-hidden="true" />
+          Sistema activo
+        </div>
+
+        {/* Corner label */}
+        <p
+          className="absolute bottom-8 right-8 m-0 font-mono text-[9px] uppercase tracking-[0.26em] text-[#f3f1e9]/30"
+          aria-hidden="true"
+        >
+          ChatAP · AR
+        </p>
+
+        {/* Large ghost watermark */}
+        <p
+          className="pointer-events-none absolute -bottom-2 left-0 right-0 m-0 select-none text-center font-neue font-black leading-none tracking-[-0.06em] text-[22vw] text-[#f3f1e9]/[0.04]"
+          aria-hidden="true"
+        >
+          AP
+        </p>
       </div>
     </section>
   );

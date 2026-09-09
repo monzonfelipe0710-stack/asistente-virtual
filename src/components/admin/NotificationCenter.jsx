@@ -16,7 +16,7 @@ const typeColors = {
   settings: "bg-muted",
 };
 
-export default function NotificationCenter({ unread = 0 }) {
+export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [read, setRead] = useState(new Set());
   const ref = useRef(null);

@@ -1,20 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { userRoles, departments } from "../../data/mockUsers";
 
 export default function UserFormModal({ open, onClose, onSave, editUser }) {
-  const [form, setForm] = useState({ name: "", email: "", role: "Ciudadano", department: "", status: "Activo" });
-  const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (open) {
-      if (editUser) {
-        setForm({ name: editUser.name, email: editUser.email, role: editUser.role, department: editUser.department, status: editUser.status });
-      } else {
-        setForm({ name: "", email: "", role: "Ciudadano", department: "Mesa de Entradas", status: "Activo" });
-      }
-      setErrors({});
+  const [form, setForm] = useState(() => {
+    if (editUser) {
+      return { name: editUser.name, email: editUser.email, role: editUser.role, department: editUser.department, status: editUser.status };
     }
-  }, [open, editUser]);
+    return { name: "", email: "", role: "Ciudadano", department: "Mesa de Entradas", status: "Activo" };
+  });
+  const [errors, setErrors] = useState({});
 
   function validate() {
     const errs = {};

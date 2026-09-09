@@ -37,7 +37,6 @@ export default function Notificaciones() {
   function handleMarkAll() {
     if (!data.user) return;
     markAllNotificationsRead(data.user.id);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh(loadNotifications(data.user.id));
   }
 

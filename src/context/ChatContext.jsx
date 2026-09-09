@@ -4,6 +4,7 @@ import { readJSON, writeJSON } from "../lib/auth";
 
 const ChatContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useChat() {
   const ctx = useContext(ChatContext);
   if (!ctx) throw new Error("useChat debe usarse dentro de ChatProvider");

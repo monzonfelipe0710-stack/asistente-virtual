@@ -611,12 +611,13 @@ export default function ChatWindow() {
 
       <div ref={messagesRef} className="flex-1 overflow-y-auto relative">
         {phase !== "chat" && (
-          <div
-            className={`welcome-content absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-300 ease-out ${
-              phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
-            }`}
-          >
-            <ChatBotAvatar size={60} reaction={reaction} />
+<div
+              className={`welcome-content absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-300 ease-out ${
+                phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
+              }`}
+            >
+              <p className="sec-meta m-0">Asistente Virtual · RRHH Formosa</p>
+              <ChatBotAvatar size={60} reaction={reaction} />
             <h1 className="text-2xl sm:text-3xl font-semibold text-ink m-0">
               {isAuthenticated && user?.name
                 ? `¡Hola, ${user.name.split(" ")[0]}! ¿En qué puedo ayudarte?`

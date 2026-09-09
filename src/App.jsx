@@ -27,17 +27,22 @@ function PageTransition({ children }) {
     prevKeyRef.current = location.key;
 
     if (reduceMotion) {
-      setDisplayLocation(location);
-      setPhase("enter");
-      return;
+      const raf = requestAnimationFrame(() => {
+        setDisplayLocation(location);
+        setPhase("enter");
+      });
+      return () => cancelAnimationFrame(raf);
     }
 
-    setPhase("exit");
+    const raf = requestAnimationFrame(() => setPhase("exit"));
     const t = setTimeout(() => {
       setDisplayLocation(location);
       setPhase("enter");
     }, EXIT_MS);
-    return () => clearTimeout(t);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
   }, [location, reduceMotion]);
 
   useEffect(() => {
