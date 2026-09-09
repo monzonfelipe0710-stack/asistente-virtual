@@ -80,74 +80,80 @@
   --font-neue-text: "PP Neue Montreal Text", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-  /* Paleta claro · Content Architecture */
-  --color-ink: #232323;
-  --color-paper: #f1eee7;
-  --color-mist: #eae8dd;
-  --color-soft: #e4e0d2;
-  --color-line: rgba(35, 35, 35, 0.16);
-  --color-muted: #5b5a56;
-  --color-faint: #8d8a82;
+  /* Fundación visual ChatAP: geometría editorial y contenedores estables. */
+  --layout-max: 90rem;
+  --layout-gutter: clamp(1.25rem, 4vw, 4rem);
+  --nav-height: 4rem;
+  --border-strong: rgba(15, 23, 48, 0.24);
 
-  /* Acentos de espécimen Pangram Pangram */
-  --color-dark: #232323;
-  --color-pitch: #000000;
-  --color-cream: #f1eee7;
-  --color-cream-ink: #232323;
-  --color-orange: #ff9100;
-  --color-crimson: #d82f2f;
+  /* Paleta claro · Azul oscuro institucional */
+  --color-ink: #0f1730;
+  --color-paper: #edf1f9;
+  --color-mist: #e3e9f6;
+  --color-soft: #d8e1f2;
+  --color-line: rgba(15, 23, 48, 0.14);
+  --color-muted: #4a5676;
+  --color-faint: #8490ae;
+
+  /* Tintas institucionales */
+  --color-dark: #0f1730;
+  --color-pitch: #070e20;
+  --color-cream: #edf1f9;
+  --color-cream-ink: #0f1730;
+  --color-orange: #2f6bff;
+  --color-crimson: #e24a4f;
   --color-cobalt: #4365ff;
-  --color-lime: #18bc42;
+  --color-lime: #1fa45c;
   --color-violet: #6157bd;
 
-  /* Acento de la referencia */
-  --color-brand: #ff9100;
-  --color-brand-dark: #e58300;
-  --color-brand-deep: #cc7400;
-  --color-ok: #18bc42;
-  --color-warn: #efc21e;
-  --color-bad: #d82f2f;
-  --color-info: #ff9100;
-  --bot-body: #232323;
-  --bot-eye: #f1eee7;
+  /* Acento institucional · azul de Estado */
+  --color-brand: #2f6bff;
+  --color-brand-dark: #2657d8;
+  --color-brand-deep: #1c44b6;
+  --color-ok: #1fa45c;
+  --color-warn: #e29c2c;
+  --color-bad: #e24a4f;
+  --color-info: #2f6bff;
+  --bot-body: #0f1730;
+  --bot-eye: #edf1f9;
 
   --color-primary: var(--color-brand);
   --color-primary-dark: var(--color-brand-dark);
   --color-primary-deep: var(--color-brand-deep);
-  --color-primary-light: #fff4e3;
-  --color-primary-lighter: #fff9f0;
+  --color-primary-light: #e1e9ff;
+  --color-primary-lighter: #f2f6ff;
   --color-accent: var(--color-brand-deep);
-  --color-accent-light: #fff4e3;
+  --color-accent-light: #e1e9ff;
 
-  --sidebar-bg: #141414;
-  --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-hover: #222222;
-  --sidebar-text: #9e9e9e;
-  --sidebar-text-hover: #ffffff;
-  --sidebar-section-text: #5e5e5e;
-  --sidebar-active-bg: var(--color-brand);
+  --sidebar-bg: #070e20;
+  --sidebar-border: rgba(234, 240, 250, 0.12);
+  --sidebar-hover: #101b35;
+  --sidebar-text: #98a3be;
+  --sidebar-text-hover: #edf2fc;
+  --sidebar-section-text: #5b667f;
+  --sidebar-active-bg: var(--color-brand-deep);
   --sidebar-active-text: #ffffff;
-  --sidebar-header-bg: #161616;
+  --sidebar-header-bg: #060c1b;
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 72px;
 
-  --radius-control: 0px;
-  --radius-card: 0px;
+  --radius-control: 0.5rem;
+  --radius-card: 0.625rem;
 
-  /* Radios editoriales: jerarquía ajustada (controles 2-5px, tarjetas 6-8px).
-     Coerciona todas las utilidades rounded-* del proyecto a un solo lenguaje. */
+  /* Radios redondeados y amables: controles 10px, tarjetas 14px,
+     esquinas suaves que reemplazan la estética angular anterior. */
   --radius-sm: 0.125rem;
-  --radius-md: 0.1875rem;
-  --radius-lg: 0.25rem;
-  --radius-xl: 0.3125rem;
-  --radius-2xl: 0.375rem;
-  --radius-3xl: 0.5rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.75rem;
 
   /* Bandas oscuras estables (ritmo claro/oscuro en ambos temas) */
-  --color-band: #171717;
-  --color-band-fg: #f3f1e9;
+  --color-band: #070e20;
+  --color-band-fg: #eaf0fa;
 
-  /* Estética Swiss: sin sombras difusas, arquitectura pura de líneas */
+  /* Sombras suaves y acogedoras */
   --shadow-soft: none;
   --shadow-hover: none;
 }
@@ -157,25 +163,26 @@
 }
 
 .dark {
-  --color-ink: #f3f1e9;
-  --color-paper: #171717;
-  --color-mist: #212120;
-  --color-soft: #1b1b1b;
-  --color-line: rgba(243, 241, 233, 0.15);
-  --color-muted: #a3a096;
-  --color-faint: #63615a;
-  --color-brand: #ff9100;
-  --color-brand-dark: #e58300;
-  --color-brand-deep: #cc7400;
-  --color-ok: #18bc42;
-  --color-warn: #efc21e;
-  --color-bad: #d82f2f;
-  --color-info: #ff9100;
-  --bot-body: #f1eee7;
-  --bot-eye: #232323;
-  --color-primary-light: #2a2114;
-  --color-primary-lighter: #1c160d;
-  --color-accent-light: #2a2114;
+  --color-ink: #eaf0fa;
+  --color-paper: #0a1124;
+  --color-mist: #111b34;
+  --color-soft: #0c1530;
+  --color-line: rgba(234, 240, 250, 0.14);
+  --color-muted: #a2aec7;
+  --color-faint: #6a7590;
+  --color-brand: #4d7dff;
+  --color-brand-dark: #3a68f2;
+  --color-brand-deep: #2a55d6;
+  --color-ok: #2fbf71;
+  --color-warn: #eeb253;
+  --color-bad: #f26067;
+  --color-info: #4d7dff;
+  --border-strong: rgba(234, 240, 250, 0.28);
+  --bot-body: #eaf0fa;
+  --bot-eye: #0a1124;
+  --color-primary-light: #13264e;
+  --color-primary-lighter: #0c1a38;
+  --color-accent-light: #13264e;
   color-scheme: dark;
 }
 
@@ -195,7 +202,7 @@
 
   ::selection {
     background: var(--color-brand);
-    color: #1a1a1a;
+    color: #ffffff;
   }
 
   :focus-visible {
@@ -446,7 +453,7 @@
     border: none;
     border-radius: var(--radius-control);
     background: var(--color-brand-deep);
-    color: #1a1a1a;
+    color: #ffffff;
     font-size: 0.72rem;
     font-weight: 600;
     line-height: 1.2;
@@ -656,11 +663,8 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
+    font-size: 0.8rem;
     font-weight: 500;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
     color: var(--color-muted);
   }
   .sec-meta::before {
@@ -687,31 +691,28 @@
   .chat-scroll::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 999px; }
   .chat-scroll::-webkit-scrollbar-track { background: transparent; }
 
-  /* Conversación editorial: globos angulares con metadata técnica */
+  /* Conversación: globos redondeados con metadata mínima */
   .chat-msg {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.35rem;
     max-width: min(78%, 46rem);
   }
   .chat-msg__meta {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.563rem;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 500;
     color: var(--color-faint);
   }
   .chat-msg__body {
-    padding: 0.75rem 0.875rem;
+    padding: 0.8rem 1rem;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-card);
     background: var(--color-paper);
     color: var(--color-ink);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     line-height: 1.5;
   }
   .chat-msg--user {
@@ -721,7 +722,7 @@
   .chat-msg--user .chat-msg__body {
     background: var(--color-brand);
     border-color: var(--color-brand);
-    color: #1a1a1a;
+    color: #ffffff;
   }
   .chat-msg--user .chat-msg__meta {
     justify-content: flex-end;
@@ -736,7 +737,7 @@
     text-underline-offset: 2px;
     text-decoration-thickness: 1px;
   }
-  .chat-msg--user .mono-link { color: #1a1a1a; }
+  .chat-msg--user .mono-link { color: #ffffff; }
 
   .chat-divider {
     display: flex;
@@ -902,10 +903,10 @@
 
 @layer components {
   .card {
-    @apply bg-paper border border-line/70 rounded-2xl;
+    @apply bg-paper border border-line/70 rounded-2xl shadow-soft;
   }
   .card-interactive {
-    @apply bg-paper border border-line/70 rounded-2xl;
+    @apply bg-paper border border-line/70 rounded-2xl shadow-soft;
     transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .card-interactive:hover,
@@ -924,29 +925,33 @@
            focus:border-brand focus:ring-2 focus:ring-brand/12;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider
-           rounded-none select-none cursor-pointer border border-line bg-mist text-ink hover:bg-soft;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
+           rounded-xl select-none cursor-pointer border border-line bg-mist text-ink hover:bg-soft;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-widest
-           rounded-none cursor-pointer bg-brand-deep text-paper border border-brand-deep
-           hover:bg-[#EBEBEB] hover:text-[#1A1A1A] hover:border-[#EBEBEB];
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold
+           rounded-xl cursor-pointer bg-brand-deep text-white border border-brand-deep shadow-soft
+           hover:bg-brand-dark;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-bold uppercase tracking-widest
-           rounded-none cursor-pointer bg-transparent text-ink border border-line
-           hover:bg-[#EBEBEB] hover:text-[#1A1A1A] hover:border-[#EBEBEB];
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold
+           rounded-xl cursor-pointer bg-transparent text-ink border border-line
+           hover:bg-mist hover:text-ink;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold uppercase tracking-wider
-           rounded-none cursor-pointer bg-bad text-paper hover:opacity-90;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
+           rounded-xl cursor-pointer bg-bad text-white hover:opacity-90 shadow-soft;
     transition: opacity 0.15s ease, background-color 0.15s ease;
   }
   .badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-none border border-line;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full border border-line;
   }
   .table-row {
     @apply transition-colors;
@@ -955,7 +960,7 @@
     @apply cursor-pointer select-none hover:text-ink;
   }
   .skeleton {
-    @apply rounded-md;
+    @apply rounded-xl;
     background: linear-gradient(90deg, var(--color-mist) 25%, var(--color-soft) 37%, var(--color-mist) 63%);
     background-size: 800px 100%;
     animation: shimmer 1.4s infinite linear;
@@ -1000,6 +1005,9 @@
   .animate-counter { animation: counter 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
   .bar-fill-animate { animation: bar-fill 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .bar-fill-y-animate { animation: bar-fill-y 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* Micro-etiquetas: tracking suavizado, menos ruido */
+  .tracking-widest { letter-spacing: 0.05em; }
 
   .sidebar-tooltip {
     position: relative;
@@ -1192,40 +1200,44 @@
 }
 
 @layer utilities {
-  /* Escala tipográfica editorial PP Neue Montreal */
+  /* Escala tipográfica sobria · PP Neue Montreal */
   .display-1 {
     font-family: "PP Neue Montreal", sans-serif;
-    font-size: clamp(3.25rem, 12vw, 9.5rem);
-    line-height: 0.88;
-    letter-spacing: -0.045em;
-    font-weight: 800;
+    font-size: clamp(2.25rem, 5.5vw, 4rem);
+    line-height: 1.06;
+    letter-spacing: -0.025em;
+    font-weight: 700;
     text-wrap: balance;
   }
   .display-2 {
     font-family: "PP Neue Montreal", sans-serif;
-    font-size: clamp(2.4rem, 6.5vw, 5.2rem);
-    line-height: 0.92;
-    letter-spacing: -0.04em;
-    font-weight: 500;
-    font-family: "PP Neue Montreal", sans-serif;
-    font-size: clamp(1.75rem, 4.25vw, 3.25rem);
-    line-height: 0.98;
-    letter-spacing: -0.035em;
-    font-weight: 500;
-    font-family: "PP Neue Montreal", sans-serif;
-    font-size: 0.72rem;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
     font-weight: 600;
-    letter-spacing: 0.2em;
+  }
+  .display-3 {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+
+  .kicker {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--color-muted);
   }
 
   .lead {
     font-family: "PP Neue Montreal", sans-serif;
-    font-size: clamp(1.1rem, 1.7vw, 1.45rem);
-    line-height: 1.45;
+    font-size: clamp(1rem, 1.4vw, 1.2rem);
+    line-height: 1.55;
     color: var(--color-muted);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   .editorial-text {
@@ -1604,7 +1616,7 @@
 @layer utilities {
   /* Textura tipográfica de fondo (TechnologyTexture) */
   .band-dark { background-color: var(--color-band); color: var(--color-band-fg); }
-  .band-dark ::selection { background: var(--color-brand); color: #171717; }
+  .band-dark ::selection { background: var(--color-brand); color: #ffffff; }
 
   .texture-words {
     position: absolute;
@@ -1623,7 +1635,7 @@
   }
   .reference-radial-texture {
     opacity: 0.9;
-    color: rgba(241, 240, 232, 0.82);
+    color: rgba(234, 240, 250, 0.82);
     font-size: clamp(0.58rem, 0.7vw, 0.78rem);
     line-height: 1;
     background: radial-gradient(circle at 52% 47%, transparent 0 6%, rgba(255,255,255,0.06) 6.1% 6.25%, transparent 6.35% 13%, rgba(255,255,255,0.06) 13.1% 13.25%, transparent 13.35% 21%, rgba(255,255,255,0.06) 21.1% 21.25%, transparent 21.35% 30%, rgba(255,255,255,0.06) 30.1% 30.25%, transparent 30.35% 40%, rgba(255,255,255,0.06) 40.1% 40.25%, transparent 40.35% 52%, rgba(255,255,255,0.06) 52.1% 52.25%, transparent 52.35%);
@@ -1689,7 +1701,7 @@
     background: var(--color-paper);
   }
   .reference-hero-copy { min-width: 0; }
-  .reference-hero-art { background: #202020; color: #f1f0e8; }
+  .reference-hero-art { background: #0d162e; color: #eaf0fa; }
   .reference-title {
     font-size: clamp(4.5rem, 9.3vw, 10rem);
     line-height: 0.82;
@@ -1708,7 +1720,7 @@
     gap: 0.65rem;
     min-height: 2.75rem;
     padding: 0.75rem 1.1rem;
-    border: 1px solid #171717;
+    border: 1px solid #070e20;
     font-family: var(--font-mono);
     font-size: 0.65rem;
     font-weight: 700;
@@ -1717,22 +1729,22 @@
     transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
   }
   .reference-button:hover { transform: translateY(-2px); }
-  .reference-button-dark { background: #171717; color: #f1f0e8; }
-  .reference-button-dark:hover { background: var(--color-brand); color: #171717; }
-  .reference-button-outline { color: #171717; }
-  .reference-button-outline:hover { background: #171717; color: #f1f0e8; }
+  .reference-button-dark { background: #070e20; color: #eaf0fa; }
+  .reference-button-dark:hover { background: var(--color-brand); color: #ffffff; }
+  .reference-button-outline { color: #0f1730; }
+  .reference-button-outline:hover { background: #0f1730; color: #eaf0fa; }
 
   @media (min-width: 1024px) {
     .site-navbar { position: fixed; left: 0; right: 0; top: 1rem; }
     .site-navbar > div { max-width: 54rem; }
-    .site-navbar > div > div { border: 1px solid rgba(241, 240, 232, 0.16); background: #171717 !important; }
+    .site-navbar > div > div { border: 1px solid rgba(234, 240, 250, 0.16); background: #070e20 !important; }
     .site-navbar .text-ink,
     .site-navbar .font-neue,
-    .site-navbar .nav-tab { color: #f1f0e8 !important; }
+    .site-navbar .nav-tab { color: #eaf0fa !important; }
     .site-navbar .nav-tab:hover,
     .site-navbar .nav-tab.is-active { color: #ffffff; }
     .site-navbar .nav-tab::after { background: var(--color-brand); }
-    .site-navbar .border-line { border-color: rgba(241, 240, 232, 0.2); }
+    .site-navbar .border-line { border-color: rgba(234, 240, 250, 0.2); }
     .site-navbar .hover\:bg-mist:hover { background: #252525; }
   }
 
@@ -1795,7 +1807,7 @@
     min-height: 100svh;
   }
   .hero-split__right {
-    background: #171717;
+    background: #070e20;
     min-height: 100svh;
   }
   @media (max-width: 1023px) {
@@ -1808,13 +1820,13 @@
   }
 
   .hero-headline {
-    font-size: clamp(3.2rem, 8vw, 8rem);
-    line-height: 0.88;
-    letter-spacing: -0.055em;
-    font-weight: 800;
+    font-size: clamp(2.1rem, 5vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    font-weight: 700;
   }
   .hero-lead {
-    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
     line-height: 1.6;
   }
 
@@ -1859,7 +1871,7 @@
     width: 0.4rem;
     height: 0.4rem;
     border-radius: 9999px;
-    background: #18bc42;
+    background: var(--color-ok);
     flex: 0 0 auto;
     animation: pulse-soft 2s ease-in-out infinite;
   }
@@ -1894,7 +1906,7 @@
   .hero-btn-primary:hover {
     background: var(--color-brand);
     border-color: var(--color-brand);
-    color: #171717;
+    color: #ffffff;
     transform: translateY(-2px);
   }
   .hero-btn-arrow {
@@ -1933,7 +1945,7 @@
     gap: 0.6rem;
     padding: 0.9rem 1.75rem;
     background: var(--color-brand);
-    color: #171717;
+    color: #ffffff;
     font-family: var(--font-mono);
     font-size: 0.65rem;
     font-weight: 800;
@@ -1953,20 +1965,20 @@
     gap: 0.5rem;
     padding: 0.9rem 1.75rem;
     background: transparent;
-    color: rgba(243,241,233,0.7);
+    color: rgba(234,240,250,0.7);
     font-family: var(--font-mono);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    border: 1px solid rgba(243,241,233,0.2);
+    border: 1px solid rgba(234,240,250,0.2);
     cursor: pointer;
     transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   }
   .finalcta-btn-ghost:hover {
-    background: rgba(243,241,233,0.06);
-    border-color: rgba(243,241,233,0.35);
-    color: #f3f1e9;
+    background: rgba(234,240,250,0.06);
+    border-color: rgba(234,240,250,0.35);
+    color: #eaf0fa;
   }
 }
 
@@ -1988,9 +2000,9 @@
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.45rem 0.75rem;
-    background: #171717;
-    border: 1px solid rgba(243,241,233,0.14);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.28), 0 1px 0 rgba(243,241,233,0.06) inset;
+    background: #070e20;
+    border: 1px solid rgba(234,240,250,0.14);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.28), 0 1px 0 rgba(234,240,250,0.06) inset;
     backdrop-filter: blur(12px);
   }
 
@@ -1998,7 +2010,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
-    color: #f3f1e9;
+    color: #eaf0fa;
   }
   .nav-brand-mark {
     display: grid;
@@ -2006,7 +2018,7 @@
     width: 1.75rem;
     height: 1.75rem;
     background: var(--color-brand);
-    color: #171717;
+    color: #ffffff;
     font-family: var(--font-neue);
     font-size: 0.65rem;
     font-weight: 900;
@@ -2018,7 +2030,7 @@
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #f3f1e9;
+    color: #eaf0fa;
   }
 
   .nav-link {
@@ -2029,7 +2041,7 @@
     font-weight: 500;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.55);
+    color: rgba(234,240,250,0.55);
     text-decoration: none;
     transition: color 0.18s ease;
   }
@@ -2044,10 +2056,10 @@
     transform-origin: left;
     transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .nav-link:hover { color: #f3f1e9; }
+  .nav-link:hover { color: #eaf0fa; }
   .nav-link:hover::after,
   .nav-link--active::after { transform: scaleX(1); }
-  .nav-link--active { color: #f3f1e9; }
+  .nav-link--active { color: #eaf0fa; }
 
   .nav-icon-btn {
     width: 2rem;
@@ -2055,15 +2067,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(243,241,233,0.14);
-    color: rgba(243,241,233,0.5);
+    border: 1px solid rgba(234,240,250,0.14);
+    color: rgba(234,240,250,0.5);
     background: transparent;
     cursor: pointer;
     transition: color 0.18s ease, background 0.18s ease;
   }
   .nav-icon-btn:hover {
-    color: #f3f1e9;
-    background: rgba(243,241,233,0.06);
+    color: #eaf0fa;
+    background: rgba(234,240,250,0.06);
   }
 
   .nav-cta {
@@ -2071,7 +2083,7 @@
     align-items: center;
     padding: 0.45rem 1rem;
     background: var(--color-brand);
-    color: #171717;
+    color: #ffffff;
     font-family: var(--font-mono);
     font-size: 0.6rem;
     font-weight: 800;
@@ -2091,19 +2103,19 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.3rem 0.5rem;
-    border: 1px solid rgba(243,241,233,0.14);
+    border: 1px solid rgba(234,240,250,0.14);
     background: transparent;
     cursor: pointer;
     transition: background 0.18s ease;
   }
-  .nav-profile-btn:hover { background: rgba(243,241,233,0.06); }
+  .nav-profile-btn:hover { background: rgba(234,240,250,0.06); }
   .nav-profile-avatar {
     display: grid;
     place-items: center;
     width: 1.6rem;
     height: 1.6rem;
     background: var(--color-brand);
-    color: #171717;
+    color: #ffffff;
     font-family: var(--font-mono);
     font-size: 0.6rem;
     font-weight: 900;
@@ -2115,8 +2127,8 @@
     right: 0;
     top: calc(100% + 8px);
     width: 14rem;
-    background: #171717;
-    border: 1px solid rgba(243,241,233,0.14);
+    background: #070e20;
+    border: 1px solid rgba(234,240,250,0.14);
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     z-index: 50;
     overflow: hidden;
@@ -2127,8 +2139,8 @@
     left: 0;
     right: 0;
     top: calc(100% + 6px);
-    background: #171717;
-    border: 1px solid rgba(243,241,233,0.14);
+    background: #070e20;
+    border: 1px solid rgba(234,240,250,0.14);
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     z-index: 50;
     overflow: hidden;
@@ -2186,8 +2198,8 @@
 /* ── Problems terminal ─────────────────────────────────────── */
 @layer components {
   .problems-terminal {
-    border: 1px solid rgba(243,241,233,0.14);
-    background: #171717;
+    border: 1px solid rgba(234,240,250,0.14);
+    background: #070e20;
     overflow: hidden;
   }
   .problems-terminal__bar {
@@ -2195,8 +2207,8 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.7rem 1rem;
-    border-bottom: 1px solid rgba(243,241,233,0.1);
-    background: #111111;
+    border-bottom: 1px solid rgba(234,240,250,0.1);
+    background: #050b1a;
   }
   .problems-terminal__dot {
     width: 0.7rem;
@@ -2208,13 +2220,13 @@
     display: grid;
     grid-template-columns: 3.5rem 1fr 5rem;
     padding: 0.6rem 1rem;
-    border-bottom: 1px solid rgba(243,241,233,0.08);
+    border-bottom: 1px solid rgba(234,240,250,0.08);
     font-family: var(--font-mono);
     font-size: 0.58rem;
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.3);
+    color: rgba(234,240,250,0.3);
   }
   .problems-terminal__col-num  { grid-column: 1; }
   .problems-terminal__col-title { grid-column: 2; }
@@ -2224,27 +2236,27 @@
     grid-template-columns: 3.5rem 1fr 5rem;
     align-items: center;
     padding: 0.85rem 1rem;
-    border-bottom: 1px solid rgba(243,241,233,0.06);
+    border-bottom: 1px solid rgba(234,240,250,0.06);
     font-family: var(--font-mono);
     font-size: 0.72rem;
-    color: rgba(243,241,233,0.7);
+    color: rgba(234,240,250,0.7);
     transition: background 0.18s ease;
   }
-  .problems-terminal__row:hover { background: rgba(243,241,233,0.04); }
+  .problems-terminal__row:hover { background: rgba(234,240,250,0.04); }
   .problems-terminal__row:last-child { border-bottom: none; }
   .problems-terminal__foot {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0.7rem 1rem;
-    border-top: 1px solid rgba(243,241,233,0.08);
-    background: #111111;
+    border-top: 1px solid rgba(234,240,250,0.08);
+    background: #050b1a;
     font-family: var(--font-mono);
     font-size: 0.58rem;
     font-weight: 600;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.3);
+    color: rgba(234,240,250,0.3);
   }
 }
 
@@ -2266,14 +2278,14 @@
     font-weight: 600;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.45);
+    color: rgba(234,240,250,0.45);
     margin: 0;
   }
   .services-eyebrow-line {
     display: inline-block;
     width: 2.5rem;
     height: 1px;
-    background: rgba(243,241,233,0.2);
+    background: rgba(234,240,250,0.2);
   }
   .services-count {
     display: flex;
@@ -2288,7 +2300,7 @@
     font-weight: 800;
     letter-spacing: -0.05em;
     line-height: 1;
-    color: rgba(243,241,233,0.15);
+    color: rgba(234,240,250,0.15);
   }
   .services-count__label {
     font-family: var(--font-mono);
@@ -2296,7 +2308,7 @@
     font-weight: 600;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.3);
+    color: rgba(234,240,250,0.3);
   }
 
   .services-row {
@@ -2304,13 +2316,13 @@
     align-items: center;
     gap: 1.5rem;
     padding: 1.25rem 0;
-    border-bottom: 1px solid rgba(243,241,233,0.08);
+    border-bottom: 1px solid rgba(234,240,250,0.08);
     text-decoration: none;
     transition: background 0.2s ease, padding-inline 0.25s cubic-bezier(0.22,1,0.36,1);
   }
   .services-row:hover {
     padding-inline: 0.75rem;
-    background: rgba(243,241,233,0.04);
+    background: rgba(234,240,250,0.04);
   }
   .services-row:hover .services-row__title { transform: translateX(6px); }
   .services-row:hover .services-row__tag {
@@ -2324,7 +2336,7 @@
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.16em;
-    color: rgba(243,241,233,0.3);
+    color: rgba(234,240,250,0.3);
   }
   .services-row__title {
     flex: 1;
@@ -2333,7 +2345,7 @@
     font-weight: 800;
     letter-spacing: -0.04em;
     line-height: 1;
-    color: #f3f1e9;
+    color: #eaf0fa;
     transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
   }
   .services-row__tag {
@@ -2341,12 +2353,12 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.35rem 0.7rem;
-    border: 1px solid rgba(243,241,233,0.18);
+    border: 1px solid rgba(234,240,250,0.18);
     font-family: var(--font-mono);
     font-size: 0.6rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.45);
+    color: rgba(234,240,250,0.45);
     transition: color 0.2s ease, border-color 0.2s ease;
   }
   @media (min-width: 640px) { .services-row__tag { display: inline-flex; } }
@@ -2405,17 +2417,17 @@
   }
 
   .chat-terminal-wrap {
-    border: 1px solid rgba(243,241,233,0.14);
+    border: 1px solid rgba(234,240,250,0.14);
     overflow: hidden;
-    background: #171717;
+    background: #070e20;
   }
   .chat-terminal__bar {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.65rem 0.9rem;
-    background: #111111;
-    border-bottom: 1px solid rgba(243,241,233,0.1);
+    background: #050b1a;
+    border-bottom: 1px solid rgba(234,240,250,0.1);
   }
   .chat-terminal__dot {
     width: 0.65rem;
@@ -2430,7 +2442,7 @@
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.3);
+    color: rgba(234,240,250,0.3);
   }
 
   .terminal-caret {
@@ -2472,7 +2484,7 @@
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.16em;
-    color: rgba(243,241,233,0.3);
+    color: rgba(234,240,250,0.3);
   }
   .trust-card__meta {
     font-family: var(--font-mono);
@@ -2480,7 +2492,7 @@
     font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.25);
+    color: rgba(234,240,250,0.25);
   }
   .trust-card__quote {
     margin: 2rem 0 0;
@@ -2490,7 +2502,7 @@
     font-weight: 500;
     letter-spacing: -0.02em;
     line-height: 1.4;
-    color: rgba(243,241,233,0.8);
+    color: rgba(234,240,250,0.8);
   }
   .trust-card__title {
     margin: 0;
@@ -2499,7 +2511,7 @@
     font-weight: 700;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(243,241,233,0.35);
+    color: rgba(234,240,250,0.35);
   }
 
   .trust-stats {
@@ -2558,7 +2570,7 @@
   .orbit-ring text {
     font-family: var(--font-mono);
     font-size: 3.8px;
-    fill: rgba(243,241,233,0.22);
+    fill: rgba(234,240,250,0.22);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
@@ -2642,7 +2654,7 @@
     align-items: center;
     justify-content: center;
     /* Subtle glow ring behind the avatar */
-    filter: drop-shadow(0 0 28px rgba(255, 145, 0, 0.18));
+    filter: drop-shadow(0 0 28px rgba(79, 122, 255, 0.28));
   }
 }
 
@@ -2680,7 +2692,7 @@
   .trust-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45),
-                0 0 0 1px rgba(255, 145, 0, 0.18);
+                0 0 0 1px rgba(79, 122, 255, 0.28);
   }
 
   /* Animated bottom line that grows on hover */
@@ -2712,7 +2724,7 @@
   }
   /* Hover text colour shift */
   .services-row:hover .services-row__title {
-    color: #f3f1e9;
+    color: #eaf0fa;
   }
   .services-row:hover .services-row__num {
     color: var(--color-brand);
@@ -2755,7 +2767,7 @@
   .services-row:hover {
     /* Use translateX on the title instead of shifting padding */
     padding-inline: 0;
-    background: rgba(243, 241, 233, 0.04);
+    background: rgba(234, 240, 250, 0.04);
   }
   .services-row:hover .services-row__title {
     transform: translateX(8px) translateY(var(--row-tilt, 0px));
@@ -2785,7 +2797,7 @@
     display: inline-block;
     width: 0;
     height: 1px;
-    background: rgba(243, 241, 233, 0.3);
+    background: rgba(234, 240, 250, 0.3);
     transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s;
   }
   .is-revealed .services-eyebrow-line {
@@ -2815,4 +2827,2417 @@
 }
 .fonts-ready {
   animation: body-appear 0.35s ease both;
+}
+
+
+/* ============================================================
+   BUILDERS TABLE DESIGN SYSTEM · BT-*
+   Inspirado en builderstable.net
+   Editorial dark, tipografía bold masiva, secciones numeradas.
+   ============================================================ */
+
+/* ── Navbar ────────────────────────────────────────────────── */
+@layer components {
+  .bt-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: #080e1e;
+    border-bottom: 1px solid rgba(234, 240, 250, 0.1);
+  }
+  .bt-navbar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    gap: 2rem;
+  }
+  .bt-navbar__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .bt-navbar__brand-mark {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    background: #EAF0FA;
+    color: #080e1e;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.65rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+  .bt-navbar__brand-name {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #EAF0FA;
+  }
+  .bt-nav-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.55);
+    text-decoration: none;
+    transition: color 0.18s ease;
+  }
+  .bt-nav-link:hover {
+    color: #EAF0FA;
+  }
+  .bt-nav-cta {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1.1rem;
+    background: #EAF0FA;
+    color: #080e1e;
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .bt-nav-cta:hover {
+    background: #ffffff;
+  }
+  .bt-nav-hamburger {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    background: transparent;
+    border: 1px solid rgba(234, 240, 250, 0.15);
+    color: rgba(234, 240, 250, 0.7);
+    cursor: pointer;
+    transition: border-color 0.18s ease, color 0.18s ease;
+  }
+  .bt-nav-hamburger:hover {
+    border-color: rgba(234, 240, 250, 0.4);
+    color: #EAF0FA;
+  }
+  .bt-nav-profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.6rem;
+    background: transparent;
+    border: 1px solid rgba(234, 240, 250, 0.15);
+    cursor: pointer;
+    transition: border-color 0.18s ease;
+  }
+  .bt-nav-profile-btn:hover {
+    border-color: rgba(234, 240, 250, 0.35);
+  }
+  .bt-nav-profile-avatar {
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    background: var(--color-brand);
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+  .bt-nav-drawer {
+    background: #080e1e;
+    border-top: 1px solid rgba(234, 240, 250, 0.08);
+  }
+}
+
+/* ── Hero ──────────────────────────────────────────────────── */
+@layer components {
+  .bt-hero {
+    background: #080e1e;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: 60px; /* compensate navbar */
+  }
+  .bt-hero__inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-top: 4rem;
+    padding-bottom: 3rem;
+  }
+  .bt-hero__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.35);
+    margin: 0 0 2.5rem;
+  }
+  .bt-hero__dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-ok);
+    animation: pulse-soft 2.4s ease-in-out infinite;
+    flex: 0 0 auto;
+  }
+  .bt-hero__headline {
+    margin: 0;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-weight: 800;
+    font-size: clamp(3.5rem, 10vw, 10rem);
+    line-height: 0.88;
+    letter-spacing: -0.055em;
+    color: #EAF0FA;
+    text-transform: uppercase;
+  }
+  .bt-hero__line {
+    display: block;
+  }
+  .bt-hero__line--accent {
+    color: rgba(234, 240, 250, 0.3);
+  }
+  .bt-hero__bottom {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 3rem;
+    margin-top: 4rem;
+    flex-wrap: wrap;
+  }
+  .bt-hero__lead {
+    margin: 0;
+    max-width: 26rem;
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+    line-height: 1.65;
+    color: rgba(234, 240, 250, 0.55);
+  }
+  .bt-hero__ctas {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .bt-hero__meta {
+    border-top: 1px solid rgba(234, 240, 250, 0.1);
+    padding-top: 1rem;
+    padding-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .bt-hero__meta-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.3);
+  }
+  .bt-hero__meta-sep {
+    width: 1px;
+    height: 0.8rem;
+    background: rgba(234, 240, 250, 0.12);
+    flex: 0 0 auto;
+  }
+  .bt-status-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-ok);
+    flex: 0 0 auto;
+    animation: pulse-soft 2.2s ease-in-out infinite;
+  }
+  .bt-scroll-hint {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.3);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.18s ease;
+  }
+  .bt-scroll-hint:hover {
+    color: rgba(234, 240, 250, 0.7);
+  }
+}
+
+/* ── Hero entrance animations ──────────────────────────────── */
+@keyframes bt-fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@layer utilities {
+  .bt-enter-0 { animation: bt-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both; }
+  .bt-enter-1 { animation: bt-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both; }
+  .bt-enter-2 { animation: bt-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both; }
+  .bt-enter-3 { animation: bt-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both; }
+}
+
+/* ── Sections ──────────────────────────────────────────────── */
+@layer utilities {
+  .bt-section {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+  @media (min-width: 1024px) {
+    .bt-section {
+      padding-top: 8rem;
+      padding-bottom: 8rem;
+    }
+  }
+  .bt-divider {
+    border: 0;
+    border-top: 1px solid var(--color-line);
+    margin: 0;
+  }
+  .bt-divider--light {
+    border-top-color: rgba(234, 240, 250, 0.1);
+  }
+}
+
+/* ── Eyebrow ───────────────────────────────────────────────── */
+@layer components {
+  .bt-eyebrow-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .bt-eyebrow-row--light {
+    border-bottom-color: rgba(234, 240, 250, 0.1);
+  }
+  .bt-eyebrow-tag {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .bt-eyebrow-tag--light {
+    color: rgba(234, 240, 250, 0.4);
+  }
+  .bt-eyebrow-num {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--color-faint);
+  }
+  .bt-eyebrow-num--light {
+    color: rgba(234, 240, 250, 0.25);
+  }
+}
+
+/* ── Section headline ──────────────────────────────────────── */
+@layer utilities {
+  .bt-section-headline {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(2.4rem, 6vw, 5.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+    margin: 0;
+  }
+  .bt-italic {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--color-faint);
+  }
+  .bt-italic--light {
+    color: rgba(234, 240, 250, 0.4);
+  }
+  .bt-body-text {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: clamp(0.9rem, 1.2vw, 1rem);
+    line-height: 1.7;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+@layer components {
+  .bt-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    background: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--color-ink);
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  }
+  .bt-btn-primary:hover {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
+  .bt-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    background: transparent;
+    color: #EAF0FA;
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid rgba(234, 240, 250, 0.25);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  .bt-btn-ghost:hover {
+    background: rgba(234, 240, 250, 0.08);
+    border-color: rgba(234, 240, 250, 0.45);
+  }
+  .bt-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--color-line);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  .bt-btn-outline:hover {
+    background: var(--color-mist);
+    border-color: color-mix(in srgb, var(--color-ink) 35%, transparent);
+  }
+  .bt-btn-dark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem;
+    background: #080e1e;
+    color: #EAF0FA;
+    font-family: var(--font-mono);
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid #080e1e;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.18s ease;
+  }
+  .bt-btn-dark:hover {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    transform: translateY(-1px);
+  }
+}
+
+/* ── Stats grid ────────────────────────────────────────────── */
+@layer components {
+  .bt-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-top: 1px solid var(--color-line);
+    border-left: 1px solid var(--color-line);
+  }
+  @media (min-width: 640px) {
+    .bt-stats-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .bt-stat-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.75rem 1.5rem;
+    border-right: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .bt-stat__val {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  .bt-stat__label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+}
+
+/* ── Intro grid ────────────────────────────────────────────── */
+@layer utilities {
+  .bt-intro-grid {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Steps ─────────────────────────────────────────────────── */
+@layer components {
+  .bt-steps-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  @media (min-width: 768px) {
+    .bt-steps-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .bt-step {
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .bt-step {
+      padding: 2.5rem 2rem 2.5rem 0;
+      border-right: 1px solid var(--color-line);
+      border-bottom: none;
+    }
+    .bt-step:last-child {
+      border-right: none;
+    }
+    .bt-step:nth-child(n+2) {
+      padding-left: 2rem;
+    }
+  }
+  .bt-step__num {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .bt-step__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-step__body {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── How it works rows (dark bg) ───────────────────────────── */
+@layer components {
+  .bt-how-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 2.5rem 0;
+    border-bottom: 1px solid rgba(234, 240, 250, 0.1);
+  }
+  @media (min-width: 768px) {
+    .bt-how-row {
+      grid-template-columns: 1fr 1.5fr;
+      gap: 4rem;
+      align-items: start;
+    }
+  }
+  .bt-how-row__left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .bt-how-row__num {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.3);
+  }
+  .bt-how-row__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #EAF0FA;
+    margin: 0;
+  }
+  .bt-how-row__right {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .bt-how-row__subtitle {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: rgba(234, 240, 250, 0.5);
+    margin: 0;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+  }
+  .bt-how-row__desc {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: rgba(234, 240, 250, 0.5);
+    margin: 0;
+  }
+}
+
+/* ── Services grid ─────────────────────────────────────────── */
+@layer components {
+  .bt-services-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-top: 1px solid rgba(234, 240, 250, 0.1);
+    border-left: 1px solid rgba(234, 240, 250, 0.1);
+  }
+  @media (min-width: 768px) {
+    .bt-services-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .bt-service-card {
+    padding: 2rem 1.5rem;
+    border-right: 1px solid rgba(234, 240, 250, 0.1);
+    border-bottom: 1px solid rgba(234, 240, 250, 0.1);
+    transition: background 0.2s ease;
+  }
+  .bt-service-card:hover {
+    background: rgba(234, 240, 250, 0.04);
+  }
+  .bt-service-card__tag {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: #EAF0FA;
+    margin: 0 0 0.6rem;
+  }
+  .bt-service-card__desc {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: rgba(234, 240, 250, 0.45);
+    margin: 0;
+  }
+}
+
+/* ── Criteria section ──────────────────────────────────────── */
+@layer components {
+  .bt-criteria-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  @media (min-width: 1024px) {
+    .bt-criteria-header {
+      grid-template-columns: 1fr 1fr;
+      align-items: start;
+    }
+  }
+  .bt-criteria-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: 0.5rem;
+  }
+  .bt-criteria-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid var(--color-line);
+  }
+  @media (min-width: 640px) {
+    .bt-criteria-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .bt-criteria-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .bt-criteria-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 2rem 1.75rem 2rem 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  @media (min-width: 640px) {
+    .bt-criteria-card {
+      border-right: 1px solid var(--color-line);
+      border-bottom: none;
+    }
+    .bt-criteria-card:nth-child(2n) {
+      padding-left: 1.75rem;
+      padding-right: 0;
+    }
+    .bt-criteria-card:nth-child(n+3) {
+      border-top: 1px solid var(--color-line);
+    }
+  }
+  @media (min-width: 1024px) {
+    .bt-criteria-card {
+      padding: 2rem 1.75rem 2rem 0;
+      border-right: 1px solid var(--color-line);
+      border-top: none;
+    }
+    .bt-criteria-card:nth-child(n+2) {
+      padding-left: 1.75rem;
+    }
+    .bt-criteria-card:last-child {
+      border-right: none;
+    }
+  }
+  .bt-criteria-card__num {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .bt-criteria-card__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-criteria-card__body {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.83rem;
+    line-height: 1.65;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── FAQ ───────────────────────────────────────────────────── */
+@layer components {
+  .bt-faq-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  @media (min-width: 1024px) {
+    .bt-faq-layout {
+      grid-template-columns: 1fr 1.4fr;
+      align-items: start;
+      gap: 6rem;
+    }
+  }
+  .bt-faq-list {
+    border-top: 1px solid var(--color-line);
+  }
+  .bt-faq-item {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .bt-faq-item__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 1.25rem 0;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    transition: color 0.18s ease;
+  }
+  .bt-faq-item__trigger:hover {
+    color: var(--color-brand);
+  }
+  .bt-faq-item__icon {
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--color-faint);
+    flex: 0 0 auto;
+    margin-left: 1rem;
+    transition: color 0.18s ease;
+  }
+  .bt-faq-item__trigger:hover .bt-faq-item__icon {
+    color: var(--color-brand);
+  }
+  .bt-faq-item__body {
+    padding: 0 0 1.5rem;
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-muted);
+    animation: bt-fade-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* ── Join section ──────────────────────────────────────────── */
+@layer components {
+  .bt-join-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+  }
+  @media (min-width: 768px) {
+    .bt-join-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .bt-join-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2.5rem;
+    background: var(--color-paper);
+  }
+  .bt-join-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .bt-join-card__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-join-card__sub {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .bt-join-card__desc {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── Why join (dark) ───────────────────────────────────────── */
+@layer components {
+  .bt-why-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border-top: 1px solid rgba(234, 240, 250, 0.1);
+  }
+  @media (min-width: 640px) {
+    .bt-why-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .bt-why-card {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    padding: 2rem 0;
+    border-bottom: 1px solid rgba(234, 240, 250, 0.08);
+  }
+  @media (min-width: 640px) {
+    .bt-why-card {
+      padding: 2rem;
+      border-right: 1px solid rgba(234, 240, 250, 0.08);
+    }
+    .bt-why-card:nth-child(2n) {
+      border-right: none;
+    }
+  }
+  .bt-why-card__icon {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid rgba(234, 240, 250, 0.15);
+    color: rgba(234, 240, 250, 0.6);
+    flex: 0 0 auto;
+  }
+  .bt-why-card__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #EAF0FA;
+    margin: 0 0 0.4rem;
+  }
+  .bt-why-card__desc {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.83rem;
+    line-height: 1.65;
+    color: rgba(234, 240, 250, 0.45);
+    margin: 0;
+  }
+}
+
+/* ── Final CTA / Pass cards ────────────────────────────────── */
+@layer components {
+  .bt-pass-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+  }
+  @media (min-width: 768px) {
+    .bt-pass-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .bt-pass-card {
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem;
+    background: var(--color-paper);
+    position: relative;
+  }
+  .bt-pass-card--primary {
+    background: var(--color-mist);
+  }
+  .bt-pass-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-line);
+    margin-bottom: 2rem;
+  }
+  .bt-pass-card__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-pass-card__sub {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--color-muted);
+    margin: 0;
+  }
+  .bt-pass-card__price {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .bt-pass-card__amount {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--color-ink);
+    line-height: 1;
+  }
+  .bt-pass-card__rate {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .bt-pass-card__features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+  }
+  .bt-pass-feature {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    color: var(--color-muted);
+  }
+  .bt-pass-feature__dot {
+    width: 0.3rem;
+    height: 0.3rem;
+    border-radius: 9999px;
+    background: var(--color-brand);
+    flex: 0 0 auto;
+  }
+  .bt-status-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-top: 1px solid var(--color-line);
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+@layer components {
+  .bt-footer {
+    background: #080e1e;
+    padding-top: 5rem;
+    padding-bottom: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .bt-footer__watermark {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-weight: 900;
+    font-size: clamp(4rem, 18vw, 16rem);
+    line-height: 0.85;
+    letter-spacing: -0.06em;
+    color: rgba(234, 240, 250, 0.04);
+    text-align: center;
+    margin: 3rem 0 0;
+    pointer-events: none;
+    user-select: none;
+    display: block;
+    overflow: hidden;
+  }
+  .bt-footer__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  @media (min-width: 768px) {
+    .bt-footer__grid {
+      grid-template-columns: 1fr auto;
+      align-items: start;
+    }
+  }
+  .bt-footer__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+  }
+  .bt-footer__brand-mark {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    background: #EAF0FA;
+    color: #080e1e;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.7rem;
+    font-weight: 900;
+  }
+  .bt-footer__brand-name {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: #EAF0FA;
+  }
+  .bt-footer__tagline {
+    max-width: 22rem;
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: rgba(234, 240, 250, 0.4);
+    margin: 0;
+  }
+  .bt-footer__nav-label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.25);
+    margin: 0 0 1rem;
+  }
+  .bt-footer__nav-link {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    color: rgba(234, 240, 250, 0.5);
+    text-decoration: none;
+    transition: color 0.18s ease;
+  }
+  .bt-footer__nav-link:hover {
+    color: #EAF0FA;
+  }
+  .bt-footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1.25rem 0;
+    margin-top: 3rem;
+    border-top: 1px solid rgba(234, 240, 250, 0.08);
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.25);
+  }
+}
+
+/* ── Ensure main content clears fixed navbar ─────────────────── */
+@layer utilities {
+  main {
+    padding-top: 0;
+  }
+  /* Hero already handles its own padding-top: 60px */
+  /* Other pages that don't use bt-hero need the offset */
+  .page-offset {
+    padding-top: 60px;
+  }
+}
+
+
+/* ============================================================
+   PROFESSIONAL REFINEMENTS — v2
+   Noise grain, grid overlay, mejorado sistema bt-*, 
+   micro-animaciones, efectos hover de alto nivel.
+   ============================================================ */
+
+/* ── Noise / grain texture overlay ─────────────────────────── */
+@layer utilities {
+  /* SVG noise inline como data-uri — se aplica como ::after en secciones oscuras */
+  .noise-overlay {
+    position: relative;
+  }
+  .noise-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+
+  /* Versión más intensa para hero oscuro */
+  .noise-overlay--strong::before {
+    opacity: 0.055;
+  }
+
+  /* Grid líneas técnicas de fondo — muy sutil */
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, rgba(234, 240, 250, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(234, 240, 250, 0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+  }
+
+  .grid-lines--light {
+    background-image:
+      linear-gradient(to right, rgba(15, 23, 48, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 48, 0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+  }
+
+  /* Punto de cruce en el grid para efecto de blueprint */
+  .grid-dots {
+    background-image: radial-gradient(circle, rgba(234,240,250,0.12) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .grid-dots--light {
+    background-image: radial-gradient(circle, rgba(15,23,48,0.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+/* ── Tipografía display refinada ─────────────────────────────── */
+@layer utilities {
+  /* Escala de display para hero */
+  .bt-display-xl {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(3.8rem, 11vw, 11rem);
+    line-height: 0.86;
+    letter-spacing: -0.06em;
+    font-weight: 800;
+  }
+
+  /* Section titles — menos agresivos que xl */
+  .bt-display-lg {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(2.8rem, 6.5vw, 6.5rem);
+    line-height: 0.89;
+    letter-spacing: -0.045em;
+    font-weight: 700;
+  }
+
+  /* Número decorativo gigante (fondo) */
+  .bt-bg-num {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(8rem, 22vw, 22rem);
+    font-weight: 900;
+    line-height: 0.8;
+    letter-spacing: -0.08em;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Mono label estilo técnico */
+  .bt-mono-label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+}
+
+/* ── Refined bt-hero ─────────────────────────────────────────── */
+@layer components {
+  /* El hero ahora usa bt-display-xl */
+  .bt-hero__headline {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(3.8rem, 11vw, 11rem);
+    line-height: 0.86;
+    letter-spacing: -0.06em;
+    font-weight: 800;
+    color: #EAF0FA;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  /* Cursor parpadeante al final del último titular */
+  .bt-hero__cursor {
+    display: inline-block;
+    width: 3px;
+    height: 0.85em;
+    background: var(--color-brand);
+    margin-left: 0.08em;
+    vertical-align: middle;
+    animation: bt-blink 1.1s step-end infinite;
+  }
+
+  /* Línea decorativa horizontal animada */
+  .bt-hero__rule {
+    display: block;
+    height: 1px;
+    background: linear-gradient(to right, var(--color-brand) 0%, rgba(234,240,250,0.12) 100%);
+    transform-origin: left;
+  }
+
+  /* Scanline efecto sutil sobre el hero */
+  .bt-hero__scanline {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 3px,
+      rgba(0, 0, 0, 0.06) 3px,
+      rgba(0, 0, 0, 0.06) 4px
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Gradient de fade bottom del hero */
+  .bt-hero__fade-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8rem;
+    background: linear-gradient(to top, #080e1e 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 3;
+  }
+}
+
+@keyframes bt-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── Hover effects para filas y cards ───────────────────────── */
+@layer components {
+  /* Fila de servicio/capacidad con línea izquierda animada */
+  .bt-row-hover {
+    position: relative;
+    transition: background 0.2s ease;
+  }
+  .bt-row-hover::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-brand);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bt-row-hover:hover::before {
+    transform: scaleY(1);
+  }
+
+  /* Card con borde animado en hover */
+  .bt-border-reveal {
+    position: relative;
+    overflow: hidden;
+  }
+  .bt-border-reveal::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--color-brand);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+  .bt-border-reveal:hover::after {
+    opacity: 1;
+  }
+
+  /* Número de sección grande — overlay muy sutil */
+  .bt-section-num-bg {
+    position: absolute;
+    right: -0.1em;
+    top: -0.3em;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(6rem, 16vw, 16rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.06em;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(234,240,250,0.06);
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+  }
+  .bt-section-num-bg--light {
+    -webkit-text-stroke: 1px rgba(15,23,48,0.05);
+  }
+
+  /* Línea separator con label integrado */
+  .bt-rule-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .bt-rule-label::before,
+  .bt-rule-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  .bt-rule-label--dark {
+    color: rgba(234,240,250,0.2);
+  }
+  .bt-rule-label--dark::before,
+  .bt-rule-label--dark::after {
+    background: rgba(234,240,250,0.08);
+  }
+}
+
+/* ── Magnetic button effect ─────────────────────────────────── */
+@layer components {
+  .bt-magnetic {
+    display: inline-flex;
+    position: relative;
+    cursor: pointer;
+  }
+  .bt-magnetic__inner {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+}
+
+/* ── Refined stats cells ─────────────────────────────────────── */
+@layer components {
+  /* Override — más espacio y tipografía más grande */
+  .bt-stat-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 2rem 1.75rem;
+    border-right: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s ease;
+  }
+  .bt-stat-cell:hover {
+    background: var(--color-mist);
+  }
+  .bt-stat__val {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(2.4rem, 5.5vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .bt-stat__label {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+
+  /* Stats en sección dark */
+  .bt-stat-cell--dark {
+    border-right-color: rgba(234,240,250,0.08);
+    border-bottom-color: rgba(234,240,250,0.08);
+    transition: background 0.2s ease;
+  }
+  .bt-stat-cell--dark:hover {
+    background: rgba(234,240,250,0.03);
+  }
+  .bt-stat-cell--dark .bt-stat__val {
+    color: #EAF0FA;
+  }
+  .bt-stat-cell--dark .bt-stat__label {
+    color: rgba(234,240,250,0.3);
+  }
+}
+
+/* ── Service row — refined ──────────────────────────────────── */
+@layer components {
+  .bt-service-row {
+    display: grid;
+    grid-template-columns: 3.5rem 1fr auto;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid rgba(234,240,250,0.08);
+    text-decoration: none;
+    cursor: pointer;
+    transition: padding-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bt-service-row:hover {
+    padding-left: 0.75rem;
+  }
+  .bt-service-row__num {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: rgba(234,240,250,0.25);
+    transition: color 0.2s ease;
+  }
+  .bt-service-row:hover .bt-service-row__num {
+    color: var(--color-brand);
+  }
+  .bt-service-row__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: #EAF0FA;
+    transition: color 0.2s ease;
+  }
+  .bt-service-row:hover .bt-service-row__title {
+    color: #ffffff;
+  }
+  .bt-service-row__tag {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(234,240,250,0.2);
+    transition: color 0.2s ease;
+    white-space: nowrap;
+  }
+  .bt-service-row:hover .bt-service-row__tag {
+    color: rgba(234,240,250,0.6);
+  }
+
+  /* Versión light */
+  .bt-service-row--light {
+    border-bottom-color: var(--color-line);
+  }
+  .bt-service-row--light .bt-service-row__title {
+    color: var(--color-ink);
+  }
+  .bt-service-row--light:hover .bt-service-row__title {
+    color: var(--color-brand);
+  }
+  .bt-service-row--light .bt-service-row__num {
+    color: var(--color-faint);
+  }
+  .bt-service-row--light:hover .bt-service-row__num {
+    color: var(--color-brand);
+  }
+  .bt-service-row--light .bt-service-row__tag {
+    color: var(--color-faint);
+  }
+}
+
+/* ── FAQ accordion — refined ────────────────────────────────── */
+@layer components {
+  .bt-faq-item {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .bt-faq-item__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 1.4rem 0;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    transition: color 0.18s ease;
+    gap: 1.5rem;
+  }
+  .bt-faq-item__trigger:hover {
+    color: var(--color-brand);
+  }
+  .bt-faq-item__icon {
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--color-line);
+    color: var(--color-faint);
+    flex: 0 0 auto;
+    font-size: 0.9rem;
+    transition: border-color 0.18s ease, color 0.18s ease, transform 0.25s ease;
+  }
+  .bt-faq-item__trigger:hover .bt-faq-item__icon {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+  .bt-faq-item__icon--open {
+    transform: rotate(45deg);
+  }
+  .bt-faq-item__body {
+    padding: 0 0 1.5rem;
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    color: var(--color-muted);
+    overflow: hidden;
+  }
+}
+
+/* ── Join/access cards — refined ────────────────────────────── */
+@layer components {
+  .bt-access-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    padding: 2.5rem;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s ease;
+  }
+  .bt-access-card:hover {
+    border-color: color-mix(in srgb, var(--color-brand) 50%, var(--color-line));
+  }
+  /* Corner accent */
+  .bt-access-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4rem;
+    height: 4rem;
+    border-left: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    background: var(--color-mist);
+    transition: background 0.25s ease;
+  }
+  .bt-access-card:hover::before {
+    background: color-mix(in srgb, var(--color-brand) 8%, var(--color-mist));
+  }
+  .bt-access-card__num {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .bt-access-card__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-access-card__desc {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.75;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── Why-join items — sin iconos genéricos ──────────────────── */
+@layer components {
+  .bt-why-item {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr;
+    gap: 1.25rem;
+    align-items: start;
+    padding: 1.75rem 0;
+    border-bottom: 1px solid rgba(234,240,250,0.07);
+  }
+  .bt-why-item__index {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: rgba(234,240,250,0.25);
+    padding-top: 0.2rem;
+  }
+  .bt-why-item__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: #EAF0FA;
+    margin: 0 0 0.4rem;
+  }
+  .bt-why-item__desc {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.83rem;
+    line-height: 1.7;
+    color: rgba(234,240,250,0.4);
+    margin: 0;
+  }
+}
+
+/* ── Criteria cards — refined ───────────────────────────────── */
+@layer components {
+  .bt-criteria-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 2rem 1.75rem;
+    border-right: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+    position: relative;
+    transition: background 0.2s ease;
+  }
+  .bt-criteria-card:hover {
+    background: var(--color-mist);
+  }
+  .bt-criteria-card__num {
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+  }
+  .bt-criteria-card__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-criteria-card__body {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.83rem;
+    line-height: 1.7;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── Scrollbar estilizado ────────────────────────────────────── */
+@layer base {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(15,23,48,0.15) transparent;
+  }
+  html.dark {
+    scrollbar-color: rgba(234,240,250,0.1) transparent;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(15,23,48,0.15);
+    border-radius: 2px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: rgba(234,240,250,0.1);
+  }
+}
+
+/* ── CTA final — headline dominante ─────────────────────────── */
+@layer components {
+  .bt-cta-headline {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: clamp(3rem, 8vw, 8rem);
+    font-weight: 800;
+    line-height: 0.88;
+    letter-spacing: -0.055em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+
+  .bt-cta-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+
+  /* Indicador de estado activo tipo pill */
+  .bt-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid rgba(31, 164, 92, 0.3);
+    background: rgba(31, 164, 92, 0.06);
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ok);
+  }
+}
+
+/* ── Refined navbar hover underline ─────────────────────────── */
+@layer components {
+  .bt-nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.9rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(234, 240, 250, 0.5);
+    text-decoration: none;
+    transition: color 0.18s ease;
+  }
+  .bt-nav-link::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0.9rem;
+    right: 0.9rem;
+    height: 1px;
+    background: var(--color-brand);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .bt-nav-link:hover {
+    color: #EAF0FA;
+  }
+  .bt-nav-link:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+/* ── Step cards — refined ───────────────────────────────────── */
+@layer components {
+  .bt-step {
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    position: relative;
+  }
+  @media (min-width: 768px) {
+    .bt-step {
+      padding: 2.5rem 2rem 2.5rem 0;
+      border-right: 1px solid var(--color-line);
+      border-bottom: none;
+    }
+    .bt-step:last-child {
+      border-right: none;
+    }
+    .bt-step:nth-child(n+2) {
+      padding-left: 2rem;
+    }
+  }
+  .bt-step__num {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+  }
+  .bt-step__title {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .bt-step__body {
+    font-family: "PP Neue Montreal Text", "PP Neue Montreal", sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--color-muted);
+    margin: 0;
+  }
+}
+
+/* ── Footer refined ─────────────────────────────────────────── */
+@layer components {
+  .bt-footer {
+    background: #06090f;
+    padding-top: 5rem;
+    padding-bottom: 0;
+    position: relative;
+    overflow: hidden;
+    border-top: 1px solid rgba(234, 240, 250, 0.06);
+  }
+  .bt-footer__watermark {
+    font-family: "PP Neue Montreal", sans-serif;
+    font-weight: 900;
+    font-size: clamp(4.5rem, 20vw, 18rem);
+    line-height: 0.82;
+    letter-spacing: -0.07em;
+    color: rgba(234, 240, 250, 0.03);
+    text-align: center;
+    margin: 4rem 0 0;
+    pointer-events: none;
+    user-select: none;
+    display: block;
+    overflow: hidden;
+  }
+}
+
+/* ── Prevent FOUC on motion elements ─────────────────────────── */
+@layer base {
+  [data-motion-initial] {
+    opacity: 0;
+  }
+}
+
+  /* ============================================================
+     CHATAP LANDING · CAPA DE COMPOSICIÓN
+     Estilos scoped a la página pública para evitar interferencias
+     con el panel interno y los flujos del chatbot.
+     ============================================================ */
+
+  :root {
+    --chatap-max-width: 78rem;
+    --chatap-section-y: clamp(4.75rem, 9vw, 8rem);
+    --chatap-blue-wash: #f5f7fc;
+  }
+
+  .dark {
+    --chatap-blue-wash: #0d1830;
+  }
+
+  .chatap-landing {
+    overflow: clip;
+    background: var(--color-paper);
+  }
+
+  .scroll-progress {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 80;
+    height: 3px;
+    transform-origin: 0 50%;
+    background: var(--color-brand);
+    box-shadow: 0 0 14px color-mix(in srgb, var(--color-brand) 45%, transparent);
+    pointer-events: none;
+  }
+
+  .chatap-landing > section {
+    position: relative;
+  }
+
+  .chatap-landing .ed-max {
+    width: min(100%, var(--chatap-max-width));
+  }
+
+  .chatap-landing #inicio {
+    background:
+      radial-gradient(circle at 50% 9%, color-mix(in srgb, var(--color-brand) 8%, transparent), transparent 30rem),
+      linear-gradient(180deg, var(--chatap-blue-wash) 0%, var(--color-paper) 76%);
+  }
+
+  .chatap-landing #inicio > div {
+    min-height: min(43rem, calc(100svh - 5rem));
+    justify-content: center;
+    padding-top: clamp(6.5rem, 13vw, 10rem);
+    padding-bottom: clamp(4.5rem, 9vw, 7rem);
+  }
+
+  .chatap-landing #inicio h1 {
+    max-width: 13ch;
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 700;
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+  }
+
+  .chatap-landing #inicio p {
+    max-width: 34rem;
+    font-size: clamp(1rem, 1.5vw, 1.2rem);
+    line-height: 1.65;
+  }
+
+  .chatap-landing #inicio .btn-primary,
+  .chatap-landing .btn-primary {
+    min-height: 2.9rem;
+    padding-inline: 1.35rem;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-brand-deep) 20%, transparent);
+  }
+
+  .chatap-landing #inicio .btn-primary:hover,
+  .chatap-landing .btn-primary:hover {
+    box-shadow: 0 12px 26px color-mix(in srgb, var(--color-brand-deep) 27%, transparent);
+  }
+
+  .chatap-landing #que-es,
+  .chatap-landing #faq,
+  .chatap-landing #confianza {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .chatap-landing #que-es > .ed-max,
+  .chatap-landing #confianza > .ed-max,
+  .chatap-landing #faq > .ed-max {
+    padding-top: var(--chatap-section-y);
+    padding-bottom: var(--chatap-section-y);
+  }
+
+  .chatap-landing #que-es h2,
+  .chatap-landing #faq h2,
+  .chatap-landing #confianza h2,
+  .chatap-landing #servicios h2 {
+    max-width: 19ch;
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .chatap-landing #que-es > .ed-max > .max-w-2xl,
+  .chatap-landing #confianza > .ed-max > .max-w-2xl,
+  .chatap-landing #faq > .ed-max > .mx-auto {
+    margin-bottom: 0.5rem;
+  }
+
+  .chatap-landing .card,
+  .chatap-landing .card-interactive {
+    border-color: color-mix(in srgb, var(--color-line) 88%, transparent);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .chatap-landing .card-interactive {
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .chatap-landing .card-interactive:hover,
+  .chatap-landing .card-interactive:focus-within {
+    border-color: color-mix(in srgb, var(--color-brand) 42%, var(--color-line));
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-3px);
+  }
+
+  .chatap-landing #servicios {
+    padding-block: var(--chatap-section-y);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--color-band) 94%, var(--color-brand)), var(--color-band));
+  }
+
+  .chatap-landing #servicios > .ed-max {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .chatap-landing #servicios a {
+    min-height: 12.5rem;
+    border-color: rgba(234, 240, 250, 0.14);
+    background: rgba(234, 240, 250, 0.045);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 180ms ease, border-color 180ms ease;
+  }
+
+  .chatap-landing #servicios a:hover,
+  .chatap-landing #servicios a:focus-visible {
+    border-color: color-mix(in srgb, var(--color-brand) 68%, rgba(234, 240, 250, 0.2));
+    background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    transform: translateY(-3px);
+    outline: none;
+  }
+
+  .chatap-landing #faq .max-w-3xl {
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .chatap-landing #faq button:focus-visible,
+  .chatap-landing a:focus-visible,
+  .chatap-landing .btn-primary:focus-visible,
+  .chatap-landing .btn-ghost:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+  }
+
+  .chatap-landing #confianza {
+    background: var(--chatap-blue-wash);
+  }
+
+  .chatap-landing #charla {
+    border-top: 1px solid rgba(234, 240, 250, 0.1);
+    background:
+      radial-gradient(circle at 80% 30%, rgba(47, 107, 255, 0.16), transparent 26rem),
+      var(--color-band);
+  }
+
+  .chatap-landing #charla h2 {
+    max-width: 17ch;
+    font-size: clamp(2.1rem, 5vw, 4.2rem);
+    line-height: 1;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+  }
+
+  @media (max-width: 639px) {
+    .chatap-landing #inicio > div {
+      min-height: 36rem;
+    }
+
+    .chatap-landing #inicio h1 {
+      font-size: clamp(2.35rem, 12vw, 3.5rem);
+    }
+
+    .chatap-landing #servicios a {
+      min-height: auto;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chatap-landing .card-interactive,
+    .chatap-landing #servicios a {
+      transition: none;
+    }
+  }
+
+/* ============================================================
+   CHATAP EDITORIAL · ADAPTACIÓN DE REFERENCIA
+   ============================================================ */
+.chatap-landing {
+  --editorial-black: #080808;
+  --editorial-white: #f4f3ef;
+  --editorial-dim: rgba(244, 243, 239, 0.62);
+  --editorial-line: rgba(244, 243, 239, 0.18);
+  background: var(--editorial-black);
+  color: var(--editorial-white);
+}
+
+.chatap-navbar {
+  background: var(--editorial-black, #080808);
+}
+
+.chatap-navbar > div {
+  border-color: rgba(244, 243, 239, 0.18);
+  background: rgba(8, 8, 8, 0.88) !important;
+  border-color: rgba(244, 243, 239, 0.18) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(14px);
+}
+
+.chatap-navbar .text-ink,
+.chatap-navbar .text-muted,
+.chatap-navbar .text-faint {
+  color: var(--editorial-white, #f4f3ef);
+}
+
+.chatap-navbar .border-line { border-color: rgba(244, 243, 239, 0.18); }
+.chatap-navbar .bg-paper { background: transparent; }
+.chatap-navbar .bg-brand-deep { background: var(--color-brand); }
+.chatap-navbar nav a:hover { background: rgba(244, 243, 239, 0.08); color: #fff; }
+.chatap-navbar .btn-primary { background: var(--editorial-white); border-color: var(--editorial-white); color: var(--editorial-black); box-shadow: none; }
+.chatap-navbar .btn-primary:hover { background: var(--color-brand); border-color: var(--color-brand); color: #fff; }
+
+.chatap-landing .chatap-hero,
+.chatap-landing .chatap-experience,
+.chatap-landing .chatap-services,
+.chatap-landing .chatap-faq,
+.chatap-landing .chatap-access,
+.chatap-landing .chatap-proof,
+.chatap-landing .chatap-contact {
+  border: 0;
+  background: var(--editorial-black);
+  color: var(--editorial-white);
+}
+
+.chatap-landing .ed-max { max-width: 90rem; }
+.chatap-landing .section-bleed { padding-inline: clamp(1.25rem, 4vw, 4rem); }
+.chatap-label { margin: 0; color: var(--editorial-dim); font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em; line-height: 1.3; text-transform: uppercase; }
+
+.chatap-hero { min-height: 100svh; padding-top: 1px; }
+.chatap-hero__inner { position: relative; display: grid; height: calc(100svh - 1px); min-height: 46rem; width: min(100% - clamp(2.5rem, 8vw, 8rem), 90rem); margin: 0 auto; grid-template-columns: minmax(0, 1.45fr) minmax(15rem, 0.72fr); grid-template-rows: auto 1fr auto; column-gap: clamp(2rem, 7vw, 8rem); align-items: center; padding: clamp(6.5rem, 11vw, 9rem) 0 2rem; }
+.chatap-hero__title { align-self: start; padding-bottom: 0; }
+.chatap-hero__title h1 { margin: 0.6rem 0 0; color: var(--editorial-white); font-family: var(--font-neue); font-size: clamp(5.2rem, 16vw, 15rem); font-weight: 900; letter-spacing: -0.09em; line-height: 0.72; text-transform: uppercase; }
+.chatap-hero__title h1 span { display: block; color: transparent; -webkit-text-stroke: 1px rgba(244, 243, 239, 0.7); }
+.chatap-hero__avatar { position: relative; display: grid; min-height: min(28rem, 48vw); place-items: center; align-self: center; isolation: isolate; }
+.chatap-hero__avatar::before { content: ""; position: absolute; width: min(25rem, 90%); aspect-ratio: 1; border: 1px solid var(--editorial-line); border-radius: 50%; box-shadow: 0 0 0 2.6rem rgba(244, 243, 239, 0.02), 0 0 0 6.4rem rgba(244, 243, 239, 0.015); z-index: -1; }
+.chatap-hero__avatar-ring { position: absolute; width: min(19rem, 72%); aspect-ratio: 1; border: 1px dashed rgba(47, 107, 255, 0.5); border-radius: 50%; animation: chatap-orbit 18s linear infinite; }
+.chatap-hero__avatar-index { position: absolute; right: 0; bottom: 1rem; color: var(--editorial-dim); font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.16em; }
+.chatap-hero__intro { max-width: 18rem; align-self: center; padding-top: 2rem; }
+.chatap-hero__intro > p:not(.chatap-label) { margin: 1.5rem 0 0; color: var(--editorial-dim); font-size: clamp(1rem, 1.6vw, 1.25rem); line-height: 1.45; }
+.chatap-hero__actions { display: flex; flex-wrap: wrap; gap: 0.65rem 1.25rem; margin-top: 2rem; }
+.chatap-link { display: inline-flex; align-items: center; gap: 0.65rem; min-height: 2.6rem; padding: 0.7rem 0; color: var(--editorial-white); font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-decoration: none; text-transform: uppercase; transition: color 180ms ease, transform 180ms ease, background-color 180ms ease; }
+.chatap-link:hover, .chatap-link:focus-visible { color: #6f96ff; transform: translateX(3px); outline: none; }
+.chatap-link--solid { padding-inline: 1rem; background: var(--editorial-white); color: var(--editorial-black); }
+.chatap-link--solid:hover, .chatap-link--solid:focus-visible { background: var(--color-brand); color: #fff; }
+.chatap-hero__footer { display: flex; grid-column: 1 / -1; justify-content: space-between; gap: 1rem; padding-top: 1.25rem; border-top: 1px solid var(--editorial-line); color: var(--editorial-dim); font-family: var(--font-mono); font-size: 0.56rem; letter-spacing: 0.13em; }
+
+.chatap-experience, .chatap-services, .chatap-faq, .chatap-access, .chatap-proof, .chatap-contact { padding-block: clamp(5rem, 11vw, 10rem); }
+.chatap-section-heading { display: grid; max-width: 60rem; grid-template-columns: minmax(10rem, 0.7fr) minmax(0, 1.35fr); gap: 1rem 3rem; margin-bottom: clamp(4rem, 8vw, 7rem); }
+.chatap-section-heading .chatap-label { grid-row: span 2; }
+.chatap-section-heading h2, .chatap-faq__heading h2 { margin: 0; color: var(--editorial-white); font-family: var(--font-neue); font-size: clamp(2.6rem, 6vw, 6.5rem); font-weight: 800; letter-spacing: -0.065em; line-height: 0.88; text-wrap: balance; }
+.chatap-section-heading > p:last-child, .chatap-faq__heading > p:last-child { max-width: 29rem; margin: 1.3rem 0 0; color: var(--editorial-dim); font-size: 1rem; line-height: 1.55; }
+.chatap-experience__steps { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.chatap-step { min-height: 18rem; padding: 1.5rem 2rem 2rem 0; border-right: 1px solid var(--editorial-line); }
+.chatap-step + .chatap-step { padding-left: 2rem; }
+.chatap-step:last-child { border-right: 0; }
+.chatap-step__number, .chatap-service__number, .chatap-access__index, .chatap-proof__item > span { color: #6f96ff; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em; }
+.chatap-step h3, .chatap-service__title, .chatap-access__card h3, .chatap-proof__item h3 { display: block; margin: 3rem 0 0; color: var(--editorial-white); font-family: var(--font-neue); font-size: clamp(1.3rem, 2.1vw, 2rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1; }
+.chatap-step p, .chatap-service__desc, .chatap-access__card p, .chatap-proof__item p { margin: 0.9rem 0 0; color: var(--editorial-dim); font-family: var(--font-neue-text); font-size: 0.9rem; line-height: 1.55; }
+.chatap-stats { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: clamp(3rem, 7vw, 6rem); border-top: 1px solid var(--editorial-line); border-bottom: 1px solid var(--editorial-line); }
+.chatap-stat { padding: 1.2rem 1.25rem 1.2rem 0; border-right: 1px solid var(--editorial-line); }
+.chatap-stat + .chatap-stat { padding-left: 1.25rem; }
+.chatap-stat:last-child { border-right: 0; }
+.chatap-stat__value { display: block; color: var(--editorial-white); font-family: var(--font-neue); font-size: clamp(2rem, 4vw, 4rem); font-weight: 800; letter-spacing: -0.06em; line-height: 1; }
+.chatap-stat__label { display: block; margin-top: 0.5rem; color: var(--editorial-dim); font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.chatap-services { background: #111 !important; }
+.chatap-services__grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1px; background: var(--editorial-line); }
+.chatap-service { position: relative; display: flex; min-height: 19rem; flex-direction: column; padding: 1.5rem; background: #111; color: var(--editorial-white); text-decoration: none; transition: background-color 200ms ease, transform 200ms ease; }
+.chatap-service:hover, .chatap-service:focus-visible { z-index: 1; background: #1d1d1d; outline: none; transform: translateY(-4px); }
+.chatap-service--1 { grid-column: span 7; } .chatap-service--2 { grid-column: span 5; } .chatap-service--3, .chatap-service--4, .chatap-service--5 { grid-column: span 4; } .chatap-service--6 { grid-column: span 7; }
+.chatap-service__title { margin-top: auto; font-size: clamp(1.8rem, 4vw, 4.5rem); }
+.chatap-service__desc { max-width: 24rem; }
+.chatap-service__tag { margin-top: 1.5rem; color: #6f96ff; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.chatap-faq { background: var(--editorial-white) !important; color: var(--editorial-black) !important; }
+.chatap-faq__heading { display: grid; grid-template-columns: minmax(10rem, 0.7fr) minmax(0, 1.35fr); gap: 1rem 3rem; margin-bottom: 4rem; }
+.chatap-faq .chatap-label { color: rgba(8, 8, 8, 0.55); grid-row: span 2; }
+.chatap-faq__heading h2 { color: var(--editorial-black); }
+.chatap-faq__heading > p:last-child { color: rgba(8, 8, 8, 0.62); }
+.chatap-faq__list { max-width: 60rem; margin-left: auto; border-top: 1px solid rgba(8, 8, 8, 0.25); }
+.chatap-faq__list > div { border-color: rgba(8, 8, 8, 0.25); }
+.chatap-faq__list button { padding-inline: 0; color: var(--editorial-black); border-radius: 0; }
+.chatap-faq__list button:hover { background: transparent; color: var(--color-brand-deep); }
+.chatap-faq__list button span:last-child { background: transparent; color: var(--editorial-black); border: 1px solid rgba(8, 8, 8, 0.35); }
+.chatap-faq__list p { padding-inline: 0; color: rgba(8, 8, 8, 0.65); }
+.chatap-faq__cta { margin-top: 2rem; background: var(--editorial-black); color: var(--editorial-white); padding-inline: 1rem; }
+
+.chatap-access { background: #161616 !important; }
+.chatap-access__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--editorial-line); }
+.chatap-access__card { min-height: 22rem; padding: 1.5rem; background: #161616; }
+.chatap-access__card h3 { margin-top: 6rem; font-size: clamp(2rem, 4vw, 4.5rem); }
+.chatap-access__card p { max-width: 27rem; }
+.chatap-access__card .chatap-link { margin-top: 1.5rem; }
+.chatap-proof { background: var(--editorial-black) !important; }
+.chatap-proof__grid { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--editorial-line); }
+.chatap-proof__item { min-height: 15rem; padding: 1.5rem 1.5rem 1.5rem 0; border-right: 1px solid var(--editorial-line); }
+.chatap-proof__item + .chatap-proof__item { padding-left: 1.5rem; }
+.chatap-proof__item:last-child { border-right: 0; }
+.chatap-proof__item h3 { margin-top: 3rem; font-size: 1.25rem; }
+.chatap-contact { background: #111 !important; }
+.chatap-contact__grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.65fr); align-items: end; gap: 4rem; }
+.chatap-contact h2 { margin: 0; color: var(--editorial-white); font-family: var(--font-neue); font-size: clamp(4rem, 10vw, 10rem); font-weight: 900; letter-spacing: -0.09em; line-height: 0.75; }
+.chatap-contact h2 span { color: transparent; -webkit-text-stroke: 1px rgba(244, 243, 239, 0.7); }
+.chatap-contact__details { max-width: 22rem; }
+.chatap-contact__details > p:not(.chatap-label) { margin: 1.5rem 0 0; color: var(--editorial-dim); line-height: 1.55; }
+.chatap-footer { background: var(--editorial-black); color: var(--editorial-white); border-top: 1px solid var(--editorial-line); }
+.chatap-footer .ed-max { padding-block: 3rem; }
+.chatap-footer .text-ink, .chatap-footer .text-muted, .chatap-footer .text-faint { color: var(--editorial-dim); }
+.chatap-footer .border-line { border-color: var(--editorial-line); }
+.chatap-footer .bg-brand-deep { background: var(--editorial-white); color: var(--editorial-black); }
+.chatap-footer a:hover { color: var(--editorial-white); }
+@keyframes chatap-orbit { to { transform: rotate(360deg); } }
+
+@media (max-width: 767px) {
+  .chatap-hero__inner { width: calc(100% - 2.5rem); height: auto; min-height: 48rem; grid-template-columns: 1fr; grid-template-rows: auto auto auto auto; gap: 2rem; padding-top: 7rem; }
+  .chatap-hero__title { padding-bottom: 1rem; }
+  .chatap-hero__title h1 { font-size: clamp(5rem, 25vw, 9rem); }
+  .chatap-hero__avatar { min-height: 18rem; }
+  .chatap-hero__intro { padding-top: 0; }
+  .chatap-hero__footer { flex-wrap: wrap; }
+  .chatap-hero__footer span:last-child { width: 100%; }
+  .chatap-section-heading, .chatap-faq__heading { display: block; }
+  .chatap-section-heading h2, .chatap-faq__heading h2 { margin-top: 1.25rem; font-size: clamp(2.8rem, 13vw, 5rem); }
+  .chatap-experience__steps, .chatap-stats, .chatap-proof__grid { grid-template-columns: 1fr 1fr; }
+  .chatap-step:nth-child(2) { border-right: 0; }
+  .chatap-step:nth-child(3) { grid-column: 1 / -1; border-top: 1px solid var(--editorial-line); padding-left: 0; }
+  .chatap-stat:nth-child(2) { border-right: 0; }
+  .chatap-stat:nth-child(n + 3) { border-top: 1px solid var(--editorial-line); }
+  .chatap-stat:nth-child(3) { padding-left: 0; }
+  .chatap-services__grid { grid-template-columns: 1fr 1fr; }
+  .chatap-service--1, .chatap-service--6 { grid-column: span 2; }
+  .chatap-service--2, .chatap-service--3, .chatap-service--4, .chatap-service--5 { grid-column: span 1; }
+  .chatap-access__grid, .chatap-contact__grid { grid-template-columns: 1fr; }
+  .chatap-proof__item:nth-child(2) { border-right: 0; }
+  .chatap-proof__item:nth-child(n + 3) { border-top: 1px solid var(--editorial-line); }
+  .chatap-proof__item:nth-child(3) { padding-left: 0; }
+  .chatap-contact h2 { font-size: clamp(4.1rem, 19vw, 7rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chatap-hero__avatar-ring { animation: none; }
+  .chatap-link, .chatap-service { transition: none; }
+}
+
+/* Los IDs pertenecen a la landing histórica y tienen prioridad específica. */
+.chatap-landing #inicio,
+.chatap-landing #que-es,
+.chatap-landing #servicios,
+.chatap-landing #faq,
+.chatap-landing #confianza,
+.chatap-landing #charla {
+  background: var(--editorial-black) !important;
+  color: var(--editorial-white) !important;
+}
+
+.chatap-landing #faq { background: var(--editorial-white) !important; color: var(--editorial-black) !important; }
+.chatap-landing #servicios { background: #111 !important; }
+.chatap-landing #confianza { background: #161616 !important; }
+.chatap-landing #charla { background: #111 !important; }
+
+/* ============================================================
+   FASE 1 · FUNDACION VISUAL
+   Esta capa final resuelve la precedencia de los sistemas historicos.
+   No introduce movimiento nuevo ni cambia la logica de las vistas.
+   ============================================================ */
+
+html,
+body,
+#root {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.site-navbar {
+  --nav-surface: var(--color-paper);
+  --nav-ink: var(--color-ink);
+  --nav-muted: var(--color-muted);
+  --nav-line: var(--color-line);
+  position: sticky;
+  isolation: isolate;
+  min-height: var(--nav-height);
+  background: var(--nav-surface);
+}
+
+.site-navbar > div {
+  width: min(100%, var(--layout-max));
+  border-color: var(--nav-line) !important;
+  border-radius: var(--radius-control) !important;
+  background: var(--nav-surface) !important;
+  box-shadow: none !important;
+  color: var(--nav-ink);
+}
+
+.site-navbar .text-ink { color: var(--nav-ink); }
+.site-navbar .text-muted,
+.site-navbar .text-faint { color: var(--nav-muted); }
+.site-navbar .border-line { border-color: var(--nav-line); }
+.site-navbar .bg-paper { background: var(--nav-surface); }
+.site-navbar .bg-mist:hover { background: var(--color-mist); }
+
+.site-navbar--landing {
+  --nav-surface: #080808;
+  --nav-ink: #f4f3ef;
+  --nav-muted: rgba(244, 243, 239, 0.62);
+  --nav-line: rgba(244, 243, 239, 0.18);
+}
+
+.site-navbar--landing > div {
+  background: rgba(8, 8, 8, 0.88) !important;
+  backdrop-filter: blur(14px);
+}
+
+.site-navbar--landing .bg-paper { background: transparent; }
+.site-navbar--landing .bg-brand-deep { background: var(--color-brand); }
+.site-navbar--landing .btn-primary {
+  background: #f4f3ef;
+  border-color: #f4f3ef;
+  color: #080808;
+}
+.site-navbar--landing .btn-primary:hover {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #ffffff;
+}
+.site-navbar--landing nav a:hover { background: rgba(244, 243, 239, 0.08); color: #ffffff; }
+
+.site-navbar--chat > div {
+  max-width: var(--layout-max);
+  border-block: 1px solid var(--nav-line);
+  border-inline: 0;
+  border-radius: 0 !important;
+  background: var(--color-paper) !important;
+}
+
+.site-navbar--profile > div,
+.site-navbar--contact > div,
+.site-navbar--account > div {
+  border-block: 1px solid var(--nav-line);
+  border-inline: 0;
+  border-radius: 0 !important;
+}
+
+.site-navbar--chat > nav,
+.site-navbar--profile > nav,
+.site-navbar--contact > nav,
+.site-navbar--account > nav {
+  border: 1px solid var(--nav-line);
+  border-radius: var(--radius-control);
+  background: var(--nav-surface);
+  box-shadow: none;
+}
+
+.chatap-chat-shell {
+  min-width: 0;
+  background: var(--color-paper);
+}
+
+.chatap-chat-main {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.ed-max {
+  width: min(100%, var(--layout-max));
+}
+
+.section-bleed {
+  padding-inline: var(--layout-gutter);
+}
+
+@media (max-width: 1023px) {
+  .site-navbar { padding-inline: 0.75rem; }
+  .site-navbar > div { width: 100%; }
+}
+
+@media (max-width: 639px) {
+  .section-bleed { padding-inline: 1.25rem; }
+  .site-navbar { padding-inline: 0.5rem; }
 }

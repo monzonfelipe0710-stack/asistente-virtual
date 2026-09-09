@@ -1,137 +1,100 @@
-import { useEffect, useRef, useState } from "react";
-import Reveal from "../common/Reveal";
-import AnimatedText from "./AnimatedText";
-import { useCountUp } from "../../hooks/useCountUp";
+import { Link } from "react-router-dom";
+import { motion } from "motion/react";
 
-const PILLARS = [
+const ACCESS_OPTIONS = [
   {
-    num: "01",
-    title: "Seguridad",
-    quote: "Datos personales resguardados y acceso controlado, sin improvisar el circuito.",
-    meta: "Protocolo oficial",
+    id: "ciudadano",
+    title: "Ciudadano",
+    desc: "Realizá consultas, seguí expedientes y gestioná trámites administrativos. Sin registro para consultas generales.",
+    cta: "Empezar como ciudadano",
+    to: "/chat",
   },
   {
-    num: "02",
-    title: "Accesibilidad",
-    quote: "Pensada para cada persona, desde cualquier dispositivo, a cualquier hora.",
-    meta: "Dispositivo libre",
-  },
-  {
-    num: "03",
-    title: "Transparencia",
-    quote: "Fuentes oficiales y trazabilidad de cada respuesta. Nada fuera de expediente.",
-    meta: "Fuentes verificadas",
+    id: "empleado",
+    title: "Empleado",
+    desc: "Si sos agente de la Administración Pública Provincial, registrate para acceder a las herramientas de gestión interna.",
+    cta: "Registrarme",
+    to: "/login",
   },
 ];
 
-/* ── Stat cell with count-up ─────────────────────────────────────── */
-function StatCell({ raw, label }) {
-  const ref = useRef(null);
-  const [active, setActive] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined" ||
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setActive(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setActive(true); io.disconnect(); } },
-      { threshold: 0.5 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  /* Parse the numeric part and keep the suffix (e.g. "24hs" → 24, "hs") */
-  const match = String(raw).match(/^(\d+)(.*)$/);
-  const numeric = match ? parseInt(match[1], 10) : null;
-  const suffix  = match ? match[2] : raw;
-  const prefix  = numeric === null ? raw : "";
-
-  const count = useCountUp(numeric ?? 0, active, 1200);
-  const display = numeric !== null ? `${count}${suffix}` : (active ? raw : "0");
-
-  return (
-    <div ref={ref} className="trust-stat">
-      <span className="trust-stat__val" aria-label={raw}>{display}</span>
-      <span className="trust-stat__label">{label}</span>
-    </div>
-  );
-}
-
-/* ── Inline dot-grid for cards ───────────────────────────────────── */
-function DotGridMini() {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0"
-      aria-hidden="true"
-      style={{
-        backgroundImage: "radial-gradient(circle, rgba(241,240,232,0.08) 1px, transparent 1px)",
-        backgroundSize: "18px 18px",
-      }}
-    />
-  );
-}
+const WHY = [
+  {
+    title: "Información que es tuya",
+    desc: "Todo lo que consultás queda en tus manos. Sin intermediarios, sin intérpretes, sin papeles perdidos.",
+  },
+  {
+    title: "Atención sin horario",
+    desc: "Las 24 horas, los 7 días. Sin turno, sin fila, sin depender del horario de ningún organismo.",
+  },
+  {
+    title: "El organismo correcto",
+    desc: "Más de 16 áreas de gobierno accesibles desde un mismo lugar, sin navegar portales desconectados.",
+  },
+  {
+    title: "Constancia de cada gestión",
+    desc: "Registros, estados de expediente y documentos. Todo guardado y verificado en SIGED.",
+  },
+];
 
 export default function TrustSection() {
   return (
-    <section id="confianza" className="relative py-16 lg:py-28 bg-paper">
-      <div className="ed-max section-bleed">
-
-        {/* Header */}
-        <Reveal>
-          <div className="trust-header">
-            <div>
-              <p className="light-eyebrow">
-                <span className="text-brand">05</span>
-                <span className="light-eyebrow-line" aria-hidden="true" />
-                Confianza
-              </p>
-              <h2 className="display-2 text-ink m-0 mt-5 font-neue max-w-3xl">
-                <AnimatedText text="El trabajo que se recuerda." as="span" />
-              </h2>
-            </div>
+    <>
+      {/* ── Cómo acceder ─────────────────────────────────────── */}
+      <motion.section
+        id="confianza"
+        className="chatap-access"
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.12 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="ed-max section-bleed">
+          <div className="chatap-section-heading">
+            <p className="chatap-label">05 · ACCESO</p>
+            <h2>Una puerta para cada necesidad.</h2>
+            <p>El mismo lenguaje claro para ciudadanos y equipos de la Administración Pública Provincial.</p>
           </div>
-        </Reveal>
 
-        {/* Bento grid */}
-        <div className="mt-14 trust-bento">
-          {PILLARS.map((p, i) => (
-            <Reveal key={p.num} delay={i * 90}>
-              <article className="trust-card band-dark relative overflow-hidden group">
-                <DotGridMini />
-                <div className="relative z-10 flex flex-col h-full p-7 lg:p-9">
-                  <div className="flex items-start justify-between gap-4">
-                    <span className="trust-card__num">{p.num}</span>
-                    <span className="trust-card__meta">{p.meta}</span>
-                  </div>
-                  <p className="trust-card__quote">"{p.quote}"</p>
-                  <p className="trust-card__title mt-auto">{p.title}</p>
-
-                  {/* Hover line — grows from left on hover */}
-                  <span className="trust-card__line" aria-hidden="true" />
-                </div>
-              </article>
-            </Reveal>
-          ))}
-        </div>
-
-        {/* Stats strip */}
-        <Reveal delay={180}>
-          <div className="trust-stats mt-10">
-            {[
-              { raw: "24hs",  label: "disponibilidad" },
-              { raw: "0",     label: "tiempo de espera" },
-              { raw: "1",     label: "asistente, toda la info" },
-            ].map((s) => (
-              <StatCell key={s.raw + s.label} raw={s.raw} label={s.label} />
+          <div className="chatap-access__grid">
+            {ACCESS_OPTIONS.map((opt) => (
+              <div key={opt.id} className="chatap-access__card">
+                <span className="chatap-access__index">{opt.id === "ciudadano" ? "A" : "B"}</span>
+                <h3>{opt.title}</h3>
+                <p>{opt.desc}</p>
+                <Link to={opt.to} className="chatap-link">{opt.cta} <span aria-hidden="true">↗</span>
+                </Link>
+              </div>
             ))}
           </div>
-        </Reveal>
-      </div>
-    </section>
+        </div>
+      </motion.section>
+
+      {/* ── Por qué usarlo ───────────────────────────────────── */}
+      <motion.section
+        className="chatap-proof"
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.12 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="ed-max section-bleed">
+          <div className="chatap-section-heading">
+            <p className="chatap-label">06 · PRINCIPIOS</p>
+            <h2>La atención pública, hecha para las personas.</h2>
+          </div>
+
+          <div className="chatap-proof__grid">
+            {WHY.map((w, i) => (
+              <div key={w.title} className="chatap-proof__item">
+                <span>0{i + 1}</span>
+                <h3>{w.title}</h3>
+                <p>{w.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+    </>
   );
 }

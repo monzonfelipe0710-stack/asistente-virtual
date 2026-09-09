@@ -1,86 +1,105 @@
-import { useNavigate } from "react-router-dom";
-import Reveal from "../common/Reveal";
-import AnimatedText from "./AnimatedText";
-import ChatPreview from "./ChatPreview";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "motion/react";
 
-const CAPABILITIES = [
-  { num: "A", title: "Lenguaje claro",         note: "Respuestas humanas, sin burocracia." },
-  { num: "B", title: "Trámites y expedientes", note: "Seguimiento y consulta al instante." },
-  { num: "C", title: "Conexión con personas",  note: "Cuando la gestión lo requiere." },
+const FAQS = [
+  {
+    id: "f1",
+    q: "¿Qué es ChatAP?",
+    a: "El asistente virtual oficial de la Subsecretaría de Recursos Humanos de Formosa. Unifica información de trámites, expedientes y organismos en un único canal conversacional, disponible las 24 horas.",
+  },
+  {
+    id: "f2",
+    q: "¿Cuándo está disponible?",
+    a: "Las 24 horas, los 7 días de la semana. No hay horario de atención ni necesidad de turno previo.",
+  },
+  {
+    id: "f3",
+    q: "¿Quién puede usarlo?",
+    a: "Cualquier ciudadano de la Provincia de Formosa. Para consultas generales no se requiere registro.",
+  },
+  {
+    id: "f4",
+    q: "¿Los datos son seguros?",
+    a: "Sí. ChatAP opera bajo los protocolos de seguridad de la Administración Pública Provincial. Los datos personales nunca se comparten con terceros.",
+  },
+  {
+    id: "f5",
+    q: "¿Puedo seguir un expediente?",
+    a: "Sí. ChatAP se conecta con SIGED para que puedas consultar el estado de tu expediente en tiempo real, sin ir a Mesa de Entradas.",
+  },
+  {
+    id: "f6",
+    q: "¿Necesito instalar algo?",
+    a: "No. ChatAP funciona directamente desde el navegador, en cualquier dispositivo, sin descarga ni instalación.",
+  },
 ];
 
-export default function ChatSection() {
-  const navigate = useNavigate();
+function FaqItem({ q, a }) {
+  const [open, setOpen] = useState(false);
 
   return (
-    <section id="capacidades" className="relative overflow-hidden py-16 lg:py-28 bg-paper">
-      <div className="ed-max section-bleed grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+    <div className="border-b border-line last:border-b-0">
+      <button
+        type="button"
+        className="flex w-full cursor-pointer items-center justify-between gap-4 bg-transparent px-6 py-5 text-left text-base font-medium text-ink transition-colors hover:bg-mist"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span>{q}</span>
+        <motion.span
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-lighter text-brand-deep"
+          aria-hidden="true"
+        >
+          +
+        </motion.span>
+      </button>
 
-        {/* ── Left copy ─────────────────────────────────────────────── */}
-        <div>
-          <Reveal>
-            <p className="light-eyebrow">
-              <span className="text-brand">04</span>
-              <span className="light-eyebrow-line" aria-hidden="true" />
-              Cómo funciona
-            </p>
-            <h2 className="display-2 text-ink m-0 mt-5 font-neue">
-              <AnimatedText text="Este es el canal real." as="span" />
-            </h2>
-            <p className="mt-6 m-0 text-[1rem] leading-relaxed text-muted font-neue-text max-w-md">
-              Escribís como si hablaras con una persona. ChatAP busca en la base
-              oficial y responde al momento, con voz, documentos y seguimiento.
-            </p>
-          </Reveal>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            style={{ overflow: "hidden" }}
+          >
+            <p className="px-6 pb-6 text-sm leading-relaxed text-muted">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
-          {/* Capabilities list */}
-          <Reveal delay={140}>
-            <div className="mt-10 border-t border-line">
-              {CAPABILITIES.map((c) => (
-                <div key={c.num} className="cap-row">
-                  <span className="cap-row__num">{c.num}</span>
-                  <div className="cap-row__body">
-                    <p className="cap-row__title">{c.title}</p>
-                    <p className="cap-row__note">{c.note}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-
-          {/* CTAs */}
-          <Reveal delay={260}>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={() => navigate("/chat")}
-                className="hero-btn-primary"
-              >
-                Probar ChatAP
-                <span aria-hidden="true">→</span>
-              </button>
-              <Link to="/contacto" className="text-sm font-mono uppercase tracking-[0.16em] text-faint hover:text-ink transition-colors no-underline">
-                Otros canales →
-              </Link>
-            </div>
-          </Reveal>
+export default function ChatSection() {
+  return (
+    <motion.section
+      id="faq"
+      className="chatap-faq"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.12 }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="ed-max section-bleed">
+        <div className="chatap-faq__heading">
+          <p className="chatap-label">04 · CHATAP RESPONDE</p>
+          <h2>Preguntas frecuentes, respuestas directas.</h2>
+          <p>Una base de conocimiento institucional para orientar cada consulta con precisión.</p>
         </div>
 
-        {/* ── Right: terminal chat preview ──────────────────────────── */}
-        <Reveal variant="blur" delay={100}>
-          <div className="chat-terminal-wrap">
-            {/* Chrome bar */}
-            <div className="chat-terminal__bar">
-              <span className="chat-terminal__dot" style={{ background: "#ff5f57" }} />
-              <span className="chat-terminal__dot" style={{ background: "#febc2e" }} />
-              <span className="chat-terminal__dot" style={{ background: "#28c840" }} />
-              <span className="chat-terminal__title">chatap — asistente virtual</span>
-            </div>
-            <ChatPreview dark />
-          </div>
-        </Reveal>
+        <div className="chatap-faq__list">
+          {FAQS.map((f) => (
+            <FaqItem key={f.id} q={f.q} a={f.a} />
+          ))}
+        </div>
+
+        <Link to="/chat" className="chatap-link chatap-link--solid chatap-faq__cta">Hacé tu consulta <span aria-hidden="true">↗</span></Link>
       </div>
-    </section>
+    </motion.section>
   );
 }

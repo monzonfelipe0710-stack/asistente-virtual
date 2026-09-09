@@ -1,51 +1,45 @@
 import { Link } from "react-router-dom";
 
 const QUICK = [
-  { label: "Chatear",   to: "/chat" },
-  { label: "Soporte",   to: "/contacto" },
+  { label: "Empezar",   to: "/chat" },
+  { label: "Contacto",  to: "/contacto" },
   { label: "Mi perfil", to: "/perfil" },
   { label: "Ingresar",  to: "/login" },
 ];
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden bg-paper border-t border-line/50">
-      <div className="ed-max section-bleed relative z-10 py-16 md:py-24">
-
-        {/* Top grid */}
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1fr_auto] md:items-start">
-          {/* Brand + copy */}
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="grid h-8 w-8 place-items-center bg-ink text-paper font-extrabold text-xs font-neue" aria-hidden="true">
-                AP
-              </span>
-              <span className="flex flex-col leading-none">
-                <span className="text-sm font-extrabold tracking-tight text-ink uppercase font-neue">
-                  ChatAP<span className="text-brand">.</span>
+    <footer className="chatap-footer">
+      <div className="ed-max section-bleed py-14">
+        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
+          {/* Brand + tagline */}
+          <div className="max-w-sm">
+            <Link to="/" aria-label="ChatAP — inicio" className="no-underline">
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-deep text-sm font-bold text-white"
+                  aria-hidden="true"
+                >
+                  AP
                 </span>
-                <span className="mt-1 text-[8px] font-mono font-semibold uppercase tracking-[0.24em] text-faint">
-                  Recursos Humanos · Formosa
-                </span>
+                <span className="text-[17px] font-semibold tracking-tight text-ink">ChatAP</span>
               </span>
-            </div>
-            <p className="mt-5 max-w-xs m-0 text-sm leading-relaxed text-muted font-neue-text">
+            </Link>
+            <p className="mt-4 text-sm leading-relaxed text-muted">
               La Administración Pública respondiendo a cada persona, en lenguaje
-              claro y a toda hora. Sin filas, sin horarios.
+              claro y a toda hora.
             </p>
           </div>
 
           {/* Quick nav */}
           <nav aria-label="Enlaces rápidos">
-            <p className="m-0 mb-4 text-[9px] font-mono font-semibold uppercase tracking-[0.24em] text-faint">
-              Accesos
-            </p>
-            <ul className="m-0 p-0 list-none flex flex-col gap-2">
+            <p className="m-0 text-sm font-semibold text-ink">Accesos</p>
+            <ul className="m-0 mt-3 list-none space-y-2.5 p-0">
               {QUICK.map((l) => (
                 <li key={l.label}>
                   <Link
                     to={l.to}
-                    className="text-sm text-muted hover:text-ink transition-colors no-underline font-neue-text"
+                    className="text-sm text-muted no-underline transition-colors hover:text-brand-deep"
                   >
                     {l.label}
                   </Link>
@@ -56,24 +50,14 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-16 flex flex-col gap-3 border-t border-line/50 pt-6 md:flex-row md:items-center md:justify-between">
-          <p className="m-0 text-xs text-faint font-neue-text">
-            &copy; {new Date().getFullYear()} Gobierno de la Provincia de Formosa ·
+        <div className="mt-12 flex flex-col gap-2 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="m-0 text-sm text-muted">
+            © {new Date().getFullYear()} Gobierno de la Provincia de Formosa ·
             Subsecretaría de Recursos Humanos
           </p>
-          <p className="m-0 text-[9px] font-mono uppercase tracking-[0.24em] text-faint">
-            info :: oficial · ChatAP v1.0
-          </p>
+          <p className="m-0 text-sm text-faint">ChatAP v1.0 · información oficial</p>
         </div>
       </div>
-
-      {/* Giant ghost watermark */}
-      <p
-        aria-hidden="true"
-        className="pointer-events-none select-none relative -bottom-[0.15em] left-0 right-0 m-0 text-center font-neue font-black leading-none tracking-[-0.06em] text-[17vw] text-ink/[0.06]"
-      >
-        CHATAP
-      </p>
     </footer>
   );
 }

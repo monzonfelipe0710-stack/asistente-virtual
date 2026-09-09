@@ -98,7 +98,7 @@ export default function MessageBubble({ message, speaking = false, typedText = "
             {typing && (
               <span
                 className={`inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 align-middle animate-pulse-soft ${
-                  isBot ? "bg-brand-deep" : "bg-[#171717]"
+                  isBot ? "bg-brand-deep" : "bg-[#070e20]"
                 }`}
               />
             )}
@@ -121,7 +121,6 @@ export default function MessageBubble({ message, speaking = false, typedText = "
             return null;
           })}
         <span className={`chat-msg__meta ${isBot ? "" : "chat-msg__meta--end"}`}>
-          {isBot && <span className="ui-dot" style={{ background: "var(--color-brand)" }} aria-hidden="true" />}
           {isBot ? "Asistente" : "Vos"} ·{" "}
           {new Date(message.timestamp).toLocaleTimeString("es-AR", {
             hour: "2-digit",

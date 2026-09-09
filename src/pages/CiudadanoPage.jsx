@@ -3,9 +3,9 @@ import ChatWindow from "../components/ciudadano/ChatWindow";
 
 export default function CiudadanoPage() {
   return (
-    <div className="h-screen flex flex-col bg-paper">
+    <div className="chatap-chat-shell h-screen flex flex-col bg-paper">
       <Navbar />
-      <main className="flex-1 min-h-0">
+      <main className="chatap-chat-main flex-1 min-h-0">
         <ChatWindow />
       </main>
     </div>

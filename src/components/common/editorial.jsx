@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 
 export function Kicker({ children, className = "" }) {
-  return <p className={`kicker m-0 font-neue tracking-[0.22em] text-xs text-muted ${className}`}>{children}</p>;
+  return <p className={`kicker m-0 font-neue ${className}`}>{children}</p>;
 }
 
 const TITLE_EL = { 1: "h1", 2: "h2", 3: "h3" };
@@ -78,7 +78,7 @@ export function Wordmark({ children, className = "" }) {
 
 export function MetricStrip({ items = [], cols = "grid-cols-2 md:grid-cols-4", className = "" }) {
   return (
-    <div className={`grid gap-px bg-line border border-line overflow-hidden rounded-none ${cols} ${className}`}>
+    <div className={`grid gap-px bg-line border border-line overflow-hidden rounded-2xl ${cols} ${className}`}>
       {items.map((item, i) => (
         <div key={item.label ?? i} className="bg-paper p-6 md:p-8">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.24em] text-muted">

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence, useMotionValueEvent, useScroll } from "motion/react";
 import { useAuth } from "../../context/AuthContext";
 
 const preloadAdmin = () => {
@@ -8,10 +9,10 @@ const preloadAdmin = () => {
 };
 
 const NAV_LINKS = [
-  { id: "que-es",     label: "Qué es",    to: "/",        hash: true },
-  { id: "servicios",  label: "Servicios", to: "/",        hash: true },
-  { id: "capacidades",label: "ChatAP",    to: "/chat",    hash: false },
-  { id: "confianza",  label: "Confianza", to: "/",        hash: true },
+  { id: "que-es",      label: "Cómo funciona", to: "/",     hash: true  },
+  { id: "servicios",   label: "Servicios",     to: "/",     hash: true  },
+  { id: "capacidades", label: "ChatAP",        to: "/chat", hash: false },
+  { id: "confianza",   label: "Acceso",        to: "/",     hash: true  },
 ];
 
 /* ─── Profile dropdown ─────────────────────────────────────────────── */
@@ -22,7 +23,10 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -47,10 +51,12 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
     if (loggingOut) return;
     setOpen(false);
     setLoggingOut(true);
-    setTimeout(() => { logout(); navigate("/"); }, 550);
+    setTimeout(() => { logout(); navigate("/"); }, 500);
   }
 
   const firstName = (user?.name || "").split(" ")[0];
+  const menuItem =
+    "flex items-center gap-3 px-4 py-2.5 text-sm text-ink/80 hover:text-ink hover:bg-mist transition-colors no-underline";
 
   return (
     <>
@@ -61,158 +67,204 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
           aria-label="Menú de perfil"
           aria-haspopup="menu"
           aria-expanded={open}
-          className="nav-profile-btn"
+          className="flex cursor-pointer items-center gap-2 rounded-full border border-line bg-paper py-1 pl-1 pr-3 transition-colors hover:bg-mist"
         >
-          <span className="nav-profile-avatar">{user.name?.[0] ?? "?"}</span>
-          <span className="hidden lg:block text-xs font-medium text-[#f3f1e9] max-w-[9rem] truncate">
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-deep text-sm font-semibold text-white"
+            aria-hidden="true"
+          >
+            {user.name?.[0] ?? "?"}
+          </span>
+          <span className="hidden max-w-[8rem] truncate text-sm font-medium text-ink lg:block">
             {firstName}
           </span>
-          <svg
-            className={`w-3.5 h-3.5 text-[#f3f1e9]/40 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          <motion.svg
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="h-3.5 w-3.5 text-faint"
             fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          </motion.svg>
         </button>
 
-        {open && (
-          <div role="menu" className="nav-dropdown animate-fade-up">
-            <div className="px-4 py-3 border-b border-[#f3f1e9]/10">
-              <p className="text-sm font-medium text-[#f3f1e9] m-0 truncate">{user.name}</p>
-              <p className="text-xs text-[#f3f1e9]/45 m-0 mt-0.5 truncate">{user.email}</p>
-              {userRole && (
-                <span className="inline-block mt-2 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-widest border border-[#f3f1e9]/15 text-[#f3f1e9]/60">
-                  {userRole}
-                </span>
-              )}
-            </div>
-            <div className="py-1">
-              {[
-                { to: "/perfil", label: "Mi perfil" },
-              ].map((l) => (
-                <Link
-                  key={l.to} to={l.to}
-                  onClick={() => setOpen(false)}
-                  role="menuitem"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#f3f1e9]/75 hover:text-[#f3f1e9] hover:bg-[#f3f1e9]/5 transition-colors no-underline"
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              role="menu"
+              className="absolute right-0 top-full z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-2xl border border-line bg-paper shadow-hover"
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
+              transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="border-b border-line px-4 py-3">
+                <p className="m-0 truncate text-sm font-semibold text-ink">{user.name}</p>
+                <p className="m-0 mt-0.5 truncate text-xs text-muted">{user.email}</p>
+                {userRole && (
+                  <span className="badge mt-2 bg-primary-lighter text-brand-deep">
+                    {userRole}
+                  </span>
+                )}
+              </div>
+              <div className="py-1">
+                {[{ to: "/perfil", label: "Mi perfil" }].map((l) => (
+                  <Link
+                    key={l.to} to={l.to}
+                    onClick={() => setOpen(false)}
+                    role="menuitem"
+                    className={menuItem}
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+                <a
+                  href="https://www.formosa.gob.ar/miportal/login"
+                  target="_blank" rel="noopener noreferrer"
+                  role="menuitem" onClick={() => setOpen(false)}
+                  className={menuItem}
                 >
-                  {l.label}
-                </Link>
-              ))}
-              <a
-                href="https://www.formosa.gob.ar/miportal/login"
-                target="_blank" rel="noopener noreferrer"
-                role="menuitem" onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#f3f1e9]/75 hover:text-[#f3f1e9] hover:bg-[#f3f1e9]/5 transition-colors no-underline"
-              >
-                MiPortal
-              </a>
-              {isStaff && (
-                <Link
-                  to="/admin"
-                  onMouseEnter={preloadAdmin} onFocus={preloadAdmin}
-                  onClick={() => setOpen(false)}
-                  role="menuitem"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#f3f1e9]/75 hover:text-[#f3f1e9] hover:bg-[#f3f1e9]/5 transition-colors no-underline"
+                  MiPortal
+                </a>
+                {isStaff && (
+                  <Link
+                    to="/admin"
+                    onMouseEnter={preloadAdmin} onFocus={preloadAdmin}
+                    onClick={() => setOpen(false)}
+                    role="menuitem"
+                    className={menuItem}
+                  >
+                    Panel Admin
+                  </Link>
+                )}
+              </div>
+              <div className="border-t border-line py-1">
+                <button
+                  type="button" role="menuitem" onClick={handleLogout}
+                  className="w-full cursor-pointer bg-transparent px-4 py-2.5 text-left text-sm text-bad transition-colors hover:bg-bad/10"
                 >
-                  Panel Admin
-                </Link>
-              )}
-            </div>
-            <div className="border-t border-[#f3f1e9]/10 py-1">
-              <button
-                type="button" role="menuitem" onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-bad hover:bg-bad/10 transition-colors text-left cursor-pointer"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
-        )}
+                  Cerrar sesión
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {loggingOut && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center animate-fade-in"
-          style={{ backgroundColor: "var(--color-paper)" }}
-          role="status" aria-label="Cerrando sesión"
-        >
-          <div className="flex flex-col items-center gap-3 animate-scale-in">
-            <span
-              className="block w-10 h-10 rounded-full border-2 animate-spin"
-              style={{ borderColor: "var(--color-line)", borderTopColor: "var(--color-brand)" }}
-              aria-hidden="true"
-            />
-            <p className="text-sm text-muted m-0 font-medium">Cerrando sesión…</p>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {loggingOut && (
+          <motion.div
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-paper"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="status" aria-label="Cerrando sesión"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <motion.span
+                className="block h-10 w-10 rounded-full border-2"
+                style={{ borderColor: "rgba(15,23,48,0.15)", borderTopColor: "#1c44b6" }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                aria-hidden="true"
+              />
+              <p className="m-0 text-sm font-medium text-muted">Cerrando sesión…</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
 
-/* ─── Mobile drawer ────────────────────────────────────────────────── */
+/* ─── Mobile drawer ────────────────────────────────────────────── */
 function MobileDrawer({ onClose, isAuthenticated }) {
   return (
-    <nav
+    <motion.nav
       aria-label="Navegación móvil"
-      className="nav-drawer animate-slide-down"
+      className="mx-4 mt-2 overflow-hidden rounded-2xl border border-line bg-paper shadow-hover lg:hidden"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="flex flex-col gap-0.5 p-2">
+      <div className="flex flex-col py-1">
         {NAV_LINKS.map((l) => (
           <Link
-            key={l.id} to={l.to}
+            key={l.id}
+            to={l.to}
             onClick={onClose}
-            className="flex items-center justify-between px-4 py-3 text-sm font-mono font-medium uppercase tracking-wider text-[#f3f1e9]/80 hover:text-[#f3f1e9] hover:bg-[#f3f1e9]/5 transition-colors no-underline"
+            className="flex items-center justify-between px-5 py-3 text-sm font-medium text-ink/80 no-underline transition-colors hover:bg-mist hover:text-ink"
           >
             {l.label}
-            <span className="text-[#f3f1e9]/30 text-xs">→</span>
+            <span className="text-faint">→</span>
           </Link>
         ))}
         {!isAuthenticated && (
-          <div className="border-t border-[#f3f1e9]/10 mt-1 pt-1">
-            <Link
-              to="/login" onClick={onClose}
-              className="flex items-center justify-between px-4 py-3 text-sm font-mono font-bold uppercase tracking-wider text-[#171717] bg-brand no-underline"
-            >
-              Ingresar
-              <span className="text-[#171717]/60 text-xs">→</span>
-            </Link>
-          </div>
+          <Link
+            to="/login" onClick={onClose}
+            className="mt-1 flex items-center justify-between border-t border-line px-5 py-3 text-sm font-semibold text-brand-deep no-underline hover:bg-mist"
+          >
+            Ingresar
+            <span aria-hidden="true">→</span>
+          </Link>
         )}
       </div>
-    </nav>
+    </motion.nav>
   );
 }
 
-/* ─── Main Navbar ──────────────────────────────────────────────────── */
+/* ─── Main Navbar ──────────────────────────────────────────────── */
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dark, setDark] = useState(
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
-  );
+  const [hidden, setHidden] = useState(false);
+  const { scrollY } = useScroll();
   const { user, isAuthenticated, isStaff, userRole, logout } = useAuth();
   const location = useLocation();
   const isHome = location.pathname === "/";
+  const navSurface = isHome
+    ? "landing"
+    : location.pathname === "/chat"
+      ? "chat"
+      : location.pathname === "/perfil"
+        ? "profile"
+        : location.pathname === "/contacto" || location.pathname === "/soporte"
+          ? "contact"
+          : "account";
 
-  function toggleTheme() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    try { localStorage.setItem("theme", next ? "dark" : "light"); } catch { /* noop */ }
-  }
+  useMotionValueEvent(scrollY, "change", (current) => {
+    const previous = scrollY.getPrevious();
+    if (current < 24 || previous === undefined) {
+      setHidden(false);
+      return;
+    }
+    setHidden(current > previous);
+  });
 
   return (
-    <header className="nav-shell">
-      <div className="nav-pill">
+    <motion.header
+      className={`site-navbar site-navbar--${navSurface} sticky top-0 z-40 px-4 py-3 ${isHome ? "chatap-navbar" : ""}`}
+      data-surface={navSurface}
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: hidden ? -120 : 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-line bg-paper/85 px-3 py-2 shadow-soft backdrop-blur-md">
         {/* Brand */}
-        <Link to="/" aria-label="ChatAP — inicio" className="nav-brand no-underline">
-          <span className="nav-brand-mark" aria-hidden="true">AP</span>
-          <span className="nav-brand-name">ChatAP</span>
+        <Link to="/" aria-label="ChatAP — inicio" className="no-underline">
+          <span className="flex items-center gap-2.5">
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-deep text-sm font-bold text-white"
+              aria-hidden="true"
+            >
+              AP
+            </span>
+            <span className="text-[17px] font-semibold tracking-tight text-ink">ChatAP</span>
+          </span>
         </Link>
 
-        {/* Desktop links */}
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Navegación principal">
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Navegación principal">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.id}
@@ -223,68 +275,69 @@ export default function Navbar() {
                   document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" });
                 }
               }}
-              className={`nav-link ${location.pathname === l.to && !l.hash ? "nav-link--active" : ""}`}
+              className="rounded-full px-3.5 py-1.5 text-sm font-medium text-muted no-underline transition-colors hover:bg-mist hover:text-ink"
             >
               {l.label}
             </Link>
           ))}
         </nav>
 
-        {/* Right actions */}
+        {/* Right */}
         <div className="flex items-center gap-2">
-          {/* Theme toggle */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label="Cambiar tema"
-            className="nav-icon-btn"
-          >
-            {dark ? (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m16.95 6.95l-1.41-1.41M6.46 6.46L5.05 5.05m12.49 0l-1.41 1.41M6.46 17.54l-1.41 1.41M12 8a4 4 0 100 8 4 4 0 000-8z" />
-              </svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-              </svg>
-            )}
-          </button>
-
           {isAuthenticated && user ? (
             <ProfileMenu user={user} isStaff={isStaff} userRole={userRole} logout={logout} />
           ) : (
-            <Link to="/login" className="nav-cta hidden sm:inline-flex">
+            <Link to="/login" className="btn-primary hidden rounded-full px-5 py-2 text-sm sm:inline-flex">
               Ingresar
             </Link>
           )}
 
-          {/* Hamburger */}
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={menuOpen}
-            className="nav-icon-btn lg:hidden"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-line bg-paper text-ink transition-colors hover:bg-mist lg:hidden"
           >
-            {menuOpen ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              {menuOpen ? (
+                <motion.svg
+                  key="close"
+                  className="h-5 w-5"
+                  initial={{ rotate: -45, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 45, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                </motion.svg>
+              ) : (
+                <motion.svg
+                  key="open"
+                  className="h-5 w-5"
+                  initial={{ rotate: 45, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: -45, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 7h16M4 12h16M4 17h16" />
+                </motion.svg>
+              )}
+            </AnimatePresence>
           </button>
         </div>
       </div>
 
-      {menuOpen && (
-        <MobileDrawer
-          onClose={() => setMenuOpen(false)}
-          isAuthenticated={isAuthenticated}
-        />
-      )}
-    </header>
+      <AnimatePresence>
+        {menuOpen && (
+          <MobileDrawer
+            onClose={() => setMenuOpen(false)}
+            isAuthenticated={isAuthenticated}
+          />
+        )}
+      </AnimatePresence>
+    </motion.header>
   );
 }

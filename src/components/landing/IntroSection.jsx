@@ -1,167 +1,100 @@
-import { useEffect, useRef, useState } from "react";
-import Reveal from "../common/Reveal";
-import AnimatedText from "./AnimatedText";
+import { useRef, useEffect, useState } from "react";
+import { motion, useInView } from "motion/react";
 
-const SPECS = [
-  { k: "CHATAP",  v: "1.0" },
-  { k: "ESTADO",  v: "EN LÍNEA" },
-  { k: "VOZ",     v: "ACTIVA" },
-  { k: "MESA",    v: "PDF" },
-  { k: "SIGED",   v: "CONECTADO" },
-  { k: "DERIVA",  v: "0 COLA" },
-];
-
-const PROBLEMS = [
-  { num: "001", title: "Hacer fila para una consulta de dos minutos",           time: "∞ HRS" },
-  { num: "002", title: "No saber qué documentación llevar a mesa de entrada",   time: "~3 HRS" },
-  { num: "003", title: "Horario de atención que no coincide con el tuyo",       time: "~4 HRS" },
-  { num: "004", title: "Buscar un trámite en portales que no se hablan",        time: "~3 HRS" },
-  { num: "005", title: "Reescribir la misma solicitud porque faltó un dato",    time: "~2 HRS" },
-  { num: "006", title: "No encontrar a quién preguntar, ni a dónde ir",         time: "~2 HRS" },
-];
-
-/* ─── Spec strip cell — staggered entrance on first intersection ── */
-function SpecCell({ label, value, index }) {
+/* ─── Count-up animado ────────────────────────────────────────── */
+function CountUp({ target, suffix = "", duration = 1.2 }) {
   const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+  const inView = useInView(ref, { once: true, amount: 0.5 });
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined" ||
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setVisible(true);
+    if (!inView) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCount(target);
       return;
     }
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); io.disconnect(); } },
-      { threshold: 0.3 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+    let start = null;
+    let raf;
+    function step(ts) {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / (duration * 1000), 1);
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setCount(Math.round(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, target, duration]);
 
   return (
-    <div
-      ref={ref}
-      className={`spec-strip__cell ${index < SPECS.length - 1 ? "spec-strip__cell--border" : ""} ${
-        visible ? "spec-cell-enter" : "opacity-0"
-      }`}
-      style={{ animationDelay: visible ? `${index * 55}ms` : "0ms" }}
-    >
-      <span className="spec-strip__key">{label}</span>
-      <span className="spec-strip__val">{value}</span>
-    </div>
+    <span ref={ref} aria-label={`${target}${suffix}`} style={{ fontVariantNumeric: "tabular-nums" }}>
+      {count}{suffix}
+    </span>
   );
 }
 
-/* ─── Terminal rows — wipe-in when terminal enters viewport ──── */
-function TerminalRows({ visible }) {
-  return (
-    <ul className="m-0 p-0 list-none">
-      {PROBLEMS.map((p, i) => (
-        <li
-          key={p.num}
-          className={`problems-terminal__row ${visible ? "terminal-row-enter" : "opacity-0"}`}
-          style={{ animationDelay: `${i * 65}ms` }}
-        >
-          <span className="problems-terminal__col-num text-brand">{p.num}</span>
-          <span className="problems-terminal__col-title">{p.title}</span>
-          <span className="problems-terminal__col-time text-bad">{p.time}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
+const STATS = [
+  { num: 24,   suffix: "hs",  label: "Disponibilidad" },
+  { num: 0,    suffix: "",    label: "Tiempo de espera" },
+  { num: 16,   suffix: "+",   label: "Organismos" },
+  { num: 100,  suffix: "%",   label: "Oficial" },
+];
+
+const STEPS = [
+  {
+    title: "Preguntás en lenguaje natural",
+    body: "Sin formularios ni tecnicismos. Escribís lo que necesitás y el sistema entiende el contexto.",
+  },
+  {
+    title: "Obtenés información oficial",
+    body: "Requisitos, plazos y organismos directamente de las fuentes de la Administración Pública.",
+  },
+  {
+    title: "Resolvés el trámite",
+    body: "Seguimiento de expedientes, formularios y derivación directa al área correspondiente.",
+  },
+];
 
 export default function IntroSection() {
-  const terminalRef = useRef(null);
-  const [terminalVisible, setTerminalVisible] = useState(false);
-
-  useEffect(() => {
-    const el = terminalRef.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined" ||
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setTerminalVisible(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setTerminalVisible(true); io.disconnect(); } },
-      { threshold: 0.1 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
   return (
-    <section id="que-es" className="relative overflow-hidden py-16 lg:py-28 bg-paper">
+    <section id="que-es" className="chatap-experience">
       <div className="ed-max section-bleed">
+        <div className="chatap-section-heading">
+          <p className="chatap-label">02 · EXPERIENCIA</p>
+          <h2>Resolver empieza por poder preguntar.</h2>
+          <p>ChatAP traduce la complejidad de los trámites públicos en una conversación clara, orientada y útil.</p>
+        </div>
 
-        {/* ── Spec strip — each cell staggers in ─────────────────── */}
-        <div className="spec-strip">
-          {SPECS.map((s, i) => (
-            <SpecCell key={s.k} label={s.k} value={s.v} index={i} />
+        {/* Pasos */}
+        <div className="chatap-experience__steps">
+          {STEPS.map((s, i) => (
+            <motion.div
+              key={s.title}
+              className="chatap-step"
+              initial={{ opacity: 0, y: 22 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.45, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <span className="chatap-step__number" aria-hidden="true">0{i + 1}</span>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </motion.div>
           ))}
         </div>
 
-        {/* ── Headline + body ──────────────────────────────────────── */}
-        <Reveal>
-          <div className="mt-16 lg:mt-24 grid grid-cols-1 lg:grid-cols-[1fr_auto] lg:items-end gap-8">
-            <div>
-              <p className="intro-kicker m-0">Problemas habituales</p>
-              <h2 className="display-2 text-ink m-0 mt-5 font-neue max-w-4xl">
-                <AnimatedText
-                  text="La mesa de entrada sola te cuesta días. Cada vez."
-                  as="span"
-                />
-              </h2>
-            </div>
-            <p className="m-0 text-sm font-mono uppercase tracking-[0.2em] text-faint lg:text-right lg:pb-2 lg:max-w-[18rem]">
-              Tiempo estimado<br />perdido por gestión
-            </p>
-          </div>
-
-          <p className="mt-8 max-w-2xl m-0 editorial-text">
-            Nunca es lo fácil lo que duele. Es no saber qué pedir, a quién, con qué
-            papeles. Es el horario que cierra. Es la información que cambia y nadie
-            te avisa. ChatAP concentra eso: consulta, trámite y documentación en
-            lenguaje claro, a cualquier hora.
-          </p>
-        </Reveal>
-
-        {/* ── Problems terminal ────────────────────────────────────── */}
-        <Reveal delay={80}>
-          <div ref={terminalRef} className="problems-terminal mt-14">
-            {/* Chrome bar */}
-            <div className="problems-terminal__bar">
-              <span className="problems-terminal__dot" style={{ background: "#ff5f57" }} />
-              <span className="problems-terminal__dot" style={{ background: "#febc2e" }} />
-              <span className="problems-terminal__dot" style={{ background: "#28c840" }} />
-              <span className="ml-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#f3f1e9]/35">
-                problemas — chatap.gob.ar
+        {/* Stats */}
+        <div className="chatap-stats">
+          {STATS.map((s) => (
+            <div key={s.label} className="chatap-stat">
+              <span className="chatap-stat__value">
+                <CountUp target={s.num} suffix={s.suffix} />
               </span>
+              <span className="chatap-stat__label">{s.label}</span>
             </div>
-
-            {/* Header */}
-            <div className="problems-terminal__header">
-              <span className="problems-terminal__col-num">#</span>
-              <span className="problems-terminal__col-title">DESCRIPCIÓN</span>
-              <span className="problems-terminal__col-time">TIEMPO</span>
-            </div>
-
-            {/* Staggered rows */}
-            <TerminalRows visible={terminalVisible} />
-
-            <div className="problems-terminal__foot">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse-dot" aria-hidden="true" />
-                ChatAP resuelve cada uno de estos puntos
-              </span>
-              <span>v1.0 · 2026</span>
-            </div>
-          </div>
-        </Reveal>
+          ))}
+        </div>
       </div>
     </section>
   );

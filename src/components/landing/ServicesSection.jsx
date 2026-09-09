@@ -1,135 +1,77 @@
-import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import Reveal from "../common/Reveal";
-import AnimatedText from "./AnimatedText";
-import DotGrid from "./DotGrid";
-import { useCountUp } from "../../hooks/useCountUp";
+import { motion } from "motion/react";
 
 const SERVICES = [
-  { num: "01", title: "Trámites",    tag: "Iniciar",    to: "/chat" },
-  { num: "02", title: "Información", tag: "Consultar",  to: "/chat" },
-  { num: "03", title: "Organismos",  tag: "Directorio", to: "/contacto" },
-  { num: "04", title: "Consultas",   tag: "Preguntar",  to: "/chat" },
-  { num: "05", title: "Asistencia",  tag: "Soporte",    to: "/contacto" },
-  { num: "06", title: "Servicios",   tag: "Canales",    to: "/contacto" },
+  {
+    title: "Trámites",
+    desc: "Iniciá trámites con los requisitos paso a paso, sin formularios previos.",
+    tag: "Iniciar",
+    to: "/chat",
+  },
+  {
+    title: "Información",
+    desc: "Consultá requisitos, plazos y normativa oficial en lenguaje claro.",
+    tag: "Consultar",
+    to: "/chat",
+  },
+  {
+    title: "Expedientes",
+    desc: "Seguí el estado de tus expedientes desde cualquier dispositivo.",
+    tag: "Seguir",
+    to: "/chat",
+  },
+  {
+    title: "Organismos",
+    desc: "Encontrá el organismo y el área correcta para cada consulta.",
+    tag: "Directorio",
+    to: "/contacto",
+  },
+  {
+    title: "Formularios",
+    desc: "Descargá los formularios que necesitás, siempre la versión vigente.",
+    tag: "Descargar",
+    to: "/chat",
+  },
+  {
+    title: "Derivaciones",
+    desc: "Te conectamos con la persona y el área correcta, sin vueltas.",
+    tag: "Canales",
+    to: "/contacto",
+  },
 ];
-
-/* ── Magnetic hover row ──────────────────────────────────────────── */
-function ServiceRow({ num, title, tag, to }) {
-  const ref = useRef(null);
-
-  function onMouseMove(e) {
-    const el = ref.current;
-    if (!el || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const rect = el.getBoundingClientRect();
-    /* Vertical offset: how far from the row's vertical centre (normalised -1…1) */
-    const relY = ((e.clientY - rect.top) / rect.height - 0.5) * 8;
-    el.style.setProperty("--row-tilt", `${relY.toFixed(2)}px`);
-  }
-
-  function onMouseLeave() {
-    ref.current?.style.setProperty("--row-tilt", "0px");
-  }
-
-  return (
-    <Link
-      ref={ref}
-      to={to}
-      className="services-row group no-underline"
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      style={{ "--row-tilt": "0px" }}
-    >
-      <span className="services-row__num">{num}</span>
-      <span
-        className="services-row__title"
-        style={{ transform: "translateY(var(--row-tilt))" }}
-      >
-        {title}
-      </span>
-      <span className="services-row__tag">
-        {tag}
-        <svg
-          className="w-3.5 h-3.5 opacity-60 transition-transform duration-200 group-hover:translate-x-1"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-      </span>
-    </Link>
-  );
-}
-
-/* ── Counter for "06 canales" ────────────────────────────────────── */
-function ServiceCount() {
-  const ref = useRef(null);
-  const [active, setActive] = useState(false);
-  const count = useCountUp(6, active, 900);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined" ||
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setActive(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setActive(true); io.disconnect(); } },
-      { threshold: 0.5 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  return (
-    <p ref={ref} className="services-count">
-      <span className="services-count__num" aria-label="06">
-        {String(count).padStart(2, "0")}
-      </span>
-      <span className="services-count__label">canales</span>
-    </p>
-  );
-}
 
 export default function ServicesSection() {
   return (
-    <section id="servicios" className="relative overflow-hidden band-dark py-16 lg:py-24">
-      <DotGrid color="rgba(241,240,232,0.05)" />
+    <motion.section
+      id="servicios"
+      className="chatap-services"
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.12 }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="ed-max section-bleed">
+        <div className="chatap-section-heading chatap-section-heading--dark">
+          <p className="chatap-label">03 · CAPACIDADES</p>
+          <h2>Todo lo que necesitás. Un solo canal.</h2>
+          <p>Orientación, documentación y seguimiento para que cada gestión encuentre su camino.</p>
+        </div>
 
-      <div className="ed-max section-bleed relative z-10">
-        {/* Header */}
-        <Reveal>
-          <div className="services-header">
-            <div>
-              <p className="services-eyebrow">
-                <span className="text-brand">03</span>
-                <span className="services-eyebrow-line" aria-hidden="true" />
-                Servicios
-              </p>
-              <h2 className="display-2 text-[#f3f1e9] m-0 mt-5 font-neue max-w-4xl">
-                <AnimatedText
-                  text="Cada decisión, ya tomada. Para ir a lo que importa."
-                  as="span"
-                />
-              </h2>
-            </div>
-            <ServiceCount />
-          </div>
-        </Reveal>
-
-        {/* Divider */}
-        <div className="mt-14 border-t border-[#f3f1e9]/10" />
-
-        {/* Service rows — staggered Reveal */}
-        <ul className="m-0 p-0 list-none">
+        <div className="chatap-services__grid">
           {SERVICES.map((s, i) => (
-            <Reveal key={s.num} as="li" delay={i * 60}>
-              <ServiceRow {...s} />
-            </Reveal>
+            <Link
+              key={s.title}
+              to={s.to}
+              className={`chatap-service chatap-service--${i + 1}`}
+            >
+              <span className="chatap-service__number">0{i + 1}</span>
+              <span className="chatap-service__title">{s.title}</span>
+              <span className="chatap-service__desc">{s.desc}</span>
+              <span className="chatap-service__tag">{s.tag} ↗</span>
+            </Link>
           ))}
-        </ul>
+        </div>
       </div>
-    </section>
+    </motion.section>
   );
 }
