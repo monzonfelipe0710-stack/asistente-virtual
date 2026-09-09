@@ -156,6 +156,7 @@ export default function UserTable() {
       </div>
 
       <UserFormModal
+        key={`${modalOpen}-${editUser?.id || "new"}`}
         open={modalOpen}
         onClose={closeModal}
         onSave={handleSave}

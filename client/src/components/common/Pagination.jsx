@@ -49,6 +49,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePagination(items, pageSize = 5) {
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(items.length / pageSize);

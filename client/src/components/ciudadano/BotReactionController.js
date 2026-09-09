@@ -120,6 +120,7 @@ const IDLE_SEQUENCES = {
 };
 
 const IDLE_MOOD_KEYS = ["curious", "bored", "happy", "sleepy", "alert", "stretch", "lookAround", "wave", "think"];
+void IDLE_MOOD_KEYS;
 
 /* ──────────────────── POOLS CONTEXTUALES (chat) ──────────────────── */
 

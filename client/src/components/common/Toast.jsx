@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback } from "react";
 
 const ToastContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   return useContext(ToastContext);
 }

@@ -1,7 +1,6 @@
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import Hero from "../components/landing/Hero";
-import Marquee from "../components/landing/Marquee";
 import IntroSection from "../components/landing/IntroSection";
 import ServicesSection from "../components/landing/ServicesSection";
 import ChatSection from "../components/landing/ChatSection";
@@ -14,7 +13,6 @@ export default function HomePage() {
       <Navbar />
       <main>
         <Hero />
-        <Marquee />
         <IntroSection />
         <ServicesSection />
         <ChatSection />

@@ -86,6 +86,8 @@ export function useProfileData() {
       usersSuspendidos: allUsers.filter((u) => u.status === "Suspendido").length,
       usersNuevos: allUsers.filter((u) => {
         const c = new Date(u.createdAt || 0).getTime();
+        // La ventana de 30 días depende del reloj del dispositivo (dato volátil, no de render)
+        // eslint-disable-next-line react-hooks/purity
         return c > Date.now() - 30 * 24 * 60 * 60 * 1000;
       }).length,
 

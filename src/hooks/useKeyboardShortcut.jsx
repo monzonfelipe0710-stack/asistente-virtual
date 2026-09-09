@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 
-const shortcuts = [];
-
+// eslint-disable-next-line react-refresh/only-export-components
 export default function useKeyboardShortcut(key, ctrlKey, handler) {
   useEffect(() => {
     const listener = (e) => {

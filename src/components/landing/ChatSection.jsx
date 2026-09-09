@@ -1,78 +1,85 @@
 import { useNavigate } from "react-router-dom";
 import Reveal from "../common/Reveal";
-import { ArrowLink } from "../common/editorial";
-import SectionLabel from "./SectionLabel";
-import ChatPreview from "./ChatPreview";
 import AnimatedText from "./AnimatedText";
+import ChatPreview from "./ChatPreview";
+import { Link } from "react-router-dom";
 
 const CAPABILITIES = [
-  { num: "A", title: "Lenguaje claro", note: "Respuestas humanas, sin burocracia." },
+  { num: "A", title: "Lenguaje claro",         note: "Respuestas humanas, sin burocracia." },
   { num: "B", title: "Trámites y expedientes", note: "Seguimiento y consulta al instante." },
-  { num: "C", title: "Conexión con personas", note: "Cuando la gestión lo requiere." },
+  { num: "C", title: "Conexión con personas",  note: "Cuando la gestión lo requiere." },
 ];
 
 export default function ChatSection() {
   const navigate = useNavigate();
 
   return (
-    <section id="capacidades" className="relative overflow-hidden border-b border-line py-28 lg:py-40">
-      <div className="ed-max section-bleed grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-        <div className="lg:col-span-5">
+    <section id="capacidades" className="relative overflow-hidden py-16 lg:py-28 bg-paper">
+      <div className="ed-max section-bleed grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+        {/* ── Left copy ─────────────────────────────────────────────── */}
+        <div>
           <Reveal>
-            <SectionLabel num="04">Cómo funciona</SectionLabel>
-            <h2 className="display-2 text-ink m-0 mt-8 font-neue">
-              <AnimatedText text="ASÍ FUNCIONA CHATAP." as="span" />
+            <p className="light-eyebrow">
+              <span className="text-brand">04</span>
+              <span className="light-eyebrow-line" aria-hidden="true" />
+              Cómo funciona
+            </p>
+            <h2 className="display-2 text-ink m-0 mt-5 font-neue">
+              <AnimatedText text="Este es el canal real." as="span" />
             </h2>
-            <p className="mt-7 m-0 text-[1.05rem] leading-relaxed text-muted font-neue-text max-w-md">
-              Escribís tu consulta como si hablaras con una persona. ChatAP entiende,
-              busca en la base oficial y te responde al momento.
+            <p className="mt-6 m-0 text-[1rem] leading-relaxed text-muted font-neue-text max-w-md">
+              Escribís como si hablaras con una persona. ChatAP busca en la base
+              oficial y responde al momento, con voz, documentos y seguimiento.
             </p>
           </Reveal>
 
-          <Reveal delay={160}>
-            <div className="mt-10 flex flex-col">
+          {/* Capabilities list */}
+          <Reveal delay={140}>
+            <div className="mt-10 border-t border-line">
               {CAPABILITIES.map((c) => (
-                <div key={c.num} className="flex items-baseline gap-4 border-b border-line py-4">
-                  <span className="fig-num text-brand shrink-0">{c.num}</span>
-                  <div>
-                    <h3 className="m-0 font-neue text-base font-bold tracking-tight text-ink">{c.title}</h3>
-                    <p className="m-0 mt-0.5 text-sm text-muted">{c.note}</p>
+                <div key={c.num} className="cap-row">
+                  <span className="cap-row__num">{c.num}</span>
+                  <div className="cap-row__body">
+                    <p className="cap-row__title">{c.title}</p>
+                    <p className="cap-row__note">{c.note}</p>
                   </div>
                 </div>
               ))}
             </div>
           </Reveal>
 
+          {/* CTAs */}
           <Reveal delay={260}>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <button
                 type="button"
                 onClick={() => navigate("/chat")}
-                className="btn-primary px-8! py-4! text-sm!"
+                className="hero-btn-primary"
               >
                 Probar ChatAP
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
+                <span aria-hidden="true">→</span>
               </button>
-              <ArrowLink className="mt-0" to="/contacto" mute>
-                Otros canales de atención
-              </ArrowLink>
+              <Link to="/contacto" className="text-sm font-mono uppercase tracking-[0.16em] text-faint hover:text-ink transition-colors no-underline">
+                Otros canales →
+              </Link>
             </div>
           </Reveal>
         </div>
 
-        <div className="lg:col-span-6 lg:col-start-7">
-          <Reveal variant="blur" delay={150}>
-            <ChatPreview />
-          </Reveal>
-          <Reveal variant="up" delay={300}>
-            <div className="mt-5 flex items-center justify-between">
-              <p className="fig-num m-0">FIG. 02 — Conversación tipo</p>
-              <p className="fig-num m-0 text-faint">UUID :: chatap-02</p>
+        {/* ── Right: terminal chat preview ──────────────────────────── */}
+        <Reveal variant="blur" delay={100}>
+          <div className="chat-terminal-wrap">
+            {/* Chrome bar */}
+            <div className="chat-terminal__bar">
+              <span className="chat-terminal__dot" style={{ background: "#ff5f57" }} />
+              <span className="chat-terminal__dot" style={{ background: "#febc2e" }} />
+              <span className="chat-terminal__dot" style={{ background: "#28c840" }} />
+              <span className="chat-terminal__title">chatap — asistente virtual</span>
             </div>
-          </Reveal>
-        </div>
+            <ChatPreview dark />
+          </div>
+        </Reveal>
       </div>
     </section>
   );

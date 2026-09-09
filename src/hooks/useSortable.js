@@ -9,7 +9,7 @@ export default function useSortable(items, defaultKey = null, defaultDir = "asc"
     return [...items].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
-      let cmp = 0;
+      let cmp;
       if (typeof aVal === "string" && typeof bVal === "string") {
         cmp = aVal.localeCompare(bVal, "es", { sensitivity: "base" });
       } else {

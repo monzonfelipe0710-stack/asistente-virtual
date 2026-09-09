@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useReducedMotion() {
   return (
     typeof window !== "undefined" &&
@@ -9,12 +10,12 @@ export function useReducedMotion() {
 }
 
 export function CountUp({ value, duration = 550, className = "" }) {
-  const [display, setDisplay] = useState(useReducedMotion() ? value : 0);
+  const reduceMotion = useReducedMotion();
+  const [display, setDisplay] = useState(reduceMotion ? value : 0);
   const fromRef = useRef(0);
 
   useEffect(() => {
-    if (useReducedMotion()) {
-      setDisplay(value);
+    if (reduceMotion) {
       fromRef.current = value;
       return;
     }
@@ -30,7 +31,7 @@ export function CountUp({ value, duration = 550, className = "" }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [value, duration]);
+  }, [value, duration, reduceMotion]);
 
   return <span className={className}>{display}</span>;
 }
@@ -81,6 +82,7 @@ export function PageHeader({ title, description, children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const statusStyles = {
   Ingresado: "bg-info/10 text-info",
   "En proceso": "bg-warn/10 text-warn",
@@ -88,6 +90,7 @@ export const statusStyles = {
   Finalizado: "bg-ok/10 text-ok",
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const priorityStyles = {
   Alta: "bg-bad/10 text-bad",
   Normal: "bg-brand/10 text-brand",

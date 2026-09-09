@@ -4,8 +4,10 @@ import { useAuth } from "./AuthContext";
 const AdminContext = createContext(null);
 
 // Únicos roles del sistema. El Ciudadano no tiene acceso al panel interno.
+// eslint-disable-next-line react-refresh/only-export-components
 export const ROLES = ["Superadmin", "Administrador", "Ciudadano"];
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const PERMISSION_LABELS = {
   dashboard: { label: "Ver panel general", desc: "Resumen de la actividad del sistema." },
   mesa_entrada: { label: "Mesa de Entradas", desc: "Ingreso y seguimiento de trámites y expedientes." },
@@ -43,6 +45,7 @@ const PERMISSIONS = {
   Ciudadano: [],
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function permissionsForRole(role) {
   return (PERMISSIONS[role] || []).map((key) => ({
     key,
@@ -52,12 +55,8 @@ export function permissionsForRole(role) {
 
 export function AdminProvider({ children }) {
   // El rol sale siempre del usuario logueado (sin selector manual).
-  let role = "Ciudadano";
-  try {
-    role = useAuth()?.userRole || "Ciudadano";
-  } catch {
-    role = "Ciudadano";
-  }
+  const { userRole = "Ciudadano" } = useAuth();
+  let role = userRole || "Ciudadano";
   if (!ROLES.includes(role)) role = "Ciudadano";
 
   const can = (perm) => (PERMISSIONS[role] || []).includes(perm);
@@ -68,6 +67,7 @@ export function AdminProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAdmin() {
   const ctx = useContext(AdminContext);
   if (!ctx) throw new Error("useAdmin debe usarse dentro de AdminProvider");

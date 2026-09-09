@@ -49,7 +49,7 @@ export default function GlobalSearch() {
         <div className="absolute top-full left-0 right-0 mt-1.5 card card-border overflow-hidden z-50 animate-scale-in shadow-lg">
           {results.length > 0 ? (
             <div className="py-1">
-              {results.map((item, i) => (
+              {results.map((item) => (
                 <button key={`${item._type}-${item.id}`} onMouseDown={(e) => { e.preventDefault(); handleSelect(item); }} className="w-full text-left px-3 py-2.5 hover:bg-soft transition-colors flex items-start gap-2.5 border-b border-line last:border-0 cursor-pointer">
                   <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border shrink-0 mt-0.5 ${typeStyles[item._type] || "bg-mist text-muted"}`}>{item._type === "knowledge" ? "Art." : item._type === "document" ? "Doc." : "SIGED"}</span>
                   <div className="min-w-0">

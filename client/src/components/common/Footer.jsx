@@ -1,34 +1,51 @@
 import { Link } from "react-router-dom";
 
 const QUICK = [
-  { label: "Chatear", to: "/chat" },
-  { label: "Soporte", to: "/contacto" },
+  { label: "Chatear",   to: "/chat" },
+  { label: "Soporte",   to: "/contacto" },
   { label: "Mi perfil", to: "/perfil" },
-  { label: "Ingresar", to: "/login" },
+  { label: "Ingresar",  to: "/login" },
 ];
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden border-t border-line">
+    <footer className="relative overflow-hidden bg-paper border-t border-line/50">
       <div className="ed-max section-bleed relative z-10 py-16 md:py-24">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1fr_auto] md:items-end">
+
+        {/* Top grid */}
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1fr_auto] md:items-start">
+          {/* Brand + copy */}
           <div>
-            <p className="m-0 text-[11px] font-mono uppercase tracking-[0.22em] text-faint">
-              ChatAP · Asistente Virtual
-            </p>
-            <p className="mt-4 max-w-sm m-0 text-[15px] leading-relaxed text-muted font-neue-text">
+            <div className="flex items-center gap-3">
+              <span className="grid h-8 w-8 place-items-center bg-ink text-paper font-extrabold text-xs font-neue" aria-hidden="true">
+                AP
+              </span>
+              <span className="flex flex-col leading-none">
+                <span className="text-sm font-extrabold tracking-tight text-ink uppercase font-neue">
+                  ChatAP<span className="text-brand">.</span>
+                </span>
+                <span className="mt-1 text-[8px] font-mono font-semibold uppercase tracking-[0.24em] text-faint">
+                  Recursos Humanos · Formosa
+                </span>
+              </span>
+            </div>
+            <p className="mt-5 max-w-xs m-0 text-sm leading-relaxed text-muted font-neue-text">
               La Administración Pública respondiendo a cada persona, en lenguaje
               claro y a toda hora. Sin filas, sin horarios.
             </p>
           </div>
 
+          {/* Quick nav */}
           <nav aria-label="Enlaces rápidos">
-            <ul className="m-0 p-0 list-none flex flex-wrap gap-x-8 gap-y-3">
+            <p className="m-0 mb-4 text-[9px] font-mono font-semibold uppercase tracking-[0.24em] text-faint">
+              Accesos
+            </p>
+            <ul className="m-0 p-0 list-none flex flex-col gap-2">
               {QUICK.map((l) => (
                 <li key={l.label}>
                   <Link
                     to={l.to}
-                    className="nav-tab no-underline inline-flex"
+                    className="text-sm text-muted hover:text-ink transition-colors no-underline font-neue-text"
                   >
                     {l.label}
                   </Link>
@@ -38,21 +55,22 @@ export default function Footer() {
           </nav>
         </div>
 
-        <div className="mt-16 flex flex-col gap-3 border-t border-line/70 pt-6 md:flex-row md:items-center md:justify-between">
+        {/* Bottom bar */}
+        <div className="mt-16 flex flex-col gap-3 border-t border-line/50 pt-6 md:flex-row md:items-center md:justify-between">
           <p className="m-0 text-xs text-faint font-neue-text">
             &copy; {new Date().getFullYear()} Gobierno de la Provincia de Formosa ·
             Subsecretaría de Recursos Humanos
           </p>
-          <p className="m-0 text-[10px] font-mono uppercase tracking-[0.24em] text-faint">
-            info :: oficial
+          <p className="m-0 text-[9px] font-mono uppercase tracking-[0.24em] text-faint">
+            info :: oficial · ChatAP v1.0
           </p>
         </div>
       </div>
 
+      {/* Giant ghost watermark */}
       <p
         aria-hidden="true"
-        className="pointer-events-none select-none absolute -bottom-[0.32em] left-0 right-0 m-0 text-center font-neue font-black leading-none tracking-tighter text-[17vw]"
-        style={{ color: "transparent", WebkitTextStroke: "1px color-mix(in srgb, var(--color-ink) 8%, transparent)" }}
+        className="pointer-events-none select-none relative -bottom-[0.15em] left-0 right-0 m-0 text-center font-neue font-black leading-none tracking-[-0.06em] text-[17vw] text-ink/[0.06]"
       >
         CHATAP
       </p>

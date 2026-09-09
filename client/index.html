@@ -6,13 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preload" href="/fonts/PPNeueMontreal-Regular.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/PPNeueMontreal-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Medium.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Black.woff2" as="font" type="font/woff2" crossorigin />
     <style>
       ::selection {
         color: #171717;
-        background: #FF4000;
+        background: #ff9100;
       }
       html, body {
-        background-color: #f1f0e8;
+        background-color: #f1eee7;
       }
       html.dark, html.dark body {
         background-color: #171717;
@@ -22,11 +24,22 @@
       (function () {
         try {
           var t = localStorage.getItem("theme");
-          if (t === "dark" || !t) document.documentElement.classList.add("dark");
+          var dark = t === "dark";
+          if (dark) document.documentElement.classList.add("dark");
         } catch (e) {}
+        /* Add fonts-ready when fonts finish loading so the page
+           fades in clean instead of flashing un-styled text */
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function () {
+            document.body.classList.add("fonts-ready");
+          });
+        } else {
+          document.body.classList.add("fonts-ready");
+        }
       })();
     </script>
-    <meta name="theme-color" content="#171717" />
+    <meta name="theme-color" content="#f1eee7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="ChatAP, el asistente virtual de la Administración Pública de Formosa. Consultá trámites, documentación y servicios de la Subsecretaría de Recursos Humanos."

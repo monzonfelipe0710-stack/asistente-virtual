@@ -1,6 +1,6 @@
 const DOT_TONE = {
   ok: "bg-[#18bc42]",
-  brand: "bg-[#ff4000]",
+  brand: "bg-brand",
   warn: "bg-[#efc21e]",
 };
 

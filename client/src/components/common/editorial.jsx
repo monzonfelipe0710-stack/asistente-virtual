@@ -18,7 +18,7 @@ export function Lead({ children, className = "" }) {
 
 export function ArrowLink({ children, to, onClick, className = "", mute = false }) {
   const base = `group inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.2em] no-underline transition-colors ${
-    mute ? "text-muted hover:text-ink" : "text-[#FF4000] hover:text-ink"
+    mute ? "text-muted hover:text-ink" : "text-brand hover:text-ink"
   } ${className}`;
   const arrow = (
     <span className="inline-block transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true">

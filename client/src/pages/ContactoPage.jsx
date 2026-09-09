@@ -52,11 +52,14 @@ export default function ContactoPage() {
 
   useEffect(() => {
     if (user && !form.name) {
-      setForm((prev) => ({
-        ...prev,
-        name: user.name || prev.name,
-        contact: user.email || prev.contact,
-      }));
+      const raf = requestAnimationFrame(() =>
+        setForm((prev) => ({
+          ...prev,
+          name: user.name || prev.name,
+          contact: user.email || prev.contact,
+        }))
+      );
+      return () => cancelAnimationFrame(raf);
     }
   }, [user, form.name]);
 
