@@ -7,49 +7,79 @@
 
 ChatAP is a governmental virtual assistant with two surfaces: a citizen-facing
 chatbot (Persuade + Experience) and an internal admin panel (Operate). The
-system is built on a calm, blue-branded token system with dark/light theming.
-The signature element is a procedurally-animated blob avatar driven by the
-`--bot-body` / `--bot-eye` CSS variables.
+system is built on a deep-navy, institutional-blue token system with dark/light
+theming. The signature element is a procedurally-animated blob avatar driven by
+the `--bot-body` / `--bot-eye` CSS variables.
+
+## Identity — "Azul de Estado"
+
+Unique identity built on three chromatic ideas that distinguish ChatAP from any
+generic SaaS blue:
+
+1. **Navy chrome (`#070e20`‑`#0a1124`)** — the dominant surface. Panels,
+   terminal windows, the navbar pill, admin sidebar and dark sections run on
+   deep ocean-navy instead of near-black grey, giving the whole product a
+   state-rigor feel ("azul oscuro").
+2. **Key accent (`--color-brand`)** — a single charged electrical blue
+   (`#2f6bff` light / `#4d7dff` dark) used *sparingly*: CTAs, active nav,
+   caret, focus rings, section numbers and the avatar glow. Nothing else is
+   colored.
+3. **Cool paper (`--color-paper #edf1f9`)** — the light theme is a blue-grey
+   off-white (not warm cream) so every surface reads cool, calm and official.
+
+The orange "specimen" identity was retired. The product now runs on a
+**friendly & rounded** expression of the navy system: rounded corners
+(`--radius-control: 10px`, `--radius-card: 14px`), soft elevation shadows,
+calm display typography (no oversized editorial type), and plain-language
+section copy. Decorative layers (terminal windows, dot grids, orbit rings,
+marquees, watermark numerals, word-by-word reveals) were removed from the
+landing; the blob avatar remains the signature element. Mono micro-labels and
+wide uppercase tracking were softened across the app.
 
 ## Colors
 
-### Brand — likely (blue, governmental)
-- Primary `#007BC6` (light) / `#38A8E0` (dark)
-- Primary-dark `#0071AE` / `#2A93C9`
-- Primary-deep `#005A92` / `#1F7FB8`
-- Primary-light `#E6F2FA` / `#10212E`
-- Primary-lighter `#F2F8FC` / `#0C1922`
+### Brand — Azul de Estado
+- Primary `#2F6BFF` (light) / `#4D7DFF` (dark)
+- Primary-dark `#2657D8` / `#3A68F2`
+- Primary-deep `#1C44B6` / `#2A55D6`
+- Primary-light `#E1E9FF` / `#13264E`
+- Primary-lighter `#F2F6FF` / `#0C1A38`
 
 ### Surface
-- Paper `#FFFFFF` (light) / `#0B0E14` (dark) — main background
-- Mist `#F5F5F5` / `#14181F` — subtle surface / hover
-- Soft `#FAFAFA` / `#0F131A` — tertiary surface
-- Line `#E1E1E1` / `#232A35` — borders / dividers
+- Paper `#EDF1F9` (light) / `#0A1124` (dark) — main background
+- Mist `#E3E9F6` / `#111B34` — subtle surface / hover
+- Soft `#D8E1F2` / `#0C1530` — tertiary surface
+- Line `rgba(15,23,48,.14)` / `rgba(234,240,250,.14)` — borders / dividers
 
 ### Text
-- Ink `#222222` / `#E7E9EE` — primary text
-- Muted `#555555` / `#9AA6B6` — secondary text
-- Faint `#777777` / `#6B7480` — tertiary / disabled text
+- Ink `#0F1730` / `#EAF0FA` — primary text
+- Muted `#4A5676` / `#A2AEC7` — secondary text
+- Faint `#8490AE` / `#6A7590` — tertiary / disabled text
+
+### Chrome (bands, navbar, terminal, sidebar)
+- Band `#070E20` (deepest navy) / Band-fg `#EAF0FA`
+- Terminal header `#050B1A`
+- Sidebar bg `#070E20`, hover `#101B35`, active `var(--color-brand-deep)`
 
 ### Semantic
-- Ok (success) `#2E7D32` / `#4CAF50`
-- Warn `#B7791F` / `#D9933A`
-- Bad (danger) `#C62828` / `#EF5350`
-- Info `#007BC6` / `#38A8E0`
+- Ok (success) `#1FA45C` / `#2FBF71`
+- Warn `#E29C2C` / `#EEB253`
+- Bad (danger) `#E24A4F` / `#F26067`
+- Info `#2F6BFF` / `#4D7DFF`
 
 ### Sidebar (chrome)
-- Background `#F8F9FB` / `#0D1017`
-- Border `#E4E7EC` / `#1C2030`
-- Hover `#ECEDF0` / `#151A24`
-- Text `#5F6368` / `#8B919E`
-- Text-hover `#202124` / `#E1E3E8`
-- Section-text `#9AA0A6` / `#4E5565`
-- Active-bg `var(--color-brand)` 
+- Background `#070E20`
+- Border `rgba(234,240,250,0.12)`
+- Hover `#101B35`
+- Text `#98A3BE`
+- Text-hover `#EDF2FC`
+- Section-text `#5B667F`
+- Active-bg `var(--color-brand-deep)`
 - Active-text `#FFFFFF`
 
 ### Bot avatar
-- Body `#0A0A0C` (light) / `#E7E9EE` (dark)
-- Eye `#FFFFFF` (light) / `#0A0A0C` (dark)
+- Body `#0F1730` (light) / `#EAF0FA` (dark)
+- Eye `#EDF1F9` (light) / `#0A1124` (dark)
 
 ## Typography
 
@@ -67,7 +97,7 @@ The signature element is a procedurally-animated blob avatar driven by the
 - `text-3xl` (30px) — hero stat values
 
 ### Weight / case
-- Micro labels: `font-semibold uppercase tracking-widest` (section headers, table headers)
+- Micro labels: `font-semibold uppercase tracking-widest` (section/table headers; global tracking softened to 0.05em)
 - Buttons / CTAs: `font-semibold`
 - Numeric/stat values: `font-bold`
 
@@ -90,12 +120,12 @@ Tailwind v4 default scale. Common rhythmic units:
 
 ## Radius
 
-- `rounded-md` (6px) — segmented controls, small pills
-- `rounded-lg` (8px) — buttons, nav items, badges
-- `rounded-xl` (12px) — inputs, stat icons, cards-in-lists
-- `rounded-2xl` (16px) — cards, modals
-- `rounded-full` — pills, avatars, dots
-- Chat bubbles corner tweaks: `rounded-tl-sm` / `rounded-tr-sm`
+Friendly & rounded. Tokens coerce every `rounded-*` utility into one language:
+- `--radius-sm 4px` · `--radius-md 6px` · `--radius-lg 8px` — small pills, nav
+- `--radius-xl 12px` — inputs, buttons, stat icons
+- `--radius-2xl 16px` — cards, modals
+- `--radius-3xl 20px` — panels
+- `--radius-control 10px` (inputs/segmented) · `--radius-card 14px` (cards) · `rounded-full` for pills, avatars, dots
 
 ## Components
 
@@ -103,7 +133,7 @@ Tailwind v4 default scale. Common rhythmic units:
 - **Primary** — `bg-brand-deep text-paper hover:bg-brand-dark hover:-translate-y-0.5 shadow-sm hover:shadow`, `px-4 py-2.5`, `rounded-xl`, `font-semibold`, `transition-all duration-200`
 - **Ghost** — `bg-transparent text-muted border border-line hover:text-ink hover:bg-mist`
 - **Danger** — `bg-bad text-paper hover:opacity-90`
-- **Dense/legacy** — `text-xs font-bold uppercase tracking-wide`, square corners (used in some admin grids)
+- All `.btn-*` use `rounded-xl` (`rounded-full` when used as pill CTAs), `font-semibold`, sentence case — no uppercase/wide-tracking labels
 
 ### Input (`input-field`)
 `w-full px-4 py-2.5 text-sm bg-paper border border-line rounded-xl outline-none placeholder:text-faint focus:border-brand focus:ring-2 focus:ring-brand/15`

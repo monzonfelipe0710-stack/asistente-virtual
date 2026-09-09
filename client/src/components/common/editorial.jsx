@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 
 export function Kicker({ children, className = "" }) {
-  return <p className={`kicker m-0 font-neue tracking-[0.22em] text-xs text-muted ${className}`}>{children}</p>;
+  return <p className={`kicker m-0 font-neue ${className}`}>{children}</p>;
 }
 
 const TITLE_EL = { 1: "h1", 2: "h2", 3: "h3" };
