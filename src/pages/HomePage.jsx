@@ -8,7 +8,7 @@ import ChatSection from "../components/landing/ChatSection";
 import TrustSection from "../components/landing/TrustSection";
 import FinalCta from "../components/landing/FinalCta";
 
-export default function HomePage() {
+export function HomePage() {
   return (
     <>
       <Navbar />
@@ -25,3 +25,5 @@ export default function HomePage() {
     </>
   );
 }
+
+export default HomePage;
