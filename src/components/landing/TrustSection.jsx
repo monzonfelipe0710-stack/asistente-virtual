@@ -28,7 +28,7 @@ const PILLARS = [
   },
 ];
 
-function StatCell({ raw, label, suffix = "" }) {
+function StatCell({ raw, label }) {
   const ref = useRef(null);
   const [active, setActive] = useState(false);
 
@@ -37,6 +37,7 @@ function StatCell({ raw, label, suffix = "" }) {
     if (!el) return;
     if (typeof IntersectionObserver === "undefined" ||
         window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActive(true);
       return;
     }
@@ -71,8 +72,6 @@ export default function TrustSection() {
   return (
     <section id="confianza" className="relative py-20 lg:py-32 bg-paper border-b border-line/40">
       <div className="ed-max section-bleed">
-
-        {/* Header */}
         <Reveal>
           <div className="trust-header">
             <div>
@@ -88,7 +87,6 @@ export default function TrustSection() {
           </div>
         </Reveal>
 
-        {/* Bento grid with Spotlight Cards */}
         <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-5">
           {PILLARS.map((p, i) => (
             <Reveal key={p.num} delay={i * 90}>
@@ -121,7 +119,6 @@ export default function TrustSection() {
           ))}
         </div>
 
-        {/* Stats strip */}
         <Reveal delay={180}>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-line mt-12 border border-line rounded-2xl overflow-hidden shadow-sm">
             <StatCell raw="24hs" label="Disponibilidad permanente" />
@@ -130,7 +127,6 @@ export default function TrustSection() {
           </div>
         </Reveal>
 
-        {/* Official Governance Seal */}
         <Reveal delay={240}>
           <div className="mt-14 p-6 border border-line bg-mist/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
