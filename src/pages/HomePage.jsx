@@ -6,10 +6,10 @@ import ChatBotAvatar from "../components/ChatBotAvatar";
 import "../styles/home.css";
 
 const CAPABILITIES = [
-  ["01", "Trámites", "Conocé los pasos necesarios para realizar tus gestiones.", "#chatap"],
-  ["02", "Requisitos", "Identificá qué documentación necesitás presentar.", "#chatap"],
-  ["03", "Documentación", "Encontrá documentos y recursos relacionados con tus gestiones.", "#chatap"],
-  ["04", "Orientación", "Recibí orientación para saber por dónde empezar.", "#chatap"],
+  ["01", "Trámites", "Conocé los pasos necesarios para realizar tus gestiones."],
+  ["02", "Requisitos", "Identificá qué documentación necesitás presentar."],
+  ["03", "Documentación", "Encontrá documentos y recursos relacionados con tus gestiones."],
+  ["04", "Orientación", "Recibí orientación para saber por dónde empezar."],
 ];
 
 function useReveal() {
@@ -115,7 +115,7 @@ export function HomePage() {
           </div>
         </section>
 
-        <section id="chatap" className="home-section home-intro home-anchor">
+        <section id="presentacion" className="home-section home-intro home-anchor">
           <div className="home-container home-intro__layout">
             <div className="home-reveal">
               <p className="home-section__eyebrow">01 / La idea</p>
@@ -130,7 +130,7 @@ export function HomePage() {
           </div>
         </section>
 
-        <section className="home-section home-bot home-anchor" aria-labelledby="bot-title">
+        <section id="chatap" className="home-section home-bot home-anchor" aria-labelledby="bot-title">
           <div className="home-container home-bot__layout">
             <div>
               <p className="home-section__eyebrow home-reveal">02 / Conocé al asistente</p>
@@ -166,8 +166,8 @@ export function HomePage() {
             </div>
 
             <div className="home-capability-list">
-              {CAPABILITIES.map(([number, title, description, href], index) => (
-                <a key={title} href={href} className={`home-capability home-reveal home-delay-${Math.min(index + 1, 3)}`}>
+              {CAPABILITIES.map(([number, title, description], index) => (
+                <a key={title} href="#chatap" className={`home-capability home-reveal home-delay-${Math.min(index + 1, 3)}`}>
                   <span className="home-capability__number">{number}</span>
                   <span>
                     <h3>{title}</h3>
@@ -183,7 +183,7 @@ export function HomePage() {
         <section id="soporte" className="home-section home-chat home-anchor" aria-labelledby="preview-title">
           <div className="home-container home-chat__layout">
             <div>
-              <p className="home-section__eyebrow home-reveal">04 / Así se siente</p>
+              <p className="home-section__eyebrow home-reveal">04 / Soporte y experiencia</p>
               <h2 id="preview-title" className="home-display home-reveal home-delay-1">Preguntá. ChatAP te orienta.</h2>
               <p className="home-copy home-reveal home-delay-2">
                 La conversación es el punto de partida. El objetivo es que puedas expresar lo que necesitás sin aprender cómo funciona la Administración por dentro.
