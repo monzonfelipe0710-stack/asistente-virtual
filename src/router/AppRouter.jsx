@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, useLocation } from "react-router-dom";
 import BotOnboardingModal from "../components/common/BotOnboardingModal";
 import AppRoutes from "./routes";
 
@@ -49,9 +49,7 @@ function RouteTransition() {
 
   return (
     <div key={displayLocation.key} className={animationClass}>
-      <Routes location={displayLocation}>
-        <AppRoutes />
-      </Routes>
+      <AppRoutes location={displayLocation} />
     </div>
   );
 }
