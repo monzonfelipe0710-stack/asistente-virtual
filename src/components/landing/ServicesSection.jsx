@@ -1,10 +1,8 @@
-import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import Reveal from "../common/Reveal";
 import AnimatedText from "./AnimatedText";
 import DotGrid from "./DotGrid";
 import SpotlightCard from "../common/SpotlightCard";
-import { useCountUp } from "../../hooks/useCountUp";
 
 const SERVICES = [
   {
@@ -75,7 +73,6 @@ export default function ServicesSection() {
       <DotGrid color="rgba(241,240,232,0.05)" />
 
       <div className="ed-max section-bleed relative z-10">
-        {/* Header */}
         <Reveal>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
@@ -102,10 +99,8 @@ export default function ServicesSection() {
           </div>
         </Reveal>
 
-        {/* Divider */}
         <div className="mt-12 mb-14 border-t border-[#f3f1e9]/10" />
 
-        {/* Bento Grid — 3 columns on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {SERVICES.map((s, i) => (
             <Reveal key={s.num} delay={i * 70}>
@@ -116,7 +111,6 @@ export default function ServicesSection() {
                 className="group flex flex-col justify-between p-7 lg:p-8 min-h-[17rem] no-underline rounded-2xl border border-[#f3f1e9]/10 hover:border-brand/40 transition-all duration-300"
               >
                 <div>
-                  {/* Card top bar */}
                   <div className="flex items-center justify-between gap-2 mb-6">
                     <span className="font-mono text-[11px] font-bold tracking-widest text-brand">
                       {s.num}
@@ -127,18 +121,15 @@ export default function ServicesSection() {
                     </span>
                   </div>
 
-                  {/* Title */}
                   <h3 className="m-0 font-neue text-2xl lg:text-3xl font-extrabold tracking-tight text-[#f3f1e9] group-hover:text-brand transition-colors">
                     {s.title}
                   </h3>
 
-                  {/* Description */}
                   <p className="mt-3.5 m-0 font-neue-text text-sm leading-relaxed text-[#f3f1e9]/60 group-hover:text-[#f3f1e9]/85 transition-colors">
                     {s.desc}
                   </p>
                 </div>
 
-                {/* Card footer meta bar */}
                 <div className="mt-8 pt-4 border-t border-[#f3f1e9]/10 flex items-center justify-between">
                   <span className="font-mono text-[9px] uppercase tracking-wider text-[#f3f1e9]/40">
                     {s.meta}
