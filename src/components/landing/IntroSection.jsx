@@ -20,7 +20,6 @@ const PROBLEMS = [
   { num: "006", title: "No encontrar a quién preguntar, ni a dónde ir",         time: "~2 HRS" },
 ];
 
-/* ─── Spec strip cell — staggered entrance on first intersection ── */
 function SpecCell({ label, value, index }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
@@ -30,6 +29,8 @@ function SpecCell({ label, value, index }) {
     if (!el) return;
     if (typeof IntersectionObserver === "undefined" ||
         window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      // Intentional reduced-motion fallback: make the element visible immediately.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true);
       return;
     }
@@ -55,7 +56,6 @@ function SpecCell({ label, value, index }) {
   );
 }
 
-/* ─── Terminal rows — wipe-in when terminal enters viewport ──── */
 function TerminalRows({ visible }) {
   return (
     <ul className="m-0 p-0 list-none">
@@ -83,6 +83,8 @@ export default function IntroSection() {
     if (!el) return;
     if (typeof IntersectionObserver === "undefined" ||
         window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      // Intentional reduced-motion fallback: make the terminal visible immediately.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTerminalVisible(true);
       return;
     }
@@ -97,15 +99,12 @@ export default function IntroSection() {
   return (
     <section id="que-es" className="relative overflow-hidden py-16 lg:py-28 bg-paper">
       <div className="ed-max section-bleed">
-
-        {/* ── Spec strip — each cell staggers in ─────────────────── */}
         <div className="spec-strip">
           {SPECS.map((s, i) => (
             <SpecCell key={s.k} label={s.k} value={s.v} index={i} />
           ))}
         </div>
 
-        {/* ── Headline + body ──────────────────────────────────────── */}
         <Reveal>
           <div className="mt-16 lg:mt-24 grid grid-cols-1 lg:grid-cols-[1fr_auto] lg:items-end gap-8">
             <div>
@@ -130,10 +129,8 @@ export default function IntroSection() {
           </p>
         </Reveal>
 
-        {/* ── Problems terminal ────────────────────────────────────── */}
         <Reveal delay={80}>
           <div ref={terminalRef} className="problems-terminal mt-14">
-            {/* Chrome bar */}
             <div className="problems-terminal__bar">
               <span className="problems-terminal__dot" style={{ background: "#ff5f57" }} />
               <span className="problems-terminal__dot" style={{ background: "#febc2e" }} />
@@ -143,14 +140,12 @@ export default function IntroSection() {
               </span>
             </div>
 
-            {/* Header */}
             <div className="problems-terminal__header">
               <span className="problems-terminal__col-num">#</span>
               <span className="problems-terminal__col-title">DESCRIPCIÓN</span>
               <span className="problems-terminal__col-time">TIEMPO</span>
             </div>
 
-            {/* Staggered rows */}
             <TerminalRows visible={terminalVisible} />
 
             <div className="problems-terminal__foot flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-[#111]">
