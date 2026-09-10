@@ -237,7 +237,7 @@ export default function LoginRegisterPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3.5 rounded-none bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
+                      className="w-full py-3.5 rounded-full bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
                     >
                       {submitting ? "Enviando…" : "Enviar enlace"}
                     </button>
@@ -438,7 +438,7 @@ export default function LoginRegisterPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 rounded-none bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
+                    className="w-full py-3.5 rounded-full bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
                   >
                     {submitting
                       ? "Procesando…"

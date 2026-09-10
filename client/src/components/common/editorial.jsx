@@ -78,7 +78,7 @@ export function Wordmark({ children, className = "" }) {
 
 export function MetricStrip({ items = [], cols = "grid-cols-2 md:grid-cols-4", className = "" }) {
   return (
-    <div className={`grid gap-px bg-line border border-line overflow-hidden rounded-none ${cols} ${className}`}>
+    <div className={`grid gap-px bg-line border border-line overflow-hidden rounded-2xl ${cols} ${className}`}>
       {items.map((item, i) => (
         <div key={item.label ?? i} className="bg-paper p-6 md:p-8">
           <p className="m-0 text-[10px] font-bold uppercase tracking-[0.24em] text-muted">

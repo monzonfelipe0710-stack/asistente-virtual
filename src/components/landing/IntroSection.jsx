@@ -153,12 +153,20 @@ export default function IntroSection() {
             {/* Staggered rows */}
             <TerminalRows visible={terminalVisible} />
 
-            <div className="problems-terminal__foot">
-              <span className="inline-flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse-dot" aria-hidden="true" />
-                ChatAP resuelve cada uno de estos puntos
+            <div className="problems-terminal__foot flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-[#111]">
+              <span className="inline-flex items-center gap-2 font-mono text-[11px] text-[#f3f1e9]">
+                <span className="w-2 h-2 rounded-full bg-brand animate-pulse-dot" aria-hidden="true" />
+                <span>Tiempo tradicional acumulado: <strong className="text-bad">~14 horas</strong></span>
+                <span className="text-white/20">→</span>
+                <span>Con ChatAP: <strong className="text-[#18bc42]">&lt; 60 segundos</strong></span>
               </span>
-              <span>v1.0 · 2026</span>
+              <a
+                href="/chat"
+                className="font-mono text-[10px] uppercase tracking-wider text-brand hover:underline flex items-center gap-1.5"
+              >
+                <span>Resolver mi trámite ahora</span>
+                <span>→</span>
+              </a>
             </div>
           </div>
         </Reveal>

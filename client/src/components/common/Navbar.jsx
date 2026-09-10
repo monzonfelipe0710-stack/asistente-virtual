@@ -8,13 +8,13 @@ const preloadAdmin = () => {
 };
 
 const NAV_LINKS = [
-  { id: "que-es",     label: "Qué es",    to: "/",        hash: true },
-  { id: "servicios",  label: "Servicios", to: "/",        hash: true },
-  { id: "capacidades",label: "ChatAP",    to: "/chat",    hash: false },
-  { id: "confianza",  label: "Confianza", to: "/",        hash: true },
+  { id: "inicio",      label: "Proyecto",    to: "/",     hash: true },
+  { id: "nuestro-bot", label: "Nuestro Bot", to: "/",     hash: true },
+  { id: "servicios",   label: "Servicios",   to: "/",     hash: true },
+  { id: "capacidades", label: "Simulador",   to: "/",     hash: true },
+  { id: "confianza",   label: "Confianza",   to: "/",     hash: true },
 ];
 
-/* ─── Profile dropdown ─────────────────────────────────────────────── */
 function ProfileMenu({ user, isStaff, userRole, logout }) {
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -58,7 +58,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          aria-label="Menú de perfil"
+          aria-label="Menu de perfil"
           aria-haspopup="menu"
           aria-expanded={open}
           className="nav-profile-btn"
@@ -87,9 +87,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
               )}
             </div>
             <div className="py-1">
-              {[
-                { to: "/perfil", label: "Mi perfil" },
-              ].map((l) => (
+              {[{ to: "/perfil", label: "Mi perfil" }].map((l) => (
                 <Link
                   key={l.to} to={l.to}
                   onClick={() => setOpen(false)}
@@ -151,11 +149,10 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
   );
 }
 
-/* ─── Mobile drawer ────────────────────────────────────────────────── */
 function MobileDrawer({ onClose, isAuthenticated }) {
   return (
     <nav
-      aria-label="Navegación móvil"
+      aria-label="Navegacion movil"
       className="nav-drawer animate-slide-down"
     >
       <div className="flex flex-col gap-0.5 p-2">
@@ -166,7 +163,7 @@ function MobileDrawer({ onClose, isAuthenticated }) {
             className="flex items-center justify-between px-4 py-3 text-sm font-mono font-medium uppercase tracking-wider text-[#f3f1e9]/80 hover:text-[#f3f1e9] hover:bg-[#f3f1e9]/5 transition-colors no-underline"
           >
             {l.label}
-            <span className="text-[#f3f1e9]/30 text-xs">→</span>
+            <span className="text-[#f3f1e9]/30 text-xs">to</span>
           </Link>
         ))}
         {!isAuthenticated && (
@@ -176,7 +173,7 @@ function MobileDrawer({ onClose, isAuthenticated }) {
               className="flex items-center justify-between px-4 py-3 text-sm font-mono font-bold uppercase tracking-wider text-[#171717] bg-brand no-underline"
             >
               Ingresar
-              <span className="text-[#171717]/60 text-xs">→</span>
+              <span className="text-[#171717]/60 text-xs">to</span>
             </Link>
           </div>
         )}
@@ -185,15 +182,21 @@ function MobileDrawer({ onClose, isAuthenticated }) {
   );
 }
 
-/* ─── Main Navbar ──────────────────────────────────────────────────── */
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [dark, setDark] = useState(
     typeof document !== "undefined" && document.documentElement.classList.contains("dark")
   );
   const { user, isAuthenticated, isStaff, userRole, logout } = useAuth();
   const location = useLocation();
   const isHome = location.pathname === "/";
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function toggleTheme() {
     const next = !dark;
@@ -204,35 +207,31 @@ export default function Navbar() {
 
   return (
     <header className="nav-shell">
-      <div className="nav-pill">
-        {/* Brand */}
-        <Link to="/" aria-label="ChatAP — inicio" className="nav-brand no-underline">
+      <div className={`nav-pill${scrolled ? " nav-pill--scrolled" : ""}`}>
+        <Link to="/" aria-label="ChatAP inicio" className="nav-brand no-underline">
           <span className="nav-brand-mark" aria-hidden="true">AP</span>
           <span className="nav-brand-name">ChatAP</span>
         </Link>
 
-        {/* Desktop links */}
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Navegación principal">
+        <nav className="hidden lg:flex items-center gap-1" aria-label="Navegacion principal">
           {NAV_LINKS.map((l) => (
             <Link
               key={l.id}
-              to={l.hash && isHome ? `#${l.id}` : l.to}
+              to={l.hash && isHome ? "#" + l.id : l.to}
               onClick={(e) => {
                 if (l.hash && isHome) {
                   e.preventDefault();
                   document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" });
                 }
               }}
-              className={`nav-link ${location.pathname === l.to && !l.hash ? "nav-link--active" : ""}`}
+              className={"nav-link " + (location.pathname === l.to && !l.hash ? "nav-link--active" : "")}
             >
               {l.label}
             </Link>
           ))}
         </nav>
 
-        {/* Right actions */}
         <div className="flex items-center gap-2">
-          {/* Theme toggle */}
           <button
             type="button"
             onClick={toggleTheme}
@@ -258,11 +257,10 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Hamburger */}
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            aria-label={menuOpen ? "Cerrar menu" : "Abrir menu"}
             aria-expanded={menuOpen}
             className="nav-icon-btn lg:hidden"
           >
