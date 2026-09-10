@@ -19,6 +19,8 @@ function RouteTransition() {
     prevKeyRef.current = location.key;
 
     if (reduceMotion) {
+      // Intentional synchronization: reduced-motion mode must render the new route immediately.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayLocation(location);
       setPhase("enter");
       return;
