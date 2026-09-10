@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
 import CiudadanoPage from "./pages/CiudadanoPage";
 import AdminLayout from "./pages/AdminLayout";
 import Dashboard from "./components/admin/Dashboard";
@@ -10,7 +11,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<CiudadanoPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/chat" element={<CiudadanoPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="usuarios" element={<UserTable />} />
