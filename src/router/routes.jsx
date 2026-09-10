@@ -1,5 +1,7 @@
 import { lazy, Suspense } from "react";
-import { Route } from "react-router-dom";
+import { Navigate, Outlet, Route, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useAdmin } from "../context/AdminContext";
 import CiudadanoPage from "../pages/CiudadanoPage";
 import HomePage from "../pages/HomePage";
 import LoginRegisterPage from "../pages/LoginRegisterPage";
@@ -31,6 +33,32 @@ function Lazy({ children }) {
   return <Suspense fallback={<PageFallback />}>{children}</Suspense>;
 }
 
+function StaffRoute() {
+  const { user, userRole } = useAuth();
+  const location = useLocation();
+
+  if (!user || user.status === "Suspendido") {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (userRole !== "Superadmin" && userRole !== "Administrador") {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+}
+
+function PermissionRoute({ permission }) {
+  const { can } = useAdmin();
+  const location = useLocation();
+
+  if (!can(permission)) {
+    return <Navigate to="/admin" replace state={{ from: location }} />;
+  }
+
+  return <Outlet />;
+}
+
 export default function AppRoutes() {
   return (
     <>
@@ -43,16 +71,36 @@ export default function AppRoutes() {
       <Route path="/soporte" element={<Lazy><ContactoPage /></Lazy>} />
       <Route path="/perfil" element={<Lazy><ProfilePage /></Lazy>} />
 
-      <Route path="/admin" element={<Lazy><AdminLayout /></Lazy>}>
-        <Route index element={<Lazy><AdminDashboard /></Lazy>} />
-        <Route path="solicitudes" element={<Lazy><EmployeeApprovals /></Lazy>} />
-        <Route path="usuarios" element={<Lazy><UserTable /></Lazy>} />
-        <Route path="mesa-de-entrada" element={<Lazy><MesaDeEntrada /></Lazy>} />
-        <Route path="conocimiento" element={<Lazy><KnowledgeManager /></Lazy>} />
-        <Route path="siged" element={<Lazy><SigedIntegration /></Lazy>} />
-        <Route path="documentos" element={<Lazy><DocumentManager /></Lazy>} />
-        <Route path="configuracion" element={<Lazy><ChatbotSettings /></Lazy>} />
-        <Route path="reportes" element={<Lazy><ReportsPage /></Lazy>} />
+      <Route element={<StaffRoute />}>
+        <Route path="/admin" element={<Lazy><AdminLayout /></Lazy>}>
+          <Route element={<PermissionRoute permission="dashboard" />}>
+            <Route index element={<Lazy><AdminDashboard /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="solicitudes" />}>
+            <Route path="solicitudes" element={<Lazy><EmployeeApprovals /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="usuarios" />}>
+            <Route path="usuarios" element={<Lazy><UserTable /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="mesa_entrada" />}>
+            <Route path="mesa-de-entrada" element={<Lazy><MesaDeEntrada /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="conocimiento" />}>
+            <Route path="conocimiento" element={<Lazy><KnowledgeManager /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="siged" />}>
+            <Route path="siged" element={<Lazy><SigedIntegration /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="documentos" />}>
+            <Route path="documentos" element={<Lazy><DocumentManager /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="configuracion" />}>
+            <Route path="configuracion" element={<Lazy><ChatbotSettings /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="reportes" />}>
+            <Route path="reportes" element={<Lazy><ReportsPage /></Lazy>} />
+          </Route>
+        </Route>
       </Route>
 
       <Route path="*" element={<Lazy><NotFoundPage /></Lazy>} />
