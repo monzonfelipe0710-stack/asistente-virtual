@@ -7,8 +7,14 @@ export default function FinalCta() {
   const navigate = useNavigate();
 
   return (
-    <section id="charla" className="relative overflow-hidden band-dark py-20 lg:py-36" aria-label="Llamado final">
+    <section id="charla" className="relative overflow-hidden band-dark py-24 lg:py-40" aria-label="Llamado final">
       <DotGrid color="rgba(241,240,232,0.06)" />
+
+      {/* Ambient center glow */}
+      <div
+        className="ambient-glow-brand absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full"
+        aria-hidden="true"
+      />
 
       {/* Giant ghost watermark */}
       <p
@@ -20,7 +26,7 @@ export default function FinalCta() {
 
       <div className="ed-max section-bleed relative z-10 text-center">
         <Reveal>
-          <p className="m-0 font-mono text-[10px] uppercase tracking-[0.28em] text-[#f3f1e9]/40">
+          <p className="m-0 font-mono text-[10px] uppercase tracking-[0.28em] text-brand font-bold">
             Formosa · Administración Pública · 2026
           </p>
         </Reveal>

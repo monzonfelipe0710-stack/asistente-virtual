@@ -1,134 +1,156 @@
-import { useRef, useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import Reveal from "../common/Reveal";
 import AnimatedText from "./AnimatedText";
 import DotGrid from "./DotGrid";
+import SpotlightCard from "../common/SpotlightCard";
 import { useCountUp } from "../../hooks/useCountUp";
 
 const SERVICES = [
-  { num: "01", title: "Trámites",    tag: "Iniciar",    to: "/chat" },
-  { num: "02", title: "Información", tag: "Consultar",  to: "/chat" },
-  { num: "03", title: "Organismos",  tag: "Directorio", to: "/contacto" },
-  { num: "04", title: "Consultas",   tag: "Preguntar",  to: "/chat" },
-  { num: "05", title: "Asistencia",  tag: "Soporte",    to: "/contacto" },
-  { num: "06", title: "Servicios",   tag: "Canales",    to: "/contacto" },
+  {
+    num: "01",
+    tag: "SIGED Integrado",
+    title: "Mesa de Entradas",
+    desc: "Presentación, recepción y trazabilidad digital de expedientes oficiales provinciales en tiempo real.",
+    meta: "Trazabilidad de Expedientes",
+    to: "/chat",
+    query: "¿Cómo inicio o consulto un trámite en Mesa de Entradas?",
+    accent: "#ff9100",
+  },
+  {
+    num: "02",
+    tag: "Descarga Inmediata",
+    title: "Recibos de Sueldo",
+    desc: "Acceso al recibo mensual de haberes con firma digital y verificación oficial de autenticidad.",
+    meta: "PDF Oficial con Hash Seguro",
+    to: "/chat",
+    query: "Quiero consultar y descargar mi recibo de sueldo",
+    accent: "#ff9100",
+  },
+  {
+    num: "03",
+    tag: "Salud & Permisos",
+    title: "Licencias Médicas",
+    desc: "Carga de certificados de salud, licencias especiales, cómputos y justificación de inasistencias.",
+    meta: "Reconocimientos Médicos",
+    to: "/chat",
+    query: "Requisitos y procedimiento para solicitar licencia médica",
+    accent: "#18bc42",
+  },
+  {
+    num: "04",
+    tag: "Red Provincial",
+    title: "Guía de Organismos",
+    desc: "Directorio completo de dependencias de la Administración Pública, autoridades y canales oficiales.",
+    meta: "Estructura Gubernamental",
+    to: "/contacto",
+    query: "Directorio y dependencias del Gobierno de Formosa",
+    accent: "#4365ff",
+  },
+  {
+    num: "05",
+    tag: "Inclusión Universal",
+    title: "Asistente de Voz",
+    desc: "Interacción multimodal mediante dictado por micrófono y lectura asistida en lenguaje llano.",
+    meta: "Audio Bidireccional Accesible",
+    to: "/chat",
+    query: "Quiero usar el dictado por voz",
+    accent: "#ff9100",
+  },
+  {
+    num: "06",
+    tag: "Mesa de Ayuda",
+    title: "Atención Humana",
+    desc: "Derivación con agentes especializados de Recursos Humanos para trámites complejos o atípicos.",
+    meta: "Subsecretaría de RRHH",
+    to: "/contacto",
+    query: "Necesito contactar a un agente de Recursos Humanos",
+    accent: "#febc2e",
+  },
 ];
-
-/* ── Magnetic hover row ──────────────────────────────────────────── */
-function ServiceRow({ num, title, tag, to }) {
-  const ref = useRef(null);
-
-  function onMouseMove(e) {
-    const el = ref.current;
-    if (!el || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const rect = el.getBoundingClientRect();
-    /* Vertical offset: how far from the row's vertical centre (normalised -1…1) */
-    const relY = ((e.clientY - rect.top) / rect.height - 0.5) * 8;
-    el.style.setProperty("--row-tilt", `${relY.toFixed(2)}px`);
-  }
-
-  function onMouseLeave() {
-    ref.current?.style.setProperty("--row-tilt", "0px");
-  }
-
-  return (
-    <Link
-      ref={ref}
-      to={to}
-      className="services-row group no-underline"
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-      style={{ "--row-tilt": "0px" }}
-    >
-      <span className="services-row__num">{num}</span>
-      <span
-        className="services-row__title"
-        style={{ transform: "translateY(var(--row-tilt))" }}
-      >
-        {title}
-      </span>
-      <span className="services-row__tag">
-        {tag}
-        <svg
-          className="w-3.5 h-3.5 opacity-60 transition-transform duration-200 group-hover:translate-x-1"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-        </svg>
-      </span>
-    </Link>
-  );
-}
-
-/* ── Counter for "06 canales" ────────────────────────────────────── */
-function ServiceCount() {
-  const ref = useRef(null);
-  const [active, setActive] = useState(false);
-  const count = useCountUp(6, active, 900);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined" ||
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setActive(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setActive(true); io.disconnect(); } },
-      { threshold: 0.5 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  return (
-    <p ref={ref} className="services-count">
-      <span className="services-count__num" aria-label="06">
-        {String(count).padStart(2, "0")}
-      </span>
-      <span className="services-count__label">canales</span>
-    </p>
-  );
-}
 
 export default function ServicesSection() {
   return (
-    <section id="servicios" className="relative overflow-hidden band-dark py-16 lg:py-24">
+    <section id="servicios" className="relative overflow-hidden band-dark py-20 lg:py-32">
       <DotGrid color="rgba(241,240,232,0.05)" />
 
       <div className="ed-max section-bleed relative z-10">
         {/* Header */}
         <Reveal>
-          <div className="services-header">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <p className="services-eyebrow">
                 <span className="text-brand">03</span>
                 <span className="services-eyebrow-line" aria-hidden="true" />
-                Servicios
+                Módulos de Gestión
               </p>
-              <h2 className="display-2 text-[#f3f1e9] m-0 mt-5 font-neue max-w-4xl">
+              <h2 className="display-2 text-[#f3f1e9] m-0 mt-5 font-neue max-w-3xl">
                 <AnimatedText
-                  text="Cada decisión, ya tomada. Para ir a lo que importa."
+                  text="Cada trámite conectado en un solo punto de contacto."
                   as="span"
                 />
               </h2>
             </div>
-            <ServiceCount />
+            <div className="flex flex-col items-start md:items-end">
+              <span className="font-neue text-3xl sm:text-4xl font-extrabold text-[#f3f1e9]/20">
+                06 MÓDULOS
+              </span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-[#f3f1e9]/40 mt-1">
+                Autonomía Digital 24/7
+              </span>
+            </div>
           </div>
         </Reveal>
 
         {/* Divider */}
-        <div className="mt-14 border-t border-[#f3f1e9]/10" />
+        <div className="mt-12 mb-14 border-t border-[#f3f1e9]/10" />
 
-        {/* Service rows — staggered Reveal */}
-        <ul className="m-0 p-0 list-none">
+        {/* Bento Grid — 3 columns on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {SERVICES.map((s, i) => (
-            <Reveal key={s.num} as="li" delay={i * 60}>
-              <ServiceRow {...s} />
+            <Reveal key={s.num} delay={i * 70}>
+              <SpotlightCard
+                as={Link}
+                to={s.to}
+                state={{ initialQuery: s.query }}
+                className="group flex flex-col justify-between p-7 lg:p-8 min-h-[17rem] no-underline rounded-2xl border border-[#f3f1e9]/10 hover:border-brand/40 transition-all duration-300"
+              >
+                <div>
+                  {/* Card top bar */}
+                  <div className="flex items-center justify-between gap-2 mb-6">
+                    <span className="font-mono text-[11px] font-bold tracking-widest text-brand">
+                      {s.num}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-mono uppercase tracking-wider font-semibold rounded-full border border-[#f3f1e9]/15 text-[#f3f1e9]/60 group-hover:text-[#f3f1e9] group-hover:border-brand/40 transition-colors">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                      {s.tag}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="m-0 font-neue text-2xl lg:text-3xl font-extrabold tracking-tight text-[#f3f1e9] group-hover:text-brand transition-colors">
+                    {s.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="mt-3.5 m-0 font-neue-text text-sm leading-relaxed text-[#f3f1e9]/60 group-hover:text-[#f3f1e9]/85 transition-colors">
+                    {s.desc}
+                  </p>
+                </div>
+
+                {/* Card footer meta bar */}
+                <div className="mt-8 pt-4 border-t border-[#f3f1e9]/10 flex items-center justify-between">
+                  <span className="font-mono text-[9px] uppercase tracking-wider text-[#f3f1e9]/40">
+                    {s.meta}
+                  </span>
+                  <span className="text-brand font-bold text-sm transform transition-transform duration-200 group-hover:translate-x-1.5">
+                    →
+                  </span>
+                </div>
+              </SpotlightCard>
             </Reveal>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );

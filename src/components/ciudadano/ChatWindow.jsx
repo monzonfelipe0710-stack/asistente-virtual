@@ -96,7 +96,7 @@ function resolveResponse(userText) {
   return null;
 }
 
-export default function ChatWindow() {
+export default function ChatWindow({ initialQuery = null }) {
   const { messages, addMessage, clearHistory } = useChat();
   const { user, isAuthenticated } = useAuth();
   const [input, setInput] = useState("");
@@ -195,6 +195,18 @@ export default function ChatWindow() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWelcomeMem(userId ? loadMemory(userId) : null);
   }, [userId]);
+
+  // Consulta automática iniciada desde el buscador del Hero
+  const initialQueryHandled = useRef(false);
+  useEffect(() => {
+    if (initialQuery && !initialQueryHandled.current) {
+      initialQueryHandled.current = true;
+      const timer = setTimeout(() => {
+        sendText(initialQuery);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [initialQuery]);
 
   function beginChat() {
     if (startedRef.current) return;
