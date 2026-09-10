@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, useLocation } from "react-router-dom";
 import BotOnboardingModal from "../components/common/BotOnboardingModal";
 import AppRoutes from "./routes";
 
-const EXIT_MS = 240;
+const EXIT_MS = 120;
 
 function RouteTransition() {
   const location = useLocation();
@@ -19,11 +19,9 @@ function RouteTransition() {
     prevKeyRef.current = location.key;
 
     if (reduceMotion) {
-      const raf = requestAnimationFrame(() => {
-        setDisplayLocation(location);
-        setPhase("enter");
-      });
-      return () => cancelAnimationFrame(raf);
+      setDisplayLocation(location);
+      setPhase("enter");
+      return;
     }
 
     const raf = requestAnimationFrame(() => setPhase("exit"));
@@ -44,8 +42,8 @@ function RouteTransition() {
 
   const animationClass =
     phase === "exit" && !reduceMotion
-      ? "animate-page-exit"
-      : "animate-page-enter";
+      ? "animate-route-exit"
+      : "animate-route-enter";
 
   return (
     <div key={displayLocation.key} className={animationClass}>
