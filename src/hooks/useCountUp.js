@@ -16,6 +16,8 @@ export function useCountUp(target, active, duration = 1400) {
   useEffect(() => {
     if (!active) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      // Intentional reduced-motion fallback: skip animation and show the target.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValue(target);
       return;
     }
@@ -27,7 +29,6 @@ export function useCountUp(target, active, duration = 1400) {
       if (!startRef.current) startRef.current = ts;
       const elapsed = ts - startRef.current;
       const progress = Math.min(elapsed / duration, 1);
-      // easeOutExpo
       const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
       setValue(Math.round(ease * target));
       if (progress < 1) rafRef.current = requestAnimationFrame(animate);
