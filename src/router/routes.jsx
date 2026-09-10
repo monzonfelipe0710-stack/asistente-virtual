@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Outlet, Route, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAdmin } from "../context/AdminContext";
 import CiudadanoPage from "../pages/CiudadanoPage";
@@ -59,9 +59,9 @@ function PermissionRoute({ permission }) {
   return <Outlet />;
 }
 
-export default function AppRoutes() {
+export default function AppRoutes({ location }) {
   return (
-    <>
+    <Routes location={location}>
       <Route path="/" element={<HomePage />} />
       <Route path="/chat" element={<CiudadanoPage />} />
       <Route path="/login" element={<LoginRegisterPage />} />
@@ -104,6 +104,6 @@ export default function AppRoutes() {
       </Route>
 
       <Route path="*" element={<Lazy><NotFoundPage /></Lazy>} />
-    </>
+    </Routes>
   );
 }
