@@ -1,51 +1,25 @@
 <!doctype html>
-<html lang="es" class="lenis">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preload" href="/fonts/PPNeueMontreal-Regular.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/PPNeueMontreal-Bold.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/PPNeueMontreal-Medium.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/PPNeueMontreal-Black.woff2" as="font" type="font/woff2" crossorigin />
-    <style>
-      ::selection {
-        color: #171717;
-        background: #ff9100;
-      }
-      html, body {
-        background-color: #f1eee7;
-      }
-      html.dark, html.dark body {
-        background-color: #171717;
-      }
-    </style>
-    <script>
-      (function () {
-        try {
-          var t = localStorage.getItem("theme");
-          var dark = t === "dark";
-          if (dark) document.documentElement.classList.add("dark");
-        } catch (e) {}
-        /* Add fonts-ready when fonts finish loading so the page
-           fades in clean instead of flashing un-styled text */
-        if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(function () {
-            document.body.classList.add("fonts-ready");
-          });
-        } else {
-          document.body.classList.add("fonts-ready");
-        }
-      })();
-    </script>
-    <meta name="theme-color" content="#f1eee7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#edf1f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a1124" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="ChatAP, el asistente virtual de la Administración Pública de Formosa. Consultá trámites, documentación y servicios de la Subsecretaría de Recursos Humanos."
     />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.emailjs.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>ChatAP — Asistente Virtual de la Administración Pública</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (t === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
