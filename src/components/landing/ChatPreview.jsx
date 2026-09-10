@@ -44,14 +44,12 @@ const SCENARIOS = [
   },
 ];
 
-export default function ChatPreview({ className = "", avatarSize = 56, dark = true }) {
+export default function ChatPreview({ className = "", avatarSize = 56 }) {
   const [activeTab, setActiveTab] = useState("recibo");
   const scenario = SCENARIOS.find((s) => s.id === activeTab) || SCENARIOS[0];
 
   return (
     <div className={`flex flex-col bg-[#0f0f0f] text-white border border-[#f3f1e9]/12 overflow-hidden shadow-2xl ${className}`}>
-
-      {/* ── Scenario Switcher Tabs ─────────────────────────────────── */}
       <div className="flex border-b border-white/10 bg-[#161616] overflow-x-auto no-scrollbar">
         {SCENARIOS.map((tab) => {
           const isActive = tab.id === activeTab;
@@ -73,7 +71,6 @@ export default function ChatPreview({ className = "", avatarSize = 56, dark = tr
         })}
       </div>
 
-      {/* ── Chat Window Header ─────────────────────────────────────── */}
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5 bg-[#141414]">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -98,7 +95,6 @@ export default function ChatPreview({ className = "", avatarSize = 56, dark = tr
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Animated voice wave */}
           <div className="flex items-center gap-1 h-3 px-2 py-1 bg-white/5 border border-white/10 rounded" title="Canal de voz activo">
             <span className="w-1 h-2 bg-brand rounded-full animate-pulse" />
             <span className="w-1 h-3 bg-brand rounded-full animate-pulse delay-100" />
@@ -108,17 +104,13 @@ export default function ChatPreview({ className = "", avatarSize = 56, dark = tr
         </div>
       </div>
 
-      {/* ── Chat Messages Stream ──────────────────────────────────── */}
       <div className="flex flex-col gap-4 p-5 min-h-[22rem] bg-[#0c0c0c]">
-
-        {/* User Bubble */}
         <div className="flex justify-end animate-fade-in">
           <div className="max-w-[85%] sm:max-w-[75%] px-4 py-3 bg-brand text-[#171717] font-medium text-sm rounded-2xl rounded-tr-sm border border-brand shadow-lg">
             <p className="m-0 leading-relaxed font-neue-text">{scenario.userMsg}</p>
           </div>
         </div>
 
-        {/* Bot Response Bubble */}
         <div className="flex items-start gap-3 max-w-[95%] sm:max-w-[85%] animate-fade-up">
           <div className="w-6 h-6 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center shrink-0 mt-1">
             <span className="font-mono text-[10px] text-brand font-bold">AP</span>
@@ -127,7 +119,6 @@ export default function ChatPreview({ className = "", avatarSize = 56, dark = tr
             <div className="p-4 bg-[#181818] border border-white/10 rounded-2xl rounded-tl-sm text-sm text-[#f3f1e9] leading-relaxed font-neue-text">
               <p className="m-0">{scenario.botMsg}</p>
 
-              {/* Dynamic Attachment Rendering based on Scenario */}
               {scenario.attachment.type === "pdf" && (
                 <div className="mt-3.5 p-3 bg-[#111] border border-brand/30 rounded-xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -178,7 +169,6 @@ export default function ChatPreview({ className = "", avatarSize = 56, dark = tr
               )}
             </div>
 
-            {/* Quick action button inside bot reply */}
             <div className="mt-2.5 flex items-center gap-3">
               <span className="font-mono text-[9px] uppercase tracking-widest text-[#f3f1e9]/40">
                 Respuesta Oficial Verificada
@@ -191,7 +181,6 @@ export default function ChatPreview({ className = "", avatarSize = 56, dark = tr
         </div>
       </div>
 
-      {/* ── Terminal Input Footer ─────────────────────────────────── */}
       <div className="border-t border-white/10 p-3.5 bg-[#141414] flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 px-4 py-2.5 bg-[#0c0c0c] border border-white/10 rounded-full text-xs font-mono text-[#f3f1e9]/50">
           <span className="text-brand">›</span>
