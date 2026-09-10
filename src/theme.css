@@ -1,0 +1,188 @@
+/* ChatAP — Azul de Estado
+ * Visual layer kept separate from the legacy stylesheet so the UI can be
+ * modernized incrementally without destabilizing component behavior.
+ */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --color-ink: #0f1730;
+  --color-paper: #edf1f9;
+  --color-mist: #e3e9f6;
+  --color-soft: #d8e1f2;
+  --color-line: rgba(15, 23, 48, 0.14);
+  --color-muted: #4a5676;
+  --color-faint: #8490ae;
+  --color-dark: #070e20;
+  --color-pitch: #050b1a;
+  --color-cream: #edf1f9;
+  --color-cream-ink: #0f1730;
+  --color-brand: #2f6bff;
+  --color-brand-dark: #2657d8;
+  --color-brand-deep: #1c44b6;
+  --color-ok: #1fa45c;
+  --color-warn: #e29c2c;
+  --color-bad: #e24a4f;
+  --color-info: #2f6bff;
+  --bot-body: #0f1730;
+  --bot-eye: #edf1f9;
+  --color-primary: var(--color-brand);
+  --color-primary-dark: var(--color-brand-dark);
+  --color-primary-deep: var(--color-brand-deep);
+  --color-primary-light: #e1e9ff;
+  --color-primary-lighter: #f2f6ff;
+  --color-accent: var(--color-brand-deep);
+  --color-accent-light: #e1e9ff;
+  --color-band: #070e20;
+  --color-band-fg: #eaf0fa;
+  --sidebar-bg: #070e20;
+  --sidebar-border: rgba(234, 240, 250, 0.12);
+  --sidebar-hover: #101b35;
+  --sidebar-text: #98a3be;
+  --sidebar-text-hover: #edf2fc;
+  --sidebar-section-text: #5b667f;
+  --sidebar-active-bg: var(--color-brand-deep);
+  --sidebar-active-text: #ffffff;
+  --sidebar-header-bg: #070e20;
+  --sidebar-width: 272px;
+  --sidebar-collapsed-width: 64px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --shadow-soft: 0 1px 2px rgba(15, 23, 48, 0.05), 0 8px 24px rgba(15, 23, 48, 0.06);
+  --shadow-hover: 0 8px 28px rgba(15, 23, 48, 0.1);
+}
+
+.dark {
+  --color-ink: #eaf0fa;
+  --color-paper: #0a1124;
+  --color-mist: #111b34;
+  --color-soft: #0c1530;
+  --color-line: rgba(234, 240, 250, 0.14);
+  --color-muted: #a2aec7;
+  --color-faint: #6a7590;
+  --color-brand: #4d7dff;
+  --color-brand-dark: #3a68f2;
+  --color-brand-deep: #2a55d6;
+  --color-ok: #2fbf71;
+  --color-warn: #eeb253;
+  --color-bad: #f26067;
+  --color-info: #4d7dff;
+  --bot-body: #eaf0fa;
+  --bot-eye: #0a1124;
+  --color-primary-light: #13264e;
+  --color-primary-lighter: #0c1a38;
+  --color-accent-light: #13264e;
+  --color-band: #070e20;
+  --color-band-fg: #eaf0fa;
+  --sidebar-bg: #070e20;
+  --sidebar-hover: #101b35;
+  --sidebar-active-bg: var(--color-brand-deep);
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    letter-spacing: normal;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-brand) 24%, transparent);
+    color: var(--color-ink);
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .card,
+  .card-border {
+    border-radius: var(--radius-card);
+  }
+
+  .card {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .card-interactive {
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .quick-reply-card {
+    box-shadow: var(--shadow-soft);
+    border-color: var(--color-line);
+  }
+
+  .quick-reply-card:hover,
+  .quick-reply-card:focus-visible {
+    box-shadow: var(--shadow-hover);
+  }
+
+  .input-field {
+    border-radius: var(--radius-control);
+    border-color: var(--color-line);
+    background: var(--color-paper);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  }
+
+  .input-field:focus {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 15%, transparent);
+  }
+}
+
+@layer utilities {
+  .animate-speak {
+    animation: speak 900ms ease-in-out infinite;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass-panel {
+    background: color-mix(in srgb, var(--color-paper) 82%, transparent);
+    border: 1px solid var(--color-line);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+}
+
+@keyframes speak {
+  0%, 100% { transform: scaleY(0.75); opacity: 0.72; }
+  50% { transform: scaleY(1.12); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
