@@ -22,7 +22,11 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    // Intentional synchronization: a route change closes the transient profile menu.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -240,7 +244,7 @@ export default function Navbar() {
           >
             {dark ? (
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m16.95 6.95l-1.41-1.41M6.46 6.46L5.05 5.05m12.49 0l-1.41 1.41M6.46 17.54l-1.41 1.41M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m16.95 6.95l-1.41-1.41M6.46 6.46L5.05 5.05m12.49 0l-1.41 1.41M6.46 17.54l1.41 1.41M12 8a4 4 0 100 8 4 4 0 000-8z" />
               </svg>
             ) : (
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
