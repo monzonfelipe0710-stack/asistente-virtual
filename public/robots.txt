@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://chatap.formosa.gob.ar/sitemap.xml

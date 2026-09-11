@@ -1,0 +1,958 @@
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { useAdmin } from "../../context/AdminContext";
+import { useToast } from "../common/Toast";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+import {
+  initialMesaEntradas,
+  createMesaEntrada,
+  peekNextMesaId,
+  mesaStatuses,
+  mesaSectores,
+  mesaIdentificadores,
+} from "../../data/mockMesaEntrada";
+import {
+  PageHeader,
+  StatCard,
+  StatusPill,
+  PriorityDot,
+  EmptyState,
+} from "./ui";
+import { formatDate } from "../../utils/date";
+
+function Icon({ path }) {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d={path} />
+    </svg>
+  );
+}
+
+export default function MesaDeEntrada() {
+  const { can, role } = useAdmin();
+  const push = useToast();
+  const [items, setItems] = useState(initialMesaEntradas);
+  const [query, setQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("todos");
+  const [formOpen, setFormOpen] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [justAdded, setJustAdded] = useState(null);
+
+  const allowed = can("mesa_entrada");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((it) => {
+      const matchQ =
+        !q ||
+        it.nombre.toLowerCase().includes(q) ||
+        it.descripcion.toLowerCase().includes(q) ||
+        it.encargado.toLowerCase().includes(q) ||
+        it.sector.toLowerCase().includes(q) ||
+        it.id.toLowerCase().includes(q);
+      const matchS = filterStatus === "todos" || it.estado === filterStatus;
+      return matchQ && matchS;
+    });
+  }, [items, query, filterStatus]);
+
+  const stats = useMemo(
+    () => ({
+      total: items.length,
+      proceso: items.filter((i) => i.estado === "En proceso").length,
+      observado: items.filter((i) => i.estado === "Observado").length,
+      finalizado: items.filter((i) => i.estado === "Finalizado").length,
+    }),
+    [items]
+  );
+
+  if (!allowed) {
+    return (
+      <div className="card p-10 text-center max-w-lg mx-auto mt-10 animate-scale-in">
+        <div className="text-4xl mb-3">🔒</div>
+        <h2 className="text-lg font-bold text-ink m-0">Acceso restringido</h2>
+        <p className="text-sm text-muted mt-2">
+          Tu rol actual (<span className="font-semibold">{role}</span>) no tiene permiso para
+          gestionar la Mesa de Entradas. Contactá a un Administrador.
+        </p>
+      </div>
+    );
+  }
+
+  function handleCreate(values) {
+    const entry = createMesaEntrada(values);
+    setItems((prev) => [entry, ...prev]);
+    setJustAdded(entry.id);
+    push(`Ingreso ${entry.id} registrado en Mesa de Entradas.`, "success");
+    setTimeout(() => setJustAdded(null), 2000);
+  }
+
+  function changeStatus(id, estado) {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, estado } : it)));
+    setDetail((prev) => (prev && prev.id === id ? { ...prev, estado } : prev));
+    push(`Ingreso ${id} → estado "${estado}".`, "info");
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Mesa de Entradas"
+        description="Registrá y dale seguimiento a los ingresos de trámites y expedientes."
+      >
+        <button className="btn-primary" onClick={() => setFormOpen(true)}>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Registrar ingreso
+        </button>
+      </PageHeader>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
+        <StatCard
+          label="Ingresos totales"
+          value={stats.total}
+          tone="brand"
+          icon={<Icon path="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />}
+        />
+        <StatCard
+          label="En proceso"
+          value={stats.proceso}
+          tone="warn"
+          hint="requieren atención"
+          icon={<Icon path="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />}
+        />
+        <StatCard
+          label="Observados"
+          value={stats.observado}
+          tone="bad"
+          hint="pendientes de corrección"
+          icon={<Icon path="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />}
+        />
+        <StatCard
+          label="Finalizados"
+          value={stats.finalizado}
+          tone="ok"
+          hint="completados"
+          icon={<Icon path="M5 13l4 4L19 7" />}
+        />
+      </div>
+
+      <div className="card p-5">
+        <div className="flex flex-wrap gap-3 mb-4">
+          <div className="relative flex-1 min-w-55">
+            <svg className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 110-16 8 8 0 010 16z" />
+            </svg>
+            <input
+              className="input-field pl-9"
+              placeholder="Buscar por nombre, encargado, sector o nº…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {["todos", ...mesaStatuses].map((s) => {
+              const active = filterStatus === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                    active
+                      ? "bg-brand-deep text-paper border-brand-deep"
+                      : "bg-paper text-muted border-line hover:text-ink hover:bg-mist"
+                  }`}
+                >
+                  {s === "todos" ? "Todos" : s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon="🗂️"
+            title="Sin ingresos para mostrar"
+            description="No hay registros que coincidan con la búsqueda o el filtro seleccionado."
+            action={
+              <button className="btn-primary" onClick={() => setFormOpen(true)}>
+                Registrar ingreso
+              </button>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto -mx-5">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-widest text-muted border-b border-line">
+                  <th className="text-left font-semibold px-5 py-3">Nº</th>
+                  <th className="text-left font-semibold px-5 py-3">Nombre</th>
+                  <th className="text-left font-semibold px-5 py-3">Encargado</th>
+                  <th className="text-left font-semibold px-5 py-3">Sector</th>
+                  <th className="text-left font-semibold px-5 py-3">Costo</th>
+                  <th className="text-left font-semibold px-5 py-3">Estado</th>
+                  <th className="text-left font-semibold px-5 py-3">Fecha</th>
+                  <th className="text-right font-semibold px-5 py-3">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {filtered.map((it) => (
+                  <tr
+                    key={it.id}
+                    onClick={() => setDetail(it)}
+                    className={`table-row hover:bg-mist cursor-pointer transition-colors ${
+                      justAdded === it.id ? "row-new" : ""
+                    }`}
+                  >
+                    <td className="px-5 py-3 font-mono text-xs text-muted">{it.id}</td>
+                    <td className="px-5 py-3">
+                      <div className="font-semibold text-ink">{it.nombre}</div>
+                      <div className="text-xs text-faint truncate max-w-50">{it.descripcion}</div>
+                    </td>
+                    <td className="px-5 py-3 text-muted">{it.encargado}</td>
+                    <td className="px-5 py-3 text-muted">{it.sector}</td>
+                    <td className="px-5 py-3 text-muted">{it.costo}</td>
+                    <td className="px-5 py-3">
+                      <StatusPill status={it.estado} />
+                    </td>
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">{formatDate(it.fecha)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        className="text-xs font-semibold text-brand hover:underline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetail(it);
+                        }}
+                      >
+                        Ver
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {formOpen && (
+        <MesaFormModal onClose={() => setFormOpen(false)} onSubmit={handleCreate} />
+      )}
+
+      {detail && (
+        <MesaDetailModal
+          entry={detail}
+          onClose={() => setDetail(null)}
+          onChangeStatus={(estado) => changeStatus(detail.id, estado)}
+        />
+      )}
+    </div>
+  );
+}
+
+function MesaFormModal({ onClose, onSubmit }) {
+  const [form, setForm] = useState({
+    nombre: "",
+    descripcion: "",
+    costo: "",
+    encargado: "",
+    sector: mesaSectores[0],
+    requisitos: "",
+    mesa: mesaIdentificadores[0],
+  });
+  const [errors, setErrors] = useState({});
+  const [shake, setShake] = useState(false);
+  const [adjuntos, setAdjuntos] = useState([]);
+  const [closing, setClosing] = useState(false);
+  const previewId = peekNextMesaId();
+  const today = formatDate(new Date());
+  const descripcionRef = useRef(null);
+  const requisitosRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = descripcionRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const nextHeight = Math.max(64, el.scrollHeight);
+    el.style.height = `${nextHeight}px`;
+  }, [form.descripcion]);
+
+  useLayoutEffect(() => {
+    const el = requisitosRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const nextHeight = Math.max(64, el.scrollHeight);
+    el.style.height = `${nextHeight}px`;
+  }, [form.requisitos]);
+
+  function update(field, value) {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
+  }
+
+  function handleAddFiles() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChange(e) {
+    const selected = Array.from(e.target.files || []);
+    setAdjuntos((prev) => [...prev, ...selected]);
+    e.target.value = "";
+  }
+
+  function removeFile(i) {
+    setAdjuntos((a) => a.filter((_, idx) => idx !== i));
+  }
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(() => onClose(), 220);
+  }
+
+  function submit(e) {
+    e.preventDefault();
+    const next = {};
+    if (!form.nombre.trim()) next.nombre = "El nombre del trámite es obligatorio.";
+    setErrors(next);
+    if (Object.keys(next).length) {
+      setShake(true);
+      setTimeout(() => setShake(false), 450);
+      return;
+    }
+    onSubmit({ ...form, adjuntos });
+    setClosing(true);
+    setTimeout(() => onClose(), 220);
+  }
+
+  return (
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 ${closing ? "animate-fade-out" : "animate-fade-in"}`}>
+      <div className={`card w-full max-w-205 p-0 ${closing ? "animate-scale-out" : "animate-scale-in"} shadow-2xl ${shake ? "animate-shake" : ""}`}>
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 text-brand">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-ink m-0 leading-tight">Registrar ingreso</h2>
+              <p className="text-[10px] text-muted mt-0.5 m-0">Completá los datos del trámite</p>
+            </div>
+          </div>
+          <button className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink hover:bg-mist transition-colors" onClick={handleClose} aria-label="Cerrar">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-4 py-2 bg-soft border-b border-line">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-muted m-0">Nº de expediente</p>
+                <p className="text-xs font-bold text-brand-deep font-mono m-0 tracking-wide">{previewId}</p>
+              </div>
+            </div>
+            <div className="h-6 w-px bg-line" />
+            <div className="flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <div>
+                <p className="text-[9px] uppercase tracking-widest text-muted m-0">Fecha</p>
+                <p className="text-xs font-semibold text-ink m-0">{today}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form className="p-4 grid grid-cols-2 gap-x-4 gap-y-2" onSubmit={submit}>
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              Nombre
+            </label>
+            <input
+              className={`input-field ${errors.nombre ? "border-bad focus:border-bad ring-bad/15" : ""}`}
+              value={form.nombre}
+              onChange={(e) => update("nombre", e.target.value)}
+              placeholder="Nombre del trámite"
+            />
+            {errors.nombre && <p className="text-[10px] text-bad mt-0.5 font-medium">{errors.nombre}</p>}
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Costo
+            </label>
+            <input
+              className="input-field"
+              value={form.costo}
+              onChange={(e) => update("costo", e.target.value)}
+              placeholder="Ej: Gratuito o $2.000"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Encargado
+            </label>
+            <input
+              className="input-field"
+              value={form.encargado}
+              onChange={(e) => update("encargado", e.target.value)}
+              placeholder="Nombre y apellido del encargado"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Sector
+            </label>
+            <select className="input-field" value={form.sector} onChange={(e) => update("sector", e.target.value)}>
+              {mesaSectores.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Mesa
+            </label>
+            <select className="input-field" value={form.mesa} onChange={(e) => update("mesa", e.target.value)}>
+              {mesaIdentificadores.map((m) => (
+                <option key={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="col-span-2">
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              Descripción
+            </label>
+            <textarea
+              ref={descripcionRef}
+              className="input-field min-h-13 resize-none leading-relaxed"
+              style={{ resize: "none" }}
+              value={form.descripcion}
+              onChange={(e) => update("descripcion", e.target.value)}
+              placeholder="Detalle del trámite (opcional)"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+              Requisitos
+            </label>
+            <textarea
+              ref={requisitosRef}
+              className="input-field min-h-13 resize-none leading-relaxed"
+              style={{ resize: "none" }}
+              value={form.requisitos}
+              onChange={(e) => update("requisitos", e.target.value)}
+              placeholder="Documentación y requisitos necesarios (opcional)"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted mb-0.5">
+              <svg className="w-3 h-3 text-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 000 2.828l6.586 6.586a2 2 0 002.828 0l6.586-6.586a2 2 0 000-2.828l-6.586-6.586a2 2 0 00-2.828 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15l-3-3m0 0l3-3m-3 3h9" />
+              </svg>
+              Documentación adjunta
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={handleAddFiles}
+              className="w-full border-2 border-dashed border-line rounded-lg py-2.5 text-xs text-muted hover:border-brand hover:text-brand transition-colors flex flex-col items-center gap-1 bg-soft/50 hover:bg-brand/5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M12 4v12m0-12l-4 4m4-4l4 4M4 20h16" />
+              </svg>
+              <span className="font-medium">Tocar para adjuntar archivos</span>
+            </button>
+            {adjuntos.length > 0 && (
+              <ul className="mt-1.5 space-y-1">
+                {adjuntos.map((f, i) => (
+                  <li key={i} className="flex items-center gap-2 text-[11px] text-muted bg-mist rounded-lg px-2.5 py-1.5 border border-line">
+                    <svg className="w-3.5 h-3.5 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="truncate flex-1 font-medium text-ink">{f.name}</span>
+                    <button type="button" onClick={() => removeFile(i)} className="text-faint hover:text-bad transition-colors p-0.5 rounded hover:bg-bad/10" aria-label="Quitar">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="col-span-2 flex items-center justify-end gap-2 pt-1">
+            <button type="button" onClick={handleClose} className="btn-ghost py-1.5! px-3! text-xs!">
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary py-1.5! px-3! text-xs!">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Guardar ingreso
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+const STATUS_ORDER = ["Ingresado", "En proceso", "Observado", "Finalizado"];
+
+function downloadFile(file, e) {
+  e?.stopPropagation();
+  if (file instanceof File) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } else if (file?.url) {
+    const a = document.createElement("a");
+    a.href = file.url;
+    a.download = file.name || "documento";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.click();
+  }
+}
+
+function MesaDetailModal({ entry, onClose, onChangeStatus }) {
+  const currentIdx = STATUS_ORDER.indexOf(entry.estado);
+  const [viewer, setViewer] = useState(null);
+  const [closing, setClosing] = useState(false);
+  const hasAdjuntos = Array.isArray(entry.adjuntos) && entry.adjuntos.length > 0;
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(onClose, 200);
+  }
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 ${
+        closing ? "animate-fade-out" : "animate-fade-in"
+      }`}
+    >
+      <div
+        className={`card w-full max-w-lg p-6 ${
+          closing ? "animate-scale-out" : "animate-scale-in"
+        }`}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-ink m-0 truncate">{entry.nombre}</h2>
+            <p className="text-xs font-mono text-muted mt-0.5">{entry.id}</p>
+          </div>
+          <button className="text-muted hover:text-ink" onClick={handleClose} aria-label="Cerrar">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 mb-5">
+          <StatusPill status={entry.estado} />
+          <span className="text-xs text-faint">·</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+            <PriorityDot priority={entry.prioridad} />
+            Prioridad {entry.prioridad}
+          </span>
+        </div>
+
+        <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+          <Field label="Costo" value={entry.costo} />
+          <Field label="Encargado" value={entry.encargado} />
+          <Field label="Sector" value={entry.sector} />
+          <Field label="Mesa" value={entry.mesa} />
+          <Field label="Fecha" value={formatDate(entry.fecha)} />
+          {entry.descripcion && (
+            <div className="col-span-2">
+              <Field label="Descripción" value={entry.descripcion} />
+            </div>
+          )}
+          {entry.requisitos && (
+            <div className="col-span-2">
+              <Field label="Requisitos" value={entry.requisitos} />
+            </div>
+          )}
+        </dl>
+
+        {hasAdjuntos && (
+          <div className="mt-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-faint mb-2">
+              Documentación adjunta ({entry.adjuntos.length})
+            </p>
+            <ul className="space-y-1.5">
+              {entry.adjuntos.map((f, i) => (
+                <li key={i} className="flex items-center gap-2.5 text-[11px] bg-mist rounded-lg px-2.5 py-2 border border-line">
+                  <FileBadge file={f} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-ink m-0">{f.name}</p>
+                    <p className="text-[9px] text-faint m-0">
+                      {fileKind(f.name) === "pdf"
+                        ? "PDF"
+                        : f.type
+                        ? f.type.split("/")[1]?.toUpperCase()
+                        : "Archivo"}
+                      {formatFileSize(f.size) ? ` · ${formatFileSize(f.size)}` : ""}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setViewer(f)}
+                    className="text-[10px] font-bold text-brand hover:underline px-1.5 py-1 rounded hover:bg-brand/10 transition-colors"
+                  >
+                    Ver
+                  </button>
+                  <button
+                    onClick={(e) => downloadFile(f, e)}
+                    className="text-[10px] font-bold text-muted hover:text-brand-deep hover:underline px-1.5 py-1 rounded hover:bg-brand/10 transition-colors"
+                  >
+                    Descargar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-faint mb-2">
+            Progreso del expediente
+          </p>
+          <div className="flex items-center gap-1">
+            {STATUS_ORDER.map((s, i) => {
+              const done = i <= currentIdx;
+              const isCurrent = i === currentIdx;
+              return (
+                <div key={s} className="flex-1 flex items-center gap-1">
+                  <div className="flex flex-col items-center gap-1 flex-1">
+                    <div
+                      className={`w-3.5 h-3.5 rounded-full transition-colors ${
+                        isCurrent ? "bg-brand-deep ring-4 ring-brand-deep/20" : done ? "bg-brand-deep/60" : "bg-line"
+                      }`}
+                    />
+                    <span className={`text-[9px] text-center leading-tight ${isCurrent ? "text-brand-deep font-semibold" : "text-faint"}`}>
+                      {s}
+                    </span>
+                  </div>
+                  {i < STATUS_ORDER.length - 1 && (
+                    <div className={`h-0.5 flex-1 rounded ${done ? "bg-brand-deep/50" : "bg-line"}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-faint mb-2">
+            Cambiar estado
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {mesaStatuses.map((s) => {
+              const active = entry.estado === s;
+              const tone =
+                s === "Finalizado" ? "ok" : s === "Observado" ? "bad" : s === "En proceso" ? "warn" : "info";
+              const activeCls =
+                tone === "ok"
+                  ? "bg-ok text-paper border-ok"
+                  : tone === "bad"
+                  ? "bg-bad text-paper border-bad"
+                  : tone === "warn"
+                  ? "bg-warn text-paper border-warn"
+                  : "bg-info text-paper border-info";
+              return (
+                <button
+                  key={s}
+                  onClick={() => onChangeStatus(s)}
+                  className={`badge cursor-pointer border transition-colors ${
+                    active ? activeCls : "bg-mist text-muted border-line hover:bg-soft"
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {viewer && <DocumentViewerModal file={viewer} onClose={() => setViewer(null)} />}
+      </div>
+    </div>
+  );
+}
+
+function DocumentViewerModal({ file, onClose }) {
+  const [closing, setClosing] = useState(false);
+  const url = useMemo(() => {
+    if (file?.url) return file.url;
+    if (file instanceof File) return URL.createObjectURL(file);
+    return null;
+  }, [file]);
+
+  const kind = fileKind(file.name);
+
+  function handleClose() {
+    setClosing(true);
+    setTimeout(onClose, 200);
+  }
+
+  return (
+    <div
+      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink/60 ${
+        closing ? "animate-fade-out" : "animate-fade-in"
+      }`}
+    >
+      <div
+        className={`card w-full max-w-4xl p-0 overflow-hidden flex flex-col max-h-[92vh] ${
+          closing ? "animate-scale-out" : "animate-scale-in"
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-line shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileBadge file={file} />
+            <div className="min-w-0">
+              <p className="truncate font-bold text-sm text-ink m-0">{file.name}</p>
+              <p className="text-[10px] text-faint m-0">
+                {kind === "pdf"
+                  ? "Documento PDF"
+                  : kind === "img"
+                  ? "Imagen"
+                  : "Documento adjunto"}
+              </p>
+            </div>
+          </div>
+          <button className="text-muted hover:text-ink p-1" onClick={handleClose} aria-label="Cerrar">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 bg-ink/5 overflow-auto">
+          {kind === "pdf" ? (
+            <PdfPreview file={file} url={url} />
+          ) : url && kind === "img" ? (
+            <div className="flex items-center justify-center p-4 min-h-80">
+              <img src={url} alt={file.name} className="max-w-full max-h-[68vh] object-contain" />
+            </div>
+          ) : (
+            <div className="text-center p-8">
+              <div className="text-4xl mb-3">📄</div>
+              <p className="text-sm font-semibold text-ink m-0">No se puede previsualizar este archivo</p>
+              <p className="text-xs text-muted mt-1">
+                Usá "Descargar" para abrirlo con el programa adecuado.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-line shrink-0">
+          <button
+            onClick={(e) => downloadFile(file, e)}
+            className="btn-primary py-1.5! px-3! text-xs!"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0-12l-4 4m4-4l4 4M4 20h16" />
+            </svg>
+            Descargar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PdfPreview({ file, url }) {
+  const containerRef = useRef(null);
+  const [status, setStatus] = useState("loading");
+  const [pages, setPages] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function render() {
+      try {
+        const source =
+          file instanceof File
+            ? { data: await file.arrayBuffer() }
+            : { url };
+        const pdf = await pdfjsLib.getDocument(source).promise;
+        if (cancelled) return;
+        setPages(pdf.numPages);
+        const el = containerRef.current;
+        if (!el) return;
+        el.innerHTML = "";
+
+        const dpr = window.devicePixelRatio || 1;
+        const page = await pdf.getPage(1);
+        const base = page.getViewport({ scale: 1 });
+        const fitWidth = Math.max(320, el.clientWidth - 12);
+        const scale = Math.min(fitWidth / base.width, 2);
+
+        for (let n = 1; n <= pdf.numPages && !cancelled; n++) {
+          const p = n === 1 ? page : await pdf.getPage(n);
+          const vp = p.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          const wrap = document.createElement("div");
+          canvas.width = Math.floor(vp.width * dpr);
+          canvas.height = Math.floor(vp.height * dpr);
+          canvas.style.width = "100%";
+          canvas.style.height = "auto";
+          wrap.style.padding = "14px 6px";
+          wrap.style.display = "flex";
+          wrap.style.justifyContent = "center";
+          wrap.style.background = "#8b99ab1f";
+          wrap.appendChild(canvas);
+          el.appendChild(wrap);
+
+          const ctx = canvas.getContext("2d");
+          await p.render({
+            canvasContext: ctx,
+            viewport: vp,
+            transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
+          }).promise;
+        }
+        if (!cancelled) setStatus("done");
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    }
+
+    render();
+    return () => {
+      cancelled = true;
+    };
+  }, [file, url]);
+
+  if (status === "error") {
+    return (
+      <div className="text-center p-8">
+        <div className="text-4xl mb-3">📄</div>
+        <p className="text-sm font-semibold text-ink m-0">No se pudo leer este PDF</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-70">
+      <div ref={containerRef} />
+      {status === "loading" && (
+        <div className="flex items-center justify-center gap-2 py-16">
+          <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-muted m-0">Cargando documento…</p>
+        </div>
+      )}
+      {status === "done" && (
+        <div className="flex items-center justify-center gap-1.5 py-2 pb-3">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-ok" />
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-faint m-0">
+            {pages} página{pages === 1 ? "" : "s"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FileBadge({ file }) {
+  const kind = fileKind(file.name);
+  const tone =
+    kind === "pdf"
+      ? "bg-bad/12 text-bad"
+      : kind === "img"
+      ? "bg-ok/12 text-ok-dark"
+      : kind === "doc"
+      ? "bg-info/12 text-info"
+      : "bg-brand/12 text-brand";
+  const label =
+    kind === "pdf"
+      ? "PDF"
+      : kind === "img"
+      ? "IMG"
+      : kind === "doc"
+      ? "DOC"
+      : kind === "sheet"
+      ? "XLS"
+      : "FILE";
+
+  return (
+    <div className={`w-9 h-9 shrink-0 rounded-md flex items-center justify-center font-bold text-[9px] tracking-wide ${tone}`}>
+      {label}
+    </div>
+  );
+}
+
+function fileKind(name) {
+  const n = String(name || "").toLowerCase();
+  if (n.endsWith(".pdf")) return "pdf";
+  if (/\.(png|jpe?g|gif|webp|svg|bmp)$/.test(n)) return "img";
+  if (/\.docx?$/.test(n)) return "doc";
+  if (/\.(xlsx?|csv)$/.test(n)) return "sheet";
+  return "file";
+}
+
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return "";
+  const kb = bytes / 1024;
+  if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+  return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
+}
+
+function Field({ label, value }) {
+  return (
+    <div>
+      <dt className="text-[10px] uppercase tracking-widest text-faint">{label}</dt>
+      <dd className="text-ink font-medium mt-0.5 wrap-break-word">{value}</dd>
+    </div>
+  );
+}

@@ -1,10 +1,53 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="lenis">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChatAP - Chatbot Administración Pública</title>
+    <link rel="preload" href="/fonts/PPNeueMontreal-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Medium.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Black.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      ::selection {
+        color: #ffffff;
+        background: #2F6BFF;
+      }
+      html, body {
+        background-color: #070E20;
+        color: #EAF0FA;
+      }
+      html:not(.dark), html:not(.dark) body {
+        background-color: #F0F4F9;
+        color: #0F1730;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var migrated = localStorage.getItem("chatap_dark_default_v1");
+          if (!migrated) {
+            localStorage.setItem("theme", "dark");
+            localStorage.setItem("chatap_dark_default_v1", "true");
+          }
+          var t = localStorage.getItem("theme");
+          if (t !== "light") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="theme-color" content="#070E20" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F0F4F9" media="(prefers-color-scheme: light)" />
+    <meta
+      name="description"
+      content="ChatAP, el asistente virtual de la Administración Pública de Formosa. Consultá trámites, documentación y servicios de la Subsecretaría de Recursos Humanos."
+    />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: https://*.googleusercontent.com https://images.unsplash.com https://api.dicebear.com; font-src 'self' data:; connect-src 'self' https://api.emailjs.com https://accounts.google.com https://www.googleapis.com; frame-src 'self' https://accounts.google.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" />
+    <title>ChatAP — Asistente Virtual de la Administración Pública</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,110 +1,86 @@
 import { users } from "../../data/mockUsers";
 import { knowledgeBase } from "../../data/mockKnowledge";
 import { sigedRecords } from "../../data/mockSiged";
+import { StatusPill } from "./ui";
+import { useAuth } from "../../context/AuthContext";
+import { Kicker, DisplayTitle, Lead } from "../common/editorial";
 
 export default function Dashboard() {
-  const stats = [
+  const { user } = useAuth();
+  const firstName = (user?.name || "").split(" ")[0] || "Admin";
+
+  const metrics = [
     {
-      title: "Usuarios Activos",
+      label: "Usuarios activos",
       value: users.filter((u) => u.status === "Activo").length,
-      total: users.length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      color: "blue",
+      hint: `de ${users.length} usuarios`,
     },
     {
-      title: "Artículos Base",
+      label: "Artículos base",
       value: knowledgeBase.filter((k) => k.active).length,
-      total: knowledgeBase.length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      color: "emerald",
+      hint: `de ${knowledgeBase.length} artículos`,
     },
     {
-      title: "Expedientes SIGED",
+      label: "Expedientes SIGED",
       value: sigedRecords.length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      color: "indigo",
     },
     {
-      title: "Pendientes",
+      label: "Requieren atención",
       value: sigedRecords.filter((r) => r.status === "En proceso" || r.status === "Ingresado").length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      color: "amber",
+      hint: "pendientes",
     },
   ];
 
-  const colorMap = {
-    blue: "bg-blue-50 text-blue-700",
-    emerald: "bg-emerald-50 text-emerald-700",
-    indigo: "bg-indigo-50 text-indigo-700",
-    amber: "bg-amber-50 text-amber-700",
-  };
-
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-slate-800 m-0 mb-6">Dashboard</h1>
+    <div className="max-w-6xl">
+      <div className="border-b border-line/70 pb-12">
+        <Kicker>[ Panel de administración ]</Kicker>
+        <DisplayTitle as={2} className="mt-4">
+          ADMINISTRACIÓN.
+        </DisplayTitle>
+        <Lead className="mt-6 max-w-2xl">
+          Hola, {firstName}. Resumen de la actividad del panel, los expedientes y la
+          base de conocimiento de ChatAP.
+        </Lead>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <div key={stat.title} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className={`p-2 rounded-lg ${colorMap[stat.color]}`}>
-                {stat.icon}
-              </div>
-              {stat.total && (
-                <span className="text-xs text-slate-400">
-                  de {stat.total}
-                </span>
-              )}
-            </div>
-            <p className="text-2xl font-bold text-slate-800 m-0">{stat.value}</p>
-            <p className="text-xs text-slate-500 m-0 mt-0.5">{stat.title}</p>
+      <div className="mt-12 grid gap-px bg-line border border-line overflow-hidden rounded-2xl grid-cols-2 lg:grid-cols-4">
+        {metrics.map((m) => (
+          <div key={m.label} className="bg-paper p-6 md:p-8">
+            <p className="m-0 text-[11px] font-bold uppercase tracking-[0.22em] text-muted">{m.label}</p>
+            <p className="mt-4 m-0 text-4xl md:text-5xl font-extrabold tracking-tighter text-ink">{m.value}</p>
+            {m.hint ? <p className="mt-2 m-0 text-sm text-faint">{m.hint}</p> : null}
+            <div className="mt-6 h-[3px] w-10 bg-brand-deep" aria-hidden="true" />
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-800 m-0">
-            Últimos movimientos SIGED
-          </h2>
+      <div className="card mt-16 overflow-hidden">
+        <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
+          <h2 className="display-3 text-ink m-0 uppercase">Últimos movimientos</h2>
+          <span className="text-xs text-faint font-semibold uppercase tracking-wider">SIGED</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                <th className="px-4 py-3 font-medium">Expediente</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Solicitante</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Último movimiento</th>
+              <tr className="text-left text-[10px] uppercase tracking-[0.18em] text-faint">
+                <th className="px-8 py-4 font-bold">Expediente</th>
+                <th className="px-8 py-4 font-bold">Tipo</th>
+                <th className="px-8 py-4 font-bold">Solicitante</th>
+                <th className="px-8 py-4 font-bold">Estado</th>
+                <th className="px-8 py-4 font-bold">Último movimiento</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {sigedRecords.slice(0, 4).map((rec) => (
-                <tr key={rec.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">{rec.id}</td>
-                  <td className="px-4 py-3 text-slate-700">{rec.type}</td>
-                  <td className="px-4 py-3 text-slate-700">{rec.applicant}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={rec.status} />
+                <tr key={rec.id} className="hover:bg-mist/60 transition-colors">
+                  <td className="px-8 py-6 font-mono text-[13px] text-ink font-semibold">{rec.id}</td>
+                  <td className="px-8 py-6 text-ink">{rec.type}</td>
+                  <td className="px-8 py-6 text-ink">{rec.applicant}</td>
+                  <td className="px-8 py-6">
+                    <StatusPill status={rec.status} />
                   </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{rec.lastMovement}</td>
+                  <td className="px-8 py-6 text-muted text-xs">{rec.lastMovement}</td>
                 </tr>
               ))}
             </tbody>
@@ -112,20 +88,5 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
-  );
-}
-
-function StatusBadge({ status }) {
-  const colors = {
-    Ingresado: "bg-blue-50 text-blue-700",
-    "En proceso": "bg-amber-50 text-amber-700",
-    Observado: "bg-red-50 text-red-700",
-    Finalizado: "bg-emerald-50 text-emerald-700",
-  };
-
-  return (
-    <span className={`inline-block px-2 py-0.5 text-xs rounded-md ${colors[status] || "bg-slate-100 text-slate-600"}`}>
-      {status}
-    </span>
   );
 }

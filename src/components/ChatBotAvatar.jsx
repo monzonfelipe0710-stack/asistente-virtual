@@ -1,0 +1,471 @@
+import { useEffect, useRef, useState } from "react";
+import { BotEngine } from "../bloub/engine";
+import { SHAPE_BY_ID, DEFAULT_SHAPE } from "../bloub/skins";
+import { RAYON, DEMI_VIEWBOX } from "../bloub/repere";
+import { POSES } from "../bloub/states";
+import { EXPRESSION_BY_ID } from "../bloub/expressions";
+
+const INK = "#0a0a0c";
+const EYE = "#ffffff";
+
+const VB = DEMI_VIEWBOX;
+const R = RAYON;
+
+/**
+ * Expresión custom de sueño: ojos cerrados (open: 0), cabeza ligeramente inclinada.
+ * Se aplica cuando el bot lleva 5 minutos sin actividad.
+ */
+const SLEEP_EXPRESSION = {
+  id: "sleeping",
+  gaze: { yaw: 4, pitch: -6, roll: -3 },
+  split: 16,
+  eyes: [
+    { w: 0.2, h: 0.42, tilt: 0, open: 0 },
+    { w: 0.2, h: 0.42, tilt: 0, open: 0 },
+  ],
+};
+
+const REACTION_CONFIG = {
+  idle:        { state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  blink:       { blink: true },
+  lookLeft:    { look: { yaw: -35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
+  lookRight:   { look: { yaw: 35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
+  lookAround:  { look: { yaw: 0, pitch: 0, mix: 0, spin: 360, wander: 0 } },
+  lookUp:      { look: { yaw: 0, pitch: -20, mix: 1, spin: 0, wander: 0 } },
+  lookDown:    { look: { yaw: 0, pitch: 20, mix: 1, spin: 0, wander: 0 } },
+  tilt:        { transform: "rx-tilt", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  tiltLeft:    { transform: "rx-tilt", state: "idle", look: { yaw: -15, pitch: 5, mix: 1, spin: 0, wander: 0 } },
+  tiltRight:   { transform: "rx-tilt", state: "idle", look: { yaw: 15, pitch: 5, mix: 1, spin: 0, wander: 0 } },
+  bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  squash:      { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  stretch:     { transform: "rx-stretch", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  microBounce: { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  microSquash: { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  wink:        { state: "wink" },
+  surprised:   { state: "wide" },
+  thinking:    { state: "thinking" },
+  attention:   { expr: "attentif" },
+  happy:       { expr: "heureux", look: { yaw: 5, pitch: 9, mix: 1, spin: 0, wander: 0 } },
+  excited:     { expr: "excite", state: "idle", look: { yaw: 6, pitch: -14, mix: 1, spin: 0, wander: 0 } },
+  proud:       { expr: "fier", look: { yaw: 5, pitch: 17, mix: 1, spin: 0, wander: 0 } },
+  shy:         { expr: "timide", look: { yaw: -19, pitch: -14, mix: 1, spin: 0, wander: 0 } },
+  relieved:    { expr: "heureux", state: "idle", look: { yaw: 0, pitch: 5, mix: 0.5, spin: 0, wander: 0.5 } },
+  worried:     { expr: "triste" },
+  confus:      { expr: "confus", look: { yaw: -14, pitch: 3, mix: 1, spin: 0, wander: 0 } },
+  curious:     { expr: "curieux", look: { yaw: 16, pitch: -9, mix: 1, spin: 0, wander: 0 } },
+  angry:       { expr: "colere", look: { yaw: 3, pitch: 7, mix: 1, spin: 0, wander: 0 } },
+  scared:      { expr: "effraye", look: { yaw: 2, pitch: -20, mix: 1, spin: 0, wander: 0 } },
+  bored:       { expr: "blase", look: { yaw: -22, pitch: 2, mix: 1, spin: 0, wander: 0 } },
+  sleepy:      { expr: "somnolent", look: { yaw: 6, pitch: -9, mix: 1, spin: 0, wander: 0 } },
+  suspicious:  { expr: "mefiant", look: { yaw: 12, pitch: 6, mix: 1, spin: 0, wander: 0 } },
+  fierce:      { expr: "colere", state: "alert", look: { yaw: 0, pitch: 5, mix: 1, spin: 0, wander: 0 } },
+  notify:      { state: "notify" },
+  exclaim:     { state: "exclaim" },
+  playful:     { state: "wink", expr: "excite", look: { yaw: 8, pitch: -5, mix: 1, spin: 0, wander: 0 } },
+  nod:         { look: { yaw: 0, pitch: 12, mix: 1, spin: 0, wander: 0 } },
+  shake:       { look: { yaw: 0, pitch: 0, mix: 1, spin: 0, wander: 0 }, expr: "confus" },
+  apologetic:  { expr: "triste", look: { yaw: 0, pitch: 15, mix: 1, spin: 0, wander: 0 } },
+  sleep:       { customExpr: SLEEP_EXPRESSION, look: { yaw: 4, pitch: -6, mix: 0.5, spin: 0, wander: 0 } },
+  hilare:      { expr: "hilare", transform: "rx-bounce", state: "idle" },
+  giggle:      { expr: "hilare", transform: "rx-tilt", state: "idle" },
+  cheer:       { state: "exclaim", transform: "rx-bounce" },
+  peek:        { state: "wink", transform: "rx-tilt" },
+  intrigued:   { expr: "curieux", transform: "rx-tilt", state: "idle" },
+  glee:        { expr: "excite", transform: "rx-bounce", state: "idle" },
+  smug:        { expr: "fier", transform: "rx-tilt", state: "idle" },
+  amazed:      { state: "wide", transform: "rx-stretch" },
+  celebrate:   { state: "exclaim", transform: "rx-bounce" },
+  play:        { state: "play" },
+  orbit:       { state: "orbit" },
+  swirl:       { state: "swirl" },
+  burst:       { state: "burst" },
+  egg:         { state: "egg" },
+  hexagon:     { state: "hexagon" },
+  comet:       { state: "comet" },
+  alert:       { state: "alert" },
+};
+
+const DOT_POOL = 6;
+const MAX_YAW = 35;
+const MAX_PITCH = 28;
+
+const AUTO_REACTIONS_POOL = [
+  "blink",
+  "wink",
+  "happy",
+  "excited",
+  "surprised",
+  "thinking",
+  "curious",
+  "proud",
+  "shy",
+  "relieved",
+  "playful",
+  "hilare",
+  "giggle",
+  "bounce",
+  "microBounce",
+  "squash",
+  "microSquash",
+  "stretch",
+  "tiltLeft",
+  "tiltRight",
+  "attention",
+  "confus",
+  "suspicious",
+  "exclaim",
+  "notify",
+  "cheer",
+  "peek",
+  "intrigued",
+  "glee",
+  "smug",
+  "amazed",
+  "nod",
+  "shake",
+  "celebrate",
+  "play",
+  "orbit",
+  "swirl",
+  "burst",
+  "egg",
+  "hexagon",
+  "comet",
+  "alert",
+];
+
+function createShuffleBag(pool) {
+  let deck = [];
+  let lastPicked = null;
+
+  return function getNext() {
+    if (deck.length === 0) {
+      deck = [...pool];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      if (deck.length > 1 && deck[deck.length - 1] === lastPicked) {
+        [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+      }
+    }
+    const next = deck.pop();
+    lastPicked = next;
+    return next;
+  };
+}
+
+function applyConfig(engine, cfg, t, isFollowing = false) {
+  if (cfg.blink) {
+    engine.forceBlink(t);
+    return;
+  }
+  if (cfg.state) engine.setState(cfg.state, t);
+  if (cfg.customExpr) {
+    engine.setExpression(cfg.customExpr, t);
+  } else if (cfg.expr) {
+    engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
+  }
+  if (cfg.look && !isFollowing) engine.setLook(cfg.look, t);
+}
+
+function ZzzOverlay({ size }) {
+  const s = size || 44;
+  const base = s * 0.38;
+  return (
+    <span
+      className="absolute z-10 pointer-events-none select-none"
+      style={{ top: -s * 0.15, right: -s * 0.1 }}
+      aria-hidden="true"
+    >
+      <span className="zzz-letter" style={{ fontSize: base, animationDelay: "0s" }}>Z</span>
+      <span className="zzz-letter" style={{ fontSize: base * 0.8, animationDelay: "0.6s", top: -base * 0.3, left: base * 0.4 }}>z</span>
+      <span className="zzz-letter" style={{ fontSize: base * 0.6, animationDelay: "1.2s", top: -base * 0.7, left: base * 0.8 }}>z</span>
+    </span>
+  );
+}
+
+export default function ChatBotAvatar({
+  reaction = "idle",
+  size = 44,
+  speaking = false,
+  static: isStatic = false,
+  followMouse = true,
+}) {
+  const svgRef = useRef(null);
+  const bodyRef = useRef(null);
+  const eyeARef = useRef(null);
+  const eyeBRef = useRef(null);
+  const dotRefs = useRef([]);
+  const reactionRef = useRef(reaction);
+  const drawRef = useRef(null);
+  const engineRef = useRef(null);
+  const clockRef = useRef(0);
+  const colorsRef = useRef({ body: INK, eye: EYE });
+  const [rxClass, setRxClass] = useState("");
+  const [autoReaction, setAutoReaction] = useState(null);
+
+  useEffect(() => {
+    const readColors = () => {
+      const cs = getComputedStyle(document.documentElement);
+      colorsRef.current = {
+        body: cs.getPropertyValue("--bot-body").trim() || INK,
+        eye: cs.getPropertyValue("--bot-eye").trim() || EYE,
+      };
+    };
+    readColors();
+
+    const engine = new BotEngine(
+      R,
+      "idle",
+      SHAPE_BY_ID.get(DEFAULT_SHAPE)?.radii ?? null,
+      null
+    );
+    engineRef.current = engine;
+    clockRef.current = 0;
+
+    const paint = (f) => {
+      const { body, eye } = colorsRef.current;
+      if (bodyRef.current) {
+        bodyRef.current.setAttribute("d", f.bodyPath);
+        bodyRef.current.setAttribute("opacity", String(f.bodyAlpha));
+        bodyRef.current.setAttribute("fill", body);
+      }
+      [eyeARef.current, eyeBRef.current].forEach((el, i) => {
+        if (!el) return;
+        const e = f.eyes[i];
+        if (e && e.alpha > 0.01) {
+          el.setAttribute("d", e.d);
+          el.setAttribute("transform", e.matrix);
+          el.setAttribute("opacity", String(e.alpha));
+          el.setAttribute("fill", eye);
+          el.style.display = "";
+        } else {
+          el.style.display = "none";
+        }
+      });
+      for (let i = 0; i < DOT_POOL; i++) {
+        const el = dotRefs.current[i];
+        if (!el) continue;
+        const d = f.dots[i];
+        if (d && d.opacity > 0.01 && d.r > 0.0005) {
+          el.setAttribute("cx", String(d.x));
+          el.setAttribute("cy", String(d.y));
+          el.setAttribute("r", String(d.r));
+          el.setAttribute("opacity", String(d.opacity));
+          el.setAttribute("fill", body);
+          el.style.display = "";
+        } else {
+          el.style.display = "none";
+        }
+      }
+    };
+
+    const reduceMQ = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+
+    const drawStatic = () => {
+      const cfg = REACTION_CONFIG[reactionRef.current] || REACTION_CONFIG.idle;
+      const st = cfg.state || "idle";
+      if (!cfg.blink) {
+        if (cfg.state) engine.setState(cfg.state, 0);
+        if (cfg.customExpr) {
+          engine.setExpression(cfg.customExpr, 0);
+        } else if (cfg.expr) {
+          engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, 0);
+        }
+        if (cfg.look) engine.setLook(cfg.look, 0);
+      }
+      paint(engine.sample(POSES[st] ?? 1));
+    };
+    drawRef.current = drawStatic;
+
+    const themeObserver = new MutationObserver(() => {
+      readColors();
+      if (isStatic) drawStatic();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+    if (isStatic) {
+      drawStatic();
+      return () => {
+        themeObserver.disconnect();
+        engineRef.current = null;
+        drawRef.current = null;
+      };
+    }
+
+    let raf = 0;
+    let clock = 0;
+    let last = 0;
+
+    const tick = (ms) => {
+      raf = requestAnimationFrame(tick);
+      const dt = last ? Math.min((ms - last) / 1000, 0.064) : 0;
+      last = ms;
+      clock += dt;
+      clockRef.current = clock;
+      paint(engine.sample(clock));
+    };
+
+    const start = () => {
+      cancelAnimationFrame(raf);
+      last = 0;
+      raf = requestAnimationFrame(tick);
+    };
+    const stop = () => cancelAnimationFrame(raf);
+
+    const onReduce = (e) => {
+      if (e.matches) {
+        stop();
+        drawStatic();
+      } else if (!document.hidden) {
+        start();
+      }
+    };
+
+    const onVis = () => {
+      if (document.hidden) stop();
+      else if (!(reduceMQ && reduceMQ.matches)) start();
+    };
+
+    const onMove = (e) => {
+      const el = svgRef.current;
+      if (!el || !engineRef.current) return;
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist === 0) return;
+
+      // Sensibilidad ágil y natural para seguir el cursor en 360° en cualquier dirección
+      const intensity = Math.min(1, dist / 240);
+      // yaw positivo = mira a la derecha (dx > 0); yaw negativo = mira a la izquierda (dx < 0)
+      const yaw = (dx / dist) * MAX_YAW * intensity;
+      // pitch negativo = mira arriba (dy < 0); pitch positivo = mira abajo (dy > 0)
+      const pitch = (dy / dist) * MAX_PITCH * intensity;
+      engineRef.current.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current, 0.12);
+    };
+
+    const onLeave = () => {
+      if (engineRef.current) {
+        engineRef.current.setLook(null, clockRef.current, 0.35);
+      }
+    };
+
+    if (reduceMQ && reduceMQ.matches) {
+      drawStatic();
+    } else {
+      start();
+    }
+
+    if (followMouse) {
+      window.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseleave", onLeave);
+    }
+    reduceMQ?.addEventListener("change", onReduce);
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      stop();
+      if (followMouse) {
+        window.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseleave", onLeave);
+      }
+      reduceMQ?.removeEventListener("change", onReduce);
+      document.removeEventListener("visibilitychange", onVis);
+      themeObserver.disconnect();
+      engineRef.current = null;
+      drawRef.current = null;
+    };
+  }, [isStatic, followMouse]);
+
+  useEffect(() => {
+    const eff = reaction === "idle" && autoReaction ? autoReaction : reaction;
+    reactionRef.current = eff;
+    const engine = engineRef.current;
+    if (!engine) return;
+    const cfg = REACTION_CONFIG[eff] || REACTION_CONFIG.idle;
+    const t = clockRef.current;
+    applyConfig(engine, cfg, t, followMouse);
+
+    const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
+    const transform = cfg.transform && !speaking && !reduce ? cfg.transform : "";
+    setRxClass(transform);
+
+    if (reduce || isStatic) drawRef.current?.();
+  }, [reaction, autoReaction, speaking, isStatic, followMouse]);
+
+  useEffect(() => {
+    if (isStatic || reaction !== "idle") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    let timer = null;
+    const getNextReaction = createShuffleBag(AUTO_REACTIONS_POOL);
+
+    const clear = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    const schedule = () => {
+      clear();
+      timer = setTimeout(() => {
+        const pick = getNextReaction();
+        setAutoReaction(pick);
+        const activeDuration = 1100 + Math.random() * 800;
+        timer = setTimeout(() => {
+          setAutoReaction(null);
+          const interval = 2200 + Math.random() * 1800;
+          timer = setTimeout(schedule, interval);
+        }, activeDuration);
+      }, 1500 + Math.random() * 1800);
+    };
+
+    schedule();
+    return () => {
+      clear();
+      setAutoReaction(null);
+    };
+  }, [isStatic, reaction]);
+
+  const isSleeping = reaction === "sleep";
+
+  const svg = (
+    <svg
+      ref={svgRef}
+      width={size}
+      height={size}
+      viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`}
+      role="img"
+      aria-label="Avatar animado del asistente ChatAP"
+      className={`block ${speaking ? "animate-speak" : ""} ${rxClass} ${isSleeping ? "opacity-70" : ""}`}
+    >
+      <path ref={bodyRef} fill={INK} />
+      <path ref={eyeARef} fill={EYE} />
+      <path ref={eyeBRef} fill={EYE} />
+      {Array.from({ length: DOT_POOL }).map((_, i) => (
+        <circle
+          key={i}
+          ref={(el) => (dotRefs.current[i] = el)}
+          fill={INK}
+          style={{ display: "none" }}
+        />
+      ))}
+    </svg>
+  );
+
+  if (isSleeping) {
+    return (
+      <div className="relative inline-flex">
+        <ZzzOverlay size={size} />
+        {svg}
+      </div>
+    );
+  }
+
+  return svg;
+}
