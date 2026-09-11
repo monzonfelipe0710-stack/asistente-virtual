@@ -1,0 +1,165 @@
+/* ==========================================================================
+   HeroCinematicBackground.css
+   Fondo Cinematográfico Multi-capa con Ken Burns y Crossfade Suave
+   ========================================================================== */
+
+.hero-cinematic-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  isolation: isolate;
+}
+
+/* ── Stack de Imágenes ─────────────────────────────────────────────────── */
+.hero-cinematic-bg__media-stack {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-cinematic-bg__slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 2200ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, transform;
+  transform: scale(1.03) translate3d(0, 0, 0);
+  z-index: 0;
+}
+
+.hero-cinematic-bg__slide.is-active {
+  opacity: 1;
+  z-index: 1;
+  animation: heroKenBurns 22s cubic-bezier(0.25, 1, 0.5, 1) infinite alternate;
+}
+
+.hero-cinematic-bg__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 36%;
+  display: block;
+}
+
+/* ── Ken Burns: Zoom & Pan extremadamente sutil e imperceptible ────────── */
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1.03) translate3d(0%, 0%, 0);
+  }
+  50% {
+    transform: scale(1.075) translate3d(-0.6%, -0.35%, 0);
+  }
+  100% {
+    transform: scale(1.105) translate3d(0.5%, -0.65%, 0);
+  }
+}
+
+/* ── Overlays Multi-capa Profesionales ─────────────────────────────────── */
+
+/* 1. Tinte general de atmósfera alineado con la paleta de ChatAP */
+.hero-cinematic-bg__tint {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(240, 244, 249, 0.68) 0%, rgba(240, 244, 249, 0.84) 100%);
+  transition: background 300ms ease;
+}
+
+.dark .hero-cinematic-bg__tint {
+  background: linear-gradient(180deg, rgba(7, 14, 32, 0.62) 0%, rgba(7, 14, 32, 0.82) 100%);
+}
+
+/* 2. Gradiente focal: maximiza la legibilidad del texto en el tercio central */
+.hero-cinematic-bg__focal {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: radial-gradient(ellipse 75% 65% at 50% 40%, rgba(240, 244, 249, 0.88) 0%, rgba(240, 244, 249, 0.45) 55%, transparent 100%);
+}
+
+.dark .hero-cinematic-bg__focal {
+  background: radial-gradient(ellipse 75% 65% at 50% 40%, rgba(7, 14, 32, 0.9) 0%, rgba(7, 14, 32, 0.5) 55%, transparent 100%);
+}
+
+/* 3. Vignette cinematográfica muy suave */
+.hero-cinematic-bg__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(15, 23, 48, 0.18) 100%);
+}
+
+.dark .hero-cinematic-bg__vignette {
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+/* 4. Transición hacia la siguiente sección (Bottom Feathering) */
+.hero-cinematic-bg__bottom-fade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 38%;
+  z-index: 5;
+  background: linear-gradient(to bottom, transparent 0%, rgba(240, 244, 249, 0.7) 65%, #F0F4F9 100%);
+  pointer-events: none;
+}
+
+.dark .hero-cinematic-bg__bottom-fade {
+  background: linear-gradient(to bottom, transparent 0%, rgba(7, 14, 32, 0.7) 65%, #070E20 100%);
+}
+
+/* 5. Iluminación ambiental sutil superior (Azul de Estado #2F6BFF) */
+.hero-cinematic-bg__ambient-glow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 1100px;
+  height: 280px;
+  z-index: 6;
+  background: radial-gradient(ellipse at 50% 0%, rgba(47, 107, 255, 0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.dark .hero-cinematic-bg__ambient-glow {
+  background: radial-gradient(ellipse at 50% 0%, rgba(77, 125, 255, 0.18) 0%, transparent 70%);
+}
+
+/* ── Soporte de Accesibilidad: Prefers-Reduced-Motion ──────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .hero-cinematic-bg__slide {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .hero-cinematic-bg__slide:not(.is-active) {
+    display: none !important;
+  }
+}
+
+/* ── Adaptación Móvil ──────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero-cinematic-bg__slide.is-active {
+    animation-duration: 28s; /* Movimiento todavía más lento en móviles */
+    transform: scale(1.04);
+  }
+  .hero-cinematic-bg__tint {
+    background: linear-gradient(180deg, rgba(240, 244, 249, 0.8) 0%, rgba(240, 244, 249, 0.92) 100%);
+  }
+  .dark .hero-cinematic-bg__tint {
+    background: linear-gradient(180deg, rgba(7, 14, 32, 0.75) 0%, rgba(7, 14, 32, 0.9) 100%);
+  }
+  .hero-cinematic-bg__ambient-glow {
+    height: 180px;
+    opacity: 0.7;
+  }
+}

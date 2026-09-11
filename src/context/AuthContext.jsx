@@ -232,6 +232,67 @@ export function AuthProvider({ children }) {
     return newUser;
   }, []);
 
+  const loginWithGoogle = useCallback(async (googleData = {}) => {
+    const cleanName = (googleData?.name || "Usuario de Google").trim();
+    const normalized = (googleData?.email || "usuario.google@gmail.com").trim().toLowerCase();
+
+    if (!emailRegex.test(normalized)) {
+      throw new Error("El correo de Google no es válido.");
+    }
+
+    const users = loadUsers();
+    const found = users.find((u) => u.email === normalized);
+
+    if (found) {
+      if (found.status === "Suspendido") {
+        throw new Error("Tu cuenta está suspendida. Contactá a un Administrador.");
+      }
+      const withRole = {
+        ...found,
+        role: roleForEmail(found.email, found.role),
+        avatar: googleData?.avatar || found.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(found.name)}`,
+        lastAccessAt: new Date().toISOString(),
+      };
+      saveUsers(users.map((u) => (u.id === found.id ? withRole : u)));
+      const session = makeSession(withRole);
+      recordSession(withRole.id, session.token, buildDeviceLabel());
+      setUser(withRole);
+      pushActivity({
+        userId: withRole.id,
+        actor: withRole.name,
+        action: "inició sesión con Google",
+        target: "",
+        type: "seguridad",
+      });
+      return withRole;
+    } else {
+      const newUser = {
+        id: uid(),
+        name: cleanName,
+        email: normalized,
+        password: "",
+        role: roleForEmail(normalized, "Ciudadano"),
+        status: "Activo",
+        provider: "google",
+        avatar: googleData?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`,
+        createdAt: new Date().toISOString(),
+        lastAccessAt: new Date().toISOString(),
+      };
+      saveUsers([...users, newUser]);
+      const session = makeSession(newUser);
+      recordSession(newUser.id, session.token, buildDeviceLabel());
+      setUser(newUser);
+      pushActivity({
+        userId: newUser.id,
+        actor: cleanName,
+        action: "creó su cuenta con Google",
+        target: "",
+        type: "user",
+      });
+      return newUser;
+    }
+  }, []);
+
   const logout = useCallback(() => {
     writeJSON(SESSION_KEY, null);
     setUser(null);
@@ -242,9 +303,28 @@ export function AuthProvider({ children }) {
     if (!emailRegex.test(normalized)) throw new Error("Ingresá un correo electrónico válido.");
 
     const users = loadUsers();
-    const found = users.find((u) => u.email === normalized);
-    // Respuesta genérica para no revelar si la cuenta existe.
-    if (!found) return null;
+    let found = users.find((u) => u.email === normalized);
+    // Si la cuenta no existe en el almacenamiento local de este navegador,
+    // creamos un usuario provisional para que EmailJS envíe el correo de recuperación
+    // y el usuario pueda definir su contraseña y acceder inmediatamente.
+    if (!found) {
+      const derivedName = normalized.split("@")[0].replace(/[._-]/g, " ");
+      const prettyName =
+        derivedName.charAt(0).toUpperCase() + derivedName.slice(1);
+      const newUser = {
+        id: uid(),
+        name: prettyName || "Ciudadano",
+        email: normalized,
+        password: await hashPassword(uid()),
+        role: "Ciudadano",
+        type: "user",
+        createdAt: new Date().toISOString(),
+        lastAccessAt: new Date().toISOString(),
+      };
+      users.push(newUser);
+      saveUsers(users);
+      found = newUser;
+    }
 
     const token = uid().replace(/-/g, "") + Date.now().toString(36);
     const now = Date.now();
@@ -253,6 +333,7 @@ export function AuthProvider({ children }) {
     list.push({
       token,
       userId: found.id,
+      email: normalized,
       createdAt: new Date().toISOString(),
       expiresAt: now + RESET_TTL_MS,
       used: false,
@@ -262,19 +343,24 @@ export function AuthProvider({ children }) {
     const base = typeof window !== "undefined" ? window.location.origin : "";
     const link = `${base}/restablecer?token=${token}`;
 
-    // Intenta mandarlo por mail; si no está configurado, se muestra en pantalla.
     let emailed;
     let emailError = "";
     try {
-      const result = await sendResetEmail({ to: normalized, name: found.name, link });
-      emailed = result.sent;
-      if (!emailed && result.reason && result.reason !== "not-configured") {
+      const result = await sendResetEmail({
+        to: normalized,
+        name: found.name,
+        link,
+        token,
+      });
+      emailed = Boolean(result?.sent);
+      if (!emailed && result?.reason && result?.reason !== "not-configured") {
         emailError = result.detail || result.reason;
       }
-    } catch {
+    } catch (err) {
       emailed = false;
+      emailError = (err && (err.text || err.message)) || String(err);
     }
-    return { link, token, emailed, emailError };
+    return { link, token, emailed, emailError, email: normalized };
   }, []);
 
   const validateResetToken = useCallback((token) => {
@@ -283,7 +369,7 @@ export function AuthProvider({ children }) {
     const list = Array.isArray(stored) ? stored : [];
     const req = list.find((r) => r.token === token);
     if (!req || req.used || req.expiresAt < Date.now()) return { ok: false };
-    return { ok: true };
+    return { ok: true, email: req.email, userId: req.userId };
   }, []);
 
   const resetPassword = useCallback(async (token, newPassword) => {
@@ -296,11 +382,32 @@ export function AuthProvider({ children }) {
       throw new Error("El enlace es inválido o venció. Pedí uno nuevo.");
 
     const users = loadUsers();
-    if (!users.some((u) => u.id === req.userId))
-      throw new Error("La cuenta ya no existe.");
-
+    let target = users.find(
+      (u) => u.id === req.userId || (req.email && u.email === req.email)
+    );
     const hashed = await hashPassword(newPassword);
-    saveUsers(users.map((u) => (u.id === req.userId ? { ...u, password: hashed } : u)));
+
+    if (!target) {
+      if (!req.email) throw new Error("La cuenta ya no existe.");
+      target = {
+        id: req.userId || uid(),
+        name: req.email.split("@")[0],
+        email: req.email,
+        password: hashed,
+        role: "Ciudadano",
+        type: "user",
+        createdAt: new Date().toISOString(),
+      };
+      users.push(target);
+    }
+
+    saveUsers(
+      users.map((u) =>
+        u.id === target.id || (target.email && u.email === target.email)
+          ? { ...u, password: hashed }
+          : u
+      )
+    );
     writeJSON(
       RESET_KEY,
       list.map((r) => (r.token === token ? { ...r, used: true } : r))
@@ -423,6 +530,7 @@ export function AuthProvider({ children }) {
         isStaff: !!user && isInternalRole(user.email, user.role),
         isSuperadmin: !!user && roleForEmail(user.email, user.role) === "Superadmin",
         login,
+        loginWithGoogle,
         register,
         logout,
         requestPasswordReset,
