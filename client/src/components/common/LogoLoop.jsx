@@ -61,10 +61,19 @@ const useAnimationLoop = (trackRef, targetVelocity, seqWidth, seqHeight, isHover
   const lastTimestampRef = useRef(null);
   const offsetRef = useRef(0);
   const velocityRef = useRef(0);
+  const isVisibleRef = useRef(true);
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
+
+    const visibilityObserver =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(([entry]) => {
+            isVisibleRef.current = entry.isIntersecting;
+          })
+        : null;
+    visibilityObserver?.observe(track);
 
     const seqSize = isVertical ? seqHeight : seqWidth;
 
@@ -77,6 +86,12 @@ const useAnimationLoop = (trackRef, targetVelocity, seqWidth, seqHeight, isHover
     }
 
     const animate = timestamp => {
+      if (!isVisibleRef.current || document.hidden) {
+        lastTimestampRef.current = null;
+        rafRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
       if (lastTimestampRef.current === null) {
         lastTimestampRef.current = timestamp;
       }
@@ -111,6 +126,7 @@ const useAnimationLoop = (trackRef, targetVelocity, seqWidth, seqHeight, isHover
         rafRef.current = null;
       }
       lastTimestampRef.current = null;
+      visibilityObserver?.disconnect();
     };
   }, [targetVelocity, seqWidth, seqHeight, isHovered, hoverSpeed, isVertical, trackRef]);
 };
