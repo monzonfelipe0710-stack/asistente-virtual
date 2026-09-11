@@ -252,6 +252,11 @@ export default function HomePage() {
     return isMobile || cores < 4 || memory < 4;
   }, []);
 
+  /* Precarga el chunk del chat cuando el usuario apunta a un enlace hacia /chat */
+  const prefetchChat = () => {
+    import("../pages/CiudadanoPage").catch(() => {});
+  };
+
   useLayoutEffect(() => {
     const hero = heroRef.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -323,7 +328,7 @@ export default function HomePage() {
             <Suspense fallback={null}>
               <CRTWarp
                 className="hero-cinematic__crtwarp"
-                color={theme === "dark" ? "#ffffff" : "#ff9100"}
+                color={theme === "dark" ? "#f3f1e9" : "#ff9100"}
                 backgroundColor={theme === "dark" ? "#171717" : "#f1eee7"}
                 speed={0.10}
                 curvature={0.16}
@@ -341,6 +346,7 @@ export default function HomePage() {
                 mouseReact
                 mouseStrength={0.18}
                 dpr={1}
+                resolutionScale={0.55}
                 fps={isLowEnd ? 18 : 24}
               />
             </Suspense>
@@ -492,6 +498,7 @@ export default function HomePage() {
                   key={q.id}
                   to="/chat"
                   state={{ initialQuery: q.query }}
+                  onPointerEnter={prefetchChat}
                   className="quick-reply-card no-underline"
                 >
                   <span className="quick-reply-icon" aria-hidden="true">
@@ -556,7 +563,7 @@ export default function HomePage() {
               <p className="m-0 max-w-2xl text-base leading-relaxed text-paper/70 md:text-lg">
                 {FINAL_CTA.lead}
               </p>
-              <Link to={FINAL_CTA.primary.to} className="btn-primary no-underline mt-2">
+              <Link to={FINAL_CTA.primary.to} onPointerEnter={prefetchChat} className="btn-primary no-underline mt-2">
                 {FINAL_CTA.primary.label}
               </Link>
             </div>

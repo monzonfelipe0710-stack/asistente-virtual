@@ -141,6 +141,7 @@ export default function CRTWarp({
   mouseReact = true,
   mouseStrength = 0.5,
   dpr = 1,
+  resolutionScale = 1,
   fps = 30,
   paused = false,
   className,
@@ -156,6 +157,11 @@ export default function CRTWarp({
   const visibleRef = useRef(true);
   const fpsRef = useRef(fps);
   const lastFrameRef = useRef(0);
+  const resolutionScaleRef = useRef(Math.max(resolutionScale, 0.05));
+
+  useEffect(() => {
+    resolutionScaleRef.current = Math.max(resolutionScale, 0.05);
+  }, [resolutionScale]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -212,10 +218,15 @@ export default function CRTWarp({
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
 
+    const effectiveScale = resolutionScaleRef.current;
     const resize = () => {
       const width = Math.max(container.clientWidth, 1);
       const height = Math.max(container.clientHeight, 1);
-      renderer.setSize(width, height, false);
+      renderer.setSize(
+        Math.max(Math.round(width * effectiveScale), 1),
+        Math.max(Math.round(height * effectiveScale), 1),
+        false
+      );
       material.uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
     };
 
@@ -224,9 +235,12 @@ export default function CRTWarp({
     resize();
 
     const clock = new THREE.Clock();
-    const visibilityObserver = new IntersectionObserver(([entry]) => {
-      visibleRef.current = entry.isIntersecting;
-    });
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting && entry.intersectionRatio >= 0.05;
+      },
+      { threshold: [0, 0.05, 1] }
+    );
     visibilityObserver.observe(container);
 
     const render = now => {
@@ -295,7 +309,11 @@ export default function CRTWarp({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dpr));
     const container = containerRef.current;
     if (container) {
-      renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1), false);
+      renderer.setSize(
+        Math.max(Math.round(Math.max(container.clientWidth, 1) * Math.max(resolutionScale, 0.05)), 1),
+        Math.max(Math.round(Math.max(container.clientHeight, 1) * Math.max(resolutionScale, 0.05)), 1),
+        false
+      );
       uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
     }
   }, [
@@ -311,6 +329,7 @@ export default function CRTWarp({
     noise,
     pixelation,
     rgbShift,
+    resolutionScale,
     scanlineFrequency,
     scanlineStrength,
     speed,
