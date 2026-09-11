@@ -1,11 +1,27 @@
-.scroll-float { overflow: hidden; }
-.scroll-float__text {
-  display: block;
-  overflow-wrap: anywhere;
+.scroll-float {
+  overflow: visible;
 }
-.scroll-float__word { display: inline; }
-.scroll-float__char { display: inline-block; will-change: opacity, transform; }
+.scroll-float__text {
+  display: inline;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+.scroll-float__word {
+  display: inline-block;
+  white-space: nowrap;
+  margin-right: 0.32em;
+}
+.scroll-float__word:last-child {
+  margin-right: 0;
+}
+.scroll-float__char {
+  display: inline-block;
+  will-change: opacity, transform;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .scroll-float__char { opacity: 1 !important; transform: none !important; }
+  .scroll-float__char {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

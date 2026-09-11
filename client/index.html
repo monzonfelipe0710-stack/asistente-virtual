@@ -1,25 +1,52 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="lenis">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#edf1f9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0a1124" media="(prefers-color-scheme: dark)" />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Bold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Medium.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PPNeueMontreal-Black.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      ::selection {
+        color: #ffffff;
+        background: #2F6BFF;
+      }
+      html, body {
+        background-color: #070E20;
+        color: #EAF0FA;
+      }
+      html:not(.dark), html:not(.dark) body {
+        background-color: #F0F4F9;
+        color: #0F1730;
+      }
+    </style>
+    <script>
+      (function () {
+        try {
+          var migrated = localStorage.getItem("chatap_dark_default_v1");
+          if (!migrated) {
+            localStorage.setItem("theme", "dark");
+            localStorage.setItem("chatap_dark_default_v1", "true");
+          }
+          var t = localStorage.getItem("theme");
+          if (t !== "light") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="theme-color" content="#070E20" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F0F4F9" media="(prefers-color-scheme: light)" />
     <meta
       name="description"
       content="ChatAP, el asistente virtual de la Administración Pública de Formosa. Consultá trámites, documentación y servicios de la Subsecretaría de Recursos Humanos."
     />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.emailjs.com; base-uri 'self'; form-action 'self'" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.emailjs.com; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" />
     <title>ChatAP — Asistente Virtual de la Administración Pública</title>
-    <script>
-      (function () {
-        try {
-          var t = localStorage.getItem("theme");
-          if (t === "dark") document.documentElement.classList.add("dark");
-        } catch (e) {}
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

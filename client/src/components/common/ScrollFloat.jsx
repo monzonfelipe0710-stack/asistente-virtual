@@ -28,12 +28,11 @@ export default function ScrollFloat({
   const text = typeof children === "string" ? children : "";
 
   const splitText = useMemo(() => (
-    text.split(" ").map((word, wordIndex, words) => (
+    text.split(" ").map((word, wordIndex) => (
       <span className="scroll-float__word" key={`${word}-${wordIndex}`}>
         {Array.from(word).map((char, charIndex) => (
           <span className="scroll-float__char" key={`${char}-${charIndex}`}>{char}</span>
         ))}
-        {wordIndex < words.length - 1 ? " " : null}
       </span>
     ))
   ), [text]);
@@ -47,16 +46,12 @@ export default function ScrollFloat({
       const chars = element.querySelectorAll(".scroll-float__char");
       const from = {
         opacity: 0,
-        yPercent: 110,
-        scaleY: 1.7,
-        scaleX: 0.82,
+        yPercent: 45,
         transformOrigin: "50% 100%",
       };
       const to = {
         opacity: 1,
         yPercent: 0,
-        scaleY: 1,
-        scaleX: 1,
         duration: animationDuration,
         ease,
         stagger,

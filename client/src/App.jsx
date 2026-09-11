@@ -3,6 +3,7 @@ import AppErrorBoundary from "./components/common/AppErrorBoundary";
 import { AdminProvider } from "./context/AdminContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ChatProvider } from "./context/ChatContext";
+import ClickSpark from "./components/common/ClickSpark";
 import AppRouter from "./router/AppRouter";
 
 export default function App() {
@@ -12,7 +13,9 @@ export default function App() {
         <AuthProvider>
           <ChatProvider>
             <AdminProvider>
-              <AppRouter />
+              <ClickSpark>
+                <AppRouter />
+              </ClickSpark>
             </AdminProvider>
           </ChatProvider>
         </AuthProvider>

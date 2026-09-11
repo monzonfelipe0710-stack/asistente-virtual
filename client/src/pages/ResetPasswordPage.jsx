@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/common/Toast";
 import PasswordField from "../components/common/PasswordField";
 import ChatBotAvatar from "../components/ChatBotAvatar";
+import Footer from "../components/common/Footer";
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -45,8 +46,9 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-paper">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col justify-between bg-paper">
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="mb-4">
             <ChatBotAvatar size={64} reaction={done ? "happy" : "idle"} />
@@ -134,6 +136,8 @@ export default function ResetPasswordPage() {
           </Link>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }
