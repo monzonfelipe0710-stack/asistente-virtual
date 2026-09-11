@@ -3,7 +3,7 @@ import { BrowserRouter, useLocation } from "react-router-dom";
 import BotOnboardingModal from "../components/common/BotOnboardingModal";
 import AppRoutes from "./routes";
 
-const EXIT_MS = 120;
+const EXIT_MS = 180;
 
 function RouteTransition() {
   const location = useLocation();
@@ -29,6 +29,7 @@ function RouteTransition() {
     const raf = requestAnimationFrame(() => setPhase("exit"));
     const timeout = setTimeout(() => {
       setDisplayLocation(location);
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
       setPhase("enter");
     }, EXIT_MS);
 

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import MessageBubble from "./MessageBubble";
-import QuickReplies from "./QuickReplies";
 import ChatBotAvatar from "../ChatBotAvatar";
 import { BotReactionController } from "./BotReactionController";
 import { botResponses } from "../../data/mockMessages";
@@ -34,6 +33,69 @@ import {
 
 const KB_STRONG = 3.5;
 const KB_WEAK = 1.5;
+
+const CHATAP_PILLS = [
+  {
+    id: "haberes",
+    label: "Recibo de haberes",
+    query: "¿Dónde puedo ver mi recibo de sueldo?",
+    icon: (
+      <svg className="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "siged",
+    label: "Expedientes SIGED",
+    query: "¿Cómo puedo seguir mi expediente?",
+    icon: (
+      <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "licencias",
+    label: "Licencias médicas",
+    query: "¿Cómo solicito una licencia médica?",
+    icon: (
+      <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+  },
+  {
+    id: "mesa-entradas",
+    label: "Mesa de Entradas",
+    query: "¿Cómo inicio un trámite en Mesa de Entradas?",
+    icon: (
+      <svg className="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "formularios",
+    label: "Formularios y notas",
+    query: "¿Dónde descargo los formularios oficiales?",
+    icon: (
+      <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      </svg>
+    ),
+  },
+  {
+    id: "mas",
+    label: "Más consultas",
+    query: "¿Cuáles son los trámites más consultados?",
+    icon: (
+      <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2l2.4 7.2h7.6l-6.2 4.5 2.4 7.3-6.2-4.5-6.2 4.5 2.4-7.3-6.2-4.5h7.6z" />
+      </svg>
+    ),
+  },
+];
 
 function findIntent(input) {
   const text = input.toLowerCase();
@@ -598,56 +660,103 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-paper">
-      <header className="flex items-center justify-end px-4 sm:px-6 h-14">
-        <div
-          role="button"
-          tabIndex={0}
+    <div className="flex flex-col h-full bg-paper relative">
+      <header className="flex items-center justify-end px-4 sm:px-6 h-14 shrink-0 gap-2">
+        {/* Menú de opciones (9 puntos) */}
+        <button
+          type="button"
           onClick={resetConversation}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") resetConversation();
-          }}
-          className="group flex h-9 w-9 cursor-pointer items-center justify-end overflow-hidden rounded-xl border border-line text-muted transition-all duration-200 hover:w-44 hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          aria-label="Nueva conversación"
+          title="Reiniciar y ver opciones"
+          aria-label="Reiniciar y ver opciones"
+          className="w-9 h-9 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
         >
-          <span className="order-2 grid h-9 w-9 shrink-0 place-items-center">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
-            </svg>
-          </span>
-          <span className="order-1 whitespace-nowrap pl-3 text-xs font-semibold opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-            Nueva conversación
-          </span>
-        </div>
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="5" cy="5" r="2" />
+            <circle cx="12" cy="5" r="2" />
+            <circle cx="19" cy="5" r="2" />
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+            <circle cx="5" cy="19" r="2" />
+            <circle cx="12" cy="19" r="2" />
+            <circle cx="19" cy="19" r="2" />
+          </svg>
+        </button>
+
+        {/* Botón Cerrar / Nueva Conversación */}
+        <button
+          type="button"
+          onClick={resetConversation}
+          title="Nueva conversación"
+          aria-label="Nueva conversación"
+          className="w-9 h-9 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </header>
 
-      <div ref={messagesRef} className="flex-1 overflow-y-auto relative">
-        {phase !== "chat" && (
-<div
-              className={`welcome-content absolute inset-0 flex flex-col items-center justify-center px-4 text-center gap-5 transition-all duration-300 ease-out ${
-                phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
-              }`}
-            >
-              <p className="sec-meta m-0">Asistente Virtual · RRHH Formosa</p>
-              <ChatBotAvatar size={60} reaction={reaction} />
-            <h1 className="text-2xl sm:text-3xl font-semibold text-ink m-0">
-              {isAuthenticated && user?.name
-                ? `¡Hola, ${user.name.split(" ")[0]}! ¿En qué puedo ayudarte?`
-                : "¿En qué puedo ayudarte?"}
-            </h1>
-            <p className="text-muted max-w-md m-0">
-              Soy ChatAP, el asistente virtual de la Administración Pública.
-              {isAuthenticated
-                ? welcomeMem && welcomeMem.count > 0
-                  ? ` ${buildReminder(welcomeMem)}`
-                  : " Recordá tus consultas anteriores: continuá donde lo dejaste."
-                : " Consultá trámites, documentación y servicios."}
-            </p>
-          </div>
-        )}
+      <div ref={messagesRef} className="flex-1 overflow-y-auto relative flex flex-col">
+        {phase !== "chat" ? (
+          <div
+            className={`welcome-content flex-1 flex flex-col items-center justify-center px-4 py-8 text-center transition-all duration-300 ease-out ${
+              phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
+            }`}
+          >
+            {/* Avatar interactivo de ChatAP grande, sin marco ni fondo, con mirada interactiva */}
+            <div className="mb-4 relative flex items-center justify-center select-none">
+              <ChatBotAvatar size={92} reaction={reaction} followMouse={true} />
+            </div>
 
-        {phase === "chat" && (
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 animate-fade-up">
+            {/* Saludo personalizado */}
+            <div className="space-y-1 mb-2">
+              <p className="text-base sm:text-lg font-medium text-muted font-neue-text m-0">
+                {isAuthenticated && user?.name
+                  ? `Hola ${user.name.split(" ")[0]},`
+                  : "Hola,"}
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-neue m-0">
+                ¡Bienvenido! ¿En qué te podemos ayudar?
+              </h1>
+            </div>
+
+            {/* Subtítulo descriptivo */}
+            <p className="text-xs sm:text-sm text-muted font-neue-text max-w-md mx-auto leading-relaxed mb-6 m-0">
+              Estoy para ayudarte con tus gestiones y trámites provinciales. Elegí una de las opciones o escribí directamente lo que necesitás.
+            </p>
+
+            {/* Botones de consulta rápida tipo Píldoras (2 filas de 3) */}
+            <div className="chatap-pills-container">
+              {CHATAP_PILLS.map((pill) => (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => handleQuickReply(pill.query)}
+                  className="chatap-pill-btn"
+                >
+                  <span className="shrink-0">{pill.icon}</span>
+                  <span>{pill.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Continuar consulta previa si existe */}
+            {welcomeMem && welcomeMem.count > 0 && (
+              <div className="mt-4 text-xs text-muted font-neue-text flex items-center justify-center gap-1.5 animate-fade-in">
+                <span>Continuá tu última consulta:</span>
+                <button
+                  type="button"
+                  onClick={() => handleQuickReply(suggestedTopics(welcomeMem)[0]?.query || "")}
+                  className="text-brand font-semibold hover:underline cursor-pointer bg-transparent border-0 p-0"
+                >
+                  {suggestedTopics(welcomeMem)[0]?.label}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="max-w-3xl w-full mx-auto px-4 py-6 space-y-6 animate-fade-up">
             {messages.map((msg) => (
               <MessageBubble
                 key={msg.id}
@@ -662,64 +771,59 @@ export default function ChatWindow({ initialQuery = null }) {
         )}
       </div>
 
-      <div className="bg-paper">
-        {phase === "welcome" && (
-          <div className="max-w-3xl mx-auto px-4 pt-4" data-tour="chat-here">
-            <QuickReplies
-              onSelect={handleQuickReply}
-              suggested={welcomeMem && welcomeMem.count > 0 ? suggestedTopics(welcomeMem) : []}
-            />
-          </div>
-        )}
-        <form onSubmit={handleSend} className="container-ia-chat max-w-3xl mx-auto">
+      {/* Barra flotante inferior de consulta */}
+      <div className="p-4 sm:pb-6 pt-2 bg-transparent shrink-0">
+        <form onSubmit={handleSend} className="chatap-floating-bar max-w-2xl mx-auto">
+          {/* Lupa / búsqueda */}
+          <span className="text-muted/70 pl-2 pr-1 flex items-center justify-center shrink-0 pointer-events-none" aria-hidden="true">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+
+          {/* Input de consulta */}
           <input
             type="text"
             value={input}
             onChange={handleInputChange}
-            placeholder={listening ? "Escuchando…" : "Escribí tu consulta…"}
-            className="input-text"
-            aria-label="Mensaje"
+            placeholder={listening ? "Escuchando tu voz…" : "Escribí tu consulta aquí…"}
+            aria-label="Consulta para ChatAP"
             required
           />
+
+          {/* Dictado por voz */}
           {speechSupported && (
             <button
               type="button"
               onClick={toggleMic}
               aria-label={listening ? "Detener dictado" : "Hablar con el asistente"}
               title={listening ? "Detener dictado" : "Hablar con el asistente"}
-              className={`label-voice ${
+              className={`p-2 rounded-xl transition-all cursor-pointer ${
                 listening
-                  ? "is-listening"
-                  : ""
+                  ? "text-bad bg-bad/10 animate-pulse"
+                  : "text-muted hover:text-ink hover:bg-mist"
               }`}
             >
-              {listening ? (
-                <>
-                  <span className="mic-ripple absolute inset-0 rounded-full bg-bad/30" aria-hidden="true" />
-                  <svg className="icon-voice icon-voice-listening" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11a7 7 0 0014 0M12 18v3m-4 0h8" />
-                  </svg>
-                  <span className="text-voice" aria-hidden="true">
-                    Conversación iniciada · presioná para cancelar
-                  </span>
-                </>
-              ) : (
-                <svg className="icon-voice icon-voice-idle" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11a7 7 0 0014 0M12 18v3m-4 0h8" />
-                </svg>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="9" y="3" width="6" height="11" rx="3" strokeWidth={2} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 11a7 7 0 0014 0M12 18v3m-4 0h8" />
+              </svg>
             </button>
           )}
+
+          {/* Botón Enviar */}
           <button
             type="submit"
             disabled={!input.trim()}
-            className="label-text"
-            aria-label="Enviar mensaje"
+            className={`ml-1 p-2 rounded-xl flex items-center justify-center transition-all ${
+              input.trim()
+                ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
+                : "text-muted/40 cursor-not-allowed opacity-0 pointer-events-none w-0 p-0 overflow-hidden"
+            }`}
+            aria-label="Enviar consulta"
           >
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m5 12l7-7l7 7m-7 7V5" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12l7-7l7 7m-7 7V5" />
             </svg>
           </button>
         </form>

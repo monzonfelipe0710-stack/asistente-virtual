@@ -66,24 +66,96 @@ const REACTION_CONFIG = {
   shake:       { look: { yaw: 0, pitch: 0, mix: 1, spin: 0, wander: 0 }, expr: "confus" },
   apologetic:  { expr: "triste", look: { yaw: 0, pitch: 15, mix: 1, spin: 0, wander: 0 } },
   sleep:       { customExpr: SLEEP_EXPRESSION, look: { yaw: 4, pitch: -6, mix: 0.5, spin: 0, wander: 0 } },
+  hilare:      { expr: "hilare", transform: "rx-bounce", state: "idle" },
+  giggle:      { expr: "hilare", transform: "rx-tilt", state: "idle" },
+  cheer:       { state: "exclaim", transform: "rx-bounce" },
+  peek:        { state: "wink", transform: "rx-tilt" },
+  intrigued:   { expr: "curieux", transform: "rx-tilt", state: "idle" },
+  glee:        { expr: "excite", transform: "rx-bounce", state: "idle" },
+  smug:        { expr: "fier", transform: "rx-tilt", state: "idle" },
+  amazed:      { state: "wide", transform: "rx-stretch" },
+  celebrate:   { state: "exclaim", transform: "rx-bounce" },
+  play:        { state: "play" },
+  orbit:       { state: "orbit" },
+  swirl:       { state: "swirl" },
+  burst:       { state: "burst" },
+  egg:         { state: "egg" },
+  hexagon:     { state: "hexagon" },
+  comet:       { state: "comet" },
+  alert:       { state: "alert" },
 };
 
 const DOT_POOL = 6;
 const MAX_YAW = 35;
 const MAX_PITCH = 28;
 
-const AUTO_REACTIONS = [
-  "blink", "wink", "blink", "wink",
-  "lookLeft", "lookRight", "lookUp", "lookDown",
-  "tiltLeft", "tiltRight",
-  "microBounce", "microSquash", "stretch",
-  "surprised", "thinking", "attention",
-  "happy", "excited", "proud", "shy", "relieved",
-  "curious", "confus", "playful", "nod",
-  "bored", "sleepy", "exclaim", "suspicious",
+const AUTO_REACTIONS_POOL = [
+  "blink",
+  "wink",
+  "happy",
+  "excited",
+  "surprised",
+  "thinking",
+  "curious",
+  "proud",
+  "shy",
+  "relieved",
+  "playful",
+  "hilare",
+  "giggle",
+  "bounce",
+  "microBounce",
+  "squash",
+  "microSquash",
+  "stretch",
+  "tiltLeft",
+  "tiltRight",
+  "attention",
+  "confus",
+  "suspicious",
+  "exclaim",
+  "notify",
+  "cheer",
+  "peek",
+  "intrigued",
+  "glee",
+  "smug",
+  "amazed",
+  "nod",
+  "shake",
+  "celebrate",
+  "play",
+  "orbit",
+  "swirl",
+  "burst",
+  "egg",
+  "hexagon",
+  "comet",
+  "alert",
 ];
 
-function applyConfig(engine, cfg, t) {
+function createShuffleBag(pool) {
+  let deck = [];
+  let lastPicked = null;
+
+  return function getNext() {
+    if (deck.length === 0) {
+      deck = [...pool];
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      if (deck.length > 1 && deck[deck.length - 1] === lastPicked) {
+        [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+      }
+    }
+    const next = deck.pop();
+    lastPicked = next;
+    return next;
+  };
+}
+
+function applyConfig(engine, cfg, t, isFollowing = false) {
   if (cfg.blink) {
     engine.forceBlink(t);
     return;
@@ -94,7 +166,7 @@ function applyConfig(engine, cfg, t) {
   } else if (cfg.expr) {
     engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
   }
-  if (cfg.look) engine.setLook(cfg.look, t);
+  if (cfg.look && !isFollowing) engine.setLook(cfg.look, t);
 }
 
 function ZzzOverlay({ size }) {
@@ -118,7 +190,7 @@ export default function ChatBotAvatar({
   size = 44,
   speaking = false,
   static: isStatic = false,
-  followMouse = false,
+  followMouse = true,
 }) {
   const svgRef = useRef(null);
   const bodyRef = useRef(null);
@@ -258,15 +330,28 @@ export default function ChatBotAvatar({
 
     const onMove = (e) => {
       const el = svgRef.current;
-      if (!el) return;
+      if (!el || !engineRef.current) return;
       const r = el.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
-      const nx = (e.clientX - cx) / (window.innerWidth / 2);
-      const ny = (e.clientY - cy) / (window.innerHeight / 2);
-      const yaw = Math.max(-MAX_YAW, Math.min(MAX_YAW, nx * MAX_YAW));
-      const pitch = Math.max(-MAX_PITCH, Math.min(MAX_PITCH, -ny * MAX_PITCH));
-      engine.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current);
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist === 0) return;
+
+      // Sensibilidad ágil y natural para seguir el cursor en 360° en cualquier dirección
+      const intensity = Math.min(1, dist / 240);
+      // yaw positivo = mira a la derecha (dx > 0); yaw negativo = mira a la izquierda (dx < 0)
+      const yaw = (dx / dist) * MAX_YAW * intensity;
+      // pitch negativo = mira arriba (dy < 0); pitch positivo = mira abajo (dy > 0)
+      const pitch = (dy / dist) * MAX_PITCH * intensity;
+      engineRef.current.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current, 0.12);
+    };
+
+    const onLeave = () => {
+      if (engineRef.current) {
+        engineRef.current.setLook(null, clockRef.current, 0.35);
+      }
     };
 
     if (reduceMQ && reduceMQ.matches) {
@@ -277,6 +362,7 @@ export default function ChatBotAvatar({
 
     if (followMouse) {
       window.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseleave", onLeave);
     }
     reduceMQ?.addEventListener("change", onReduce);
     document.addEventListener("visibilitychange", onVis);
@@ -285,6 +371,7 @@ export default function ChatBotAvatar({
       stop();
       if (followMouse) {
         window.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseleave", onLeave);
       }
       reduceMQ?.removeEventListener("change", onReduce);
       document.removeEventListener("visibilitychange", onVis);
@@ -301,37 +388,43 @@ export default function ChatBotAvatar({
     if (!engine) return;
     const cfg = REACTION_CONFIG[eff] || REACTION_CONFIG.idle;
     const t = clockRef.current;
-    applyConfig(engine, cfg, t);
+    applyConfig(engine, cfg, t, followMouse);
 
     const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
     const transform = cfg.transform && !speaking && !reduce ? cfg.transform : "";
     setRxClass(transform);
 
     if (reduce || isStatic) drawRef.current?.();
-  }, [reaction, autoReaction, speaking, isStatic]);
+  }, [reaction, autoReaction, speaking, isStatic, followMouse]);
 
   useEffect(() => {
     if (isStatic || reaction !== "idle") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
     let timer = null;
+    const getNextReaction = createShuffleBag(AUTO_REACTIONS_POOL);
+
     const clear = () => {
       if (timer) {
         clearTimeout(timer);
         timer = null;
       }
     };
+
     const schedule = () => {
       clear();
       timer = setTimeout(() => {
-        const pick = AUTO_REACTIONS[Math.floor(Math.random() * AUTO_REACTIONS.length)];
+        const pick = getNextReaction();
         setAutoReaction(pick);
+        const activeDuration = 1100 + Math.random() * 800;
         timer = setTimeout(() => {
           setAutoReaction(null);
-          timer = setTimeout(schedule, 3200 + Math.random() * 3000);
-        }, 1100 + Math.random() * 900);
-      }, 2400 + Math.random() * 3200);
+          const interval = 2200 + Math.random() * 1800;
+          timer = setTimeout(schedule, interval);
+        }, activeDuration);
+      }, 1500 + Math.random() * 1800);
     };
+
     schedule();
     return () => {
       clear();

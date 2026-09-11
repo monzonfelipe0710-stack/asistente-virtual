@@ -7,6 +7,7 @@ import ChatBotAvatar from "../components/ChatBotAvatar";
 import ImageStage from "../components/common/ImageStage";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
 import { employeeDepartments } from "../data/mockEmployeeApprovals";
+import Footer from "../components/common/Footer";
 
 function Field({ label, type = "text", value, onChange, placeholder, autoComplete, required = true, animate = false }) {
   return (
@@ -233,7 +234,7 @@ export default function LoginRegisterPage() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3.5 rounded-full bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
+                      className="w-full py-3.5 rounded-full bg-brand-deep text-[#ffffff] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
                     >
                       {submitting ? "Enviando…" : "Enviar enlace"}
                     </button>
@@ -279,7 +280,7 @@ export default function LoginRegisterPage() {
                           </button>
                           <a
                             href={recoveryLink}
-                            className="flex-1 py-2 bg-brand-deep text-[#171717] text-xs font-semibold text-center no-underline hover:bg-brand-dark transition-colors"
+                            className="flex-1 py-2 bg-brand-deep text-[#ffffff] text-xs font-semibold text-center no-underline hover:bg-brand-dark transition-colors"
                           >
                             Probar ahora
                           </a>
@@ -308,7 +309,7 @@ export default function LoginRegisterPage() {
                     type="button"
                     onClick={() => switchMode("login")}
                     className={`relative z-10 py-2.5 text-sm font-semibold transition-colors duration-300 cursor-pointer ${
-                      isLogin ? "text-[#171717]" : "text-muted hover:text-ink"
+                      isLogin ? "text-[#ffffff]" : "text-muted hover:text-ink"
                     }`}
                   >
                     Iniciar sesión
@@ -317,7 +318,7 @@ export default function LoginRegisterPage() {
                     type="button"
                     onClick={() => switchMode("register")}
                     className={`relative z-10 py-2.5 text-sm font-semibold transition-colors duration-300 cursor-pointer ${
-                      !isLogin ? "text-[#171717]" : "text-muted hover:text-ink"
+                      !isLogin ? "text-[#ffffff]" : "text-muted hover:text-ink"
                     }`}
                   >
                     Registrarme
@@ -434,7 +435,7 @@ export default function LoginRegisterPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 rounded-full bg-brand-deep text-[#171717] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
+                    className="w-full py-3.5 rounded-full bg-brand-deep text-[#ffffff] text-sm font-semibold transition duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
                   >
                     {submitting
                       ? "Procesando…"
@@ -463,6 +464,7 @@ export default function LoginRegisterPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

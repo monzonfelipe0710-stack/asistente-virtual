@@ -10,27 +10,37 @@
     <link rel="preload" href="/fonts/PPNeueMontreal-Black.woff2" as="font" type="font/woff2" crossorigin />
     <style>
       ::selection {
-        color: #171717;
-        background: #ff9100;
+        color: #ffffff;
+        background: #2F6BFF;
       }
       html, body {
-        background-color: #f1eee7;
+        background-color: #070E20;
+        color: #EAF0FA;
       }
-      html.dark, html.dark body {
-        background-color: #171717;
+      html:not(.dark), html:not(.dark) body {
+        background-color: #F0F4F9;
+        color: #0F1730;
       }
     </style>
     <script>
       (function () {
         try {
+          var migrated = localStorage.getItem("chatap_dark_default_v1");
+          if (!migrated) {
+            localStorage.setItem("theme", "dark");
+            localStorage.setItem("chatap_dark_default_v1", "true");
+          }
           var t = localStorage.getItem("theme");
-          var dark = t === "dark";
-          if (dark) document.documentElement.classList.add("dark");
+          if (t !== "light") {
+            document.documentElement.classList.add("dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+          }
         } catch (e) {}
       })();
     </script>
-    <meta name="theme-color" content="#f1eee7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#070E20" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F0F4F9" media="(prefers-color-scheme: light)" />
     <meta
       name="description"
       content="ChatAP, el asistente virtual de la Administración Pública de Formosa. Consultá trámites, documentación y servicios de la Subsecretaría de Recursos Humanos."

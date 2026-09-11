@@ -98,7 +98,7 @@ export default function MessageBubble({ message, speaking = false, typedText = "
             {typing && (
               <span
                 className={`inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 align-middle animate-pulse-soft ${
-                  isBot ? "bg-brand-deep" : "bg-[#171717]"
+                  isBot ? "bg-brand-deep" : "bg-[#070E20]"
                 }`}
               />
             )}

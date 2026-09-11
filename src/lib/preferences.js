@@ -6,7 +6,7 @@ import { readJSON, writeJSON } from "./auth";
 const PREFIX = "chatap.preferences.";
 
 export const DEFAULT_PREFERENCES = {
-  theme: "system",
+  theme: "dark",
 };
 
 function keyFor(userId) {
@@ -39,7 +39,7 @@ export function applyTheme(theme) {
   try {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    let dark = false;
+    let dark = true;
     if (theme === "dark") dark = true;
     else if (theme === "light") dark = false;
     else if (theme === "system") {
@@ -50,8 +50,9 @@ export function applyTheme(theme) {
         dark = storedExplicit === "dark";
       } else {
         dark =
-          typeof window.matchMedia === "function" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches;
+          typeof window.matchMedia === "function"
+            ? (window.matchMedia("(prefers-color-scheme: light)").matches ? false : true)
+            : true;
       }
     }
     root.classList.toggle("dark", dark);

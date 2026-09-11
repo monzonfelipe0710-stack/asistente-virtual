@@ -85,7 +85,7 @@ export default function ContactoPage() {
 
       <main className="flex-1 w-full">
         {/* Encabezado simple y claro */}
-        <section className="border-b border-line/70 bg-gradient-to-b from-mist/80 via-mist/30 to-paper py-10 sm:py-14">
+        <section className="border-b border-line/70 bg-mist/35 py-10 sm:py-14">
           <div className="ed-max section-bleed">
             <div className="max-w-3xl">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted uppercase tracking-widest mb-3">
