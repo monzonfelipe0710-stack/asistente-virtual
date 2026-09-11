@@ -202,7 +202,7 @@ export default function AdminLayout() {
 
         {/* Main content */}
         <main ref={mainRef} className="flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
-          <div key={pathname} className="animate-page-enter">
+          <div key={pathname}>
             <Outlet />
           </div>
         </main>

@@ -7,7 +7,6 @@ import ChatBotAvatar from "../components/ChatBotAvatar";
 import ImageStage from "../components/common/ImageStage";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
 import { employeeDepartments } from "../data/mockEmployeeApprovals";
-import { triggerOnboardingForUser } from "../components/common/BotOnboardingModal";
 
 function Field({ label, type = "text", value, onChange, placeholder, autoComplete, required = true, animate = false }) {
   return (
@@ -83,7 +82,7 @@ export default function LoginRegisterPage() {
         await login(email, password);
         toast("¡Bienvenido de nuevo!", "success");
       } else {
-        const newUser = await register({
+        await register({
           name,
           email,
           password,
@@ -94,9 +93,6 @@ export default function LoginRegisterPage() {
           position,
           reason,
         });
-        if (newUser?.id) {
-          triggerOnboardingForUser(newUser.id);
-        }
         toast(
           wantsEmployee
             ? "¡Solicitud enviada! Un Superadmin revisará tus datos."

@@ -1,0 +1,157 @@
+.hero-cinematic {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--color-paper);
+}
+
+/* ── CRTWarp: canvas WebGL (Three.js) ──────────────────────── */
+.hero-cinematic__crtwarp {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  animation: crtwarp-fade-in 2s ease 0.1s both;
+}
+
+@keyframes crtwarp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cinematic__crtwarp { animation: none; }
+}
+
+/* ── Fallback: gradiente animado para low-end sin CRTWarp ──── */
+.hero-cinematic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 45%, rgba(255, 145, 0, 0.08), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 70% 60%, rgba(255, 145, 0, 0.05), transparent 50%);
+  animation: hero-fallback-drift 12s ease-in-out infinite alternate;
+  opacity: 0;
+}
+
+.hero-cinematic:not(:has(.hero-cinematic__crtwarp))::after {
+  opacity: 1;
+}
+
+@keyframes hero-fallback-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(2vw, -1vh) scale(1.03); }
+}
+
+.dark .hero-cinematic::after {
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 45%, rgba(255, 145, 0, 0.04), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 70% 60%, rgba(255, 145, 0, 0.025), transparent 50%);
+}
+
+/* ── Overlay: zona quieta detrás del título + transición inferior ── */
+.hero-cinematic__overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 50% at 32% 38%, rgba(241, 238, 231, 0.55), transparent 60%),
+    linear-gradient(to bottom, transparent 65%, var(--color-paper) 100%);
+}
+
+.dark .hero-cinematic__overlay {
+  background:
+    radial-gradient(ellipse 55% 50% at 32% 38%, rgba(23, 23, 23, 0.55), transparent 60%),
+    linear-gradient(to bottom, transparent 65%, var(--color-paper) 100%);
+}
+
+.hero-cinematic__inner { position: relative; z-index: 2; }
+
+.hero-cinematic__kicker {
+  position: relative;
+  padding-left: 1.1rem;
+  color: var(--color-muted);
+  transition: color 200ms ease;
+}
+
+.hero-cinematic__kicker::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  content: "";
+  border-radius: 50%;
+  background: var(--color-brand);
+  box-shadow: 0 0 0 0.3rem rgba(255, 145, 0, 0.13);
+  transform: translateY(-50%);
+}
+
+.hero-cinematic__title {
+  position: relative;
+  z-index: 2;
+  max-width: 14ch;
+  margin: 0;
+  font-family: var(--font-neue);
+  font-size: clamp(3.75rem, 9vw, 9.25rem);
+  font-weight: 900;
+  letter-spacing: -0.072em;
+  line-height: 0.86;
+  color: var(--color-ink);
+  text-wrap: balance;
+}
+
+.hero-cinematic__text {
+  color: var(--color-ink);
+}
+
+.hero-cinematic .hero-logo-loop--full {
+  position: relative;
+  padding-bottom: 0.5rem;
+  color: var(--color-muted);
+}
+
+.hero-cinematic .hero-logo-loop--full::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+  opacity: 0.7;
+}
+
+/* ── CTA final: panel oscuro con luz ambiental ─────────────── */
+.cta-cinematic {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 145, 0, 0.16), transparent 42%),
+    radial-gradient(circle at 85% 100%, rgba(255, 145, 0, 0.1), transparent 45%),
+    linear-gradient(180deg, #1a1a1a, #171717);
+}
+
+.cta-cinematic::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  opacity: 0.5;
+  background-image:
+    linear-gradient(to right, transparent 0, transparent calc(100% - 1px), rgba(243, 241, 233, 0.05) calc(100% - 1px)),
+    linear-gradient(to bottom, transparent 0, transparent calc(100% - 1px), rgba(243, 241, 233, 0.04) calc(100% - 1px));
+  background-size: clamp(4rem, 11vw, 10rem) clamp(4rem, 11vw, 10rem);
+  mask-image: linear-gradient(to bottom, black, transparent 70%);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .hero-cinematic__title {
+    font-size: clamp(3.45rem, 16vw, 5.5rem);
+  }
+}

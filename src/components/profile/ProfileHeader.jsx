@@ -44,7 +44,7 @@ export default function ProfileHeader({ onSaved }) {
 
   return (
     <>
-      <header className="card overflow-hidden animate-page-enter bg-paper">
+      <header className="card overflow-hidden bg-paper">
         <div className="px-6 sm:px-10 pt-10 pb-8 relative overflow-hidden">
           <span
             className="pointer-events-none select-none absolute -right-6 -top-8 text-ink/[0.05] text-[11rem] font-black tracking-tighter"

@@ -103,7 +103,7 @@ export default function ProfileLayout() {
           })}
         </div>
 
-        <div className="mt-8 animate-page-enter" key={normalized}>
+        <div className="mt-8" key={normalized}>
           {renderSection(target.key)}
         </div>
       </main>
