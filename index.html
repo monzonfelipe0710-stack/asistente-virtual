@@ -27,15 +27,6 @@
           var dark = t === "dark";
           if (dark) document.documentElement.classList.add("dark");
         } catch (e) {}
-        /* Add fonts-ready when fonts finish loading so the page
-           fades in clean instead of flashing un-styled text */
-        if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(function () {
-            document.body.classList.add("fonts-ready");
-          });
-        } else {
-          document.body.classList.add("fonts-ready");
-        }
       })();
     </script>
     <meta name="theme-color" content="#f1eee7" media="(prefers-color-scheme: light)" />

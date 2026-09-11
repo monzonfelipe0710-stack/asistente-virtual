@@ -1,0 +1,283 @@
+/* ── React Bits: LogoLoop animation ─────────────────────────── */
+.logoloop {
+  position: relative;
+  --logoloop-gap: 32px;
+  --logoloop-logoHeight: 28px;
+  --logoloop-fadeColorAuto: #ffffff;
+}
+
+.logoloop--vertical {
+  height: 100%;
+  display: inline-block;
+}
+
+.logoloop--scale-hover {
+  padding-top: calc(var(--logoloop-logoHeight) * 0.1);
+  padding-bottom: calc(var(--logoloop-logoHeight) * 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .logoloop { --logoloop-fadeColorAuto: #0b0b0b; }
+}
+
+.logoloop__track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  user-select: none;
+  position: relative;
+}
+
+.logoloop__list {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--logoloop-gap);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.logoloop--horizontal .logoloop__list {
+  flex-direction: row;
+}
+
+.logoloop--vertical .logoloop__list {
+  flex-direction: column;
+  height: 100%;
+}
+
+.logoloop__item {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--logoloop-logoHeight);
+}
+
+.logoloop__item > * {
+  display: flex;
+  align-items: center;
+}
+
+.logoloop__link {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.logoloop__link:hover,
+.logoloop__link:focus-visible {
+  transform: scale(1.05);
+}
+
+.logoloop__node {
+  display: flex;
+  align-items: center;
+}
+
+.logoloop__node svg,
+.logoloop__node img {
+  height: var(--logoloop-logoHeight);
+  width: auto;
+  object-fit: contain;
+}
+
+.logoloop__item img {
+  height: var(--logoloop-logoHeight);
+  width: auto;
+  object-fit: contain;
+}
+
+.logoloop--fade {
+  --logoloop-fade-color: var(--logoloop-fadeColor, var(--logoloop-fadeColorAuto));
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logoloop__track {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ── Hero logo loop ────────────────────────────────────────── */
+.hero-logo-loop {
+  width: min(100%, 36rem);
+  margin-top: 0.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.hero-logo-loop > p {
+  margin: 0 0 0.7rem;
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hero-logo-loop .logoloop { --logoloop-gap: 2.25rem; }
+.hero-logo-loop .logoloop__item { height: auto; min-width: auto; }
+.hero-logo-loop .institutional-mark { color: var(--color-ink); }
+.hero-logo-loop .institutional-mark__monogram { background: var(--color-brand); color: var(--color-ink); }
+.hero-logo-loop .institutional-mark__star { color: var(--color-brand-deep); }
+.hero-logo-loop .institutional-mark__seal { border-color: var(--color-line); color: var(--color-brand-deep); }
+.hero-logo-loop--full { width: 100%; margin-top: clamp(2.5rem, 6vw, 5rem); }
+.hero-logo-loop--full .logoloop { --logoloop-gap: clamp(3rem, 9vw, 8rem); }
+
+/* ── Institutional marks (logos JSX) ───────────────────────── */
+.institutional-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--color-ink);
+  font-family: var(--font-neue);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.institutional-mark__monogram {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 0.5rem;
+  background: var(--color-brand);
+  color: var(--color-ink);
+  font-size: 0.66rem;
+  letter-spacing: -0.05em;
+}
+
+.institutional-mark--unidos { font-style: italic; }
+.institutional-mark__star { color: var(--color-brand-deep); font-size: 1.5rem; line-height: 1; }
+
+.institutional-mark--gobierno {
+  gap: 0.5rem;
+  font-size: 0.68rem;
+  line-height: 0.92;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.institutional-mark__seal {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-brand-deep);
+  font-family: Georgia, serif;
+  font-size: 1.05rem;
+  text-transform: none;
+}
+
+/* ── Institutional banner section ──────────────────────────── */
+.institutional-section { overflow: hidden; }
+
+.institutional-banner {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border: 1px solid rgba(243, 241, 233, 0.16);
+  border-radius: 1.75rem;
+  background: #171717;
+  color: #f3f1e9;
+  isolation: isolate;
+}
+
+.institutional-banner::before,
+.institutional-banner::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  border: 1px solid rgba(243, 241, 233, 0.09);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.institutional-banner::before { width: 32rem; height: 32rem; top: -22rem; right: -7rem; }
+.institutional-banner::after { width: 19rem; height: 19rem; top: -12rem; right: 7rem; }
+
+.institutional-banner__glow {
+  position: absolute;
+  z-index: -1;
+  top: -8rem;
+  right: 6%;
+  width: 25rem;
+  height: 25rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 145, 0, 0.22), transparent 67%);
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+.institutional-banner__topline,
+.institutional-banner__footer-label {
+  font-family: var(--font-mono);
+  font-size: 0.61rem;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.institutional-banner__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid rgba(243, 241, 233, 0.14);
+  color: rgba(243, 241, 233, 0.52);
+}
+
+.institutional-banner__status { display: inline-flex; align-items: center; gap: 0.5rem; }
+.institutional-banner__status i { width: 0.45rem; height: 0.45rem; border-radius: 999px; background: #18bc42; box-shadow: 0 0 0 4px rgba(24, 188, 66, 0.12); }
+
+.institutional-banner__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(15rem, 0.7fr);
+  align-items: end;
+  gap: 2rem;
+  padding: clamp(2rem, 5vw, 4.25rem) 0;
+}
+
+.institutional-banner__eyebrow { margin: 0 0 1rem; color: #ff9100; font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+.institutional-banner h2 { max-width: 12ch; margin: 0; font-family: var(--font-neue); font-size: clamp(2.4rem, 5.4vw, 5.75rem); font-weight: 800; letter-spacing: -0.065em; line-height: 0.88; }
+
+.institutional-banner__bot { display: flex; align-items: center; justify-content: flex-end; gap: 1.25rem; }
+.institutional-banner__bot-avatar { display: grid; width: 7rem; height: 7rem; flex: 0 0 7rem; place-items: center; border: 1px solid rgba(243, 241, 233, 0.18); border-radius: 50%; background: rgba(243, 241, 233, 0.06); }
+.institutional-banner__bot p { margin: 0; color: rgba(243, 241, 233, 0.58); font-size: 0.9rem; line-height: 1.5; }
+.institutional-banner__bot strong { color: #f3f1e9; font-weight: 600; }
+
+.institutional-banner__footer { display: grid; grid-template-columns: 13rem minmax(0, 1fr); align-items: center; gap: 1.5rem; padding-top: 1.1rem; border-top: 1px solid rgba(243, 241, 233, 0.14); }
+.institutional-banner__footer-label { color: rgba(243, 241, 233, 0.42); }
+.institutional-banner .logoloop { --logoloop-gap: clamp(2rem, 5vw, 4.5rem); mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent); }
+.institutional-banner .logoloop__item { min-width: auto; }
+
+@media (max-width: 680px) {
+  .institutional-banner__topline { align-items: flex-start; flex-direction: column; }
+  .institutional-banner__content { grid-template-columns: 1fr; padding: 2.5rem 0; }
+  .institutional-banner__bot { justify-content: flex-start; }
+  .institutional-banner__footer { grid-template-columns: 1fr; gap: 0.9rem; }
+  .institutional-banner h2 { font-size: clamp(2.6rem, 12vw, 4rem); }
+}

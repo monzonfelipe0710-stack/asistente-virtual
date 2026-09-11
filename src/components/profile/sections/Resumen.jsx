@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../admin/ui";
 import { Icon, ICONS, SectionHeader, EmptyNote } from "../ui";
-import { triggerOnboardingForUser } from "../../common/BotOnboardingModal";
 
 export default function Resumen({ data, role, onGo }) {
   const navigate = useNavigate();
@@ -128,32 +127,6 @@ export default function Resumen({ data, role, onGo }) {
             />
           </div>
         )}
-      </div>
-
-      <div className="rounded-2xl border border-line bg-mist/30 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl bg-primary-light text-brand-deep flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </span>
-          <div>
-            <p className="text-xs font-bold text-ink m-0">Guía interactiva de ChatAP</p>
-            <p className="text-[11px] text-muted m-0">Repasá en cualquier momento cómo funciona la plataforma y qué podés hacer en cada sección.</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (data.user?.id) {
-              localStorage.removeItem(`chatap_tutorial_completed_${data.user.id}`);
-              triggerOnboardingForUser(data.user.id);
-            }
-          }}
-          className="px-3.5 py-2 rounded-xl border border-line bg-paper text-xs font-semibold text-brand-deep hover:bg-mist transition-colors cursor-pointer shrink-0"
-        >
-          Ver tutorial de nuevo
-        </button>
       </div>
     </div>
   );

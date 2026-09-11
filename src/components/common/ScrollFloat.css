@@ -1,0 +1,11 @@
+.scroll-float { overflow: hidden; }
+.scroll-float__text {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.scroll-float__word { display: inline; }
+.scroll-float__char { display: inline-block; will-change: opacity, transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-float__char { opacity: 1 !important; transform: none !important; }
+}

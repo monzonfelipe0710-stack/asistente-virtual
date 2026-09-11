@@ -8,11 +8,9 @@ const preloadAdmin = () => {
 };
 
 const NAV_LINKS = [
-  { id: "inicio",      label: "Proyecto",    to: "/",     hash: true },
-  { id: "nuestro-bot", label: "Nuestro Bot", to: "/",     hash: true },
-  { id: "servicios",   label: "Servicios",   to: "/",     hash: true },
-  { id: "capacidades", label: "Simulador",   to: "/",     hash: true },
-  { id: "confianza",   label: "Confianza",   to: "/",     hash: true },
+  { id: "inicio",  label: "Inicio",  to: "/" },
+  { id: "chatap",  label: "ChatAP",  to: "/chat" },
+  { id: "soporte", label: "Soporte", to: "/contacto" },
 ];
 
 function ProfileMenu({ user, isStaff, userRole, logout }) {
@@ -190,7 +188,6 @@ export default function Navbar() {
   );
   const { user, isAuthenticated, isStaff, userRole, logout } = useAuth();
   const location = useLocation();
-  const isHome = location.pathname === "/";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -217,14 +214,8 @@ export default function Navbar() {
           {NAV_LINKS.map((l) => (
             <Link
               key={l.id}
-              to={l.hash && isHome ? "#" + l.id : l.to}
-              onClick={(e) => {
-                if (l.hash && isHome) {
-                  e.preventDefault();
-                  document.getElementById(l.id)?.scrollIntoView({ behavior: "smooth" });
-                }
-              }}
-              className={"nav-link " + (location.pathname === l.to && !l.hash ? "nav-link--active" : "")}
+              to={l.to}
+              className={"nav-link " + (location.pathname === l.to ? "nav-link--active" : "")}
             >
               {l.label}
             </Link>

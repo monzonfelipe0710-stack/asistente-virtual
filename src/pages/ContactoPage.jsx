@@ -83,7 +83,7 @@ export default function ContactoPage() {
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-brand-deep/10 selection:text-brand-deep">
       <Navbar />
 
-      <main className="flex-1 w-full animate-page-enter">
+      <main className="flex-1 w-full">
         {/* Encabezado simple y claro */}
         <section className="border-b border-line/70 bg-gradient-to-b from-mist/80 via-mist/30 to-paper py-10 sm:py-14">
           <div className="ed-max section-bleed">

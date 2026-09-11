@@ -8,10 +8,10 @@ const QUICK = [
 ];
 
 const INFO = [
-  { label: "Inicio",    to: "/" },
-  { label: "Servicios", to: "/#servicios" },
-  { label: "ChatAP",    to: "/chat" },
-  { label: "Confianza", to: "/#confianza" },
+  { label: "Inicio",     to: "/" },
+  { label: "Asistente",  to: "/chat" },
+  { label: "Contacto",   to: "/contacto" },
+  { label: "Mi perfil",  to: "/perfil" },
 ];
 
 export default function Footer() {
