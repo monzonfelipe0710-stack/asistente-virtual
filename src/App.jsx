@@ -1,103 +1,22 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "./components/common/Toast";
+import AppErrorBoundary from "./components/common/AppErrorBoundary";
 import { AdminProvider } from "./context/AdminContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ChatProvider } from "./context/ChatContext";
-import HomePage from "./pages/HomePage";
-import CiudadanoPage from "./pages/CiudadanoPage";
-import LoginRegisterPage from "./pages/LoginRegisterPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-
-function PageFallback() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-paper text-muted text-sm uppercase tracking-widest">
-      Cargando…
-    </div>
-  );
-}
+import AppRouter from "./router/AppRouter";
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <ChatProvider>
-          <AdminProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/chat" element={<CiudadanoPage />} />
-                <Route path="/login" element={<LoginRegisterPage />} />
-                <Route path="/restablecer" element={<ResetPasswordPage />} />
-                <Route
-                  path="/contacto"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <ContactoPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/soporte"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <ContactoPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/perfil"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <ProfilePage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <AdminLayout />
-                    </Suspense>
-                  }
-                >
-                  <Route index element={<Suspense fallback={<PageFallback />}><AdminDashboard /></Suspense>} />
-                  <Route path="solicitudes" element={<Suspense fallback={<PageFallback />}><EmployeeApprovals /></Suspense>} />
-                  <Route path="usuarios" element={<Suspense fallback={<PageFallback />}><UserTable /></Suspense>} />
-                  <Route path="mesa-de-entrada" element={<Suspense fallback={<PageFallback />}><MesaDeEntrada /></Suspense>} />
-                  <Route path="conocimiento" element={<Suspense fallback={<PageFallback />}><KnowledgeManager /></Suspense>} />
-                  <Route path="siged" element={<Suspense fallback={<PageFallback />}><SigedIntegration /></Suspense>} />
-                  <Route path="documentos" element={<Suspense fallback={<PageFallback />}><DocumentManager /></Suspense>} />
-                  <Route path="configuracion" element={<Suspense fallback={<PageFallback />}><ChatbotSettings /></Suspense>} />
-                  <Route path="reportes" element={<Suspense fallback={<PageFallback />}><ReportsPage /></Suspense>} />
-                </Route>
-                <Route
-                  path="*"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <NotFoundPage />
-                    </Suspense>
-                  }
-                />
-              </Routes>
-            </BrowserRouter>
-          </AdminProvider>
-        </ChatProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <AppErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <ChatProvider>
+            <AdminProvider>
+              <AppRouter />
+            </AdminProvider>
+          </ChatProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </AppErrorBoundary>
   );
 }
-
-const AdminLayout = lazy(() => import("./pages/AdminLayout"));
-const ContactoPage = lazy(() => import("./pages/ContactoPage"));
-const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
-const AdminDashboard = lazy(() => import("./components/admin/Dashboard"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
-const EmployeeApprovals = lazy(() => import("./components/admin/EmployeeApprovals"));
-const UserTable = lazy(() => import("./components/admin/UserTable"));
-const KnowledgeManager = lazy(() => import("./components/admin/KnowledgeManager"));
-const SigedIntegration = lazy(() => import("./components/admin/SigedIntegration"));
-const DocumentManager = lazy(() => import("./components/admin/DocumentManager"));
-const ChatbotSettings = lazy(() => import("./components/admin/ChatbotSettings"));
-const ReportsPage = lazy(() => import("./components/admin/ReportsPage"));
-const MesaDeEntrada = lazy(() => import("./components/admin/MesaDeEntrada"));
