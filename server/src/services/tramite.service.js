@@ -51,6 +51,13 @@ export const eliminarTramite = async (id) => {
   return prisma.tramite.delete({where: { id } });
 };
 
+export const cambiarPublicacion = async (id, publicado) => {
+  return prisma.tramite.update({
+    where: { id },
+    data: { publicado },
+  });
+};
+
 export const actualizarTramite = async (id, datos) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
 

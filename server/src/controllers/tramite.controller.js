@@ -40,3 +40,15 @@ export const eliminar = async (req, res) => {
   await tramiteService.eliminarTramite(id);
   res.status(204).send();
 };
+
+export const publicar = async (req, res) => {
+  const id = Number(req.params.id);
+  const tramite = await tramiteService.cambiarPublicacion(id, true);
+  res.json({ mensaje: 'Tramite publicado', tramite });
+};
+
+export const despublicar = async (req, res) => {
+  const id = Number(req.params.id);
+  const tramite = await tramiteService.despublicar(id, false);
+  res.json({ mensaje: 'Tramite despublicado', tramite });
+};

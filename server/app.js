@@ -6,7 +6,7 @@ import authRoutes from './src/routes/auth.routes.js'
 import { errorHandler } from './src/middlewares/error.middleware.js';
 import usuarioRoutes from './src/routes/usuario.routes.js';
 import sectorRoutes from './src/routes/sector.routes.js'
-import tramiteRoutes from './routes/tramite.routes.js';
+import tramiteRoutes from './src/routes/tramite.routes.js';
 
 const app = express();
 
