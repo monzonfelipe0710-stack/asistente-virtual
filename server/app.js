@@ -6,6 +6,7 @@ import authRoutes from './src/routes/auth.routes.js'
 import { errorHandler } from './src/middlewares/error.middleware.js';
 import usuarioRoutes from './src/routes/usuario.routes.js';
 import sectorRoutes from './src/routes/sector.routes.js'
+import tramiteRoutes from './routes/tramite.routes.js';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.get('/api/health', (req, res) =>{
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/sectores', sectorRoutes);
+app.use('/api/tramites', tramiteRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {
