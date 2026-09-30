@@ -1,28 +1,33 @@
 import prisma from '../config/prisma.js';
+import { indexarTramite } from './embedding.service.js';
 
 export const crearTramite = async (datos, encargadoId) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
 
-  return prisma.$transaction(async (tx) => {
-    const tramite = await tx.tramite.create({
+  const tramite = await prisma.$transaction(async (tx) => {
+    return tx.tramite.create({
       data: {
         ...datosTramite,
         encargadoId,
-      requisitos: {
-        create: requisitos,
-      },
-      mesas: {
-        create: mesaIds.map((mesaId) => ({ mesaId })),
-      },
+        requisitos: {
+          create: requisitos,
+        },
+        mesas: {
+          create: mesaIds.map((mesaId) => ({ mesaId })),
+        },
       },
       include: {
         requisitos: true,
         mesas: true,
       },
     });
-
-    return tramite;
   });
+
+  indexarTramite(tramite.id).catch((err) => {
+    console.error(`Error al indexar el tramite ${tramite.id}`, err.message);
+  });
+
+  return tramite;
 };
 
 export const listarTramites = async () => {
@@ -61,23 +66,23 @@ export const cambiarPublicacion = async (id, publicado) => {
 export const actualizarTramite = async (id, datos) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
 
-  return prisma.$transaction(async (tx) => {
+  const tramiteActualizado = await prisma.$transaction(async (tx) => {
     await tx.tramite.update({
       where: { id },
       data: datosTramite,
     });
 
     if (requisitos !== undefined) {
-      await tx.requisito.deleteMany({ where: { tramiteId: id} });
+      await tx.requisito.deleteMany({ where: { tramiteId: id } });
       if (requisitos.length > 0) {
         await tx.requisito.createMany({
-          data: requisitos.map((r) => ({ ...r, tramiteId: id} )),
+          data: requisitos.map((r) => ({ ...r, tramiteId: id })),
         });
       }
     }
 
     if (mesaIds !== undefined) {
-      await tx.tramiteMesa.deleteMany({ where: { tramiteId: id} });
+      await tx.tramiteMesa.deleteMany({ where: { tramiteId: id } });
       if (mesaIds.length > 0) {
         await tx.tramiteMesa.createMany({
           data: mesaIds.map((mesaId) => ({ tramiteId: id, mesaId })),
@@ -89,10 +94,16 @@ export const actualizarTramite = async (id, datos) => {
       where: { id },
       include: {
         requisitos: true,
-        mesas: { include: { mesa: true} },
+        mesas: { include: { mesa: true } },
         sector: { select: { id: true, nombre: true } },
-        encargado: { select: { id: true, nombre: true} },
+        encargado: { select: { id: true, nombre: true } },
       },
     });
   });
+
+  indexarTramite(id).catch((err) => {
+    console.error(`Error al reindexar el trámite ${id}`, err.message);
+  });
+
+  return tramiteActualizado;
 };
