@@ -7,47 +7,37 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
   type StyleProp,
   type TextInputProps,
   type ViewStyle,
 } from "react-native";
+import { Text, TextInput } from "../common/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import type { SigedPriority, SigedStatus } from "../../data/mockSiged";
 import {
+  Motion,
   Radius,
   Shadows,
+  Size,
   Spacing,
   Type,
   Typography,
   useAdminColors,
-  withAlpha,
   type AdminPalette,
 } from "../../constants/theme";
 
 /**
- * Piezas compartidas del panel admin.
+ * Piezas compartidas del panel admin, con la anatomía de pantalla v6.
  *
- * El sistema no dibuja recuadros. Nada de bordes alrededor de bloques, ni
- * paneles con fondo propio: todo el contenido vive sobre UNA superficie y lo
- * que lo separa es el espacio y, cuando hace falta marcar un límite, una línea
- * de un pixel. Con un marco por cada grupo todo pesaba igual y la pantalla se
- * leía como una grilla de cajas en vez de como una lista de información.
- *
- * Las dos excepciones son deliberadas:
- *
- * - Los CONTROLES conservan un relleno o un subrayado. Un botón tiene que
- *   parecer apretable y un campo tiene que parecer escribible; sacarles eso no
- *   es limpiar, es romper la usabilidad.
- * - El DIÁLOGO conserva su superficie, porque flota sobre el fondo oscurecido
- *   y sin ella no habría dónde apoyarlo.
- *
- * Reglas que siguen valiendo: el color marca estado, y los textos salen de
- * `Type` (piso de 12 px, caja normal).
+ * - Sin tarjetas alrededor de listas ni indicadores: el contenido vive sobre
+ *   el fondo y las filas se separan con una línea de 1 px y 16 de aire.
+ * - Los controles sí tienen superficie: campos rellenos de 52 (radio 16),
+ *   botones de 44 a 52 (radio 12 a 16), control segmentado gris.
+ * - Una sola acción azul por pantalla. Las secundarias van con contorno
+ *   neutro y las destructivas en rojo.
  */
 
 export type Tone = "brand" | "ok" | "warn" | "bad" | "info" | "muted";
@@ -63,9 +53,9 @@ export function toneColor(C: AdminPalette, tone: Tone): string {
     case "info":
       return C.info;
     case "muted":
-      return C.muted;
+      return C.faint;
     default:
-      return C.brandDeep;
+      return C.brand;
   }
 }
 
@@ -73,17 +63,17 @@ export function toneColor(C: AdminPalette, tone: Tone): string {
 /* Estructura                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** La superficie única sobre la que se apoya cada pantalla del panel. */
+/** El fondo de cada pantalla del panel: margen lateral de 20. */
 export function AdminScreen({ children }: { children: React.ReactNode }) {
   const C = useAdminColors();
   const insets = useSafeAreaInsets();
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: C.paper }}
+      style={{ flex: 1, backgroundColor: C.canvas }}
       contentContainerStyle={{
-        paddingHorizontal: Spacing[4],
-        paddingTop: Spacing[2],
+        paddingHorizontal: Spacing[5],
+        paddingTop: Spacing[1],
         paddingBottom: insets.bottom + Spacing[12],
       }}
       showsVerticalScrollIndicator={false}
@@ -95,8 +85,8 @@ export function AdminScreen({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Agrupa contenido sin dibujar nada. Queda para que las pantallas expresen
- * "esto va junto" sin tener que repetir márgenes a mano.
+ * Agrupa contenido sin dibujar nada. `padded` deja aire arriba y abajo, como
+ * el resto de los bloques de la pantalla.
  */
 export function Card({
   children,
@@ -123,7 +113,7 @@ export function ListCard({
   return <View style={style}>{children}</View>;
 }
 
-/** Encabezado de un bloque, con la línea que lo separa de lo que sigue. */
+/** Encabezado de un bloque: título 17/600 y bajada 13; la acción va a la derecha. */
 export function CardHeader({
   title,
   subtitle,
@@ -135,12 +125,10 @@ export function CardHeader({
 }) {
   const C = useAdminColors();
   return (
-    <View style={[styles.cardHeader, { borderBottomColor: C.line }]}>
-      <View style={{ flexShrink: 1 }}>
+    <View style={styles.cardHeader}>
+      <View style={{ flexShrink: 1, gap: 2 }}>
         <Text style={[Type.cardTitle, { color: C.ink }]}>{title}</Text>
-        {!!subtitle && (
-          <Text style={[Type.meta, { color: C.muted, marginTop: 2 }]}>{subtitle}</Text>
-        )}
+        {!!subtitle && <Text style={[Type.meta, { color: C.muted }]}>{subtitle}</Text>}
       </View>
       {right}
     </View>
@@ -148,13 +136,12 @@ export function CardHeader({
 }
 
 /**
- * Una fila de lista. La línea de arriba es lo único que la separa de la
- * anterior; `first` la omite para no abrir el bloque con una raya suelta.
+ * Fila de lista: línea de 1 px abajo y 16 de aire arriba y abajo. `first` se
+ * acepta por compatibilidad; ya no cambia nada porque la línea va abajo.
  */
 export function Row({
   children,
   onPress,
-  first = false,
   style,
   accessibilityLabel,
 }: {
@@ -168,7 +155,7 @@ export function Row({
 
   const content = (pressed: boolean) => [
     styles.row,
-    !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
+    { borderBottomColor: C.line },
     pressed && { backgroundColor: C.mist },
     style,
   ];
@@ -187,6 +174,7 @@ export function Row({
   );
 }
 
+/** Título de pantalla 28/34 · 600 y bajada 15/22. */
 export function PageHeader({
   title,
   description,
@@ -198,25 +186,19 @@ export function PageHeader({
 }) {
   const C = useAdminColors();
   return (
-    <View style={{ marginBottom: Spacing[6] }}>
+    <View style={{ marginBottom: Spacing[6], gap: 6 }}>
       <Text style={[Type.pageTitle, { color: C.ink }]}>{title}</Text>
-      {!!description && (
-        <Text style={[Type.body, { color: C.muted, marginTop: Spacing[1] }]}>
-          {description}
-        </Text>
-      )}
+      {!!description && <Text style={[Type.lead, { color: C.muted }]}>{description}</Text>}
       {!!children && <View style={styles.headerActions}>{children}</View>}
     </View>
   );
 }
 
-/** Rótulo que abre un grupo de contenido, con su línea. */
+/** Rótulo que abre un grupo de contenido: título de sección 17/600. */
 export function SectionTitle({ children }: { children: string }) {
   const C = useAdminColors();
   return (
-    <View style={[styles.sectionTitle, { borderBottomColor: C.line }]}>
-      <Text style={[Type.metaStrong, { color: C.muted }]}>{children}</Text>
-    </View>
+    <Text style={[Type.cardTitle, styles.sectionTitle, { color: C.ink }]}>{children}</Text>
   );
 }
 
@@ -225,14 +207,18 @@ export function SectionTitle({ children }: { children: string }) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Botón. El primario y el destructivo van rellenos porque tienen que verse
- * apretables; el fantasma es texto, que es lo que corresponde a una acción
- * secundaria y no agrega otro rectángulo.
+ * Botón.
+ * - primary: azul profundo con texto blanco. Uno por pantalla.
+ * - secondary: contorno neutro.
+ * - ghost: texto en azul (enlace), sin superficie.
+ * - danger: texto rojo, sin superficie; al confirmar se usa `dangerFill`.
+ * `size="md"` es la variante de 44 con radio 12 para pares de botones.
  */
 export function Btn({
   label,
   onPress,
   variant = "primary",
+  size = "lg",
   icon,
   disabled = false,
   loading = false,
@@ -240,17 +226,25 @@ export function Btn({
 }: {
   label: string;
   onPress?: () => void;
-  variant?: "primary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "dangerFill";
+  size?: "lg" | "md";
   icon?: keyof typeof Ionicons.glyphMap;
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const C = useAdminColors();
+  const md = size === "md";
 
-  const ghost = variant === "ghost";
-  const bg = ghost ? "transparent" : variant === "danger" ? C.bad : C.brandDeep;
-  const fg = ghost ? C.muted : "#ffffff";
+  const filled = variant === "primary" || variant === "dangerFill";
+  const fg =
+    variant === "primary" || variant === "dangerFill"
+      ? "#FFFFFF"
+      : variant === "ghost"
+        ? C.brandDeep
+        : variant === "danger"
+          ? C.danger
+          : C.ink;
 
   return (
     <Pressable
@@ -261,17 +255,41 @@ export function Btn({
       accessibilityState={{ disabled: disabled || loading }}
       style={({ pressed }) => [
         styles.btn,
-        ghost && styles.btnGhost,
-        { backgroundColor: bg, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 },
+        {
+          height: md ? Size.touch : Size.button,
+          borderRadius: md ? Radius.lg : Radius.xl,
+        },
+        variant === "ghost" && styles.btnGhost,
+        variant === "secondary" && { borderWidth: 1, borderColor: C.line },
+        {
+          backgroundColor: filled
+            ? variant === "dangerFill"
+              ? C.danger
+              : pressed
+                ? C.primaryHover
+                : C.primary
+            : pressed && variant !== "ghost"
+              ? C.mist
+              : "transparent",
+          opacity: disabled ? 0.45 : variant === "ghost" && pressed ? 0.6 : 1,
+        },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={ghost ? C.muted : "#ffffff"} />
+        <ActivityIndicator size="small" color={fg} />
       ) : (
         <>
-          {!!icon && <Ionicons name={icon} size={16} color={fg} />}
-          <Text style={[Type.bodyStrong, { color: fg }]}>{label}</Text>
+          {!!icon && <Ionicons name={icon} size={20} color={fg} />}
+          <Text
+            style={{
+              fontSize: md ? 15 : 16,
+              fontWeight: filled ? Typography.semibold : Typography.medium,
+              color: fg,
+            }}
+          >
+            {label}
+          </Text>
         </>
       )}
     </Pressable>
@@ -279,39 +297,71 @@ export function Btn({
 }
 
 /**
- * Campo de texto subrayado. La línea de abajo dice "acá se escribe" sin
- * encerrar el campo en una caja, y al enfocarlo se tiñe del color de marca.
+ * Campo de texto relleno: 52 de alto, radio 16, gris de superficie. Al
+ * enfocarlo, borde azul, anillo de 4 px y fondo blanco. Con `icon` es el
+ * buscador: 44 de alto, radio 12, lupa a la izquierda y sin anillo.
  */
-export function Input(props: TextInputProps & { icon?: keyof typeof Ionicons.glyphMap }) {
+export function Input(
+  props: TextInputProps & { icon?: keyof typeof Ionicons.glyphMap; invalid?: boolean }
+) {
   const C = useAdminColors();
-  const { icon, style, ...rest } = props;
+  const { icon, style, invalid = false, multiline, onFocus, onBlur, ...rest } = props;
   const [focused, setFocused] = useState(false);
+  const search = !!icon;
+
+  if (search) {
+    return (
+      <View style={[styles.search, { backgroundColor: C.mist }]}>
+        <Ionicons name="search" size={18} color={C.faint} />
+        <TextInput
+          placeholderTextColor={C.faint}
+          style={[{ flex: 1, minWidth: 0, fontSize: 16, color: C.ink, height: Size.touch }, style]}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          {...rest}
+        />
+      </View>
+    );
+  }
 
   return (
     <View
       style={[
-        styles.input,
-        { borderBottomColor: focused ? C.brand : C.line },
-        focused && { borderBottomWidth: 1.5 },
+        styles.ring,
+        { borderColor: focused ? C.ring : "transparent" },
       ]}
     >
-      {!!icon && <Ionicons name={icon} size={16} color={C.faint} />}
       <TextInput
         placeholderTextColor={C.faint}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[{ flex: 1, paddingVertical: Spacing[3], color: C.ink }, Type.body, style]}
+        multiline={multiline}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
+        style={[
+          styles.field,
+          multiline && styles.fieldMultiline,
+          {
+            backgroundColor: focused ? C.canvas : C.mist,
+            borderColor: invalid ? C.danger : focused ? C.brand : "transparent",
+            color: C.ink,
+          },
+          style,
+        ]}
         {...rest}
       />
     </View>
   );
 }
 
-/** Campo con etiqueta y mensaje de error. */
+/** Campo con etiqueta 13/500 y error en rojo debajo. Sin asteriscos. */
 export function Field({
   label,
   error,
-  required = false,
   hint,
   children,
 }: {
@@ -323,15 +373,12 @@ export function Field({
 }) {
   const C = useAdminColors();
   return (
-    <View style={{ gap: Spacing[1] }}>
-      <Text style={[Type.metaStrong, { color: C.ink }]}>
-        {label}
-        {required ? " *" : ""}
-      </Text>
-      {!!hint && <Text style={[Type.meta, { color: C.faint }]}>{hint}</Text>}
+    <View style={{ gap: Spacing[2] }}>
+      <Text style={[Type.metaStrong, { color: C.muted }]}>{label}</Text>
+      {!!hint && <Text style={[Type.meta, { color: C.faint, marginTop: -4 }]}>{hint}</Text>}
       {children}
       {!!error && (
-        <Text style={[Type.meta, { color: C.bad }]} accessibilityLiveRegion="polite">
+        <Text style={[Type.meta, { color: C.danger }]} accessibilityLiveRegion="polite">
           {error}
         </Text>
       )}
@@ -340,8 +387,70 @@ export function Field({
 }
 
 /**
- * Desplegable. React Native no tiene `<select>`, así que el valor abre una
- * lista. Se ve como el campo de texto: subrayado, sin caja.
+ * Hoja inferior v6: velo al 40 %, superficie con radio 28 arriba, asa de
+ * 36 × 5 y entrada desde abajo (340 ms). La usan `Select` y `common/Modal`.
+ */
+export function BottomSheet({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const C = useAdminColors();
+  const insets = useSafeAreaInsets();
+  const y = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!open) return;
+    y.setValue(0);
+    Animated.timing(y, {
+      toValue: 1,
+      duration: Motion.sheet,
+      easing: Easing.bezier(...Motion.bezier),
+      useNativeDriver: true,
+    }).start();
+  }, [open, y]);
+
+  return (
+    <RNModal
+      visible={open}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: C.scrim, opacity: y }]}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar"
+        />
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.sheet,
+          Shadows.sheet,
+          {
+            backgroundColor: C.canvas,
+            paddingBottom: Math.max(insets.bottom, Spacing[5]) + Spacing[2],
+            transform: [{ translateY: y.interpolate({ inputRange: [0, 1], outputRange: [700, 0] }) }],
+          },
+        ]}
+      >
+        <View style={[styles.handle, { backgroundColor: C.soft }]} />
+        {children}
+      </Animated.View>
+    </RNModal>
+  );
+}
+
+/**
+ * Desplegable. React Native no tiene `<select>`: el valor se ve como un campo
+ * relleno y las opciones salen en una hoja inferior.
  */
 export function Select<T extends string>({
   value,
@@ -365,74 +474,59 @@ export function Select<T extends string>({
         accessibilityLabel={value || placeholder}
         style={({ pressed }) => [
           styles.select,
-          { borderBottomColor: C.line, opacity: pressed ? 0.6 : 1 },
+          { backgroundColor: pressed ? C.soft : C.mist },
         ]}
       >
         <Text
-          style={[Type.body, { color: value ? C.ink : C.faint, flexShrink: 1 }]}
+          style={{ fontSize: 16, color: value ? C.ink : C.faint, flexShrink: 1 }}
           numberOfLines={1}
         >
           {value || placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={16} color={C.faint} />
+        <Ionicons name="chevron-down" size={18} color={C.faint} />
       </Pressable>
 
-      <RNModal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
-        statusBarTranslucent
-      >
-        <Pressable style={styles.selectBackdrop} onPress={() => setOpen(false)}>
-          <View
-            style={[styles.selectSheet, { backgroundColor: C.paper }, Shadows.md]}
-          >
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {options.map((opt, i) => {
-                const selected = opt === value;
-                return (
-                  <Pressable
-                    key={opt}
-                    onPress={() => {
-                      onChange(opt);
-                      setOpen(false);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    style={({ pressed }) => [
-                      styles.selectOption,
-                      {
-                        backgroundColor: pressed ? C.mist : "transparent",
-                        borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                        borderTopColor: C.line,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        selected ? Type.bodyStrong : Type.body,
-                        { color: C.ink, flexShrink: 1 },
-                      ]}
-                    >
-                      {opt}
-                    </Text>
-                    {selected && <Ionicons name="checkmark" size={18} color={C.brand} />}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </Pressable>
-      </RNModal>
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+          {options.map((opt) => {
+            const selected = opt === value;
+            return (
+              <Pressable
+                key={opt}
+                onPress={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                style={({ pressed }) => [
+                  styles.selectOption,
+                  { borderBottomColor: C.line, opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: selected ? Typography.semibold : Typography.normal,
+                    color: C.ink,
+                    flexShrink: 1,
+                  }}
+                >
+                  {opt}
+                </Text>
+                {selected && <Ionicons name="checkmark" size={20} color={C.brand} />}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
     </>
   );
 }
 
 /**
- * Filtro. Es una pestaña de texto: la activa se marca con color y una línea
- * abajo, no con una píldora rellena. Solo para acotar lo que se ve; elegir un
- * valor dentro de un formulario usa `Segmented`.
+ * Pestaña de filtro: 44 de alto, subrayado de 2 px en azul ChatAP cuando está
+ * activa y contador en Geist Mono. Las pantallas las ponen en fila.
  */
 export function FilterChip({
   label,
@@ -449,22 +543,24 @@ export function FilterChip({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole="tab"
       accessibilityState={{ selected: active }}
-      style={({ pressed }) => [
-        styles.chip,
-        { borderBottomColor: active ? C.brand : "transparent", opacity: pressed ? 0.6 : 1 },
-      ]}
+      style={[styles.chip, { borderBottomColor: active ? C.brand : "transparent" }]}
     >
-      <Text style={[Type.metaStrong, { color: active ? C.brand : C.muted }]}>
+      <Text style={{ fontSize: 15, fontWeight: "500", color: active ? C.brandDeep : C.muted }}>
         {label}
-        {count !== undefined ? `  ${count}` : ""}
       </Text>
+      {count !== undefined && (
+        <Text style={[Type.mono, { color: active ? C.brandDeep : C.faint }]}>{count}</Text>
+      )}
     </Pressable>
   );
 }
 
-/** Elegir UN valor dentro de un formulario. Mismo criterio: texto subrayado. */
+/**
+ * Control segmentado: pista gris de 44 con radio 12 y 4 de relleno; la opción
+ * elegida es una pastilla blanca de radio 8 (la regla concéntrica: 12 − 4).
+ */
 export function Segmented<T extends string>({
   value,
   options,
@@ -476,7 +572,7 @@ export function Segmented<T extends string>({
 }) {
   const C = useAdminColors();
   return (
-    <View style={styles.segmented}>
+    <View style={[styles.segmented, { backgroundColor: C.mist }]}>
       {options.map((opt) => {
         const active = opt === value;
         return (
@@ -485,20 +581,54 @@ export function Segmented<T extends string>({
             onPress={() => onChange(opt)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
-            style={({ pressed }) => [
+            style={[
               styles.segment,
-              {
-                borderBottomColor: active ? C.brand : C.line,
-                opacity: pressed ? 0.6 : 1,
-              },
+              active && [{ backgroundColor: C.thumb }, Shadows.sm],
             ]}
           >
             <Text
-              style={[
-                active ? Type.bodyStrong : Type.body,
-                { color: active ? C.brand : C.muted },
-              ]}
+              style={{ fontSize: 14, fontWeight: "500", color: active ? C.ink : C.muted }}
+              numberOfLines={1}
             >
+              {opt}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Opciones con radio en grilla de 2 columnas (separación 12): cada una es un
+ * botón de 48 con radio 12, borde de 1.5 y el círculo de 16 a la izquierda.
+ */
+export function OptionGrid<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: readonly T[];
+  onChange: (value: T) => void;
+}) {
+  const C = useAdminColors();
+  return (
+    <View style={styles.optionGrid}>
+      {options.map((opt) => {
+        const on = opt === value;
+        return (
+          <Pressable
+            key={opt}
+            onPress={() => onChange(opt)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: on }}
+            style={[styles.option, { borderColor: on ? C.brand : C.line, backgroundColor: C.canvas }]}
+          >
+            <View style={[styles.radio, { borderColor: on ? C.brand : C.faint }]}>
+              {on && <View style={[styles.radioDot, { backgroundColor: C.brand }]} />}
+            </View>
+            <Text style={{ fontSize: 15, fontWeight: "500", color: C.ink, flexShrink: 1 }} numberOfLines={1}>
               {opt}
             </Text>
           </Pressable>
@@ -512,10 +642,7 @@ export function Segmented<T extends string>({
 /* Indicadores                                                                */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Estado: punto de color y texto del mismo color, sin fondo. El punto es lo
- * que se ve de reojo; el texto lo confirma para quien no distingue los tonos.
- */
+/** Estado: punto de 6 y texto 13/500 del mismo color, sin fondo. */
 export function Badge({
   label,
   tone = "brand",
@@ -553,6 +680,7 @@ const PRIORITY_TONE: Record<SigedPriority, Tone> = {
   Baja: "muted",
 };
 
+/** Prioridad con el mismo punto que el estado: Alta en rojo, Normal en azul, Baja en gris. */
 export function PriorityDot({
   priority,
   showLabel = false,
@@ -561,7 +689,7 @@ export function PriorityDot({
   showLabel?: boolean;
 }) {
   const C = useAdminColors();
-  const color = toneColor(C, PRIORITY_TONE[priority] ?? "muted");
+  const color = priority === "Alta" ? C.danger : toneColor(C, PRIORITY_TONE[priority] ?? "muted");
 
   return (
     <View style={styles.priority}>
@@ -571,6 +699,61 @@ export function PriorityDot({
       />
       {showLabel && <Text style={[Type.meta, { color: C.muted }]}>{priority}</Text>}
     </View>
+  );
+}
+
+/**
+ * Fila de expediente: título 16/600 con el estado a la derecha, solicitante y
+ * área 14, prioridad con número y fecha en Geist Mono 12, y la nota 13.
+ */
+export function RecordRow({
+  title,
+  status,
+  who,
+  area,
+  priority,
+  id,
+  date,
+  note,
+  extra,
+  onPress,
+}: {
+  title: string;
+  status: SigedStatus;
+  who: string;
+  area: string;
+  priority: SigedPriority;
+  id: string;
+  date: string;
+  note?: string;
+  /** Algo más en la línea de datos técnicos (p. ej. la cantidad de adjuntos). */
+  extra?: React.ReactNode;
+  onPress?: () => void;
+}) {
+  const C = useAdminColors();
+  return (
+    <Row onPress={onPress} accessibilityLabel={`${title}, ${status}, ${id}`}>
+      <View style={styles.recordTop}>
+        <Text style={[Type.rowTitle, { color: C.ink, flex: 1, minWidth: 0 }]} numberOfLines={2}>
+          {title}
+        </Text>
+        <StatusPill status={status} />
+      </View>
+      <Text style={[Type.label, { fontWeight: "400", color: C.muted, marginTop: Spacing[1] }]} numberOfLines={1}>
+        {who} · {area}
+      </Text>
+      <View style={styles.recordMeta}>
+        <PriorityDot priority={priority} showLabel />
+        <Text style={[Type.mono, { color: C.faint }]}>{id}</Text>
+        <Text style={[Type.mono, { color: C.faint }]}>{date}</Text>
+        {extra}
+      </View>
+      {!!note && (
+        <Text style={[Type.meta, { color: C.faint, marginTop: Spacing[1] }]} numberOfLines={2}>
+          {note}
+        </Text>
+      )}
+    </Row>
   );
 }
 
@@ -608,8 +791,8 @@ export function CountUp({
 }
 
 /**
- * Dato de resumen. Sin panel ni casilla: el número es lo que se mira y el
- * ícono lo acompaña en el color del estado que representa.
+ * Indicador sin tarjeta: ícono de 18 en el color del estado y etiqueta 14,
+ * cifra 34/40 · 600 y nota 13 en gris terciario.
  */
 export function StatCard({
   label,
@@ -630,13 +813,13 @@ export function StatCard({
   return (
     <View style={styles.stat}>
       <View style={styles.statTop}>
-        {!!icon && <Ionicons name={icon} size={15} color={color} />}
-        <Text style={[Type.meta, { color: C.muted, flex: 1 }]} numberOfLines={2}>
+        {!!icon && <Ionicons name={icon} size={18} color={color} />}
+        <Text style={[Type.label, { fontWeight: "400", color: C.muted, flex: 1 }]} numberOfLines={1}>
           {label}
         </Text>
       </View>
 
-      <CountUp value={value} style={[Type.figure, { color: C.ink, marginTop: Spacing[1] }]} />
+      <CountUp value={value} style={[Type.figure, { color: C.ink, marginTop: Spacing[2] }]} />
 
       {!!hint && (
         <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
@@ -647,26 +830,27 @@ export function StatCard({
   );
 }
 
-/** Las tarjetas de resumen en dos columnas. Estaba duplicado en cuatro pantallas. */
+/** Indicadores en 2 × 2: separación de 12 entre columnas y 24 entre filas. */
 export function StatGrid({ children }: { children: React.ReactNode }) {
   return <View style={styles.statGrid}>{children}</View>;
 }
 
-/** Par etiqueta/valor alineado, para las fichas de detalle. */
+/** Par etiqueta/valor en dos columnas iguales, con su línea. */
 export function KeyValue({ label, value }: { label: string; value: string }) {
   const C = useAdminColors();
   return (
-    <View style={styles.keyValue}>
-      <Text style={[Type.meta, { color: C.muted, width: 108 }]}>{label}</Text>
-      <Text style={[Type.body, { color: C.ink, flex: 1 }]}>{value}</Text>
+    <View style={[styles.keyValue, { borderBottomColor: C.line }]}>
+      <Text style={{ fontSize: 15, lineHeight: 20, color: C.muted, flex: 1 }}>{label}</Text>
+      <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: "500", color: C.ink, flex: 1 }}>
+        {value}
+      </Text>
     </View>
   );
 }
 
 export function EmptyState({
-  icon = "file-tray-outline",
-  title = "Sin resultados",
-  description = "No se encontraron elementos con los filtros actuales.",
+  title = "Sin resultados.",
+  description,
   action,
 }: {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -677,13 +861,12 @@ export function EmptyState({
   const C = useAdminColors();
   return (
     <View style={styles.empty}>
-      <Ionicons name={icon} size={34} color={C.faint} />
-      <Text style={[Type.bodyStrong, { color: C.ink, marginTop: Spacing[2] }]}>
-        {title}
-      </Text>
-      <Text style={[Type.meta, { color: C.muted, textAlign: "center", maxWidth: 280 }]}>
-        {description}
-      </Text>
+      <Text style={{ fontSize: 15, color: C.muted, textAlign: "center" }}>{title}</Text>
+      {!!description && (
+        <Text style={[Type.meta, { color: C.faint, textAlign: "center", maxWidth: 280 }]}>
+          {description}
+        </Text>
+      )}
       {!!action && <View style={{ marginTop: Spacing[3] }}>{action}</View>}
     </View>
   );
@@ -746,9 +929,9 @@ export function SkeletonList({ rows = 5 }: { rows?: number }) {
   return (
     <View>
       {Array.from({ length: rows }).map((_, i) => (
-        <Row key={i} first={i === 0}>
+        <Row key={i}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: Spacing[3] }}>
-            <Skeleton width={36} height={36} radius={Radius.full} />
+            <Skeleton width={40} height={40} radius={Radius.full} />
             <View style={{ flex: 1, gap: Spacing[2] }}>
               <Skeleton width="60%" />
               <Skeleton width="35%" height={10} />
@@ -760,11 +943,8 @@ export function SkeletonList({ rows = 5 }: { rows?: number }) {
   );
 }
 
-/**
- * Iniciales en un círculo. Se queda porque un círculo no encierra contenido:
- * es la persona, no un marco alrededor de sus datos.
- */
-export function Avatar({ name, size = 38 }: { name: string; size?: number }) {
+/** Iniciales en un círculo de 40, gris de superficie. */
+export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
   const C = useAdminColors();
   const initials = useMemo(
     () =>
@@ -785,14 +965,14 @@ export function Avatar({ name, size = 38 }: { name: string; size?: number }) {
         borderRadius: Radius.full,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: withAlpha(C.brandDeep, 0.1),
+        backgroundColor: C.mist,
       }}
     >
       <Text
         style={{
-          fontSize: size * 0.34,
+          fontSize: Math.round(size * 0.35),
           fontWeight: Typography.semibold,
-          color: C.brandDeep,
+          color: C.muted,
         }}
       >
         {initials}
@@ -804,92 +984,123 @@ export function Avatar({ name, size = 38 }: { name: string; size?: number }) {
 const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "baseline",
     justifyContent: "space-between",
     gap: Spacing[3],
-    paddingBottom: Spacing[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: Spacing[1],
   },
   sectionTitle: {
-    paddingBottom: Spacing[2],
     marginTop: Spacing[8],
-    marginBottom: Spacing[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: Spacing[1],
   },
   row: {
     paddingVertical: Spacing[4],
+    borderBottomWidth: 1,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: Spacing[4],
-    marginTop: Spacing[4],
+    gap: Spacing[3],
+    marginTop: Spacing[3],
   },
   btn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing[2],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderRadius: Radius.md,
+    paddingHorizontal: Spacing[5],
   },
   btnGhost: {
     paddingHorizontal: 0,
+    height: Size.touch,
   },
-  input: {
+  ring: {
+    margin: -4,
+    borderWidth: 4,
+    borderRadius: Radius.xl + 4,
+  },
+  field: {
+    minHeight: Size.input,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    paddingHorizontal: Spacing[4],
+    fontSize: 16,
+  },
+  fieldMultiline: {
+    minHeight: 96,
+    paddingTop: Spacing[3],
+    paddingBottom: Spacing[3],
+    lineHeight: 23,
+    textAlignVertical: "top",
+  },
+  search: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing[2],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: Spacing[3],
+    height: Size.touch,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing[4],
   },
   select: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: Spacing[2],
-    paddingVertical: Spacing[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    height: Size.input,
+    borderRadius: Radius.xl,
+    paddingHorizontal: Spacing[4],
   },
-  selectBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: Spacing[4],
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    maxHeight: "88%",
+    borderTopLeftRadius: Radius["3xl"],
+    borderTopRightRadius: Radius["3xl"],
+    paddingTop: Spacing[2],
+    paddingHorizontal: Spacing[5],
+    gap: Spacing[4],
   },
-  selectSheet: {
-    width: "100%",
-    maxWidth: 380,
-    maxHeight: "70%",
-    borderRadius: Radius.lg,
-    overflow: "hidden",
+  handle: {
+    width: 36,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: "center",
   },
   selectOption: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: Spacing[3],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[4],
+    minHeight: Size.input,
+    borderBottomWidth: 1,
   },
   chip: {
-    paddingVertical: Spacing[2],
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: Size.touch,
     borderBottomWidth: 2,
   },
   segmented: {
     flexDirection: "row",
-    gap: Spacing[5],
+    height: Size.touch,
+    borderRadius: Radius.lg,
+    padding: 4,
   },
   segment: {
-    paddingVertical: Spacing[2],
-    borderBottomWidth: 2,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing[2],
   },
   badge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
   },
   badgeDot: {
     width: 6,
@@ -902,15 +1113,56 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   priorityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: Radius.full,
+  },
+  optionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing[3],
+  },
+  option: {
+    flexGrow: 1,
+    flexBasis: "45%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[3],
+    height: 48,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    paddingHorizontal: Spacing[4],
+  },
+  radio: {
+    width: 16,
+    height: 16,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioDot: {
     width: 8,
     height: 8,
     borderRadius: Radius.full,
+  },
+  recordTop: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: Spacing[3],
+  },
+  recordMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: Spacing[3],
+    marginTop: Spacing[2],
   },
   statGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     rowGap: Spacing[6],
-    columnGap: Spacing[4],
+    columnGap: Spacing[3],
   },
   stat: {
     flexGrow: 1,
@@ -918,14 +1170,15 @@ const styles = StyleSheet.create({
   },
   statTop: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    minHeight: 34,
+    alignItems: "center",
+    gap: Spacing[2],
   },
   keyValue: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing[3],
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
   },
   empty: {
     alignItems: "center",

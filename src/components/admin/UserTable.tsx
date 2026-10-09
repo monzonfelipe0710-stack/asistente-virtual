@@ -1,9 +1,13 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 
 import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
-import { users as seedUsers, type AppUser } from "../../data/mockUsers";
+import { users as seedUsers, userRoles, type AppUser, type UserRole } from "../../data/mockUsers";
+import Tabs from "../common/Tabs";
 import { useToast } from "../common/Toast";
 import UserFormModal, { type UserForm } from "./UserFormModal";
 import {
@@ -22,20 +26,22 @@ export default function UserTable() {
   const push = useToast();
 
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"todos" | UserRole>("todos");
   const [rows, setRows] = useState<AppUser[]>(seedUsers);
   const [modalOpen, setModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<AppUser | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
     return rows.filter(
       (u) =>
-        u.name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.department.toLowerCase().includes(q)
+        (roleFilter === "todos" || u.role === roleFilter) &&
+        (!q ||
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q) ||
+          u.department.toLowerCase().includes(q))
     );
-  }, [rows, search]);
+  }, [rows, search, roleFilter]);
 
   function closeModal() {
     setModalOpen(false);
@@ -68,7 +74,7 @@ export default function UserTable() {
     <AdminScreen>
       <PageHeader
         title="Usuarios"
-        description={`${rows.length} usuarios registrados`}
+        description={`${rows.length} personas con acceso al panel.`}
       >
         <Btn
           label="Nuevo usuario"
@@ -84,75 +90,69 @@ export default function UserTable() {
         icon="search"
         value={search}
         onChangeText={setSearch}
-        placeholder="Buscar por nombre, correo o departamento"
+        placeholder="Buscar por nombre o correo"
         autoCapitalize="none"
       />
 
-      <ListCard style={{ marginTop: Spacing[3] }}>
-        {filtered.map((user, i) => (
-          <Row
-            key={user.id}
-            first={i === 0}
-            onPress={() => {
-              setEditUser(user);
-              setModalOpen(true);
-            }}
-            accessibilityLabel={`Editar ${user.name}`}
-          >
-            <View style={styles.line}>
-              <Avatar name={user.name} />
+      <View style={{ marginTop: Spacing[4] }}>
+        <Tabs
+          items={[
+            { id: "todos" as const, label: "Todos", count: rows.length },
+            ...userRoles.map((r) => ({
+              id: r,
+              label: r,
+              count: rows.filter((u) => u.role === r).length,
+            })),
+          ]}
+          value={roleFilter}
+          onChange={setRoleFilter}
+        />
+      </View>
 
-              <View style={styles.body}>
-                <View style={styles.nameLine}>
-                  <Text style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]} numberOfLines={1}>
+      <ListCard>
+        {filtered.map((user) => {
+          const active = user.status === "Activo";
+          return (
+            <Row
+              key={user.id}
+              onPress={() => {
+                setEditUser(user);
+                setModalOpen(true);
+              }}
+              accessibilityLabel={`Editar ${user.name}`}
+              style={{ paddingVertical: 14 }}
+            >
+              <View style={styles.line}>
+                <View style={{ opacity: active ? 1 : 0.5 }}>
+                  <Avatar name={user.name} />
+                </View>
+
+                <View style={styles.body}>
+                  <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={1}>
                     {user.name}
                   </Text>
-                  <RoleTag role={user.role} />
-                </View>
-
-                <Text style={[Type.meta, { color: C.muted }]} numberOfLines={1}>
-                  {user.email}
-                </Text>
-
-                <View style={styles.footLine}>
-                  <View style={styles.status}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: user.status === "Activo" ? C.ok : C.faint },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        Type.meta,
-                        { color: user.status === "Activo" ? C.ok : C.muted },
-                      ]}
-                    >
-                      {user.status}
-                    </Text>
-                  </View>
-                  <Text style={[Type.meta, { color: C.faint, flexShrink: 1 }]} numberOfLines={1}>
-                    {user.department}
+                  <Text style={[Type.meta, { color: C.muted }]} numberOfLines={1}>
+                    {user.email}
                   </Text>
                 </View>
 
-                <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
-                  Último acceso: {user.lastAccess}
-                </Text>
+                <View style={styles.right}>
+                  <Text style={[Type.label, { color: C.ink }]}>{user.role}</Text>
+                  <View style={styles.status}>
+                    <View
+                      style={[styles.statusDot, { backgroundColor: active ? C.ok : C.faint }]}
+                    />
+                    <Text style={[Type.metaStrong, { color: active ? C.ok : C.faint }]}>
+                      {active ? "Activo" : "Suspendido"}
+                    </Text>
+                  </View>
+                </View>
               </View>
+            </Row>
+          );
+        })}
 
-              <Ionicons name="chevron-forward" size={18} color={C.faint} />
-            </View>
-          </Row>
-        ))}
-
-        {filtered.length === 0 && (
-          <EmptyState
-            icon="people-outline"
-            title="Sin usuarios"
-            description="No se encontraron usuarios con ese criterio de búsqueda."
-          />
-        )}
+        {filtered.length === 0 && <EmptyState title="Sin resultados." />}
       </ListCard>
 
       <UserFormModal
@@ -165,23 +165,6 @@ export default function UserTable() {
   );
 }
 
-/**
- * El rol es lo que decide qué puede hacer la persona, así que se lee de un
- * golpe: Superadmin en tinta plena, Administrador en el azul de marca, y
- * Ciudadano sin relleno, porque no tiene acceso al panel.
- */
-function RoleTag({ role }: { role: AppUser["role"] }) {
-  const C = useAdminColors();
-
-  // Sin pastilla: el rol se distingue por color y peso. Superadmin en tinta
-  // plena, Administrador en el azul de marca, Ciudadano apagado porque no
-  // entra al panel.
-  const color =
-    role === "Superadmin" ? C.ink : role === "Administrador" ? C.brandDeep : C.faint;
-
-  return <Text style={[Type.metaStrong, { color }]}>{role}</Text>;
-}
-
 const styles = StyleSheet.create({
   line: {
     flexDirection: "row",
@@ -191,23 +174,15 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     minWidth: 0,
+  },
+  right: {
+    alignItems: "flex-end",
     gap: 2,
-  },
-  nameLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[2],
-  },
-  footLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[3],
-    marginTop: 2,
   },
   status: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
   },
   statusDot: {
     width: 6,

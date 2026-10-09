@@ -1,8 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 
-import { Spacing, Type, useAdminColors } from "../../constants/theme";
+import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
 import {
   documentCategories,
   documentFormats,
@@ -14,14 +19,15 @@ import {
 import { useSortable } from "../../hooks/useSortable";
 import { formatDate } from "../../utils/date";
 import Modal from "../common/Modal";
+import Icon from "../common/Icon";
 import Pagination, { usePagination } from "../common/Pagination";
+import Tabs from "../common/Tabs";
 import { useToast } from "../common/Toast";
 import {
   AdminScreen,
   Btn,
   EmptyState,
   Field,
-  FilterChip,
   Input,
   ListCard,
   PageHeader,
@@ -149,11 +155,6 @@ export default function DocumentManager() {
     push("Documento eliminado.", "info");
   }
 
-  /** El color del formato lo hace reconocible de un vistazo en la lista. */
-  function formatColor(format: DocumentFormat) {
-    return format === "PDF" ? C.bad : format === "DOCX" ? C.info : C.ok;
-  }
-
   if (loading) {
     return (
       <AdminScreen>
@@ -168,29 +169,21 @@ export default function DocumentManager() {
     <AdminScreen>
       <PageHeader
         title="Documentos"
-        description={`${docs.length} archivos · ${totalDownloads.toLocaleString("es-AR")} descargas`}
-      >
-        <Btn label="Nuevo documento" icon="add" onPress={openNew} />
-      </PageHeader>
+        description={`Formularios que los agentes pueden descargar. ${docs.length} archivos · ${totalDownloads.toLocaleString("es-AR")} descargas.`}
+      />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        {documentCategories.map((cat) => (
-          <FilterChip
-            key={cat}
-            label={cat}
-            count={catCounts[cat] ?? 0}
-            active={filterCat === cat}
-            onPress={() => {
-              setFilterCat(cat);
-              setPage(1);
-            }}
-          />
-        ))}
-      </ScrollView>
+      <Tabs
+        items={documentCategories.map((cat) => ({
+          id: cat,
+          label: cat,
+          count: catCounts[cat] ?? 0,
+        }))}
+        value={filterCat}
+        onChange={(cat) => {
+          setFilterCat(cat);
+          setPage(1);
+        }}
+      />
 
       {/* Un desplegable y un botón de sentido, en vez de cuatro textos con flechas */}
       <View style={styles.sortBar}>
@@ -218,74 +211,55 @@ export default function DocumentManager() {
       </View>
 
       <ListCard style={{ marginTop: Spacing[3] }}>
-        {paginatedItems.map((doc, i) => (
-          <Row key={doc.id} first={i === 0}>
-            <View style={styles.line}>
-              <View style={styles.fileIcon}>
-                <Text style={[Type.metaStrong, { color: formatColor(doc.format) }]}>
-                  {doc.format}
-                </Text>
-              </View>
-
-              <View style={styles.body}>
-                <Text style={[Type.bodyStrong, { color: C.ink }]} numberOfLines={2}>
-                  {doc.title}
-                </Text>
-                <Text style={[Type.meta, { color: C.muted }]} numberOfLines={2}>
-                  {doc.description}
-                </Text>
-                <Text style={[Type.meta, { color: C.faint, marginTop: 2 }]} numberOfLines={1}>
-                  {doc.category} · {doc.fileSize}
-                </Text>
-                <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
-                  {doc.downloads.toLocaleString("es-AR")} descargas · actualizado{" "}
-                  {doc.updatedAt}
-                </Text>
-              </View>
-
-              <View style={styles.actions}>
-                <Pressable
-                  onPress={() => openEdit(doc)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Editar ${doc.title}`}
-                  hitSlop={8}
-                >
-                  <Ionicons name="create-outline" size={20} color={C.muted} />
-                </Pressable>
-                <Pressable
-                  onPress={() => setDeleteId(doc.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Eliminar ${doc.title}`}
-                  hitSlop={8}
-                >
-                  <Ionicons name="trash-outline" size={20} color={C.bad} />
-                </Pressable>
-              </View>
+        {paginatedItems.map((doc) => (
+          <Row
+            key={doc.id}
+            onPress={() => openEdit(doc)}
+            accessibilityLabel={`Editar ${doc.title}`}
+            style={styles.line}
+          >
+            <View style={[styles.fileIcon, { backgroundColor: C.mist }]}>
+              <Icon name="file" size={20} color={C.muted} />
             </View>
+
+            <View style={styles.body}>
+              <Text style={[styles.title, { color: C.ink }]} numberOfLines={2}>
+                {doc.title}
+              </Text>
+              <Text style={[styles.meta, { color: C.faint }]} numberOfLines={1}>
+                {doc.format} · {doc.fileSize} · {doc.downloads.toLocaleString("es-AR")} descargas
+              </Text>
+            </View>
+
+            <Text style={[Type.meta, { color: C.faint }]}>{doc.category}</Text>
           </Row>
         ))}
 
         {paginatedItems.length === 0 && (
-          <EmptyState
-            icon="folder-open-outline"
-            title="Sin documentos"
-            description="No hay documentos en esta categoría."
-            action={<Btn label="Nuevo documento" icon="add" onPress={openNew} />}
-          />
+          <EmptyState title="No hay documentos en esta categoría." />
         )}
 
         <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </ListCard>
+
+      <Pressable
+        onPress={openNew}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.upload,
+          { borderColor: C.line, backgroundColor: pressed ? C.mist : "transparent" },
+        ]}
+      >
+        <Icon name="upload" size={18} color={C.ink} />
+        <Text style={{ fontSize: 15, fontWeight: "500", color: C.ink }}>Subir documento</Text>
+      </Pressable>
 
       <Modal
         open={formOpen}
         title={editDoc ? "Editar documento" : "Nuevo documento"}
         onClose={() => setFormOpen(false)}
         footer={
-          <>
-            <Btn label="Cancelar" variant="ghost" onPress={() => setFormOpen(false)} />
-            <Btn label={editDoc ? "Guardar cambios" : "Crear documento"} onPress={save} />
-          </>
+          <Btn label={editDoc ? "Guardar cambios" : "Crear documento"} onPress={save} />
         }
       >
         <Field label="Título" required>
@@ -302,7 +276,6 @@ export default function DocumentManager() {
             onChangeText={(description) => setForm((f) => ({ ...f, description }))}
             placeholder="Solicitud de licencia anual ordinaria"
             multiline
-            style={{ minHeight: 72, textAlignVertical: "top" }}
           />
         </Field>
 
@@ -334,6 +307,18 @@ export default function DocumentManager() {
             placeholder="245 KB"
           />
         </Field>
+
+        {!!editDoc && (
+          <Btn
+            label="Eliminar documento"
+            variant="danger"
+            size="md"
+            onPress={() => {
+              setFormOpen(false);
+              setDeleteId(editDoc.id);
+            }}
+          />
+        )}
       </Modal>
 
       <Modal
@@ -342,8 +327,8 @@ export default function DocumentManager() {
         onClose={() => setDeleteId(null)}
         footer={
           <>
-            <Btn label="Cancelar" variant="ghost" onPress={() => setDeleteId(null)} />
-            <Btn label="Eliminar" variant="danger" onPress={confirmDelete} />
+            <Btn label="Cancelar" variant="secondary" onPress={() => setDeleteId(null)} />
+            <Btn label="Eliminar" variant="dangerFill" onPress={confirmDelete} />
           </>
         }
       >
@@ -357,16 +342,11 @@ export default function DocumentManager() {
 }
 
 const styles = StyleSheet.create({
-  chips: {
-    flexDirection: "row",
-    gap: Spacing[2],
-    paddingRight: Spacing[4],
-  },
   sortBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[2],
-    marginTop: Spacing[3],
+    marginTop: Spacing[4],
   },
   sortDir: {
     width: 44,
@@ -376,22 +356,39 @@ const styles = StyleSheet.create({
   },
   line: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing[3],
+    alignItems: "center",
+    gap: Spacing[4],
+    paddingVertical: 14,
   },
   fileIcon: {
-    width: 44,
-    paddingTop: 2,
-    alignItems: "flex-start",
+    width: 40,
+    height: 40,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
   },
-  actions: {
-    gap: Spacing[3],
+  title: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "500",
+  },
+  meta: {
+    ...Type.overline,
+    letterSpacing: 0,
+    marginTop: 2,
+  },
+  upload: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 2,
+    justifyContent: "center",
+    gap: Spacing[2],
+    height: 48,
+    borderWidth: 1,
+    borderRadius: Radius.xl,
+    marginTop: Spacing[6],
   },
 });

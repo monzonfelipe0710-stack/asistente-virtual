@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "./Text";
 
-import { Radius, Spacing, Typography, useAdminColors } from "../../constants/theme";
+import { Fonts, Radius, Size, Spacing, useAdminColors } from "../../constants/theme";
+import Icon from "./Icon";
 
 /**
- * Paginador compacto: primera, última y las vecinas de la actual; el resto se
- * colapsa en puntos suspensivos.
+ * Paginador compacto: anterior y siguiente como botones de 44 y las páginas en
+ * Geist Mono; la actual en el tinte del ítem activo. Primera, última y las
+ * vecinas de la actual; el resto se colapsa en puntos suspensivos.
  */
 export default function Pagination({
   currentPage,
@@ -33,7 +40,7 @@ export default function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <View style={[styles.wrap, { borderTopColor: C.line }]}>
+    <View style={styles.wrap}>
       <Pressable
         onPress={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
@@ -41,12 +48,12 @@ export default function Pagination({
         accessibilityLabel="Página anterior"
         style={[styles.btn, currentPage === 1 && styles.disabled]}
       >
-        <Text style={[styles.btnText, { color: C.muted }]}>Anterior</Text>
+        <Icon name="chevronLeft" size={20} color={C.ink} />
       </Pressable>
 
       {pages.map((p, i) =>
         p === "..." ? (
-          <Text key={`dots-${i}`} style={[styles.dots, { color: C.muted }]}>
+          <Text key={`dots-${i}`} style={[styles.num, { color: C.faint }]}>
             …
           </Text>
         ) : (
@@ -54,17 +61,12 @@ export default function Pagination({
             key={p}
             onPress={() => onPageChange(p)}
             accessibilityRole="button"
+            accessibilityLabel={`Página ${p}`}
             accessibilityState={{ selected: p === currentPage }}
-            style={[
-              styles.btn,
-              p === currentPage && { backgroundColor: C.brand },
-            ]}
+            style={[styles.btn, p === currentPage && { backgroundColor: C.activeBg }]}
           >
             <Text
-              style={[
-                styles.btnText,
-                { color: p === currentPage ? "#ffffff" : C.muted },
-              ]}
+              style={[styles.num, { color: p === currentPage ? C.activeInk : C.muted }]}
             >
               {p}
             </Text>
@@ -79,7 +81,7 @@ export default function Pagination({
         accessibilityLabel="Página siguiente"
         style={[styles.btn, currentPage === totalPages && styles.disabled]}
       >
-        <Text style={[styles.btnText, { color: C.muted }]}>Siguiente</Text>
+        <Icon name="chevronRight" size={20} color={C.ink} />
       </Pressable>
     </View>
   );
@@ -103,28 +105,23 @@ export function usePagination<T>(items: T[], pageSize = 5) {
 const styles = StyleSheet.create({
   wrap: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing[1],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: Spacing[4],
   },
   btn: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: 6,
-    borderRadius: Radius.md,
+    minWidth: Size.touch,
+    height: Size.touch,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   disabled: {
     opacity: 0.3,
   },
-  btnText: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-  },
-  dots: {
-    paddingHorizontal: Spacing[1],
-    fontSize: Typography.sm,
+  num: {
+    fontSize: 13,
+    fontFamily: Fonts.mono,
   },
 });

@@ -1,26 +1,38 @@
-import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 
-import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
+import { Radius, Size, Spacing, Type, useAdminColors } from "../../constants/theme";
 import { sigedRecords, sigedStatuses, type SigedStatus } from "../../data/mockSiged";
 import { formatDate } from "../../utils/date";
+import Icon from "../common/Icon";
+import Tabs from "../common/Tabs";
 import { useToast } from "../common/Toast";
 import {
   AdminScreen,
-  Btn,
-  Card,
   EmptyState,
-  FilterChip,
   KeyValue,
   ListCard,
   PageHeader,
-  PriorityDot,
-  Row,
-  SectionTitle,
-  StatusPill,
+  RecordRow,
 } from "./ui";
 
 type Filter = "Todos" | SigedStatus;
+
+/** Fecha y hora como en el resto del panel: 09/10/2026, 11:57. */
+function stamp(d: Date) {
+  return `${formatDate(d)}, ${d.toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+}
 
 export default function SigedIntegration() {
   const C = useAdminColors();
@@ -28,6 +40,43 @@ export default function SigedIntegration() {
 
   const [statusFilter, setStatusFilter] = useState<Filter>("Todos");
   const [syncedAt, setSyncedAt] = useState(() => new Date());
+  const [syncing, setSyncing] = useState(false);
+  const spin = useRef(new Animated.Value(0)).current;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!syncing) return;
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+      spin.setValue(0);
+    };
+  }, [syncing, spin]);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
+
+  function sync() {
+    if (syncing) return;
+    setSyncing(true);
+    timer.current = setTimeout(() => {
+      setSyncing(false);
+      setSyncedAt(new Date());
+      push("Sincronización completa · sin errores");
+    }, 1500);
+  }
 
   const filtered = useMemo(
     () =>
@@ -47,99 +96,81 @@ export default function SigedIntegration() {
       />
 
       {/* Estado de la conexión: lo primero que se necesita saber acá */}
-      <Card padded>
-        <View style={styles.syncTop}>
-          <View style={styles.statusRow}>
+      <View style={[styles.syncTop, { borderBottomColor: C.line }]}>
+        <View style={styles.statusRow}>
+          <View style={[styles.halo, { backgroundColor: C.okBg }]}>
             <View style={[styles.dot, { backgroundColor: C.ok }]} />
-            <Text style={[Type.bodyStrong, { color: C.ink }]}>API conectada</Text>
           </View>
-          <Btn
-            label="Sincronizar"
-            variant="ghost"
-            icon="sync-outline"
-            onPress={() => {
-              setSyncedAt(new Date());
-              push("Sincronización con SIGED completada.", "success");
+          <Text style={[Type.rowTitle, { color: C.ink }]}>API conectada</Text>
+        </View>
+        <Pressable
+          onPress={sync}
+          accessibilityRole="button"
+          accessibilityState={{ busy: syncing }}
+          style={({ pressed }) => [
+            styles.syncBtn,
+            { borderColor: C.line, backgroundColor: pressed ? C.mist : C.canvas },
+          ]}
+        >
+          <Animated.View
+            style={{
+              transform: [
+                { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) },
+              ],
             }}
-          />
-        </View>
+          >
+            <Icon name="sync" size={16} color={C.ink} />
+          </Animated.View>
+          <Text style={[Type.label, { color: C.ink }]}>
+            {syncing ? "Sincronizando" : "Sincronizar"}
+          </Text>
+        </Pressable>
+      </View>
 
-        <View style={[styles.syncMeta, { borderTopColor: C.line }]}>
-          <KeyValue
-            label="Última sincronización"
-            value={syncedAt.toLocaleString("es-AR")}
-          />
-          <KeyValue label="Latencia" value="45 ms · operativa" />
-          <KeyValue label="Consultas hoy" value={String(todayCount)} />
-        </View>
-      </Card>
+      <KeyValue
+        label="Última sincronización"
+        value={syncing ? "En curso…" : stamp(syncedAt)}
+      />
+      <KeyValue label="Latencia" value="45 ms · operativa" />
+      <KeyValue label="Consultas hoy" value={String(todayCount)} />
 
-      {/* Los filtros van sobre la lista, no adentro: se ven aunque se scrollee */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        style={{ marginTop: Spacing[4] }}
-      >
-        <FilterChip
-          label="Todos"
-          count={sigedRecords.length}
-          active={statusFilter === "Todos"}
-          onPress={() => setStatusFilter("Todos")}
+      <View style={{ marginTop: Spacing[6] }}>
+        <Tabs
+          items={[
+            { id: "Todos" as Filter, label: "Todos", count: sigedRecords.length },
+            ...sigedStatuses.map((status) => ({
+              id: status as Filter,
+              label: status,
+              count: sigedRecords.filter((r) => r.status === status).length,
+            })),
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
         />
-        {sigedStatuses.map((status) => (
-          <FilterChip
-            key={status}
-            label={status}
-            count={sigedRecords.filter((r) => r.status === status).length}
-            active={statusFilter === status}
-            onPress={() => setStatusFilter(status)}
+      </View>
+
+      <ListCard>
+        {filtered.map((rec) => (
+          <RecordRow
+            key={rec.id}
+            title={rec.type}
+            status={rec.status}
+            who={rec.applicant}
+            area={rec.department}
+            priority={rec.priority}
+            id={rec.id}
+            date={formatDate(rec.date)}
+            note={rec.lastMovement}
           />
         ))}
-      </ScrollView>
 
-      <ListCard style={{ marginTop: Spacing[3] }}>
-        {filtered.map((rec, i) => (
-          <Row key={rec.id} first={i === 0}>
-            <View style={styles.rowTop}>
-              <Text style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]} numberOfLines={1}>
-                {rec.type}
-              </Text>
-              <StatusPill status={rec.status} />
-            </View>
-
-            <Text style={[Type.meta, { color: C.muted, marginTop: 2 }]} numberOfLines={1}>
-              {rec.applicant} · {rec.department}
-            </Text>
-
-            <View style={styles.rowFoot}>
-              <PriorityDot priority={rec.priority} showLabel />
-              <Text style={[Type.meta, { color: C.faint }]}>{rec.id}</Text>
-              <Text style={[Type.meta, { color: C.faint }]}>{formatDate(rec.date)}</Text>
-            </View>
-
-            <Text style={[Type.meta, { color: C.faint, marginTop: 2 }]} numberOfLines={2}>
-              {rec.lastMovement}
-            </Text>
-          </Row>
-        ))}
-
-        {filtered.length === 0 && (
-          <EmptyState
-            icon="document-text-outline"
-            title="Sin expedientes"
-            description="No hay expedientes con ese estado."
-          />
-        )}
+        {filtered.length === 0 && <EmptyState title="Sin resultados." />}
       </ListCard>
 
-      <SectionTitle>Cómo funciona</SectionTitle>
-      <Card padded>
-        <Text style={[Type.body, { color: C.muted }]}>
-          Los expedientes ingresados son recibidos y asignados por Mesa de Entradas
-          para su procesamiento.
-        </Text>
-      </Card>
+      <Text style={[Type.meta, { color: C.faint, marginTop: Spacing[6] }]}>
+        Los expedientes ingresados son recibidos y asignados por Mesa de Entradas
+        para su procesamiento.
+      </Text>
     </AdminScreen>
   );
 }
@@ -149,41 +180,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    flexWrap: "wrap",
     gap: Spacing[3],
+    paddingBottom: Spacing[4],
+    borderBottomWidth: 1,
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing[2],
+    gap: Spacing[3],
+  },
+  // el anillo de 4 px alrededor del punto de 10
+  halo: {
+    width: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dot: {
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: Radius.full,
   },
-  syncMeta: {
-    marginTop: Spacing[4],
-    paddingTop: Spacing[3],
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: Spacing[2],
-  },
-  chips: {
-    flexDirection: "row",
-    gap: Spacing[2],
-    paddingRight: Spacing[4],
-  },
-  rowTop: {
+  syncBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: Spacing[2],
-  },
-  rowFoot: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: Spacing[3],
-    marginTop: Spacing[2],
+    height: Size.touch,
+    paddingHorizontal: Spacing[4],
+    borderRadius: 999,
+    borderWidth: 1,
   },
 });

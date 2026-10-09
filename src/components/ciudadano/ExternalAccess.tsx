@@ -1,110 +1,122 @@
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import Card from "../common/Card";
-import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
+import { useMemo } from "react";
+import { View, Pressable, StyleSheet, Linking } from "react-native";
+import { Text } from "../common/Text";
+import Icon, { type IconName } from "../common/Icon";
+import { useToast } from "../common/Toast";
+import { Palette, Radius, Spacing, Type, useColors } from "../../constants/theme";
 
 interface QuickLink {
   label: string;
   subtitle: string;
-  url: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  bgColor: string;
-  iconBg: string;
+  /** Sin URL, el toque muestra `subtitle` como aviso. */
+  url?: string;
+  icon: IconName;
 }
 
 const links: QuickLink[] = [
   {
     label: "MiPortal",
-    subtitle: "Accedé a tus trámites y recibos",
+    subtitle: "Datos y recibos",
     url: "https://miportal.formosa.gob.ar",
-    icon: "person-circle-outline",
-    bgColor: Colors.primaryLight,
-    iconBg: Colors.primary,
+    icon: "user",
+  },
+  {
+    label: "Recibo de haberes",
+    subtitle: "Último período",
+    url: "https://miportal.formosa.gob.ar",
+    icon: "cash",
   },
   {
     label: "WhatsApp",
-    subtitle: "Contactanos al 3704-000000",
+    subtitle: "3704-000000",
     url: "https://wa.me/5493700000000",
-    icon: "logo-whatsapp",
-    bgColor: Colors.emeraldLight,
-    iconBg: Colors.emerald,
+    icon: "phone",
+  },
+  {
+    label: "Mesa de Entradas",
+    subtitle: "Lun a vie, 07 a 13 h",
+    icon: "pin",
   },
 ];
 
-async function openURL(url: string, label: string) {
-  const supported = await Linking.canOpenURL(url);
-  if (supported) {
-    await Linking.openURL(url);
-  } else {
-    Alert.alert("Error", `No se puede abrir ${label}.`);
-  }
-}
-
+/**
+ * Accesos: grilla de dos columnas (separación 12), tarjetas grises de radio 16
+ * y 140 de alto mínimo, ícono arriba y nombre con descripción abajo.
+ */
 export default function ExternalAccess() {
-  return (
-    <Card>
-      <Text style={styles.title}>Accesos Rápidos</Text>
+  const C = useColors();
+  const styles = useMemo(() => createStyles(C), [C]);
+  const toast = useToast();
 
-      <View style={styles.list}>
+  async function open(link: QuickLink) {
+    if (!link.url) return toast(`${link.label}: ${link.subtitle}`);
+    toast(`Abriendo ${link.label}…`);
+    const supported = await Linking.canOpenURL(link.url);
+    if (supported) await Linking.openURL(link.url);
+    else toast(`No se puede abrir ${link.label}.`, "error");
+  }
+
+  return (
+    <View>
+      <Text style={styles.subtitle}>Sistemas provinciales, a un toque.</Text>
+
+      <View style={styles.grid}>
         {links.map((link) => (
-          <TouchableOpacity
+          <Pressable
             key={link.label}
-            style={[styles.row, { backgroundColor: link.bgColor }]}
-            onPress={() => openURL(link.url, link.label)}
-            activeOpacity={0.75}
+            onPress={() => open(link)}
+            accessibilityRole="link"
+            accessibilityLabel={`${link.label}. ${link.subtitle}`}
+            style={({ pressed }) => [
+              styles.card,
+              { backgroundColor: pressed ? C.surface2 : C.surface },
+            ]}
           >
-            <View style={[styles.iconWrap, { backgroundColor: link.iconBg }]}>
-              <Ionicons name={link.icon} size={18} color={Colors.white} />
+            <Icon name={link.icon} size={22} color={C.ink2} />
+            <View>
+              <Text style={styles.label}>{link.label}</Text>
+              <Text style={styles.desc}>{link.subtitle}</Text>
             </View>
-            <View style={styles.textWrap}>
-              <Text style={styles.linkLabel}>{link.label}</Text>
-              <Text style={styles.linkSubtitle}>{link.subtitle}</Text>
-            </View>
-            <Ionicons name="open-outline" size={16} color={Colors.slate400} />
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
-    </Card>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  title: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.slate800,
-    marginBottom: Spacing[3],
-  },
-  list: {
-    gap: Spacing[2],
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[3],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderRadius: Radius.lg,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-  textWrap: {
-    flex: 1,
-  },
-  linkLabel: {
-    fontSize: Typography.base,
-    fontWeight: Typography.medium,
-    color: Colors.slate800,
-  },
-  linkSubtitle: {
-    fontSize: Typography.xs,
-    color: Colors.slate500,
-    marginTop: 1,
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    subtitle: {
+      ...Type.lead,
+      color: C.ink2,
+      marginBottom: Spacing[2],
+    },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: Spacing[3],
+      marginTop: Spacing[2],
+    },
+    card: {
+      // dos columnas exactas: (100 % − 12) / 2
+      width: "48%",
+      flexGrow: 1,
+      minHeight: 140,
+      justifyContent: "space-between",
+      gap: Spacing[6],
+      padding: Spacing[4],
+      borderRadius: Radius.xl,
+    },
+    label: {
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: "600",
+      color: C.ink,
+    },
+    desc: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: C.ink2,
+      marginTop: 2,
+    },
+  });

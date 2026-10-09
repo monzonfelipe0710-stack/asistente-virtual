@@ -1,20 +1,13 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import {
   FlatList,
   Keyboard,
   StyleSheet,
-  Text,
   View,
-  type LayoutChangeEvent,
   type ListRenderItemInfo,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  Palette,
-  Spacing,
-  Typography,
-  useColors,
-} from "../../constants/theme";
+import { Text } from "../common/Text";
+import { Palette, Spacing, Type, useColors } from "../../constants/theme";
 import type { ChatMessage } from "../../data/mockMessages";
 import { useChat } from "../../hooks/useChat";
 import ChatBotAvatar from "../ChatBotAvatar";
@@ -23,46 +16,31 @@ import MessageBubble from "./MessageBubble";
 import QuickReplies from "./QuickReplies";
 import TypingIndicator from "./TypingIndicator";
 
-const GREETINGS = [
-  "¿En qué puedo ayudarte?",
-  "¿Cuándo digas, empezamos?",
-  "¿Qué trámite estás buscando?",
-  "Contame tu consulta",
-  "¿Por dónde arrancamos?",
-];
-
 const keyExtractor = (item: ChatMessage) => String(item.id);
-const renderItem = ({ item }: ListRenderItemInfo<ChatMessage>) => (
-  <MessageBubble message={item} />
-);
 
 interface Props {
   onConversationStart?: (started: boolean) => void;
+  /** Nombre del usuario con sesión, para el saludo. */
+  greetingName?: string;
+  /** Aire debajo de la barra de mensaje: la barra del sistema o 12 con teclado. */
+  bottomInset: number;
 }
 
-function ChatWindow({ onConversationStart }: Props) {
+function ChatWindow({ onConversationStart, greetingName, bottomInset }: Props) {
   const { messages, isTyping, listRef, send } = useChat();
 
   const C = useColors();
   const styles = useMemo(() => createStyles(C), [C]);
-  const insets = useSafeAreaInsets();
-  const started = messages.some((m) => m.type === "user");
+  const started = messages.length > 0 || isTyping;
+  const lastId = messages[messages.length - 1]?.id;
 
-  // una frase al azar por sesión (y por "Nuevo chat", que remonta el componente).
-  // El sorteo va en effect, no en el estado inicial: el prerender estático y el
-  // cliente elegirían frases distintas y eso rompe la hidratación (React #418).
-  const [greeting, setGreeting] = useState(GREETINGS[0]);
-  useEffect(() => {
-    setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
-  }, []);
-  // acá y no en QuickReplies: la lista reserva espacio para los chips
-  const [showQuick, setShowQuick] = useState(true);
-  const hideQuick = useCallback(() => setShowQuick(false), []);
+  const greeting = greetingName
+    ? `Hola, ${greetingName.split(/[\s@]/)[0]}`
+    : "Hola";
 
   useEffect(() => {
     onConversationStart?.(started);
   }, [started, onConversationStart]);
-
 
   // rAF: sin esperar al frame siguiente el scroll usa el layout viejo y queda corto
   const scrollToEnd = useCallback(
@@ -79,48 +57,45 @@ function ChatWindow({ onConversationStart }: Props) {
     return () => sub.remove();
   }, [scrollToEnd]);
 
-  // la altura real del bloque flotante: crece con el input y encoge sin los chips
-  const [dockHeight, setDockHeight] = useState(0);
-  const measureDock = useCallback(
-    (e: LayoutChangeEvent) => setDockHeight(e.nativeEvent.layout.height),
-    []
-  );
-
-  const listContentStyle = useMemo(
-    () => [
-      styles.listContent,
-      { paddingTop: insets.top + 68, paddingBottom: dockHeight },
-      messages.length === 0 && styles.listContentEmpty,
-    ],
-    [styles, insets.top, messages.length, dockHeight]
+  // solo el último mensaje se escribe letra a letra: los anteriores ya se leyeron,
+  // y FlatList puede volver a montarlos al desplazar
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<ChatMessage>) => (
+      <MessageBubble message={item} typewriter={item.id === lastId} />
+    ),
+    [lastId]
   );
 
   return (
     <View style={styles.container}>
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={keyExtractor}
-        style={styles.list}
-        renderItem={renderItem}
-        contentContainerStyle={listContentStyle}
-        onContentSizeChange={scrollToEnd}
-        // al subir el teclado la lista se achica: vuelve al final en vez de dejarlo tapado
-        onLayout={scrollToEnd}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <ChatBotAvatar size={112} />
-            <Text style={styles.emptyTitle}>{greeting}</Text>
+      {started ? (
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={keyExtractor}
+          style={styles.list}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          onContentSizeChange={scrollToEnd}
+          // al subir el teclado la lista se achica: vuelve al final en vez de dejarlo tapado
+          onLayout={scrollToEnd}
+          ListFooterComponent={isTyping ? <TypingIndicator /> : null}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+      ) : (
+        <View style={styles.welcome}>
+          <ChatBotAvatar size={56} tight />
+          <View style={styles.welcomeText}>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.welcomeTitle}>¿En qué te ayudo hoy?</Text>
           </View>
-        }
-        ListFooterComponent={isTyping ? <TypingIndicator /> : null}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      />
+        </View>
+      )}
 
-      {/* fuera del flujo: chips e input flotan y los mensajes pasan por debajo */}
-      <View style={styles.dock} onLayout={measureDock} pointerEvents="box-none">
-        {showQuick && <QuickReplies onSelect={send} onDismiss={hideQuick} />}
+      {!started && <QuickReplies onSelect={send} />}
+
+      <View style={{ paddingBottom: bottomInset }}>
         <ChatInput onSend={send} />
       </View>
     </View>
@@ -132,40 +107,42 @@ export default memo(ChatWindow);
 
 const createStyles = (C: Palette) =>
   StyleSheet.create({
-    list: {
-      flex: 1,
-    },
-    dock: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      // entra en la medición, así el chat respeta este aire haya chips o no
-      paddingTop: Spacing[2],
-    },
     container: {
       flex: 1,
-      backgroundColor: C.white,
+      backgroundColor: C.canvas,
+    },
+    list: {
+      flex: 1,
     },
     listContent: {
       flexGrow: 1,
       justifyContent: "flex-end",
+      // el primer mensaje ya trae sus 24 de margen arriba
+      paddingTop: 0,
+      paddingBottom: Spacing[6],
     },
-    listContentEmpty: {
-      justifyContent: "center",
-    },
-    empty: {
+    welcome: {
+      flex: 1,
       alignItems: "center",
-      paddingHorizontal: Spacing[6],
-      gap: Spacing[3],
-      // lo despega del centro exacto hacia arriba
-      marginBottom: Spacing[10],
+      justifyContent: "center",
+      gap: Spacing[5],
+      paddingHorizontal: Spacing[5],
+      paddingBottom: Spacing[6],
     },
-    emptyTitle: {
+    welcomeText: {
+      alignItems: "center",
+      gap: Spacing[2],
+    },
+    greeting: {
+      ...Type.lead,
+      color: C.ink2,
+    },
+    welcomeTitle: {
       fontSize: 28,
       lineHeight: 34,
-      fontWeight: Typography.bold,
-      color: C.slate800,
+      fontWeight: "600",
+      letterSpacing: -0.56,
+      color: C.ink,
       textAlign: "center",
     },
   });

@@ -1,9 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useMemo, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 
-import { Spacing, Type, useAdminColors } from "../../constants/theme";
+import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
 import { useAdmin } from "../../context/AdminContext";
 import {
   createMesaEntrada,
@@ -20,35 +26,26 @@ import {
 } from "../../data/mockMesaEntrada";
 import { formatDate } from "../../utils/date";
 import Modal from "../common/Modal";
+import Tabs from "../common/Tabs";
 import { useToast } from "../common/Toast";
 import {
   AdminScreen,
-  Badge,
   Btn,
   Card,
   EmptyState,
   Field,
-  FilterChip,
   Input,
   KeyValue,
   ListCard,
+  OptionGrid,
   PageHeader,
+  RecordRow,
   StatGrid,
-  PriorityDot,
-  Row,
   SectionTitle,
   Segmented,
   Select,
   StatCard,
-  type Tone,
 } from "./ui";
-
-const STATUS_TONE: Record<MesaStatus, Tone> = {
-  Ingresado: "info",
-  "En proceso": "warn",
-  Observado: "bad",
-  Finalizado: "ok",
-};
 
 const MAX_ASUNTO = 120;
 
@@ -87,6 +84,8 @@ export default function MesaDeEntrada() {
   const [filterStatus, setFilterStatus] = useState<"todos" | MesaStatus>("todos");
   const [formOpen, setFormOpen] = useState(false);
   const [detail, setDetail] = useState<MesaEntrada | null>(null);
+  // el estado se elige en la hoja y se aplica al guardar
+  const [detailStatus, setDetailStatus] = useState<MesaStatus>("Ingresado");
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [adjuntos, setAdjuntos] = useState<MesaAdjunto[]>([]);
@@ -110,6 +109,7 @@ export default function MesaDeEntrada() {
   const stats = useMemo(
     () => ({
       total: items.length,
+      ingresado: items.filter((i) => i.estado === "Ingresado").length,
       proceso: items.filter((i) => i.estado === "En proceso").length,
       observado: items.filter((i) => i.estado === "Observado").length,
       finalizado: items.filter((i) => i.estado === "Finalizado").length,
@@ -193,7 +193,13 @@ export default function MesaDeEntrada() {
       </PageHeader>
 
       <StatGrid>
-        <StatCard label="Ingresos" value={stats.total} tone="brand" icon="cube-outline" hint="en total" />
+        <StatCard
+          label="Ingresados"
+          value={stats.ingresado}
+          tone="info"
+          icon="cube-outline"
+          hint="sin asignar"
+        />
         <StatCard
           label="En proceso"
           value={stats.proceso}
@@ -223,79 +229,53 @@ export default function MesaDeEntrada() {
         icon="search"
         value={query}
         onChangeText={setQuery}
-        placeholder="Buscar por solicitante, asunto o expediente"
+        placeholder="Buscar por solicitante, asunto o número"
         autoCapitalize="none"
       />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-        style={{ marginTop: Spacing[3] }}
-      >
-        <FilterChip
-          label="Todos"
-          count={items.length}
-          active={filterStatus === "todos"}
-          onPress={() => setFilterStatus("todos")}
+      <View style={{ marginTop: Spacing[3] }}>
+        <Tabs
+          items={[
+            { id: "todos" as const, label: "Todos", count: stats.total },
+            ...mesaStatuses.map((st) => ({
+              id: st,
+              label: st,
+              count: items.filter((i) => i.estado === st).length,
+            })),
+          ]}
+          value={filterStatus}
+          onChange={setFilterStatus}
         />
-        {mesaStatuses.map((s) => (
-          <FilterChip
-            key={s}
-            label={s}
-            count={items.filter((i) => i.estado === s).length}
-            active={filterStatus === s}
-            onPress={() => setFilterStatus(s)}
-          />
-        ))}
-      </ScrollView>
+      </View>
 
-      <ListCard style={{ marginTop: Spacing[3] }}>
-        {filtered.map((it, i) => (
-          <Row
+      <ListCard>
+        {filtered.map((it) => (
+          <RecordRow
             key={it.id}
-            first={i === 0}
-            onPress={() => setDetail(it)}
-            accessibilityLabel={`Ver ingreso ${it.id}`}
-          >
-            <View style={styles.rowTop}>
-              <Text
-                style={[Type.bodyStrong, { color: C.ink, flex: 1 }]}
-                numberOfLines={2}
-              >
-                {it.asunto}
-              </Text>
-              <Badge label={it.estado} tone={STATUS_TONE[it.estado]} dot />
-            </View>
-
-            <Text style={[Type.meta, { color: C.muted, marginTop: 2 }]} numberOfLines={1}>
-              {it.solicitante} · {it.tipo}
-            </Text>
-
-            <View style={styles.rowFoot}>
-              <PriorityDot priority={it.prioridad} showLabel />
-              <Text style={[Type.meta, { color: C.faint }]}>{it.id}</Text>
-              <Text style={[Type.meta, { color: C.faint }]}>{formatDate(it.fecha)}</Text>
-              {!!it.adjuntos?.length && (
+            title={it.asunto}
+            status={it.estado}
+            who={it.solicitante}
+            area={it.tipo}
+            priority={it.prioridad}
+            id={it.id}
+            date={formatDate(it.fecha)}
+            note={it.observaciones}
+            onPress={() => {
+              setDetail(it);
+              setDetailStatus(it.estado);
+            }}
+            extra={
+              !!it.adjuntos?.length && (
                 <View style={styles.attachCount}>
                   <Ionicons name="attach-outline" size={13} color={C.faint} />
-                  <Text style={[Type.meta, { color: C.faint }]}>
-                    {it.adjuntos.length}
-                  </Text>
+                  <Text style={[Type.mono, { color: C.faint }]}>{it.adjuntos.length}</Text>
                 </View>
-              )}
-            </View>
-          </Row>
+              )
+            }
+          />
         ))}
 
-        {filtered.length === 0 && (
-          <EmptyState
-            icon="cube-outline"
-            title="Sin ingresos"
-            description="No hay ingresos que coincidan con la búsqueda."
-            action={<Btn label="Registrar ingreso" icon="add" onPress={openForm} />}
-          />
-        )}
+        {filtered.length === 0 && <EmptyState title="Sin resultados." />}
       </ListCard>
 
       {/* Alta de ingreso */}
@@ -303,12 +283,7 @@ export default function MesaDeEntrada() {
         open={formOpen}
         title="Registrar ingreso"
         onClose={() => setFormOpen(false)}
-        footer={
-          <>
-            <Btn label="Cancelar" variant="ghost" onPress={() => setFormOpen(false)} />
-            <Btn label="Registrar" onPress={submitForm} />
-          </>
-        }
+        footer={<Btn label="Registrar" onPress={submitForm} />}
       >
         <View style={styles.previewId}>
           <KeyValue label="Expediente" value={peekNextMesaId()} />
@@ -406,7 +381,7 @@ export default function MesaDeEntrada() {
             ))}
             <Btn
               label="Adjuntar archivo"
-              variant="ghost"
+              variant="secondary"
               icon="attach-outline"
               onPress={pickFiles}
             />
@@ -414,31 +389,49 @@ export default function MesaDeEntrada() {
         </Field>
       </Modal>
 
-      {/* Detalle */}
+      {/* Detalle: número, asunto, datos en dos columnas y estado con radios */}
       <Modal
         open={detail !== null}
-        title={detail?.id ?? ""}
+        title={detail?.asunto ?? ""}
         onClose={() => setDetail(null)}
-        footer={<Btn label="Cerrar" variant="ghost" onPress={() => setDetail(null)} />}
+        footer={
+          <Btn
+            label="Guardar cambios"
+            onPress={() => {
+              if (detail && detail.estado !== detailStatus) {
+                changeStatus(detail.id, detailStatus);
+              }
+              setDetail(null);
+            }}
+          />
+        }
       >
         {!!detail && (
           <>
-            <Text style={[Type.cardTitle, { color: C.ink }]}>{detail.asunto}</Text>
-            <Badge label={detail.estado} tone={STATUS_TONE[detail.estado]} dot />
-
-            <View style={{ gap: Spacing[2] }}>
-              <KeyValue label="Solicitante" value={detail.solicitante} />
-              <KeyValue label="Tipo" value={detail.tipo} />
-              <KeyValue label="Dependencia" value={detail.dependencia} />
-              <KeyValue label="Prioridad" value={detail.prioridad} />
-              <KeyValue label="Fecha" value={formatDate(detail.fecha)} />
-            </View>
-
-            <Field label="Observaciones">
-              <Text style={[Type.body, { color: C.ink }]}>
-                {detail.observaciones || "Sin observaciones"}
+            <Text style={[Type.mono, { color: C.faint, marginTop: -Spacing[3] }]}>
+              {detail.id}
+            </Text>
+            {!!detail.observaciones && (
+              <Text style={[Type.label, { fontWeight: "400", color: C.muted, marginTop: -Spacing[2] }]}>
+                {detail.observaciones}
               </Text>
-            </Field>
+            )}
+
+            <View style={[styles.grid, { borderColor: C.line }]}>
+              {[
+                ["Solicitante", detail.solicitante],
+                ["Dependencia", detail.dependencia],
+                ["Prioridad", detail.prioridad],
+                ["Ingreso", formatDate(detail.fecha)],
+              ].map(([l, v]) => (
+                <View key={l} style={styles.gridCell}>
+                  <Text style={{ fontSize: 12, lineHeight: 16, color: C.muted }}>{l}</Text>
+                  <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: "500", color: C.ink, marginTop: 2 }}>
+                    {v}
+                  </Text>
+                </View>
+              ))}
+            </View>
 
             {!!detail.adjuntos?.length && (
               <Field label="Adjuntos" hint="Se abren con la app del sistema">
@@ -451,22 +444,22 @@ export default function MesaDeEntrada() {
                       accessibilityLabel={`Abrir ${file.name}`}
                       style={[styles.fileRow, { backgroundColor: C.mist }]}
                     >
-                      <Ionicons name="document-outline" size={16} color={C.muted} />
-                      <Text style={[Type.meta, { color: C.ink, flex: 1 }]} numberOfLines={1}>
+                      <Ionicons name="document-outline" size={18} color={C.muted} />
+                      <Text style={[Type.body, { color: C.ink, flex: 1 }]} numberOfLines={1}>
                         {file.name}
                       </Text>
-                      <Ionicons name="open-outline" size={16} color={C.brand} />
+                      <Ionicons name="open-outline" size={18} color={C.brandDeep} />
                     </Pressable>
                   ))}
                 </View>
               </Field>
             )}
 
-            <Field label="Estado" hint="Cambia el estado del expediente">
-              <Segmented
-                value={detail.estado}
+            <Field label="Estado">
+              <OptionGrid
+                value={detailStatus}
                 options={mesaStatuses}
-                onChange={(estado) => changeStatus(detail.id, estado)}
+                onChange={setDetailStatus}
               />
             </Field>
           </>
@@ -477,36 +470,33 @@ export default function MesaDeEntrada() {
 }
 
 const styles = StyleSheet.create({
-  chips: {
-    flexDirection: "row",
-    gap: Spacing[2],
-    paddingRight: Spacing[4],
-  },
-  rowTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: Spacing[2],
-  },
-  rowFoot: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: Spacing[3],
-    marginTop: Spacing[2],
-  },
   attachCount: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
   },
   previewId: {
-    gap: Spacing[2],
+    gap: 0,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    rowGap: Spacing[3],
+    columnGap: Spacing[3],
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    paddingVertical: 14,
+  },
+  gridCell: {
+    flexGrow: 1,
+    flexBasis: "45%",
   },
   fileRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing[2],
-    paddingVertical: Spacing[3],
+    gap: Spacing[3],
+    minHeight: 48,
+    paddingHorizontal: Spacing[4],
+    borderRadius: Radius.lg,
   },
 });

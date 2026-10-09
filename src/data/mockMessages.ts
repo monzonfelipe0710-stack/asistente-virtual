@@ -37,6 +37,12 @@ export const botResponses: BotResponse[] = [
       "El Sistema de Gestión Documental (SIGED) permite realizar el seguimiento de expedientes electrónicos. Ingresá a la sección 'MiPortal' con tu usuario y clave para consultar el estado de tus expedientes.",
   },
   {
+    // la tarjeta "Mesa de Entradas" de la bienvenida manda este texto
+    keywords: ["mesa de entradas", "horario"],
+    response:
+      "La Mesa de Entradas atiende de lunes a viernes, de 07:00 a 13:00 h. Llevá tu DNI y la documentación original.",
+  },
+  {
     keywords: ["formulario", "descarga", "plantilla"],
     response:
       "En la sección 'Descargas' de esta página encontrás formularios, modelos y plantillas administrativas disponibles para su descarga directa.",

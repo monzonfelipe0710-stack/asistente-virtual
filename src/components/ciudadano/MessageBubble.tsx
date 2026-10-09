@@ -1,23 +1,57 @@
-import { memo, useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { Palette, Radius, Spacing, Typography, useColors } from "../../constants/theme";
+import { memo, useEffect, useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { Text } from "../common/Text";
+import { Palette, Radius, Spacing, useColors } from "../../constants/theme";
 import { ChatMessage } from "../../data/mockMessages";
+import ChatBotAvatar from "../ChatBotAvatar";
 
 interface Props {
   message: ChatMessage;
+  /** Escribe el texto letra a letra (18 ms por paso). Solo el último mensaje. */
+  typewriter?: boolean;
 }
 
-// memo: cada tecla del input re-renderiza ChatWindow; los mensajes ya escritos no cambian
-function MessageBubble({ message }: Props) {
+/**
+ * Usuario: burbuja gris a la derecha, radio 20, 10 × 16, máx. 80 %.
+ * Bot: sin burbuja y a ancho completo, con el avatar de 28 arriba.
+ */
+function MessageBubble({ message, typewriter = false }: Props) {
   const C = useColors();
   const styles = useMemo(() => createStyles(C), [C]);
   const isBot = message.type === "bot";
+  const full = message.text.length;
+  const [shown, setShown] = useState(typewriter && isBot ? 0 : full);
+
+  useEffect(() => {
+    if (!typewriter || !isBot) return;
+    // textos largos avanzan de a dos para no tardar más de unos segundos
+    const step = full > 200 ? 2 : 1;
+    const id = setInterval(() => {
+      setShown((n) => {
+        const next = Math.min(full, n + step);
+        if (next >= full) clearInterval(id);
+        return next;
+      });
+    }, 18);
+    return () => clearInterval(id);
+  }, [typewriter, isBot, full]);
+
+  if (!isBot) {
+    return (
+      <View style={styles.rowUser}>
+        <View style={styles.bubbleUser}>
+          <Text style={styles.text}>{message.text}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.row, isBot ? styles.rowBot : styles.rowUser]}>
-      <View style={isBot ? styles.bubbleBot : styles.bubbleUser}>
-        <Text style={styles.text}>{message.text}</Text>
-      </View>
+    <View style={styles.rowBot}>
+      <ChatBotAvatar size={28} tight static />
+      <Text style={styles.text} accessibilityLabel={message.text}>
+        {message.text.slice(0, shown)}
+      </Text>
     </View>
   );
 }
@@ -27,31 +61,27 @@ export default memo(MessageBubble);
 const createStyles = (C: Palette) =>
   StyleSheet.create({
     // marginTop y no marginBottom: así el último mensaje no deja hueco sobre el input
-    row: {
-      marginTop: Spacing[4],
-      paddingHorizontal: Spacing[4],
-    },
-    rowBot: {
-      alignItems: "flex-start",
-    },
     rowUser: {
+      marginTop: Spacing[6],
+      paddingHorizontal: Spacing[5],
       alignItems: "flex-end",
     },
-    // sin color: al bot lo distingue la alineación, al usuario un gris neutro
-    bubbleBot: {
-      width: "100%",
+    rowBot: {
+      marginTop: Spacing[6],
+      paddingHorizontal: Spacing[5],
+      gap: Spacing[3],
+      alignItems: "flex-start",
     },
     bubbleUser: {
       maxWidth: "80%",
       paddingHorizontal: Spacing[4],
-      paddingVertical: Spacing[3],
-      backgroundColor: C.slate100,
+      paddingVertical: 10,
+      backgroundColor: C.bubble,
       borderRadius: Radius["2xl"],
-      borderBottomRightRadius: Radius.sm,
     },
     text: {
-      fontSize: Typography.md,
-      lineHeight: 22,
-      color: C.slate800,
+      fontSize: 16,
+      lineHeight: 24,
+      color: C.ink,
     },
   });

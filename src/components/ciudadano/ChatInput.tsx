@@ -1,22 +1,22 @@
 import { memo, useCallback, useMemo, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-import {
-  Palette,
-  Radius,
-  Shadows,
-  Spacing,
-  Typography,
-  useColors,
-} from "../../constants/theme";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { TextInput } from "../common/Text";
+import Icon from "../common/Icon";
+import { Palette, Radius, Spacing, Size, useColors } from "../../constants/theme";
 
 interface Props {
   onSend: (text: string) => void;
 }
 
+/**
+ * Barra de mensaje: superficie gris sobre el fondo, radio 28, mínimo 56 de
+ * alto. Al enfocarla, borde azul y anillo de 4 px. Enviar es un círculo de 40
+ * que pasa a azul profundo cuando hay texto.
+ */
 // el texto vive acá y no en useChat: así tipear no re-renderiza la lista de mensajes
 function ChatInput({ onSend }: Props) {
   const [text, setText] = useState("");
+  const [focused, setFocused] = useState(false);
   const C = useColors();
   const styles = useMemo(() => createStyles(C), [C]);
   const writing = text.trim().length > 0;
@@ -29,29 +29,42 @@ function ChatInput({ onSend }: Props) {
   }, [text, onSend]);
 
   return (
-    <View style={styles.inputBar}>
-      <TextInput
-        style={styles.input}
-        value={text}
-        onChangeText={setText}
-        placeholder="Escribí tu consulta..."
-        placeholderTextColor={C.slate400}
-        multiline
-        maxLength={500}
-        returnKeyType="send"
-        onSubmitEditing={send}
-        blurOnSubmit
-      />
-      <TouchableOpacity
-        onPress={send}
-        disabled={!writing}
-        style={[styles.sendBtn, !writing && styles.sendBtnDisabled]}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Enviar consulta"
-      >
-        <Ionicons name="arrow-up" size={22} color="#ffffff" />
-      </TouchableOpacity>
+    // el anillo de foco: React Native no tiene box-shadow con spread, así que es
+    // un borde de 4 px por fuera de la barra
+    <View style={[styles.ring, { borderColor: focused ? C.ring : "transparent" }]}>
+      <View style={[styles.bar, { borderColor: focused ? C.accentBlue : C.cborder }]}>
+        <TextInput
+          style={styles.input}
+          value={text}
+          onChangeText={setText}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder="Escribí tu consulta"
+          placeholderTextColor={C.ink3}
+          multiline
+          // una línea al empezar: en web el textarea arranca con dos. En nativo
+          // no: en Android numberOfLines fija el alto y la barra no crecería
+          {...(Platform.OS === "web" ? { numberOfLines: 1 } : null)}
+          maxLength={500}
+          returnKeyType="send"
+          onSubmitEditing={send}
+          submitBehavior="blurAndSubmit"
+          accessibilityLabel="Escribí tu consulta"
+        />
+        <Pressable
+          onPress={send}
+          disabled={!writing}
+          style={[
+            styles.sendBtn,
+            { backgroundColor: writing ? C.primary : C.surface2 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Enviar"
+          accessibilityState={{ disabled: !writing }}
+        >
+          <Icon name="send" size={20} color={writing ? "#FFFFFF" : C.ink3} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -60,36 +73,37 @@ export default memo(ChatInput);
 
 const createStyles = (C: Palette) =>
   StyleSheet.create({
-    inputBar: {
+    ring: {
+      marginHorizontal: Spacing[5] - 4,
+      borderWidth: 4,
+      borderRadius: Radius["3xl"] + 4,
+    },
+    bar: {
       flexDirection: "row",
       alignItems: "flex-end",
       gap: Spacing[2],
-      marginHorizontal: Spacing[3],
-      marginBottom: Spacing[2],
-      paddingLeft: Spacing[4],
+      minHeight: Size.composer,
+      paddingLeft: 15,
       paddingRight: Spacing[2],
-      paddingVertical: Spacing[3],
-      backgroundColor: C.slate100,
-      borderRadius: Radius["2xl"],
-      ...Shadows.md,
+      paddingVertical: Spacing[2] - 1,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderRadius: Radius["3xl"],
     },
     input: {
       flex: 1,
+      minWidth: 0,
       paddingVertical: Spacing[2],
-      fontSize: Typography.md,
-      color: C.slate800,
-      maxHeight: 140,
-      minHeight: 64,
+      fontSize: 16,
+      lineHeight: 24,
+      color: C.ink,
+      maxHeight: 120,
     },
     sendBtn: {
-      width: 48,
-      height: 48,
+      width: 40,
+      height: 40,
       borderRadius: Radius.full,
-      backgroundColor: C.primary,
       justifyContent: "center",
       alignItems: "center",
-    },
-    sendBtnDisabled: {
-      opacity: 0.4,
     },
   });

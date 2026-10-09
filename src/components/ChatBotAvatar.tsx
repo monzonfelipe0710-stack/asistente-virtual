@@ -233,6 +233,11 @@ interface Props {
   speaking?: boolean;
   /** Un solo cuadro, sin reloj: para listas y avatares chicos. */
   static?: boolean;
+  /**
+   * Recorta el lienzo a la boule: `size` pasa a ser el diámetro del círculo y
+   * no el del lienzo con margen para los anillos (que esta app no dibuja).
+   */
+  tight?: boolean;
 }
 
 export default function ChatBotAvatar({
@@ -240,10 +245,11 @@ export default function ChatBotAvatar({
   size = 44,
   speaking = false,
   static: isStatic = false,
+  tight = false,
 }: Props) {
   const C = useColors();
-  const bodyColor = C.slate900;
-  const eyeColor = C.white;
+  const bodyColor = C.bot;
+  const eyeColor = C.botEye;
 
   const [frame, setFrame] = useState<BotFrame | null>(null);
   const [autoReaction, setAutoReaction] = useState<BotReaction | null>(null);
@@ -475,7 +481,8 @@ export default function ChatBotAvatar({
   };
 
   const isSleeping = reaction === "sleep";
-  const vb = DEMI_VIEWBOX;
+  // 1.04 × RAYON: deja aire para el rebote y el aplastado sin cortar el borde
+  const vb = tight ? RAYON * 1.04 : DEMI_VIEWBOX;
 
   return (
     <Pressable

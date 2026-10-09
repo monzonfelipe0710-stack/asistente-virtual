@@ -1,20 +1,29 @@
-import type { Ionicons } from "@expo/vector-icons";
-
+/** Tarjetas de sugerencia del estado de bienvenida del chat. */
 export interface QuickReply {
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  description: string;
   query: string;
 }
 
 export const quickReplies: QuickReply[] = [
   {
-    label: "Preguntas Frecuentes",
-    icon: "chatbubble-ellipses-outline",
-    query: "¿Cuáles son las preguntas frecuentes?",
+    label: "Recibo de haberes",
+    description: "Descargar el último mes",
+    query: "Recibo de haberes",
   },
   {
-    label: "Guía de Trámites",
-    icon: "document-text-outline",
-    query: "¿Cuál es la guía de trámites disponibles?",
+    label: "Licencia médica",
+    description: "Qué necesito para pedirla",
+    query: "Licencia médica",
+  },
+  {
+    label: "Expediente SIGED",
+    description: "Consultar en qué estado está",
+    query: "Expediente SIGED",
+  },
+  {
+    label: "Mesa de Entradas",
+    description: "Horarios y qué llevar",
+    query: "Mesa de Entradas",
   },
 ];

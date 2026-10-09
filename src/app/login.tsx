@@ -1,23 +1,28 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { Text } from "../components/common/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ChatBotAvatar from "../components/ChatBotAvatar";
-import { Btn, Card, Field, Input, Select } from "../components/admin/ui";
+import { Btn, Field, Input, Select } from "../components/admin/ui";
+import Icon from "../components/common/Icon";
 import {
+  Motion,
+  Radius,
+  Shadows,
+  Size,
   Spacing,
   Type,
-  Typography,
   useAdminColors,
 } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
@@ -25,7 +30,25 @@ import { employeeDepartments } from "../data/mockEmployeeApprovals";
 
 type Mode = "login" | "register";
 
-/** Campo de contraseña con el ojo para mostrarla. */
+const COPY = {
+  login: {
+    title: "Ingresá a ChatAP",
+    sub: "Usá tu correo institucional o personal.",
+    submit: "Continuar",
+  },
+  register: {
+    title: "Creá tu cuenta",
+    sub: "Guardá tus consultas y seguí tus trámites.",
+    submit: "Crear cuenta",
+  },
+  recovery: {
+    title: "Recuperá tu acceso",
+    sub: "Te enviamos un enlace para crear una contraseña nueva.",
+    submit: "Enviar enlace",
+  },
+};
+
+/** Campo de contraseña: el ojo es un botón de 44 dentro del campo de 52. */
 function PasswordInput({
   value,
   onChangeText,
@@ -39,7 +62,7 @@ function PasswordInput({
   const [visible, setVisible] = useState(false);
 
   return (
-    <View style={{ justifyContent: "center" }}>
+    <View>
       <Input
         value={value}
         onChangeText={onChangeText}
@@ -47,21 +70,76 @@ function PasswordInput({
         secureTextEntry={!visible}
         autoCapitalize="none"
         autoComplete="password"
-        style={{ paddingRight: 34 }}
+        style={{ paddingRight: 52 }}
       />
       <Pressable
         onPress={() => setVisible((v) => !v)}
         accessibilityRole="button"
         accessibilityLabel={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-        hitSlop={8}
         style={styles.eye}
       >
-        <Ionicons
-          name={visible ? "eye-off-outline" : "eye-outline"}
-          size={18}
-          color={C.faint}
-        />
+        {({ pressed }) => (
+          <Icon
+            name={visible ? "eyeOff" : "eye"}
+            size={20}
+            color={pressed ? C.ink : C.faint}
+          />
+        )}
       </Pressable>
+    </View>
+  );
+}
+
+/** Iniciar sesión / Crear cuenta: pista gris en píldora y pastilla que se desliza. */
+function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const C = useAdminColors();
+  const [width, setWidth] = useState(0);
+  const x = useRef(new Animated.Value(mode === "register" ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(x, {
+      toValue: mode === "register" ? 1 : 0,
+      duration: 280,
+      easing: Easing.bezier(...Motion.bezier),
+      useNativeDriver: true,
+    }).start();
+  }, [mode, x]);
+
+  const half = Math.max(0, (width - 8) / 2);
+
+  return (
+    <View
+      style={[styles.switch, { backgroundColor: C.mist }]}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width > 0 && (
+        <Animated.View
+          style={[
+            styles.thumb,
+            C.thumb === "#FFFFFF" && Shadows.sm,
+            {
+              width: half,
+              backgroundColor: C.thumb,
+              transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, half] }) }],
+            },
+          ]}
+        />
+      )}
+      {(["login", "register"] as Mode[]).map((m) => (
+        <Pressable
+          key={m}
+          onPress={() => onChange(m)}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: mode === m }}
+          style={styles.switchOption}
+        >
+          <Text
+            style={{ fontSize: 14, fontWeight: "500", color: mode === m ? C.ink : C.muted }}
+          >
+            {m === "login" ? "Iniciar sesión" : "Crear cuenta"}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -92,6 +170,7 @@ export default function LoginRegisterScreen() {
   const [recoveryEmailed, setRecoveryEmailed] = useState(false);
 
   const isLogin = mode === "login";
+  const copy = recovery ? COPY.recovery : COPY[mode];
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -149,345 +228,345 @@ export default function LoginRegisterScreen() {
       style={{ flex: 1, backgroundColor: C.canvas }}
     >
       <ScrollView
-        contentContainerStyle={{
-          padding: Spacing[4],
-          paddingTop: insets.top + Spacing[6],
-          paddingBottom: insets.bottom + Spacing[10],
-          flexGrow: 1,
-          justifyContent: "center",
-        }}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.brand}>
-          <ChatBotAvatar size={72} />
-          <Text style={[styles.brandTitle, { color: C.ink }]}>ChatAP</Text>
-          <Text style={[styles.brandSub, { color: C.muted }]}>
-            Subsecretaría de Recursos Humanos · Formosa
-          </Text>
+        {/* Volver arriba a la izquierda, con el ícono sobre la línea de 20 */}
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={() => router.replace("/")}
+            accessibilityRole="button"
+            accessibilityLabel="Volver al asistente"
+            style={({ pressed }) => [
+              styles.back,
+              pressed && { backgroundColor: C.mist },
+            ]}
+          >
+            <Icon name="chevronLeft" size={22} color={C.ink} />
+          </Pressable>
         </View>
 
-        <Card padded style={{ gap: Spacing[4], maxWidth: 460, width: "100%", alignSelf: "center" }}>
-          {recovery ? (
-            <>
-              <Text style={[styles.title, { color: C.ink }]}>
-                Recuperar contraseña
+        <View style={{ marginTop: Spacing[4], alignSelf: "flex-start" }}>
+          <ChatBotAvatar size={48} tight />
+        </View>
+        <Text style={[Type.pageTitle, { color: C.ink, marginTop: Spacing[6] }]}>
+          {copy.title}
+        </Text>
+        <Text style={[Type.lead, { color: C.muted, marginTop: Spacing[2] }]}>
+          {copy.sub}
+        </Text>
+
+        {!recovery && (
+          <View style={{ marginTop: Spacing[8] }}>
+            <ModeSwitch mode={mode} onChange={switchMode} />
+          </View>
+        )}
+
+        {recovery && recoverySent && (
+          <View style={[styles.sent, { backgroundColor: C.mist }]}>
+            <View style={[styles.sentIcon, { backgroundColor: C.okBg }]}>
+              <Icon name="check" size={18} color={C.ok} strokeWidth={2.6} />
+            </View>
+            <View style={{ flex: 1, gap: Spacing[1] }}>
+              <Text style={[Type.bodyStrong, { color: C.ink }]}>Revisá tu correo</Text>
+              <Text style={[Type.label, { fontWeight: "400", color: C.muted }]}>
+                {recoveryEmailed
+                  ? `Si ${email} tiene una cuenta, vas a recibir el enlace en unos minutos. Vence en 1 hora.`
+                  : `Si ${email} tiene una cuenta, generamos un enlace válido por 1 hora.`}
               </Text>
-
-              {recoverySent ? (
-                <>
-                  <Text style={[styles.help, { color: C.muted }]}>
-                    {recoveryEmailed
-                      ? "Si existe una cuenta con ese correo, te mandamos un enlace para restablecer la contraseña. Vence en 1 hora."
-                      : "Si existe una cuenta con ese correo, generamos un enlace válido por 1 hora."}
+              {!recoveryEmailed && !!recoveryLink && (
+                <View style={{ marginTop: Spacing[2], gap: 2 }}>
+                  <Text style={[Type.overline, { color: C.faint }]}>Modo demostración</Text>
+                  <Text style={[Type.meta, { color: C.brandDeep }]} selectable>
+                    {recoveryLink}
                   </Text>
-
-                  {!recoveryEmailed && !!recoveryLink && (
-                    <View style={styles.linkBox}>
-                      <Text style={[styles.linkLabel, { color: C.faint }]}>
-                        Enlace de recuperación (modo demostración)
-                      </Text>
-                      <Text style={[styles.linkText, { color: C.brandDeep }]} selectable>
-                        {recoveryLink}
-                      </Text>
-                    </View>
-                  )}
-
-                  <Btn
-                    label="Volver a iniciar sesión"
-                    variant="ghost"
-                    onPress={() => {
-                      setRecovery(false);
-                      setRecoverySent(false);
-                    }}
-                  />
-                </>
-              ) : (
-                <>
-                  <Text style={[styles.help, { color: C.muted }]}>
-                    Ingresá tu correo y te enviamos un enlace para crear una nueva
-                    contraseña.
-                  </Text>
-
-                  <Field label="Correo electrónico" required>
-                    <Input
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="tucorreo@ejemplo.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoComplete="email"
-                    />
-                  </Field>
-
-                  {!!error && <Text style={[styles.error, { color: C.bad }]}>{error}</Text>}
-
-                  <Btn
-                    label="Enviar enlace"
-                    onPress={handleRecovery}
-                    loading={submitting}
-                  />
-                  <Btn
-                    label="Cancelar"
-                    variant="ghost"
-                    onPress={() => setRecovery(false)}
-                  />
-                </>
+                </View>
               )}
-            </>
-          ) : (
-            <>
-              <View style={styles.tabs}>
-                {(["login", "register"] as Mode[]).map((m) => (
-                  <Pressable
-                    key={m}
-                    onPress={() => switchMode(m)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: mode === m }}
-                    style={[
-                      styles.tab,
-                      { borderBottomColor: mode === m ? C.brand : C.line },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.tabText,
-                        { color: mode === m ? C.brand : C.muted },
-                      ]}
-                    >
-                      {m === "login" ? "Iniciar sesión" : "Crear cuenta"}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+            </View>
+          </View>
+        )}
 
-              {!isLogin && (
-                <Field label="Nombre" required>
-                  <Input
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Ej: Juan Pérez"
-                    autoCapitalize="words"
-                  />
-                </Field>
-              )}
-
-              <Field label="Correo electrónico" required>
+        {!(recovery && recoverySent) && (
+          <View style={styles.form}>
+            {!isLogin && !recovery && (
+              <Field label="Nombre y apellido">
                 <Input
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="tucorreo@ejemplo.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Ana Pérez"
+                  autoCapitalize="words"
+                  autoComplete="name"
                 />
               </Field>
+            )}
 
-              <Field label="Contraseña" required>
+            <Field label="Correo electrónico">
+              <Input
+                value={email}
+                onChangeText={setEmail}
+                placeholder="nombre@formosa.gob.ar"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+            </Field>
+
+            {!recovery && (
+              <Field label="Contraseña">
                 <PasswordInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder={isLogin ? "Tu contraseña" : "Mínimo 6 caracteres"}
                 />
               </Field>
+            )}
 
-              {!isLogin && (
-                <>
-                  <Pressable
-                    onPress={() => setWantsEmployee((v) => !v)}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: wantsEmployee }}
-                    style={styles.checkRow}
-                  >
-                    <Ionicons
-                      name={wantsEmployee ? "checkmark-circle" : "ellipse-outline"}
-                      size={22}
-                      color={wantsEmployee ? C.brand : C.faint}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.checkLabel, { color: C.ink }]}>
-                        Solicito acceso como empleado
-                      </Text>
-                      <Text style={[styles.checkHint, { color: C.muted }]}>
-                        Un Superadmin revisa el pedido antes de habilitarte el panel
-                        interno.
-                      </Text>
-                    </View>
-                  </Pressable>
-
-                  {wantsEmployee && (
-                    <>
-                      <View style={{ flexDirection: "row", gap: Spacing[3] }}>
-                        <View style={{ flex: 1 }}>
-                          <Field label="CUIL" required>
-                            <Input
-                              value={cuil}
-                              onChangeText={setCuil}
-                              placeholder="20-12345678-3"
-                              keyboardType="numbers-and-punctuation"
-                            />
-                          </Field>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Field label="Teléfono" required>
-                            <Input
-                              value={phone}
-                              onChangeText={setPhone}
-                              placeholder="3704 55-0000"
-                              keyboardType="phone-pad"
-                            />
-                          </Field>
-                        </View>
-                      </View>
-
-                      <Field label="Dependencia" required>
-                        <Select
-                          value={department}
-                          options={employeeDepartments}
-                          onChange={setDepartment}
-                          placeholder="Elegí tu dependencia"
-                        />
-                      </Field>
-
-                      <Field label="Puesto solicitado" required>
-                        <Input
-                          value={position}
-                          onChangeText={setPosition}
-                          placeholder="Ej: Administrativo"
-                        />
-                      </Field>
-
-                      <Field label="Motivo">
-                        <Input
-                          value={reason}
-                          onChangeText={setReason}
-                          placeholder="Contanos por qué necesitás el acceso"
-                          multiline
-                          style={{ minHeight: 72, textAlignVertical: "top" }}
-                        />
-                      </Field>
-                    </>
-                  )}
-                </>
-              )}
-
-              {!!error && (
-                <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle-outline" size={16} color={C.bad} />
-                  <Text style={[styles.error, { color: C.bad, flex: 1 }]}>{error}</Text>
-                </View>
-              )}
-
-              <Btn
-                label={isLogin ? "Entrar" : "Crear cuenta"}
-                onPress={handleSubmit}
-                loading={submitting}
-              />
-
-              {isLogin && (
+            {!isLogin && !recovery && (
+              <>
                 <Pressable
-                  onPress={() => {
-                    setRecovery(true);
-                    setError("");
-                  }}
-                  accessibilityRole="button"
+                  onPress={() => setWantsEmployee((v) => !v)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: wantsEmployee }}
+                  style={styles.checkRow}
                 >
-                  <Text style={[styles.linkAction, { color: C.brandDeep }]}>
-                    Olvidé mi contraseña
-                  </Text>
+                  <View
+                    style={[
+                      styles.check,
+                      wantsEmployee
+                        ? { backgroundColor: C.brand, borderColor: C.brand }
+                        : { borderColor: C.faint },
+                    ]}
+                  >
+                    {wantsEmployee && (
+                      <Icon name="check" size={14} color="#FFFFFF" strokeWidth={3} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[Type.body, { fontWeight: "500", color: C.ink }]}>
+                      Solicito acceso como empleado
+                    </Text>
+                    <Text style={[Type.meta, { color: C.muted }]}>
+                      Un Superadmin revisa el pedido antes de habilitarte el panel
+                      interno.
+                    </Text>
+                  </View>
                 </Pressable>
-              )}
-            </>
-          )}
-        </Card>
 
-        <Pressable
-          onPress={() => router.replace("/")}
-          accessibilityRole="link"
-          style={{ marginTop: Spacing[5] }}
+                {wantsEmployee && (
+                  <>
+                    <View style={styles.pair}>
+                      <View style={{ flex: 1 }}>
+                        <Field label="CUIL">
+                          <Input
+                            value={cuil}
+                            onChangeText={setCuil}
+                            placeholder="20-12345678-3"
+                            keyboardType="numbers-and-punctuation"
+                          />
+                        </Field>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Field label="Teléfono">
+                          <Input
+                            value={phone}
+                            onChangeText={setPhone}
+                            placeholder="3704 55-0000"
+                            keyboardType="phone-pad"
+                          />
+                        </Field>
+                      </View>
+                    </View>
+
+                    <Field label="Dependencia">
+                      <Select
+                        value={department}
+                        options={employeeDepartments}
+                        onChange={setDepartment}
+                        placeholder="Elegí tu dependencia"
+                      />
+                    </Field>
+
+                    <Field label="Puesto solicitado">
+                      <Input
+                        value={position}
+                        onChangeText={setPosition}
+                        placeholder="Ej.: Administrativo"
+                      />
+                    </Field>
+
+                    <Field label="Motivo">
+                      <Input
+                        value={reason}
+                        onChangeText={setReason}
+                        placeholder="Contanos por qué necesitás el acceso"
+                        multiline
+                      />
+                    </Field>
+                  </>
+                )}
+              </>
+            )}
+
+            {!!error && (
+              <Text
+                style={[Type.meta, { color: C.danger }]}
+                accessibilityLiveRegion="polite"
+              >
+                {error}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {isLogin && !recovery && (
+          <Pressable
+            onPress={() => {
+              setRecovery(true);
+              setError("");
+            }}
+            accessibilityRole="button"
+            style={styles.forgot}
+          >
+            {({ pressed }) => (
+              <Text
+                style={[Type.label, { color: C.brandDeep, opacity: pressed ? 0.6 : 1 }]}
+              >
+                ¿Olvidaste tu contraseña?
+              </Text>
+            )}
+          </Pressable>
+        )}
+
+        {!(recovery && recoverySent) && (
+          <Btn
+            label={copy.submit}
+            onPress={recovery ? handleRecovery : handleSubmit}
+            loading={submitting}
+            style={{ marginTop: Spacing[6] }}
+          />
+        )}
+
+        {recovery && (
+          <Btn
+            label="Volver a iniciar sesión"
+            variant="secondary"
+            onPress={() => {
+              setRecovery(false);
+              setRecoverySent(false);
+              setError("");
+            }}
+            style={{ marginTop: Spacing[3] }}
+          />
+        )}
+
+        <View style={{ flex: 1, minHeight: Spacing[6] }} />
+        <Text
+          style={[
+            styles.footer,
+            { color: C.faint, paddingBottom: Math.max(insets.bottom, Spacing[5]) + Spacing[3] },
+          ]}
         >
-          <Text style={[styles.linkAction, { color: C.muted }]}>
-            Volver al asistente
-          </Text>
-        </Pressable>
+          Subsecretaría de Recursos Humanos · Formosa
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  brand: {
-    alignItems: "center",
-    gap: Spacing[1],
-    marginBottom: Spacing[6],
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing[5],
   },
-  brandTitle: {
-    fontSize: Typography["2xl"],
-    fontWeight: Typography.bold,
-    marginTop: Spacing[2],
-  },
-  brandSub: {
-    fontSize: Typography.sm,
-    textAlign: "center",
-  },
-  title: {
-    fontSize: Typography.lg,
-    fontWeight: Typography.bold,
-  },
-  help: {
-    fontSize: Typography.base,
-    lineHeight: 20,
-  },
-  tabs: {
+  topBar: {
+    height: Size.header,
     flexDirection: "row",
-    gap: Spacing[5],
+    alignItems: "center",
+    marginLeft: -11,
   },
-  tab: {
-    paddingVertical: Spacing[2],
-    borderBottomWidth: 2,
+  back: {
+    width: Size.touch,
+    height: Size.touch,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  tabText: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
+  switch: {
+    flexDirection: "row",
+    height: Size.touch,
+    borderRadius: 999,
+    padding: 4,
+  },
+  thumb: {
+    position: "absolute",
+    top: 4,
+    bottom: 4,
+    left: 4,
+    borderRadius: 999,
+  },
+  switchOption: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing[4],
+    marginTop: Spacing[8],
+    padding: Spacing[5],
+    borderRadius: Radius.xl,
+  },
+  sentIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  form: {
+    gap: Spacing[4],
+    marginTop: Spacing[6],
   },
   eye: {
     position: "absolute",
-    right: Spacing[4],
+    right: 4,
+    top: 4,
+    width: Size.touch,
+    height: Size.touch,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: Spacing[3],
-    paddingVertical: Spacing[2],
+    paddingVertical: Spacing[1],
   },
-  checkLabel: {
-    fontSize: Typography.base,
-    fontWeight: Typography.medium,
-  },
-  checkHint: {
-    ...Type.meta,
-    marginTop: 2,
-  },
-  errorBox: {
-    flexDirection: "row",
+  check: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
     alignItems: "center",
-    gap: Spacing[2],
+    justifyContent: "center",
+    marginTop: 1,
   },
-  error: {
-    ...Type.meta,
+  pair: {
+    flexDirection: "row",
+    gap: Spacing[3],
   },
-  linkAction: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
+  forgot: {
+    alignSelf: "flex-end",
+    height: Size.touch,
+    justifyContent: "center",
+    marginTop: Spacing[1],
+  },
+  footer: {
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: "center",
-  },
-  linkBox: {
-    gap: Spacing[1],
-  },
-  linkLabel: {
-    ...Type.metaStrong,
-  },
-  linkText: {
-    ...Type.meta,
   },
 });

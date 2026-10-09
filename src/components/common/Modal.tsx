@@ -1,21 +1,23 @@
-import { Ionicons } from "@expo/vector-icons";
-import type { ReactNode } from "react";
-import {
-  KeyboardAvoidingView,
-  Modal as RNModal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Children, Fragment, isValidElement, type ReactNode } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Text } from "./Text";
 
-import { Radius, Shadows, Spacing, Typography, useAdminColors } from "../../constants/theme";
+import { BottomSheet } from "../admin/ui";
+import { Spacing, Type, useAdminColors } from "../../constants/theme";
+
+/** Abre los fragmentos: el pie llega como `<><Btn/><Btn/></>`. */
+function flatten(node: ReactNode): ReactNode[] {
+  return Children.toArray(node).flatMap((child) =>
+    isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment
+      ? flatten(child.props.children)
+      : [child]
+  );
+}
 
 /**
- * Diálogo centrado con encabezado y cierre. Es el `Modal` del panel web; acá
- * usa el Modal nativo, que ya se encarga del botón atrás en Android.
+ * Edición en hoja inferior (v6): asa, título 20/26 · 600, contenido con 16
+ * entre campos y las acciones abajo a lo ancho, repartidas en partes iguales.
+ * Se cierra tocando el velo o con el botón atrás de Android.
  */
 export default function Modal({
   open,
@@ -31,99 +33,55 @@ export default function Modal({
   footer?: ReactNode;
 }) {
   const C = useAdminColors();
+  const actions = footer ? flatten(footer) : [];
 
   return (
-    <RNModal
-      visible={open}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
+    <BottomSheet open={open} onClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.backdrop}
+        style={styles.flexShrink}
       >
-        {/* El fondo cierra; la tarjeta no, para que un toque adentro no salga */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Text style={[Type.sheetTitle, { color: C.ink }]} accessibilityRole="header">
+          {title}
+        </Text>
 
-        <View
-          style={[
-            styles.card,
-            Shadows.md,
-            { backgroundColor: C.paper },
-          ]}
+        <ScrollView
+          style={styles.flexShrink}
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.header, { borderBottomColor: C.line }]}>
-            <Text style={[styles.title, { color: C.ink }]} numberOfLines={1}>
-              {title}
-            </Text>
-            <Pressable
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar"
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={22} color={C.muted} />
-            </Pressable>
+          {children}
+        </ScrollView>
+
+        {actions.length > 0 && (
+          <View style={styles.footer}>
+            {actions.map((a, i) => (
+              <View key={i} style={styles.action}>
+                {a}
+              </View>
+            ))}
           </View>
-
-          <ScrollView
-            contentContainerStyle={styles.body}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {children}
-          </ScrollView>
-
-          {!!footer && (
-            <View style={[styles.footer, { borderTopColor: C.line }]}>{footer}</View>
-          )}
-        </View>
+        )}
       </KeyboardAvoidingView>
-    </RNModal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    padding: Spacing[4],
-  },
-  card: {
-    width: "100%",
-    maxWidth: 460,
-    maxHeight: "85%",
-    borderRadius: Radius.xl,
-    overflow: "hidden",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing[3],
-    paddingHorizontal: Spacing[5],
-    paddingVertical: Spacing[4],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  title: {
-    fontSize: Typography.md,
-    fontWeight: Typography.bold,
+  flexShrink: {
     flexShrink: 1,
   },
   body: {
-    padding: Spacing[5],
+    paddingTop: Spacing[4],
     gap: Spacing[4],
   },
   footer: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: Spacing[2],
-    paddingHorizontal: Spacing[5],
-    paddingVertical: Spacing[4],
-    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: Spacing[3],
+    marginTop: Spacing[4],
+  },
+  action: {
+    flex: 1,
   },
 });

@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 
-import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
+import { Spacing, Type, useAdminColors } from "../../constants/theme";
 import { useAdmin } from "../../context/AdminContext";
 import {
   employeeDepartments,
-  initialsOf,
   type EmployeeRequest,
   type EmployeeRequestStatus,
 } from "../../data/mockEmployeeApprovals";
@@ -14,29 +17,37 @@ import { loadUsers, saveUsers } from "../../lib/auth";
 import { loadEmployeeRequests, saveEmployeeRequests } from "../../lib/employeeRequests";
 import { formatDate } from "../../utils/date";
 import Modal from "../common/Modal";
+import Tabs from "../common/Tabs";
 import { useToast } from "../common/Toast";
 import {
   AdminScreen,
+  Avatar,
   Badge,
   Btn,
   Card,
   EmptyState,
   Field,
-  FilterChip,
   Input,
   KeyValue,
   ListCard,
   PageHeader,
-  StatGrid,
   Row,
-  SectionTitle,
   Select,
   SkeletonList,
-  StatCard,
   type Tone,
 } from "./ui";
 
-const TABS: EmployeeRequestStatus[] = ["Pendiente", "Activo", "Rechazado"];
+const TABS: { id: EmployeeRequestStatus; label: string }[] = [
+  { id: "Pendiente", label: "Pendientes" },
+  { id: "Activo", label: "Aprobadas" },
+  { id: "Rechazado", label: "Rechazadas" },
+];
+
+const STATUS_LABEL: Record<EmployeeRequestStatus, string> = {
+  Pendiente: "Pendiente",
+  Activo: "Aprobada",
+  Rechazado: "Rechazada",
+};
 
 const STATUS_TONE: Record<EmployeeRequestStatus, Tone> = {
   Pendiente: "warn",
@@ -207,61 +218,18 @@ export default function EmployeeApprovals() {
         description="Revisá los pedidos de alta y definí quién ingresa como empleado."
       />
 
-      <StatGrid>
-        <StatCard
-          label="Pendientes"
-          value={counts.Pendiente}
-          tone="warn"
-          hint="aguardan revisión"
-          icon="time-outline"
-        />
-        <StatCard
-          label="Aprobadas"
-          value={counts.Activo}
-          tone="ok"
-          hint="empleados activos"
-          icon="checkmark-outline"
-        />
-        <StatCard
-          label="Rechazadas"
-          value={counts.Rechazado}
-          tone="bad"
-          hint="no ingresaron"
-          icon="close-outline"
-        />
-        <StatCard
-          label="Total recibidas"
-          value={counts.total}
-          tone="brand"
-          hint="historial completo"
-          icon="people-outline"
-        />
-      </StatGrid>
+      <Tabs
+        items={TABS.map((t) => ({ ...t, count: counts[t.id] }))}
+        value={tab}
+        onChange={setTab}
+      />
 
-      <SectionTitle>Bandeja</SectionTitle>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        {TABS.map((t) => (
-          <FilterChip
-            key={t}
-            label={t}
-            count={counts[t]}
-            active={tab === t}
-            onPress={() => setTab(t)}
-          />
-        ))}
-      </ScrollView>
-
-      <View style={{ gap: Spacing[2], marginTop: Spacing[3] }}>
+      <View style={{ gap: Spacing[3], marginTop: Spacing[4] }}>
         <Input
           icon="search"
           value={query}
           onChangeText={setQuery}
-          placeholder="Buscar por nombre, correo, DNI, CUIL o puesto"
+          placeholder="Buscar por nombre, correo, DNI o puesto"
           autoCapitalize="none"
         />
         <Select
@@ -272,54 +240,59 @@ export default function EmployeeApprovals() {
         />
       </View>
 
-      <ListCard style={{ marginTop: Spacing[3] }}>
-        {filtered.map((req, i) => (
+      <ListCard style={{ marginTop: Spacing[2] }}>
+        {filtered.map((req) => (
           <Row
             key={req.id}
-            first={i === 0}
             onPress={() => setDetail(req)}
             accessibilityLabel={`Ver solicitud de ${req.name}`}
+            style={{ gap: Spacing[3] }}
           >
             <View style={styles.line}>
-              <View style={[styles.initials, { backgroundColor: C.mist }]}>
-                <Text style={[Type.metaStrong, { color: C.muted }]}>
-                  {initialsOf(req.name)}
-                </Text>
-              </View>
-
+              <Avatar name={req.name} />
               <View style={styles.body}>
-                <View style={styles.nameLine}>
-                  <Text
-                    style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]}
-                    numberOfLines={1}
-                  >
-                    {req.name}
-                  </Text>
-                  <Badge label={req.status} tone={STATUS_TONE[req.status]} dot />
-                </View>
-
-                <Text style={[Type.meta, { color: C.muted }]} numberOfLines={1}>
-                  {req.position} · {req.department}
+                <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={1}>
+                  {req.name}
                 </Text>
-                <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
-                  {req.email}
-                </Text>
-                <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
-                  {req.id} · {formatDate(req.requestedAt.slice(0, 10))}
+                <Text
+                  style={[Type.label, { fontWeight: "400", color: C.muted }]}
+                  numberOfLines={1}
+                >
+                  {req.department}
                 </Text>
               </View>
-
-              <Ionicons name="chevron-forward" size={18} color={C.faint} />
+              <Badge label={STATUS_LABEL[req.status]} tone={STATUS_TONE[req.status]} />
             </View>
+
+            <View style={styles.mono}>
+              {!!req.dni && <Text style={[Type.mono, { color: C.faint }]}>DNI {req.dni}</Text>}
+              <Text style={[Type.mono, { color: C.faint }]}>
+                {formatDate(req.requestedAt.slice(0, 10))}
+              </Text>
+            </View>
+
+            {req.status === "Pendiente" && (
+              <View style={styles.actions}>
+                <Btn
+                  label="Rechazar"
+                  variant="secondary"
+                  size="md"
+                  onPress={() => openConfirm(req, "Rechazado")}
+                  style={{ flex: 1 }}
+                />
+                <Btn
+                  label="Aprobar"
+                  size="md"
+                  onPress={() => openConfirm(req, "Activo")}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            )}
           </Row>
         ))}
 
         {filtered.length === 0 && (
-          <EmptyState
-            icon="checkmark-done-outline"
-            title="Sin solicitudes"
-            description="No hay solicitudes que coincidan con los filtros actuales."
-          />
+          <EmptyState title="No hay solicitudes en esta categoría." />
         )}
       </ListCard>
 
@@ -334,7 +307,7 @@ export default function EmployeeApprovals() {
             <>
               <Btn
                 label="Rechazar"
-                variant="danger"
+                variant="secondary"
                 onPress={() => detail && openConfirm(detail, "Rechazado")}
               />
               <Btn
@@ -342,16 +315,14 @@ export default function EmployeeApprovals() {
                 onPress={() => detail && openConfirm(detail, "Activo")}
               />
             </>
-          ) : (
-            <Btn label="Cerrar" variant="ghost" onPress={() => setDetail(null)} />
-          )
+          ) : undefined
         }
       >
         {!!detail && (
           <>
-            <Badge label={detail.status} tone={STATUS_TONE[detail.status]} dot />
+            <Badge label={STATUS_LABEL[detail.status]} tone={STATUS_TONE[detail.status]} />
 
-            <View style={{ gap: Spacing[2] }}>
+            <View>
               <KeyValue label="Solicitud" value={detail.id} />
               <KeyValue label="Correo" value={detail.email} />
               <KeyValue label="DNI" value={detail.dni} />
@@ -369,7 +340,7 @@ export default function EmployeeApprovals() {
 
             {!!detail.reviewedBy && (
               <Field label="Revisión">
-                <View style={{ gap: Spacing[2] }}>
+                <View>
                   <KeyValue label="Revisado por" value={detail.reviewedBy} />
                   <KeyValue
                     label="Observación"
@@ -390,21 +361,11 @@ export default function EmployeeApprovals() {
           setNote("");
         }}
         footer={
-          <>
-            <Btn
-              label="Cancelar"
-              variant="ghost"
-              onPress={() => {
-                setConfirm(null);
-                setNote("");
-              }}
-            />
-            <Btn
-              label={confirm?.action === "Activo" ? "Aprobar" : "Rechazar"}
-              variant={confirm?.action === "Activo" ? "primary" : "danger"}
-              onPress={applyDecision}
-            />
-          </>
+          <Btn
+            label={confirm?.action === "Activo" ? "Aprobar" : "Rechazar"}
+            variant={confirm?.action === "Activo" ? "primary" : "dangerFill"}
+            onPress={applyDecision}
+          />
         }
       >
         <Text style={[Type.body, { color: C.muted }]}>
@@ -429,7 +390,6 @@ export default function EmployeeApprovals() {
             onChangeText={setNote}
             placeholder="Dejá constancia de la decisión"
             multiline
-            style={{ minHeight: 84, textAlignVertical: "top" }}
           />
         </Field>
       </Modal>
@@ -438,32 +398,21 @@ export default function EmployeeApprovals() {
 }
 
 const styles = StyleSheet.create({
-  chips: {
-    flexDirection: "row",
-    gap: Spacing[2],
-    paddingRight: Spacing[4],
-  },
   line: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[3],
   },
-  initials: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
   },
-  nameLine: {
+  mono: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[2],
+    gap: Spacing[3],
   },
-
+  actions: {
+    flexDirection: "row",
+    gap: Spacing[3],
+  },
 });

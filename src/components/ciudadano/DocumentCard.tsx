@@ -1,124 +1,87 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { useMemo } from "react";
+import { View, Pressable, StyleSheet } from "react-native";
+import { Text } from "../common/Text";
+import Icon from "../common/Icon";
+import { useToast } from "../common/Toast";
 import { MockDocument } from "../../data/mockDocuments";
-import Card from "../common/Card";
-import { Colors, Typography, Spacing, Radius } from "../../constants/theme";
+import { Fonts, Palette, Radius, Spacing, useColors } from "../../constants/theme";
 
 interface Props {
   document: MockDocument;
 }
 
-const formatConfig = {
-  PDF: { bg: Colors.pdfBg, text: Colors.pdfText, label: "PDF" },
-  DOCX: { bg: Colors.docxBg, text: Colors.docxText, label: "DOC" },
-  XLSX: { bg: Colors.xlsxBg, text: Colors.xlsxText, label: "XLS" },
-};
-
+/**
+ * Fila de descarga: tarjeta gris de radio 16, ícono de documento en una caja
+ * de 40 del color del fondo, nombre 15/500, formato y peso en Geist Mono.
+ */
 export default function DocumentCard({ document }: Props) {
-  const fmt = formatConfig[document.format] ?? formatConfig.PDF;
-  const categoryTag = document.category.slice(0, -1);
+  const C = useColors();
+  const styles = useMemo(() => createStyles(C), [C]);
+  const toast = useToast();
 
   return (
-    <Card style={styles.card}>
-      <View style={[styles.formatBadge, { backgroundColor: fmt.bg }]}>
-        <Text style={[styles.formatText, { color: fmt.text }]}>{fmt.label}</Text>
+    <Pressable
+      onPress={() => toast("Descargando…")}
+      accessibilityRole="button"
+      accessibilityLabel={`Descargar ${document.title}, ${document.format}, ${document.fileSize}`}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: pressed ? C.surface2 : C.surface },
+      ]}
+    >
+      <View style={styles.iconBox}>
+        <Icon name="fileText" size={20} color={C.ink2} />
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={2}>
           {document.title}
         </Text>
-        <Text style={styles.description} numberOfLines={1}>
-          {document.description}
+        <Text style={styles.meta} numberOfLines={1}>
+          {document.format} · {document.fileSize}
         </Text>
-        <View style={styles.meta}>
-          <Text style={styles.fileSize}>{document.fileSize}</Text>
-          <Text style={styles.separator}>|</Text>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{categoryTag}</Text>
-          </View>
-        </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.downloadBtn}
-        onPress={() => Alert.alert("Descarga", `Descargando: ${document.title}`)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.downloadText}>Descargar</Text>
-      </TouchableOpacity>
-    </Card>
+      <Icon name="download" size={20} color={C.ink2} />
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[3],
-    padding: Spacing[3],
-    borderRadius: Radius.lg,
-    marginBottom: Spacing[2],
-  },
-  formatBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
-  },
-  formatText: {
-    fontSize: 10,
-    fontWeight: Typography.bold,
-  },
-  info: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.medium,
-    color: Colors.slate800,
-  },
-  description: {
-    fontSize: Typography.xs,
-    color: Colors.slate500,
-  },
-  meta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[1],
-    marginTop: 2,
-  },
-  fileSize: {
-    fontSize: Typography.xs,
-    color: Colors.slate400,
-  },
-  separator: {
-    fontSize: Typography.xs,
-    color: Colors.slate300,
-  },
-  categoryBadge: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: Radius.sm,
-  },
-  categoryText: {
-    fontSize: Typography.xs,
-    color: Colors.primary,
-    fontWeight: Typography.medium,
-  },
-  downloadBtn: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: 7,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.md,
-    flexShrink: 0,
-  },
-  downloadText: {
-    fontSize: Typography.xs,
-    fontWeight: Typography.medium,
-    color: Colors.primary,
-  },
-});
+const createStyles = (C: Palette) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing[4],
+      paddingHorizontal: Spacing[4],
+      paddingVertical: 14,
+      borderRadius: Radius.xl,
+    },
+    iconBox: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.lg,
+      backgroundColor: C.canvas,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    info: {
+      flex: 1,
+      minWidth: 0,
+    },
+    title: {
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: "500",
+      color: C.ink,
+    },
+    meta: {
+      fontSize: 11,
+      lineHeight: 14,
+      fontFamily: Fonts.mono,
+      letterSpacing: 0.66,
+      textTransform: "uppercase",
+      color: C.ink3,
+      marginTop: Spacing[1],
+    },
+  });

@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { View } from "react-native";
-
-import { Spacing } from "../../constants/theme";
+import { Btn, Field, Input, Segmented, Select } from "./ui";
 import {
   departments,
   userRoles,
@@ -10,7 +8,6 @@ import {
   type UserStatus,
 } from "../../data/mockUsers";
 import Modal from "../common/Modal";
-import { Btn, Field, Input, Select } from "./ui";
 
 export interface UserForm {
   name: string;
@@ -62,9 +59,9 @@ export default function UserFormModal({
 
   function submit() {
     const errs: Partial<Record<keyof UserForm, string>> = {};
-    if (!form.name.trim()) errs.name = "El nombre es obligatorio";
-    if (!form.email.trim()) errs.email = "El email es obligatorio";
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Email inválido";
+    if (!form.name.trim()) errs.name = "Ingresá el nombre y apellido.";
+    if (!form.email.trim()) errs.email = "Ingresá el correo.";
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = "Revisá el formato del correo.";
 
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -78,25 +75,22 @@ export default function UserFormModal({
       title={editUser ? "Editar usuario" : "Nuevo usuario"}
       onClose={onClose}
       footer={
-        <>
-          <Btn label="Cancelar" variant="ghost" onPress={onClose} />
-          <Btn
-            label={editUser ? "Guardar cambios" : "Crear usuario"}
-            onPress={submit}
-          />
-        </>
+        <Btn
+          label={editUser ? "Guardar cambios" : "Crear usuario"}
+          onPress={submit}
+        />
       }
     >
       <Field label="Nombre completo" required error={errors.name}>
         <Input
           value={form.name}
           onChangeText={(name) => setForm((f) => ({ ...f, name }))}
-          placeholder="Ej: Juan Pérez"
+          placeholder="Nombre y apellido"
           autoCapitalize="words"
         />
       </Field>
 
-      <Field label="Email" required error={errors.email}>
+      <Field label="Correo electrónico" required error={errors.email}>
         <Input
           value={form.email}
           onChangeText={(email) => setForm((f) => ({ ...f, email }))}
@@ -106,26 +100,21 @@ export default function UserFormModal({
         />
       </Field>
 
-      <View style={{ flexDirection: "row", gap: Spacing[3] }}>
-        <View style={{ flex: 1 }}>
-          <Field label="Rol">
-            <Select
-              value={form.role}
-              options={userRoles}
-              onChange={(role) => setForm((f) => ({ ...f, role }))}
-            />
-          </Field>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Field label="Estado">
-            <Select
-              value={form.status}
-              options={STATUSES}
-              onChange={(status) => setForm((f) => ({ ...f, status }))}
-            />
-          </Field>
-        </View>
-      </View>
+      <Field label="Rol">
+        <Segmented
+          value={form.role}
+          options={userRoles}
+          onChange={(role) => setForm((f) => ({ ...f, role }))}
+        />
+      </Field>
+
+      <Field label="Estado">
+        <Segmented
+          value={form.status}
+          options={STATUSES}
+          onChange={(status) => setForm((f) => ({ ...f, status }))}
+        />
+      </Field>
 
       <Field label="Departamento">
         <Select

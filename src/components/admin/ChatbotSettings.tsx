@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Switch, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 
-import { Radius, Spacing, Type, useAdminColors, withAlpha } from "../../constants/theme";
+import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
+import Toggle from "../common/Toggle";
 import { useToast } from "../common/Toast";
 import {
   AdminScreen,
   Btn,
-  Card,
   Field,
   Input,
   ListCard,
@@ -69,33 +74,36 @@ export default function ChatbotSettings() {
   return (
     <AdminScreen>
       <PageHeader
-        title="Configuración del Chatbot"
-        description="Personalizá el comportamiento y los mensajes del asistente virtual."
-      >
-        <View style={styles.statusChip}>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: settings.autoResponse ? C.ok : C.line },
-            ]}
-          />
-          <Text
-            style={[
-              styles.statusText,
-              { color: settings.autoResponse ? C.ok : C.muted },
-            ]}
-          >
-            {settings.autoResponse
-              ? "Respuestas automáticas activas"
-              : "Respuestas automáticas desactivadas"}
-          </Text>
-        </View>
-      </PageHeader>
+        title="Configuración"
+        description="Comportamiento y mensajes del asistente."
+      />
 
-      <Card padded style={{ gap: Spacing[4] }}>
-        <Text style={[styles.sectionTitle, { color: C.ink }]}>
-          Mensajes del chatbot
-        </Text>
+      <View style={styles.form}>
+        {/* Interruptores agrupados en una superficie: la fila entera es el área táctil */}
+        <View style={[styles.group, { backgroundColor: C.mist }]}>
+          <Pressable
+            onPress={() => setSettings((s) => ({ ...s, autoResponse: !s.autoResponse }))}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: settings.autoResponse }}
+            style={styles.toggleRow}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.toggleLabel, { color: C.ink }]}>Respuestas automáticas</Text>
+              <Text style={[Type.meta, { color: C.muted }]}>
+                El asistente responde solo, con la base de conocimiento.
+              </Text>
+            </View>
+            <Toggle value={settings.autoResponse} />
+          </Pressable>
+        </View>
+
+        <Field label="Horario de atención">
+          <Select
+            value={settings.workingHours}
+            options={WORKING_HOURS}
+            onChange={(workingHours) => setSettings((s) => ({ ...s, workingHours }))}
+          />
+        </Field>
 
         <Field label="Nombre del asistente">
           <Input
@@ -111,7 +119,7 @@ export default function ChatbotSettings() {
               setSettings((s) => ({ ...s, welcomeMessage }))
             }
             multiline
-            style={{ minHeight: 110, textAlignVertical: "top" }}
+            style={{ minHeight: 120 }}
           />
         </Field>
 
@@ -122,38 +130,6 @@ export default function ChatbotSettings() {
               setSettings((s) => ({ ...s, secondaryMessage }))
             }
             multiline
-            style={{ minHeight: 84, textAlignVertical: "top" }}
-          />
-        </Field>
-      </Card>
-
-      <Card padded style={{ gap: Spacing[4], marginTop: Spacing[4] }}>
-        <Text style={[styles.sectionTitle, { color: C.ink }]}>Comportamiento</Text>
-
-        <View style={styles.switchRow}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[styles.switchLabel, { color: C.ink }]}>
-              Respuestas automáticas
-            </Text>
-            <Text style={[styles.switchHint, { color: C.muted }]}>
-              El chatbot responde solo, con la base de conocimiento.
-            </Text>
-          </View>
-          <Switch
-            value={settings.autoResponse}
-            onValueChange={(autoResponse) =>
-              setSettings((s) => ({ ...s, autoResponse }))
-            }
-            trackColor={{ false: C.line, true: withAlpha(C.brand, 0.5) }}
-            thumbColor={settings.autoResponse ? C.brand : C.faint}
-          />
-        </View>
-
-        <Field label="Horario de atención">
-          <Select
-            value={settings.workingHours}
-            options={WORKING_HOURS}
-            onChange={(workingHours) => setSettings((s) => ({ ...s, workingHours }))}
           />
         </Field>
 
@@ -163,21 +139,19 @@ export default function ChatbotSettings() {
             onChangeText={(department) => setSettings((s) => ({ ...s, department }))}
           />
         </Field>
-      </Card>
 
-      <View style={{ marginTop: Spacing[5], flexDirection: "row", gap: Spacing[2] }}>
         <Btn
-          label="Guardar configuración"
-          icon="checkmark"
-          onPress={() => push("Configuración guardada correctamente.", "success")}
+          label="Guardar cambios"
+          onPress={() => push("Configuración guardada")}
         />
         <Btn
-          label="Restablecer"
+          label="Restablecer valores"
           variant="ghost"
           onPress={() => {
             setSettings(DEFAULTS);
-            push("Se restablecieron los valores por defecto.", "info");
+            push("Se restablecieron los valores por defecto");
           }}
+          style={{ alignSelf: "center", marginTop: -Spacing[2] }}
         />
       </View>
     </AdminScreen>
@@ -185,31 +159,23 @@ export default function ChatbotSettings() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: {
-    ...Type.cardTitle,
+  form: {
+    gap: Spacing[6],
   },
-  statusChip: {
+  group: {
+    borderRadius: Radius.xl,
+    overflow: "hidden",
+  },
+  toggleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing[2],
+    gap: Spacing[4],
+    paddingVertical: 14,
+    paddingHorizontal: Spacing[4],
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Radius.full,
-  },
-  statusText: {
-    ...Type.metaStrong,
-  },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[3],
-  },
-  switchLabel: {
-    ...Type.bodyStrong,
-  },
-  switchHint: {
-    ...Type.meta,
+  toggleLabel: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "500",
   },
 });

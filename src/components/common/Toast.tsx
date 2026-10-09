@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import {
   createContext,
   useCallback,
@@ -8,18 +7,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, StyleSheet, View } from "react-native";
+import { Text } from "./Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Radius, Shadows, Spacing, Typography, useAdminColors } from "../../constants/theme";
+import { Motion, Spacing, useColors } from "../../constants/theme";
 
 export type ToastType = "success" | "error" | "info" | "warning";
-
-interface Toast {
-  id: number;
-  message: string;
-  type: ToastType;
-}
 
 type Push = (message: string, type?: ToastType) => void;
 
@@ -29,140 +23,98 @@ export function useToast(): Push {
   return useContext(ToastContext);
 }
 
-const ICONS: Record<ToastType, keyof typeof Ionicons.glyphMap> = {
-  success: "checkmark-circle",
-  error: "close-circle",
-  info: "information-circle",
-  warning: "warning",
-};
+const LIFETIME_MS = 2200;
 
-const LIFETIME_MS = 3500;
-
+/**
+ * Aviso v6: una píldora en tinta con el texto en el color del fondo, centrada
+ * sobre la barra inferior. Hay uno solo a la vez: el nuevo reemplaza al viejo.
+ * El tipo no cambia el color; el mensaje ya dice qué pasó.
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [message, setMessage] = useState("");
+  const [visible, setVisible] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const remove = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const push = useCallback<Push>((next) => {
+    setMessage(next);
+    setVisible(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setVisible(false), LIFETIME_MS);
   }, []);
 
-  const push = useCallback<Push>(
-    (message, type = "success") => {
-      // Date.now() puede repetirse si entran dos avisos en el mismo ms.
-      const id = Date.now() + Math.random();
-      setToasts((prev) => [...prev, { id, message, type }]);
-      timers.current.push(setTimeout(() => remove(id), LIFETIME_MS));
+  // Sin esto, un aviso que sigue en pantalla al desmontar deja el timer vivo.
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
     },
-    [remove]
+    []
   );
-
-  // Sin esto, un aviso que sigue en cola al desmontar deja el timer vivo.
-  useEffect(() => {
-    const pending = timers.current;
-    return () => pending.forEach(clearTimeout);
-  }, []);
 
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <ToastStack toasts={toasts} onDismiss={remove} />
+      <ToastPill message={message} visible={visible} />
     </ToastContext.Provider>
   );
 }
 
-function ToastStack({
-  toasts,
-  onDismiss,
-}: {
-  toasts: Toast[];
-  onDismiss: (id: number) => void;
-}) {
+function ToastPill({ message, visible }: { message: string; visible: boolean }) {
+  const C = useColors();
   const insets = useSafeAreaInsets();
-
-  if (toasts.length === 0) return null;
-
-  return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.stack, { bottom: insets.bottom + Spacing[4] }]}
-    >
-      {toasts.map((t) => (
-        <ToastRow key={t.id} toast={t} onDismiss={() => onDismiss(t.id)} />
-      ))}
-    </View>
-  );
-}
-
-function ToastRow({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
-  const C = useAdminColors();
   const enter = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(enter, {
-      toValue: 1,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
+      toValue: visible ? 1 : 0,
+      duration: Motion.duration,
+      easing: Easing.bezier(...Motion.bezier),
       useNativeDriver: true,
     }).start();
-  }, [enter]);
+  }, [visible, enter]);
 
-  const bg =
-    toast.type === "error"
-      ? C.bad
-      : toast.type === "warning"
-        ? C.warn
-        : toast.type === "info"
-          ? C.info
-          : C.ok;
+  if (!message) return null;
 
   return (
-    <Animated.View
-      style={[
-        styles.toast,
-        Shadows.md,
-        {
-          backgroundColor: bg,
-          opacity: enter,
-          transform: [
-            { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
-          ],
-        },
-      ]}
+    <View
+      pointerEvents="none"
+      style={[styles.wrap, { bottom: insets.bottom + 76 }]}
+      accessibilityLiveRegion="polite"
     >
-      <Ionicons name={ICONS[toast.type]} size={18} color="#ffffff" />
-      <Text style={styles.message}>{toast.message}</Text>
-      <Pressable
-        onPress={onDismiss}
-        accessibilityRole="button"
-        accessibilityLabel="Cerrar aviso"
-        hitSlop={8}
+      <Animated.View
+        style={[
+          styles.pill,
+          {
+            backgroundColor: C.ink,
+            opacity: enter,
+            transform: [
+              { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            ],
+          },
+        ]}
       >
-        <Ionicons name="close" size={16} color="rgba(255,255,255,0.75)" />
-      </Pressable>
-    </Animated.View>
+        <Text style={[styles.message, { color: C.canvas }]}>{message}</Text>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: {
+  wrap: {
     position: "absolute",
-    left: Spacing[4],
-    right: Spacing[4],
-    gap: Spacing[2],
-    zIndex: 50,
-  },
-  toast: {
-    flexDirection: "row",
+    left: Spacing[6],
+    right: Spacing[6],
     alignItems: "center",
-    gap: Spacing[2],
+    zIndex: 90,
+  },
+  pill: {
     paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderRadius: Radius.lg,
+    paddingVertical: 10,
+    borderRadius: 999,
   },
   message: {
-    flex: 1,
-    color: "#ffffff",
-    fontSize: Typography.base,
-    fontWeight: Typography.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });

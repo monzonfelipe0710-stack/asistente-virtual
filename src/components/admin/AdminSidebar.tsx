@@ -1,22 +1,23 @@
-import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
+import { useMemo } from "react";
 import {
   Animated,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
+import { Text } from "../common/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   Palette,
   Radius,
+  Size,
   Spacing,
+  Type,
   Typography,
   setColorScheme,
   useColorScheme,
@@ -25,76 +26,50 @@ import {
 import { useAdmin, type Permission } from "../../context/AdminContext";
 import { useAuth } from "../../context/AuthContext";
 import ChatBotAvatar from "../ChatBotAvatar";
+import Icon, { type IconName } from "../common/Icon";
+import Toggle from "../common/Toggle";
 
 /**
- * Menú del panel.
- *
- * Está escrito contra la misma paleta y las mismas medidas que el menú de la
- * pantalla de inicio (`src/app/index.tsx`), no contra las del panel: son el
- * mismo cajón, y si cada uno usara sus propios tamaños la app se sentiría como
- * dos productos apenas se abre el menú.
+ * Menú del panel. Mismo cajón que el de la pantalla de inicio (320 de ancho,
+ * radio 28, filas de 48 con la línea de inicio en x = 24): si cada uno usara
+ * sus propias medidas, la app se sentiría como dos productos.
  */
 
 interface NavItem {
   to: string;
   label: string;
   perm: Permission;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
 }
 
 const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Principal",
     items: [
-      { to: "/admin", label: "Panel general", perm: "dashboard", icon: "home-outline" },
+      { to: "/admin", label: "Panel general", perm: "dashboard", icon: "home" },
       {
         to: "/admin/mesa-de-entrada",
         label: "Mesa de Entradas",
         perm: "mesa_entrada",
-        icon: "cube-outline",
+        icon: "box",
       },
     ],
   },
   {
     title: "Gestión",
     items: [
-      {
-        to: "/admin/solicitudes",
-        label: "Solicitudes",
-        perm: "solicitudes",
-        icon: "checkmark-circle-outline",
-      },
-      { to: "/admin/usuarios", label: "Usuarios", perm: "usuarios", icon: "people-outline" },
-      {
-        to: "/admin/conocimiento",
-        label: "Conocimiento",
-        perm: "conocimiento",
-        icon: "bulb-outline",
-      },
-      {
-        to: "/admin/documentos",
-        label: "Documentos",
-        perm: "documentos",
-        icon: "folder-outline",
-      },
+      { to: "/admin/solicitudes", label: "Solicitudes", perm: "solicitudes", icon: "checkCircle" },
+      { to: "/admin/usuarios", label: "Usuarios", perm: "usuarios", icon: "users" },
+      { to: "/admin/conocimiento", label: "Conocimiento", perm: "conocimiento", icon: "bulb" },
+      { to: "/admin/documentos", label: "Documentos", perm: "documentos", icon: "folder" },
     ],
   },
   {
     title: "Sistema",
     items: [
-      {
-        to: "/admin/siged",
-        label: "Integración SIGED",
-        perm: "siged",
-        icon: "terminal-outline",
-      },
-      {
-        to: "/admin/configuracion",
-        label: "Configuración",
-        perm: "configuracion",
-        icon: "settings-outline",
-      },
-      { to: "/admin/reportes", label: "Reportes", perm: "reportes", icon: "bar-chart-outline" },
+      { to: "/admin/siged", label: "Integración SIGED", perm: "siged", icon: "terminal" },
+      { to: "/admin/configuracion", label: "Configuración", perm: "configuracion", icon: "settings" },
+      { to: "/admin/reportes", label: "Reportes", perm: "reportes", icon: "chart" },
     ],
   },
 ];
@@ -105,9 +80,19 @@ interface Props {
   onClose: (then?: () => void) => void;
 }
 
+function initialsOf(name: string) {
+  return name
+    .trim()
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+}
+
 export default function AdminSidebar({ open, slide, onClose }: Props) {
   const C = useColors();
-  const styles = createStyles(C);
+  const styles = useMemo(() => createStyles(C), [C]);
   const dark = useColorScheme() === "dark";
 
   const router = useRouter();
@@ -117,7 +102,7 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
   const { can, role } = useAdmin();
   const { user, logout } = useAuth();
 
-  const drawerWidth = Math.min(width * 0.82, 340);
+  const drawerWidth = Math.min(Size.drawer, width - 56);
 
   const go = (to: string) => onClose(() => router.push(to as never));
 
@@ -127,6 +112,7 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
       transparent
       animationType="none"
       onRequestClose={() => onClose()}
+      statusBarTranslucent
     >
       <Animated.View
         style={[
@@ -134,7 +120,11 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
           { opacity: slide.interpolate({ inputRange: [-1, 0], outputRange: [0, 1] }) },
         ]}
       >
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => onClose()} />
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() => onClose()}
+          accessibilityLabel="Cerrar menú"
+        />
       </Animated.View>
 
       <Animated.View
@@ -142,13 +132,13 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
           styles.drawer,
           {
             width: drawerWidth,
-            paddingTop: insets.top + Spacing[4],
-            paddingBottom: insets.bottom + Spacing[4],
+            paddingTop: insets.top + Spacing[2],
+            paddingBottom: Math.max(insets.bottom, Spacing[3]),
             transform: [
               {
                 translateX: slide.interpolate({
                   inputRange: [-1, 0],
-                  outputRange: [-drawerWidth, 0],
+                  outputRange: [-drawerWidth - 8, 0],
                 }),
               },
             ],
@@ -156,8 +146,8 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
         ]}
       >
         <View style={styles.brand}>
-          <ChatBotAvatar size={40} />
-          <View style={styles.brandText}>
+          <ChatBotAvatar size={40} tight static />
+          <View style={styles.flex}>
             <Text style={styles.brandName}>Acceso interno</Text>
             <Text style={styles.brandSub}>Subsec. de Recursos Humanos</Text>
           </View>
@@ -165,7 +155,6 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
 
         <ScrollView
           style={styles.drawerItems}
-          contentContainerStyle={{ gap: 2 }}
           showsVerticalScrollIndicator={false}
         >
           {SECTIONS.map((section) => {
@@ -173,99 +162,111 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
             if (visible.length === 0) return null;
 
             return (
-              <View key={section.title} style={{ marginBottom: Spacing[5] }}>
+              <View key={section.title}>
                 <Text style={styles.sectionLabel}>{section.title}</Text>
 
-                {visible.map((link) => {
-                  // "/admin" solo coincide exacto: si no, quedaría activo siempre.
-                  const active =
-                    link.to === "/admin"
-                      ? pathname === "/admin"
-                      : pathname.startsWith(link.to);
+                <View style={styles.group}>
+                  {visible.map((link) => {
+                    // "/admin" solo coincide exacto: si no, quedaría activo siempre.
+                    const active =
+                      link.to === "/admin"
+                        ? pathname === "/admin"
+                        : pathname.startsWith(link.to);
 
-                  return (
-                    <Pressable
-                      key={link.to}
-                      onPress={() => go(link.to)}
-                      accessibilityRole="link"
-                      accessibilityState={{ selected: active }}
-                      style={[styles.menuItem, active && styles.menuItemActive]}
-                    >
-                      <Ionicons
-                        name={link.icon}
-                        size={22}
-                        color={active ? C.primary : C.slate600}
-                      />
-                      <Text
-                        style={[styles.menuLabel, active && styles.menuLabelActive]}
-                        numberOfLines={1}
+                    return (
+                      <Pressable
+                        key={link.to}
+                        onPress={() => go(link.to)}
+                        accessibilityRole="link"
+                        accessibilityState={{ selected: active }}
+                        style={({ pressed }) => [
+                          styles.menuItem,
+                          active
+                            ? { backgroundColor: C.activeBg }
+                            : pressed && { backgroundColor: C.surface },
+                        ]}
                       >
-                        {link.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                        <Icon
+                          name={link.icon}
+                          size={20}
+                          color={active ? C.activeInk : C.ink2}
+                        />
+                        <Text
+                          style={[styles.menuLabel, active && styles.menuLabelActive]}
+                          numberOfLines={1}
+                        >
+                          {link.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
             );
           })}
         </ScrollView>
 
+        {/* Preferencias y cuenta quedan fijas abajo, siempre visibles */}
         <View style={styles.drawerFooter}>
-          <Text style={styles.sectionLabel}>Preferencias</Text>
-
-          {/* Switch, no otro ítem de lista: es un ajuste, no una sección */}
-          <View style={styles.menuItem}>
-            <Ionicons
-              name={dark ? "moon" : "moon-outline"}
-              size={22}
-              color={C.slate600}
-            />
+          <Pressable
+            onPress={() => setColorScheme(dark ? "light" : "dark")}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: dark }}
+            accessibilityLabel="Modo oscuro"
+            style={styles.menuItem}
+          >
+            <Icon name="moon" size={20} color={C.ink2} />
             <Text style={styles.menuLabel}>Modo oscuro</Text>
-            <Switch
-              value={dark}
-              onValueChange={(on) => setColorScheme(on ? "dark" : "light")}
-              trackColor={{ false: C.slate300, true: C.primary }}
-              thumbColor="#ffffff"
-              accessibilityLabel="Modo oscuro"
-            />
-          </View>
+            <Toggle value={dark} />
+          </Pressable>
 
           <Pressable
             onPress={() => onClose(() => router.replace("/"))}
             accessibilityRole="link"
-            style={styles.menuItem}
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && { backgroundColor: C.surface },
+            ]}
           >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={22}
-              color={C.slate600}
-            />
+            <Icon name="chat" size={20} color={C.ink2} />
             <Text style={styles.menuLabel}>Ir al asistente</Text>
-            <Ionicons name="chevron-forward" size={18} color={C.slate400} />
+            <Icon name="chevronRight" size={18} color={C.ink3} />
           </Pressable>
 
           {!!user && (
-            <Pressable
-              onPress={() =>
-                onClose(async () => {
-                  await logout();
-                  router.replace("/");
-                })
-              }
-              accessibilityRole="button"
-              style={styles.menuItem}
-            >
-              <Ionicons name="log-out-outline" size={22} color={C.slate600} />
-              {/* Quién está adentro vive acá desde que salió del encabezado */}
-              <View style={styles.userText}>
-                <Text style={styles.menuLabel} numberOfLines={1}>
-                  Cerrar sesión
-                </Text>
-                <Text style={styles.userMeta} numberOfLines={1}>
-                  {user.name} · {role}
+            <View style={styles.account}>
+              <View style={styles.accountAvatar}>
+                <Text style={styles.accountInitials}>
+                  {initialsOf(user.name || user.email)}
                 </Text>
               </View>
-            </Pressable>
+              <View style={styles.flex}>
+                <Text style={styles.accountName} numberOfLines={1}>
+                  {user.name}
+                </Text>
+                <Text style={styles.accountRole} numberOfLines={1}>
+                  {role}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() =>
+                  onClose(async () => {
+                    await logout();
+                    router.replace("/");
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar sesión"
+                style={({ pressed }) => [
+                  styles.logout,
+                  pressed && { backgroundColor: C.surface2 },
+                ]}
+              >
+                {({ pressed }) => (
+                  <Icon name="logout" size={20} color={pressed ? C.danger : C.ink2} />
+                )}
+              </Pressable>
+            </View>
           )}
         </View>
       </Animated.View>
@@ -275,82 +276,117 @@ export default function AdminSidebar({ open, slide, onClose }: Props) {
 
 const createStyles = (C: Palette) =>
   StyleSheet.create({
+    flex: {
+      flex: 1,
+      minWidth: 0,
+    },
     overlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.45)",
+      backgroundColor: C.scrim,
     },
     drawer: {
       position: "absolute",
       left: 0,
       top: 0,
       bottom: 0,
-      backgroundColor: C.white,
-      paddingHorizontal: Spacing[4],
+      backgroundColor: C.canvas,
+      paddingHorizontal: Spacing[3],
+      borderTopRightRadius: Radius["3xl"],
+      borderBottomRightRadius: Radius["3xl"],
     },
     brand: {
       flexDirection: "row",
       alignItems: "center",
       gap: Spacing[3],
-    },
-    brandText: {
-      flex: 1,
+      paddingHorizontal: Spacing[3],
     },
     brandName: {
-      fontSize: Typography.xl,
-      fontWeight: Typography.bold,
-      color: C.slate800,
+      ...Type.cardTitle,
+      color: C.ink,
     },
     brandSub: {
-      fontSize: Typography.sm,
-      color: C.slate500,
-    },
-    sectionLabel: {
-      fontSize: Typography.sm,
-      fontWeight: Typography.semibold,
-      color: C.slate500,
-      letterSpacing: 0.6,
-      textTransform: "uppercase",
-      paddingHorizontal: Spacing[3],
-      marginBottom: Spacing[2],
+      ...Type.meta,
+      color: C.ink2,
     },
     drawerItems: {
       flex: 1,
-      marginTop: Spacing[6],
+      marginTop: Spacing[3],
     },
-    drawerFooter: {
+    sectionLabel: {
+      ...Type.overline,
+      color: C.ink3,
+      marginTop: Spacing[5],
+      marginBottom: Spacing[2],
+      marginHorizontal: Spacing[3],
+    },
+    group: {
       gap: 2,
-      borderTopWidth: 1,
-      borderTopColor: C.slate200,
-      paddingTop: Spacing[4],
     },
     menuItem: {
       flexDirection: "row",
       alignItems: "center",
-      gap: Spacing[4],
+      gap: Spacing[3],
       paddingHorizontal: Spacing[3],
-      paddingVertical: Spacing[3],
+      height: 48,
       borderRadius: Radius.lg,
-      minHeight: 48,
-    },
-    menuItemActive: {
-      backgroundColor: C.primaryLight,
     },
     menuLabel: {
       flex: 1,
       fontSize: Typography.md,
-      color: C.slate700,
       fontWeight: Typography.medium,
+      color: C.ink,
     },
     menuLabelActive: {
-      color: C.primary,
+      color: C.activeInk,
       fontWeight: Typography.semibold,
     },
-    userText: {
-      flex: 1,
+    drawerFooter: {
+      gap: 2,
+      borderTopWidth: 1,
+      borderTopColor: C.border,
+      marginTop: Spacing[2],
+      paddingTop: Spacing[2],
     },
-    userMeta: {
+    account: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing[3],
+      marginTop: 6,
+      paddingVertical: Spacing[2],
+      paddingLeft: Spacing[3],
+      paddingRight: Spacing[2],
+      borderRadius: Radius.xl,
+      backgroundColor: C.surface,
+    },
+    accountAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: Radius.full,
+      backgroundColor: C.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    accountInitials: {
       fontSize: Typography.sm,
-      color: C.slate500,
-      marginTop: 1,
+      fontWeight: Typography.semibold,
+      color: C.ink2,
+    },
+    accountName: {
+      fontSize: 15,
+      lineHeight: 20,
+      fontWeight: Typography.medium,
+      color: C.ink,
+    },
+    accountRole: {
+      fontSize: 12,
+      lineHeight: 16,
+      color: C.ink2,
+    },
+    logout: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });

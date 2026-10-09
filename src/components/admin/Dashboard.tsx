@@ -1,19 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
-import { Spacing, Type, useAdminColors } from "../../constants/theme";
+import { Spacing } from "../../constants/theme";
 import { knowledgeBase } from "../../data/mockKnowledge";
 import { sigedRecords } from "../../data/mockSiged";
 import { users } from "../../data/mockUsers";
+import { formatDate } from "../../utils/date";
 import {
   AdminScreen,
+  Btn,
   CardHeader,
   ListCard,
   PageHeader,
-  Row,
+  RecordRow,
   StatGrid,
   StatCard,
-  StatusPill,
   type Tone,
 } from "./ui";
 
@@ -26,7 +27,7 @@ interface Stat {
 }
 
 export default function Dashboard() {
-  const C = useAdminColors();
+  const router = useRouter();
 
   const stats: Stat[] = [
     {
@@ -47,7 +48,7 @@ export default function Dashboard() {
       title: "Expedientes SIGED",
       value: sigedRecords.length,
       icon: "documents-outline",
-      tone: "info",
+      tone: "brand",
       hint: "en el sistema",
     },
     {
@@ -65,7 +66,7 @@ export default function Dashboard() {
     <AdminScreen>
       <PageHeader
         title="Panel general"
-        description="Resumen de la actividad del Acceso Interno."
+        description="Resumen de la actividad del acceso interno."
       />
 
       <StatGrid>
@@ -85,34 +86,29 @@ export default function Dashboard() {
         <CardHeader
           title="Últimos movimientos"
           subtitle="Sistema de Gestión Documental"
+          right={
+            <Btn
+              label="Ver todos"
+              variant="ghost"
+              size="md"
+              onPress={() => router.push("/admin/siged")}
+            />
+          }
         />
         {sigedRecords.slice(0, 4).map((rec) => (
-          <Row key={rec.id}>
-            <View style={styles.rowTop}>
-              <Text style={[Type.bodyStrong, { color: C.ink, flexShrink: 1 }]} numberOfLines={1}>
-                {rec.type}
-              </Text>
-              <StatusPill status={rec.status} />
-            </View>
-
-            <Text style={[Type.meta, { color: C.muted, marginTop: 2 }]} numberOfLines={1}>
-              {rec.applicant}
-            </Text>
-            <Text style={[Type.meta, { color: C.faint }]} numberOfLines={2}>
-              {rec.id} — {rec.lastMovement}
-            </Text>
-          </Row>
+          <RecordRow
+            key={rec.id}
+            title={rec.type}
+            status={rec.status}
+            who={rec.applicant}
+            area={rec.department}
+            priority={rec.priority}
+            id={rec.id}
+            date={formatDate(rec.date)}
+            note={rec.lastMovement}
+          />
         ))}
       </ListCard>
     </AdminScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  rowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: Spacing[2],
-  },
-});

@@ -1,4 +1,11 @@
-import { ScrollView, TouchableOpacity, Text, StyleSheet, type ViewStyle, type StyleProp } from "react-native";
+import {
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  type ViewStyle,
+  type StyleProp,
+} from "react-native";
+import { Text } from "./Text";
 import { Colors, Radius, Spacing, Typography } from "../../constants/theme";
 
 interface Props {

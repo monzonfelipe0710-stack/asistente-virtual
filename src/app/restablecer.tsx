@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -8,15 +7,18 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { Text } from "../components/common/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Btn, Card, Field, Input } from "../components/admin/ui";
-import { Spacing, Typography, useAdminColors } from "../constants/theme";
+import ChatBotAvatar from "../components/ChatBotAvatar";
+import { Btn, Field, Input } from "../components/admin/ui";
+import Icon from "../components/common/Icon";
+import { Radius, Size, Spacing, Type, useAdminColors } from "../constants/theme";
 import { useAuth } from "../context/AuthContext";
 
+/** Misma composición que el login: volver arriba, avatar, título 28 y bajada. */
 export default function ResetPasswordScreen() {
   const C = useAdminColors();
   const router = useRouter();
@@ -61,119 +63,129 @@ export default function ResetPasswordScreen() {
     }
   }
 
+  const title = done
+    ? "Contraseña cambiada"
+    : !valid
+      ? "Enlace inválido"
+      : "Nueva contraseña";
+  const sub = done
+    ? "Ya podés entrar con tu nueva contraseña."
+    : !valid
+      ? "El enlace es inválido o venció. Pedí uno nuevo desde la pantalla de inicio de sesión."
+      : "Elegí una contraseña de al menos 6 caracteres.";
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1, backgroundColor: C.canvas }}
     >
       <ScrollView
-        contentContainerStyle={{
-          padding: Spacing[4],
-          paddingTop: insets.top + Spacing[8],
-          paddingBottom: insets.bottom + Spacing[10],
-          flexGrow: 1,
-          justifyContent: "center",
-        }}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingTop: insets.top,
+            paddingBottom: Math.max(insets.bottom, Spacing[5]) + Spacing[5],
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
-        <Card
-          padded
-          style={{ gap: Spacing[4], maxWidth: 440, width: "100%", alignSelf: "center" }}
-        >
-          {checking ? (
-            <View style={{ alignItems: "center", paddingVertical: Spacing[6] }}>
-              <ActivityIndicator color={C.brand} />
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={() => router.replace("/login")}
+            accessibilityRole="button"
+            accessibilityLabel="Volver a iniciar sesión"
+            style={({ pressed }) => [styles.back, pressed && { backgroundColor: C.mist }]}
+          >
+            <Icon name="chevronLeft" size={22} color={C.ink} />
+          </Pressable>
+        </View>
+
+        {checking ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={C.brand} />
+          </View>
+        ) : (
+          <>
+            <View style={{ marginTop: Spacing[4], alignSelf: "flex-start" }}>
+              <ChatBotAvatar size={48} tight static />
             </View>
-          ) : done ? (
-            <>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={38}
-                color={C.ok}
-                style={styles.icon}
-              />
-              <Text style={[styles.title, { color: C.ink }]}>Contraseña cambiada</Text>
-              <Text style={[styles.help, { color: C.muted }]}>
-                Ya podés entrar con tu nueva contraseña.
-              </Text>
-              <Btn label="Iniciar sesión" onPress={() => router.replace("/login")} />
-            </>
-          ) : !valid ? (
-            <>
-              <Ionicons
-                name="alert-circle-outline"
-                size={38}
-                color={C.bad}
-                style={styles.icon}
-              />
-              <Text style={[styles.title, { color: C.ink }]}>Enlace inválido</Text>
-              <Text style={[styles.help, { color: C.muted }]}>
-                El enlace es inválido o venció. Pedí uno nuevo desde la pantalla de
-                inicio de sesión.
-              </Text>
+            <Text style={[Type.pageTitle, { color: C.ink, marginTop: Spacing[6] }]}>
+              {title}
+            </Text>
+            <Text style={[Type.lead, { color: C.muted, marginTop: Spacing[2] }]}>{sub}</Text>
+
+            {done || !valid ? (
               <Btn
-                label="Volver a iniciar sesión"
-                variant="ghost"
+                label={done ? "Iniciar sesión" : "Volver a iniciar sesión"}
+                variant={done ? "primary" : "secondary"}
                 onPress={() => router.replace("/login")}
+                style={{ marginTop: Spacing[8] }}
               />
-            </>
-          ) : (
-            <>
-              <Text style={[styles.title, { color: C.ink }]}>Nueva contraseña</Text>
-              <Text style={[styles.help, { color: C.muted }]}>
-                Elegí una contraseña de al menos 6 caracteres.
-              </Text>
+            ) : (
+              <>
+                <View style={styles.form}>
+                  <Field label="Nueva contraseña">
+                    <Input
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="Mínimo 6 caracteres"
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                  </Field>
 
-              <Field label="Nueva contraseña" required>
-                <Input
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Mínimo 6 caracteres"
-                  secureTextEntry
-                  autoCapitalize="none"
+                  <Field label="Repetir contraseña" error={error}>
+                    <Input
+                      value={confirm}
+                      onChangeText={setConfirm}
+                      placeholder="Repetí la contraseña"
+                      secureTextEntry
+                      autoCapitalize="none"
+                      invalid={!!error}
+                    />
+                  </Field>
+                </View>
+
+                <Btn
+                  label="Guardar"
+                  onPress={submit}
+                  loading={submitting}
+                  style={{ marginTop: Spacing[6] }}
                 />
-              </Field>
-
-              <Field label="Repetir contraseña" required error={error}>
-                <Input
-                  value={confirm}
-                  onChangeText={setConfirm}
-                  placeholder="Repetí la contraseña"
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
-              </Field>
-
-              <Btn label="Guardar" onPress={submit} loading={submitting} />
-
-              <Pressable onPress={() => router.replace("/login")} accessibilityRole="link">
-                <Text style={[styles.link, { color: C.muted }]}>Cancelar</Text>
-              </Pressable>
-            </>
-          )}
-        </Card>
+              </>
+            )}
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  icon: {
-    alignSelf: "center",
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: Spacing[5],
   },
-  title: {
-    fontSize: Typography.lg,
-    fontWeight: Typography.bold,
-    textAlign: "center",
+  topBar: {
+    height: Size.header,
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: -11,
   },
-  help: {
-    fontSize: Typography.base,
-    lineHeight: 20,
-    textAlign: "center",
+  back: {
+    width: Size.touch,
+    height: Size.touch,
+    borderRadius: Radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  link: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    textAlign: "center",
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  form: {
+    gap: Spacing[4],
+    marginTop: Spacing[6],
   },
 });

@@ -1,35 +1,39 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Text } from "../common/Text";
 
-import { Radius, Spacing, Type, useAdminColors } from "../../constants/theme";
+import { Spacing, Type, useAdminColors } from "../../constants/theme";
 import {
   knowledgeBase,
   knowledgeCategories,
   type KnowledgeCategory,
   type KnowledgeEntry,
 } from "../../data/mockKnowledge";
+import Modal from "../common/Modal";
+import Tabs from "../common/Tabs";
 import { useToast } from "../common/Toast";
 import {
   AdminScreen,
+  Badge,
   Btn,
-  Card,
   CardHeader,
   EmptyState,
   Field,
-  FilterChip,
   Input,
   ListCard,
   PageHeader,
   Row,
+  Segmented,
   Select,
 } from "./ui";
 
 type ArticleCategory = Exclude<KnowledgeCategory, "Todas">;
+type Visibility = "Publicado" | "Borrador";
 
 const EDITABLE_CATEGORIES = knowledgeCategories.filter(
   (c): c is ArticleCategory => c !== "Todas"
 );
+const VISIBILITY: Visibility[] = ["Publicado", "Borrador"];
 
 export default function KnowledgeManager() {
   const C = useAdminColors();
@@ -37,11 +41,13 @@ export default function KnowledgeManager() {
 
   const [activeCategory, setActiveCategory] = useState<KnowledgeCategory>("Todas");
   const [items, setItems] = useState<KnowledgeEntry[]>(knowledgeBase);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [category, setCategory] = useState<ArticleCategory>("Licencias");
+  const [visibility, setVisibility] = useState<Visibility>("Publicado");
   const [error, setError] = useState("");
 
   const filtered = useMemo(
@@ -52,12 +58,16 @@ export default function KnowledgeManager() {
     [items, activeCategory]
   );
 
-  function resetForm() {
+  const published = items.filter((k) => k.active).length;
+
+  function openNew() {
     setEditingId(null);
     setQuestion("");
     setAnswer("");
     setCategory("Licencias");
+    setVisibility("Publicado");
     setError("");
+    setSheetOpen(true);
   }
 
   function startEdit(article: KnowledgeEntry) {
@@ -65,7 +75,9 @@ export default function KnowledgeManager() {
     setQuestion(article.question);
     setAnswer(article.answer);
     setCategory(article.category);
+    setVisibility(article.active ? "Publicado" : "Borrador");
     setError("");
+    setSheetOpen(true);
   }
 
   function save() {
@@ -75,6 +87,7 @@ export default function KnowledgeManager() {
     }
 
     const now = new Date().toLocaleDateString("es-AR");
+    const active = visibility === "Publicado";
 
     if (editingId !== null) {
       setItems((prev) =>
@@ -85,12 +98,13 @@ export default function KnowledgeManager() {
                 question: question.trim(),
                 answer: answer.trim(),
                 category,
+                active,
                 updatedAt: now,
               }
             : k
         )
       );
-      push("Artículo actualizado.", "success");
+      push("Artículo actualizado");
     } else {
       const nextId = Math.max(0, ...items.map((k) => k.id)) + 1;
       setItems((prev) => [
@@ -99,200 +113,137 @@ export default function KnowledgeManager() {
           question: question.trim(),
           answer: answer.trim(),
           category,
-          active: true,
+          active,
           views: 0,
           createdAt: now,
           updatedAt: now,
         },
         ...prev,
       ]);
-      push("Artículo agregado.", "success");
+      push(active ? "Artículo publicado" : "Artículo guardado como borrador");
     }
-    resetForm();
+    setSheetOpen(false);
   }
 
-  function toggleActive(id: number) {
-    setItems((prev) =>
-      prev.map((k) => (k.id === id ? { ...k, active: !k.active } : k))
-    );
-  }
-
-  function deleteArticle(id: number) {
-    setItems((prev) => prev.filter((k) => k.id !== id));
-    if (editingId === id) resetForm();
-    push("Artículo eliminado.", "info");
+  function deleteArticle() {
+    if (editingId === null) return;
+    setItems((prev) => prev.filter((k) => k.id !== editingId));
+    setSheetOpen(false);
+    push("Artículo eliminado");
   }
 
   return (
     <AdminScreen>
       <PageHeader
-        title="Base de conocimiento"
-        description="Preguntas y respuestas con las que contesta el asistente."
+        title="Conocimiento"
+        description="Lo que sabe el asistente y con qué responde."
       />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        {knowledgeCategories.map((cat) => (
-          <FilterChip
-            key={cat}
-            label={cat}
-            active={activeCategory === cat}
-            onPress={() => setActiveCategory(cat)}
-          />
-        ))}
-      </ScrollView>
+      <Tabs
+        items={knowledgeCategories.map((cat) => ({
+          id: cat,
+          label: cat,
+          count:
+            cat === "Todas"
+              ? items.length
+              : items.filter((k) => k.category === cat).length,
+        }))}
+        value={activeCategory}
+        onChange={setActiveCategory}
+      />
 
-      <ListCard style={{ marginTop: Spacing[3] }}>
-        {filtered.map((article, i) => (
-          <Row key={article.id} first={i === 0}>
-            <Text style={[Type.bodyStrong, { color: C.ink }]}>{article.question}</Text>
+      <ListCard style={{ marginTop: Spacing[6] }}>
+        <CardHeader
+          title="Artículos"
+          subtitle={`${published} publicados · tocá uno para editarlo`}
+          right={<Btn label="Nuevo" variant="ghost" size="md" onPress={openNew} />}
+        />
 
-            <Text style={[Type.meta, { color: C.muted, marginTop: Spacing[1] }]}>
-              {article.answer}
-            </Text>
-
-            <View style={styles.rowFoot}>
-              {/* El estado se toca para cambiarlo: es a la vez indicador y control */}
-              <Pressable
-                onPress={() => toggleActive(article.id)}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: article.active }}
-                accessibilityLabel={`Artículo ${article.active ? "activo" : "inactivo"}`}
-                style={({ pressed }) => [
-                  styles.stateChip,
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.stateDot,
-                    { backgroundColor: article.active ? C.ok : C.faint },
-                  ]}
-                />
-                <Text
-                  style={[Type.meta, { color: article.active ? C.ok : C.muted }]}
-                >
-                  {article.active ? "Activo" : "Inactivo"}
-                </Text>
-              </Pressable>
-
-              <Text style={[Type.meta, { color: C.faint, flex: 1 }]} numberOfLines={1}>
+        {filtered.map((article) => (
+          <Row
+            key={article.id}
+            onPress={() => startEdit(article)}
+            accessibilityLabel={`Editar ${article.question}`}
+            style={styles.row}
+          >
+            <View style={styles.body}>
+              <Text style={[styles.title, { color: C.ink }]} numberOfLines={2}>
+                {article.question}
+              </Text>
+              <Text style={[Type.meta, { color: C.faint }]} numberOfLines={1}>
                 {article.category} · {article.views} consultas · {article.updatedAt}
               </Text>
-
-              <Pressable
-                onPress={() => startEdit(article)}
-                accessibilityRole="button"
-                accessibilityLabel={`Editar ${article.question}`}
-                hitSlop={8}
-              >
-                <Ionicons name="create-outline" size={20} color={C.muted} />
-              </Pressable>
-              <Pressable
-                onPress={() => deleteArticle(article.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Eliminar ${article.question}`}
-                hitSlop={8}
-              >
-                <Ionicons name="trash-outline" size={20} color={C.bad} />
-              </Pressable>
             </View>
+            <Badge
+              label={article.active ? "Publicado" : "Borrador"}
+              tone={article.active ? "ok" : "muted"}
+            />
           </Row>
         ))}
 
-        {filtered.length === 0 && (
-          <EmptyState
-            icon="bulb-outline"
-            title="Sin artículos"
-            description="No hay artículos en esta categoría."
-          />
-        )}
+        {filtered.length === 0 && <EmptyState title="No hay artículos en esta categoría." />}
       </ListCard>
 
-      <Card style={{ marginTop: Spacing[6] }}>
-        <CardHeader
-          title={editingId !== null ? "Editar artículo" : "Agregar artículo"}
-          subtitle={
-            editingId !== null
-              ? "Los cambios se aplican a lo que responde el asistente."
-              : "Sumá una pregunta nueva a la base."
-          }
-        />
-        <View style={styles.form}>
-          <Field label="Pregunta" required error={error}>
-            <Input
-              value={question}
-              onChangeText={setQuestion}
-              placeholder="¿Cómo solicito licencia anual?"
-            />
-          </Field>
+      <Modal
+        open={sheetOpen}
+        title={editingId !== null ? "Editar artículo" : "Nuevo artículo"}
+        onClose={() => setSheetOpen(false)}
+        footer={
+          <Btn
+            label={editingId !== null ? "Guardar cambios" : "Publicar en Conocimiento"}
+            onPress={save}
+          />
+        }
+      >
+        <Field label="Pregunta" error={error}>
+          <Input
+            value={question}
+            onChangeText={setQuestion}
+            placeholder="¿Cómo solicito licencia anual?"
+          />
+        </Field>
 
-          <Field label="Respuesta" required>
-            <Input
-              value={answer}
-              onChangeText={setAnswer}
-              placeholder="Explicá el trámite paso a paso"
-              multiline
-              numberOfLines={4}
-              style={{ minHeight: 96, textAlignVertical: "top" }}
-            />
-          </Field>
+        <Field label="Respuesta del asistente">
+          <Input
+            value={answer}
+            onChangeText={setAnswer}
+            placeholder="Escribí la respuesta que va a dar ChatAP…"
+            multiline
+            style={{ minHeight: 120 }}
+          />
+        </Field>
 
-          <Field label="Categoría">
-            <Select
-              value={category}
-              options={EDITABLE_CATEGORIES}
-              onChange={setCategory}
-            />
-          </Field>
+        <Field label="Categoría">
+          <Select value={category} options={EDITABLE_CATEGORIES} onChange={setCategory} />
+        </Field>
 
-          <View style={styles.formActions}>
-            {editingId !== null && (
-              <Btn label="Cancelar" variant="ghost" onPress={resetForm} />
-            )}
-            <Btn
-              label={editingId !== null ? "Guardar cambios" : "Agregar artículo"}
-              onPress={save}
-            />
-          </View>
-        </View>
-      </Card>
+        <Field label="Estado">
+          <Segmented value={visibility} options={VISIBILITY} onChange={setVisibility} />
+        </Field>
+
+        {editingId !== null && (
+          <Btn label="Eliminar artículo" variant="danger" size="md" onPress={deleteArticle} />
+        )}
+      </Modal>
     </AdminScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  chips: {
-    flexDirection: "row",
-    gap: Spacing[2],
-    paddingRight: Spacing[4],
-  },
-  rowFoot: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[3],
-    marginTop: Spacing[3],
+    paddingVertical: 14,
   },
-  stateChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
+  body: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  stateDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Radius.full,
-  },
-  form: {
-    paddingTop: Spacing[4],
-    gap: Spacing[4],
-  },
-  formActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: Spacing[2],
+  title: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "500",
   },
 });

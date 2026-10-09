@@ -1,28 +1,31 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Slot, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
+import { Text } from "../../components/common/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AdminSidebar from "../../components/admin/AdminSidebar";
 import { Btn } from "../../components/admin/ui";
-import { ToastProvider } from "../../components/common/Toast";
+import Icon from "../../components/common/Icon";
 import {
+  Motion,
   Radius,
+  Size,
   Spacing,
   Type,
-
   useAdminColors,
 } from "../../constants/theme";
 import { AdminProvider } from "../../context/AdminContext";
 import { useAuth } from "../../context/AuthContext";
+
+const ease = Easing.bezier(...Motion.bezier);
 
 /** Pantalla de bloqueo: la ve el ciudadano y quien no inició sesión. */
 function Locked({ signedIn }: { signedIn: boolean }) {
@@ -34,23 +37,35 @@ function Locked({ signedIn }: { signedIn: boolean }) {
     <View
       style={[
         styles.lockedWrap,
-        { backgroundColor: C.canvas, paddingTop: insets.top, paddingBottom: insets.bottom },
+        {
+          backgroundColor: C.canvas,
+          paddingTop: insets.top,
+          paddingBottom: Math.max(insets.bottom, Spacing[5]),
+        },
       ]}
     >
-      <View style={styles.lockedCard}>
-        <Ionicons name="lock-closed-outline" size={34} color={C.bad} />
-        <Text style={[styles.lockedTitle, { color: C.ink }]}>Acceso restringido</Text>
-        <Text style={[styles.lockedText, { color: C.muted }]}>
+      <View style={styles.lockedBody}>
+        <View style={[styles.lockedIcon, { backgroundColor: C.mist }]}>
+          <Icon name="lock" size={22} color={C.muted} />
+        </View>
+        <Text style={[Type.pageTitle, { color: C.ink, textAlign: "center" }]}>
+          Acceso restringido
+        </Text>
+        <Text style={[Type.lead, { color: C.muted, textAlign: "center" }]}>
           {signedIn
             ? "Tu cuenta de Ciudadano no tiene permiso para entrar al Acceso Interno."
             : "Iniciá sesión con una cuenta de Administrador o Superadmin para entrar al Acceso Interno."}
         </Text>
-        <View style={styles.lockedActions}>
-          {!signedIn && (
-            <Btn label="Iniciar sesión" onPress={() => router.push("/login")} />
-          )}
-          <Btn label="Volver al inicio" variant="ghost" onPress={() => router.replace("/")} />
-        </View>
+      </View>
+      <View style={styles.lockedActions}>
+        {!signedIn && (
+          <Btn label="Iniciar sesión" onPress={() => router.push("/login")} />
+        )}
+        <Btn
+          label="Volver al asistente"
+          variant="secondary"
+          onPress={() => router.replace("/")}
+        />
       </View>
     </View>
   );
@@ -66,23 +81,31 @@ export default function AdminLayout() {
 
   const openMenu = () => {
     setMenuOpen(true);
-    Animated.timing(slide, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+    Animated.timing(slide, {
+      toValue: 0,
+      duration: Motion.drawer,
+      easing: ease,
+      useNativeDriver: true,
+    }).start();
   };
 
   const closeMenu = (then?: () => void) => {
-    Animated.timing(slide, { toValue: -1, duration: 180, useNativeDriver: true }).start(
-      () => {
-        setMenuOpen(false);
-        then?.();
-      }
-    );
+    Animated.timing(slide, {
+      toValue: -1,
+      duration: Motion.duration,
+      easing: ease,
+      useNativeDriver: true,
+    }).start(() => {
+      setMenuOpen(false);
+      then?.();
+    });
   };
 
   // La sesión se lee de forma asíncrona: sin esto, en el primer render se
   // vería "acceso restringido" incluso teniendo sesión válida.
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: C.paper }]}>
+      <View style={[styles.center, { backgroundColor: C.canvas }]}>
         <ActivityIndicator color={C.brand} />
       </View>
     );
@@ -95,8 +118,8 @@ export default function AdminLayout() {
 
   return (
     <AdminProvider>
-      <ToastProvider>
-      <View style={[styles.root, { backgroundColor: C.paper, paddingTop: insets.top }]}>
+      <View style={[styles.root, { backgroundColor: C.canvas, paddingTop: insets.top }]}>
+        {/* Barra superior de 56, igual que la de la app */}
         <View style={styles.header}>
           <Pressable
             onPress={openMenu}
@@ -104,12 +127,11 @@ export default function AdminLayout() {
             accessibilityLabel="Abrir menú"
             style={({ pressed }) => [
               styles.iconBtn,
-              { backgroundColor: pressed ? C.mist : "transparent" },
+              pressed && { backgroundColor: C.mist },
             ]}
           >
-            <Ionicons name="menu" size={22} color={C.ink} />
+            <Icon name="menu" size={22} color={C.ink} />
           </Pressable>
-
         </View>
 
         <View style={{ flex: 1 }}>
@@ -118,7 +140,6 @@ export default function AdminLayout() {
 
         <AdminSidebar open={menuOpen} slide={slide} onClose={closeMenu} />
       </View>
-      </ToastProvider>
     </AdminProvider>
   );
 }
@@ -133,42 +154,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   header: {
-    height: 52,
-    justifyContent: "center",
-    paddingHorizontal: Spacing[2],
+    height: Size.header,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 9,
   },
   iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.md,
+    width: Size.touch,
+    height: Size.touch,
+    borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
   },
   lockedWrap: {
     flex: 1,
+    paddingHorizontal: Spacing[5],
+  },
+  lockedBody: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: Spacing[4],
+    gap: Spacing[3],
   },
-  lockedCard: {
-    width: "100%",
-    maxWidth: 400,
-    padding: Spacing[8],
+  lockedIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
     alignItems: "center",
-    gap: Spacing[2],
-  },
-  lockedTitle: {
-    ...Type.cardTitle,
-  },
-  lockedText: {
-    ...Type.body,
-    textAlign: "center",
+    justifyContent: "center",
+    marginBottom: Spacing[2],
   },
   lockedActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: Spacing[2],
-    marginTop: Spacing[5],
+    gap: Spacing[3],
   },
 });

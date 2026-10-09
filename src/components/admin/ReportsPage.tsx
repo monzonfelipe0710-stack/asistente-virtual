@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { Text } from "../common/Text";
 import Svg, { Circle, G } from "react-native-svg";
 
 import { Radius, Spacing, Type, Typography, useAdminColors } from "../../constants/theme";
@@ -11,7 +16,7 @@ import {
   AdminScreen,
   Card,
   CountUp,
-  FilterChip,
+  Segmented,
   PageHeader,
   StatGrid,
   SectionTitle,
@@ -332,17 +337,12 @@ export default function ReportsPage() {
   return (
     <AdminScreen>
       <PageHeader
-        title="Reportes y Analíticas"
-        description="Métricas detalladas del sistema y del contenido."
+        title="Reportes"
+        description="Métricas del sistema y del contenido."
       >
-        {PERIODS.map((p) => (
-          <FilterChip
-            key={p}
-            label={p}
-            active={period === p}
-            onPress={() => setPeriod(p)}
-          />
-        ))}
+        <View style={{ flex: 1 }}>
+          <Segmented value={period} options={PERIODS} onChange={setPeriod} />
+        </View>
       </PageHeader>
 
       <StatGrid>
