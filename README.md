@@ -58,6 +58,18 @@ src/
 | `admin` | Personal (Superadmin o Administrador) | Sin sesión redirige a `/login`; con una cuenta de Ciudadano muestra "Acceso restringido" |
 | Cada pantalla de `admin` | Según el permiso del rol | La pantalla no existe para quien no tiene permiso |
 
+## Convenciones
+
+- **Solo rutas en `src/app`.** Un componente o un hook ahí se convertiría en una ruta (`Boton.tsx` pasaría a ser `/Boton`).
+- **Un componente por archivo, con export nombrado.** Los archivos de `src/app` son la excepción: llevan `export default`, que Expo Router exige.
+- **Imports con `@/`.** `@/components/ui/Btn` en vez de `../../components/ui/Btn`. Dentro de la misma carpeta se usa `./`.
+- **Permisos en el layout, no en cada pantalla.** `src/app/admin/_layout.tsx` decide qué pantallas existen para cada rol.
+- **Dependencias con `npx expo install`**, no con `npm install`, para que la versión coincida con el SDK de Expo Go.
+
+## Cuentas de prueba
+
+Los datos son simulados y se guardan en el dispositivo. Para entrar al panel usá la cuenta Superadmin que se crea sola la primera vez; su correo y su clave están en `src/context/AuthContext.tsx`. Cualquier otra cuenta que registres entra como Ciudadano hasta que un Superadmin apruebe su solicitud en **Solicitudes**.
+
 ## Diseño
 
 Neutros sin tinte y un solo azul. Geist en tres pesos (400, 500, 600) y Geist Mono para números y fechas. Base de 4 pt, margen lateral de 20. Los valores están en `src/constants/theme.ts`; los componentes no escriben colores a mano.
