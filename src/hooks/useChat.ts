@@ -1,40 +1,45 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { FlatList } from "react-native";
-import { ChatMessage, initialMessages, findResponse } from "../data/mockMessages";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FlatList } from "react-native";
 
+import { findResponse, type ChatMessage } from "@/data/mockMessages";
+
+/** Mensajes de la conversación y cómo enviar uno. El asistente responde tras una pausa. */
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const listRef = useRef<FlatList>(null);
-  const nextId = useRef(initialMessages.length + 1);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const siguienteId = useRef(1);
+  const respuestaPendiente = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // "Nuevo chat" remonta el componente: sin esto queda un timeout huérfano corriendo
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
+  // "Nuevo chat" vuelve a montar el chat: sin esto queda una respuesta huérfana en camino.
+  useEffect(() => {
+    return () => {
+      if (respuestaPendiente.current) clearTimeout(respuestaPendiente.current);
+    };
   }, []);
 
-  const addMessage = useCallback((type: "user" | "bot", text: string) => {
-    const msg: ChatMessage = {
-      id: nextId.current++,
+  const agregar = useCallback((type: ChatMessage["type"], text: string) => {
+    const mensaje: ChatMessage = {
+      id: siguienteId.current++,
       type,
       text,
       timestamp: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, msg]);
+    setMessages((anteriores) => [...anteriores, mensaje]);
   }, []);
 
-  // sin dependencia del texto: la referencia nunca cambia y los hijos memo aguantan
+  // No depende del texto: la referencia nunca cambia y los hijos con memo la aguantan.
   const send = useCallback(
     (text: string) => {
-      addMessage("user", text);
+      agregar("user", text);
       setIsTyping(true);
-      timer.current = setTimeout(() => {
-        addMessage("bot", findResponse(text));
+
+      respuestaPendiente.current = setTimeout(() => {
+        agregar("bot", findResponse(text));
         setIsTyping(false);
       }, 800 + Math.random() * 1200);
     },
-    [addMessage]
+    [agregar]
   );
 
   return { messages, isTyping, listRef, send };

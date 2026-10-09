@@ -3,68 +3,69 @@ import {
   Geist_500Medium,
   Geist_600SemiBold,
   useFonts,
-} from '@expo-google-fonts/geist';
-import { GeistMono_500Medium } from '@expo-google-fonts/geist-mono';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import * as SystemUI from 'expo-system-ui';
-import { useEffect } from 'react';
-import { ToastProvider } from '../components/common/Toast';
-import { useColors, useColorScheme } from '../constants/theme';
-import { AuthProvider } from '../context/AuthContext';
+} from "@expo-google-fonts/geist";
+import { GeistMono_500Medium } from "@expo-google-fonts/geist-mono";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
+import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-// la splash queda hasta que Geist esté cargada: sin esto el primer cuadro sale
-// con la fuente del sistema y salta al cambiar
+import { ToastProvider } from "@/components/ui/Toast";
+import { useColors, useColorScheme } from "@/constants/theme";
+import { AuthProvider } from "@/context/AuthContext";
+
+// La splash queda hasta que Geist esté cargada: sin esto el primer cuadro sale
+// con la fuente del sistema y salta al cambiar.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+/**
+ * Raíz de la app: fuentes, sesión y avisos. Debajo hay tres zonas:
+ * - (ciudadano)  el asistente, las descargas y los accesos, con menú lateral.
+ * - (publico)    el login y el restablecimiento de contraseña.
+ * - admin        el panel interno; su layout decide quién entra.
+ */
 export default function RootLayout() {
   const C = useColors();
-  const dark = useColorScheme() === 'dark';
-  const [fontsLoaded, fontError] = useFonts({
+  const oscuro = useColorScheme() === "dark";
+  const [fuentesListas, errorDeFuentes] = useFonts({
     Geist_400Regular,
     Geist_500Medium,
     Geist_600SemiBold,
     GeistMono_500Medium,
   });
-  const ready = fontsLoaded || !!fontError;
+  const listo = fuentesListas || !!errorDeFuentes;
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(C.canvas);
-  }, [C]);
+  }, [C.canvas]);
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
+    if (listo) SplashScreen.hideAsync().catch(() => {});
+  }, [listo]);
 
-  if (!ready) return null;
+  if (!listo) return null;
 
   return (
-    // La sesión se lee del almacenamiento, así que el provider va en la raíz:
-    // el login y el panel tienen que ver el mismo usuario.
-    <AuthProvider>
-      {/* en la raíz: el chat, el login y el panel usan el mismo aviso */}
-      <ToastProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: C.canvas },
-        }}
-      >
-        {/* el title va acá: es lo que llena el <title> que maneja expo-router */}
-        <Stack.Screen
-          name="index"
-          options={{ title: 'ChatAP · Asistente virtual de trámites' }}
-        />
-        <Stack.Screen name="admin" options={{ title: 'ChatAP · Administración' }} />
-        <Stack.Screen name="login" options={{ title: 'ChatAP · Iniciar sesión' }} />
-        <Stack.Screen
-          name="restablecer"
-          options={{ title: 'ChatAP · Restablecer contraseña' }}
-        />
-      </Stack>
-      </ToastProvider>
-      <StatusBar style={dark ? 'light' : 'dark'} />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ToastProvider>
+          <Stack
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.canvas } }}
+          >
+            {/* El title llena el <title> de la pestaña en web. */}
+            <Stack.Screen name="(ciudadano)" />
+            <Stack.Screen name="(publico)/login" options={{ title: "ChatAP · Iniciar sesión" }} />
+            <Stack.Screen
+              name="(publico)/restablecer"
+              options={{ title: "ChatAP · Restablecer contraseña" }}
+            />
+            <Stack.Screen name="admin" options={{ title: "ChatAP · Administración" }} />
+          </Stack>
+          <StatusBar style={oscuro ? "light" : "dark"} />
+        </ToastProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

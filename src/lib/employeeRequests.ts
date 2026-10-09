@@ -1,7 +1,7 @@
 import {
   initialEmployeeRequests,
   type EmployeeRequest,
-} from "../data/mockEmployeeApprovals";
+} from "@/data/mockEmployeeApprovals";
 import type { AuthUser } from "./auth";
 import { readJSON, writeJSON } from "./storage";
 

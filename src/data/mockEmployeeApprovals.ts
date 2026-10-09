@@ -23,7 +23,6 @@ export interface EmployeeRequest {
   reviewNote: string;
 }
 
-export const employeeRequestStatuses: EmployeeRequestStatus[] = ["Pendiente", "Activo", "Rechazado"];
 
 export const employeeDepartments: string[] = [
   "Mesa de Entradas",
@@ -215,12 +214,3 @@ export const initialEmployeeRequests: EmployeeRequest[] = [
     reviewNote: "Rechazado: no se pudo validar identidad. Solicitar reingreso con correo institucional.",
   },
 ];
-
-export function initialsOf(name: string): string {
-  return (name || "")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p: string) => p[0]?.toUpperCase())
-    .join("");
-}

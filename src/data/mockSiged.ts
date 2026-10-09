@@ -34,4 +34,3 @@ export const sigedRecords: SigedRecord[] = [
 ];
 
 export const sigedStatuses: SigedStatus[] = ["Ingresado", "En proceso", "Observado", "Finalizado"];
-export const sigedPriorities: SigedPriority[] = ["Alta", "Normal", "Baja"];

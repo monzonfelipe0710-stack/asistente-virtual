@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 import { useAuth } from "./AuthContext";
-import type { AuthRole } from "../lib/auth";
+import type { AuthRole } from "@/lib/auth";
 
 export type Permission =
   | "dashboard"

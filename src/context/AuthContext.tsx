@@ -18,14 +18,14 @@ import {
   type AuthRole,
   type AuthUser,
   type Session,
-} from "../lib/auth";
-import { sendResetEmail } from "../lib/email";
+} from "@/lib/auth";
+import { sendResetEmail } from "@/lib/email";
 import {
   buildRequestFromUser,
   loadEmployeeRequests,
   saveEmployeeRequests,
-} from "../lib/employeeRequests";
-import { readJSON, writeJSON } from "../lib/storage";
+} from "@/lib/employeeRequests";
+import { readJSON, writeJSON } from "@/lib/storage";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

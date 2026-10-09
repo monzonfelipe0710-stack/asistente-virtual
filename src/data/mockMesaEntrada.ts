@@ -1,4 +1,4 @@
-import { formatDate } from "../utils/date";
+import { formatDate } from "@/utils/date";
 
 export type MesaStatus = "Ingresado" | "En proceso" | "Observado" | "Finalizado";
 export type MesaPriority = "Alta" | "Normal" | "Baja";

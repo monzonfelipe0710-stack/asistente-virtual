@@ -24,11 +24,3 @@ export async function writeJSON(key: string, value: unknown): Promise<void> {
     /* cuota / almacenamiento no disponible */
   }
 }
-
-export async function removeKey(key: string): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(key);
-  } catch {
-    /* noop */
-  }
-}

@@ -47,4 +47,3 @@ export function useSortable<T extends object>(
   return { sorted, sortKey, sortDir, toggleSort, getSortIndicator };
 }
 
-export default useSortable;

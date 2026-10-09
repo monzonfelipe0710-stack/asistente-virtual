@@ -12,9 +12,6 @@ export interface BotResponse {
   response: string;
 }
 
-// el saludo ahora es el estado vacío del chat, no un mensaje
-export const initialMessages: ChatMessage[] = [];
-
 export const botResponses: BotResponse[] = [
   {
     keywords: ["licencia", "vacaciones", "permiso"],

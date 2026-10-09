@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { Btn, Field, Input, Segmented, Select } from "./ui";
+import { Btn } from "@/components/ui/Btn";
+import { Segmented } from "@/components/ui/Choices";
+import { Field, Input } from "@/components/ui/Fields";
+import { Select } from "@/components/ui/Select";
 import {
   departments,
   userRoles,
   type AppUser,
   type UserRole,
   type UserStatus,
-} from "../../data/mockUsers";
-import Modal from "../common/Modal";
+} from "@/data/mockUsers";
+import { Modal } from "@/components/ui/Modal";
 
 export interface UserForm {
   name: string;
@@ -27,7 +30,7 @@ const EMPTY: UserForm = {
 
 const STATUSES: UserStatus[] = ["Activo", "Inactivo"];
 
-export default function UserFormModal({
+export function UserFormModal({
   open,
   onClose,
   onSave,
@@ -81,7 +84,7 @@ export default function UserFormModal({
         />
       }
     >
-      <Field label="Nombre completo" required error={errors.name}>
+      <Field label="Nombre completo" error={errors.name}>
         <Input
           value={form.name}
           onChangeText={(name) => setForm((f) => ({ ...f, name }))}
@@ -90,7 +93,7 @@ export default function UserFormModal({
         />
       </Field>
 
-      <Field label="Correo electrónico" required error={errors.email}>
+      <Field label="Correo electrónico" error={errors.email}>
         <Input
           value={form.email}
           onChangeText={(email) => setForm((f) => ({ ...f, email }))}
