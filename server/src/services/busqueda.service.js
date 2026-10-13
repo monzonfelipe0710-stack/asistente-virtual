@@ -1,4 +1,4 @@
-import prisma from '..config/prisma.js';
+import prisma from '../config/prisma.js';
 import { generarEmbedding } from './embedding.service.js';
 
 export const buscarTramites = async (pregunta, limite = 5) => {

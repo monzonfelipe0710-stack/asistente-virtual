@@ -19,7 +19,7 @@ export const obtener = async (req, res) => {
   const tramite = await tramiteService.obtenerTramitePorId(id);
 
   if (!tramite) {
-    const error = new Error('Tramite no encontrado.');
+    const error = new Error('Trámite no encontrado.');
     error.statusCode = 404;
     throw error;
   }
@@ -44,11 +44,11 @@ export const eliminar = async (req, res) => {
 export const publicar = async (req, res) => {
   const id = Number(req.params.id);
   const tramite = await tramiteService.cambiarPublicacion(id, true);
-  res.json({ mensaje: 'Tramite publicado', tramite });
+  res.json({ mensaje: 'Trámite publicado', tramite });
 };
 
 export const despublicar = async (req, res) => {
   const id = Number(req.params.id);
-  const tramite = await tramiteService.despublicar(id, false);
-  res.json({ mensaje: 'Tramite despublicado', tramite });
+  const tramite = await tramiteService.cambiarPublicacion(id, false);
+  res.json({ mensaje: 'Trámite despublicado', tramite });
 };

@@ -14,13 +14,13 @@ export const generarEmbedding = async (texto) => {
 
 export const textoDeTramite = (tramite) => {
   const partes = [
-    `Tramite: ${tramite.nombre}.`,
+    `Trámite: ${tramite.nombre}.`,
     `Descripción: ${tramite.descripcion}.`,
   ];
 
   if (tramite.requisitos && tramite.requisitos.length > 0) {
     const reqs = tramite.requisitos.map((r) => r.descripcion).join(', ');
-    partes.púsh(`Requisitos: ${reqs}.`);
+    partes.push(`Requisitos: ${reqs}.`);
   }
 
   return partes.join(' ');

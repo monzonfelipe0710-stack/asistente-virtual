@@ -7,8 +7,8 @@ import { errorHandler } from './src/middlewares/error.middleware.js';
 import usuarioRoutes from './src/routes/usuario.routes.js';
 import sectorRoutes from './src/routes/sector.routes.js'
 import tramiteRoutes from './src/routes/tramite.routes.js';
-import chatRoutes from './routes/chat.routes.js';
-import metricaRoutes from './routes/metrica.routes.js';
+import chatRoutes from './src/routes/chat.routes.js';
+import metricaRoutes from './src/routes/metrica.routes.js';
 
 const app = express();
 

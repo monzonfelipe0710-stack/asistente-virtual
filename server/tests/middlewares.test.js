@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import multer from 'multer';
 
 import { errorHandler } from '../src/middlewares/error.middleware.js';
 import { autorizar } from '../src/middlewares/roles.middleware.js';
@@ -54,6 +55,21 @@ describe('errorHandler', () => {
   it('P2003 distingue el borrado de la referencia inválida', () => {
     assert.equal(manejar(prismaKnown('P2003'), 'DELETE').codigo, 409);
     assert.equal(manejar(prismaKnown('P2003'), 'POST').codigo, 400);
+  });
+
+  it('una violación de ON DELETE RESTRICT (23001) devuelve 409 y no 500', () => {
+    // Regresión: borrar un sector con trámites salía 500, porque Prisma no lo
+    // reporta como P2003 sino como PrismaClientUnknownRequestError.
+    const err = new Prisma.PrismaClientUnknownRequestError(
+      'PostgresError { code: "23001", message: "violates RESTRICT setting of foreign key constraint" }',
+      { clientVersion: '6' }
+    );
+    assert.equal(manejar(err, 'DELETE').codigo, 409);
+  });
+
+  it('un archivo demasiado grande devuelve 413 y no 500', () => {
+    assert.equal(manejar(new multer.MulterError('LIMIT_FILE_SIZE')).codigo, 413);
+    assert.equal(manejar(new multer.MulterError('LIMIT_UNEXPECTED_FILE')).codigo, 400);
   });
 
   it('cae en 500 genérico ante un error desconocido', () => {

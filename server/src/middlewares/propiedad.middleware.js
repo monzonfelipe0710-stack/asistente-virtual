@@ -6,13 +6,13 @@ export const esPropietario = async (req, res, next) => {
   const tramite = await prisma.tramite.findUnique({ where: { id } }); 
 
   if (!tramite) {
-    const error = new Error('Tramite no encontrado.');
+    const error = new Error('Trámite no encontrado.');
     error.statusCode = 404;
     throw error;
   }
 
   if (tramite.encargadoId !== req.usuario.id) {
-    const error = new Error('No se puede modificar un tramite que no te pertenezca.');
+    const error = new Error('No se puede modificar un trámite que no te pertenezca.');
     error.statusCode = 403;
     throw error;
   }

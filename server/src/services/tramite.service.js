@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { indexarTramite } from './embedding.service.js';
+import { eliminarArchivos } from './documento.service.js';
 
 export const crearTramite = async (datos, encargadoId) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
@@ -24,7 +25,7 @@ export const crearTramite = async (datos, encargadoId) => {
   });
 
   indexarTramite(tramite.id).catch((err) => {
-    console.error(`Error al indexar el tramite ${tramite.id}`, err.message);
+    console.error(`Error al indexar el trámite ${tramite.id}`, err.message);
   });
 
   return tramite;
@@ -53,7 +54,20 @@ export const obtenerTramitePorId = async (id) => {
 };
 
 export const eliminarTramite = async (id) => {
-  return prisma.tramite.delete({where: { id } });
+  // La cascada de la base borra los registros de documentos, pero no los archivos
+  // en R2: hay que leer las keys antes de borrar y limpiarlas después.
+  const documentos = await prisma.documento.findMany({
+    where: { tramiteId: id },
+    select: { archivo: true },
+  });
+
+  const eliminado = await prisma.tramite.delete({where: { id } });
+
+  if (documentos.length > 0) {
+    await eliminarArchivos(documentos.map((d) => d.archivo));
+  }
+
+  return eliminado;
 };
 
 export const cambiarPublicacion = async (id, publicado) => {
