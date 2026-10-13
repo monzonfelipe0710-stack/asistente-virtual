@@ -7,6 +7,8 @@ import { errorHandler } from './src/middlewares/error.middleware.js';
 import usuarioRoutes from './src/routes/usuario.routes.js';
 import sectorRoutes from './src/routes/sector.routes.js'
 import tramiteRoutes from './src/routes/tramite.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import metricaRoutes from './routes/metrica.routes.js';
 
 const app = express();
 
@@ -39,6 +41,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/sectores', sectorRoutes);
 app.use('/api/tramites', tramiteRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/metricas', metricaRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {
