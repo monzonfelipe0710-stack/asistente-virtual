@@ -1,13 +1,28 @@
-cliente-prueba
-BACKEND_CONTEXTO.md
-test-frontend
-# Entorno virtual y caché del scraper de ingestion
-ingestion/.venv/
-ingestion/data/cache_html/
-ingestion/data/tramites_muestra.json
-ingestion/data/informe_muestra.md
-__pycache__/
-# HTML y PDF crudos de los scrapers (se reprocesan sin volver a pedirlos)
-ingestion/data/raw/
-# Resultados de eval-chat por corrida (scripts/comparar-evals.js)
-server/eval-resultados/
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Entorno local (usar .env.example como plantilla)
+.env
+.env.*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

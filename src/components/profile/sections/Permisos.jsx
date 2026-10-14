@@ -1,9 +1,12 @@
 import { permissionsForRole } from "../../../context/AdminContext";
 import { useProfileData } from "../useProfileData";
+import { roleLabel } from "../../../lib/roles";
 import { SectionHeader, Icon, ICONS, Pill } from "../ui";
 
 const KEY_ICON = {
   dashboard: ICONS.activity,
+  tramites: ICONS.tramite,
+  sectores: ICONS.users,
   mesa_entrada: ICONS.tramite,
   usuarios: ICONS.users,
   solicitudes: ICONS.solicitud,
@@ -27,13 +30,13 @@ export default function Permisos() {
         description={
           isSuper
             ? "Tenés acceso total al Panel de Administración."
-            : "Lo que tu rol de Administrador puede hacer en el sistema."
+            : "Lo que tu rol de Empleado puede hacer en el sistema."
         }
       />
       <div className="card card-border overflow-hidden">
         <div className="px-5 py-3 border-b border-line bg-mist/60 flex items-center justify-between gap-3">
           <p className="text-sm font-bold text-ink m-0">
-            Rol <span className="font-mono">{data.userRole}</span>
+            Rol <span className="font-mono">{roleLabel(data.userRole)}</span>
           </p>
           {isSuper && <Pill tone="bg-ink text-paper">Acceso total</Pill>}
         </div>
@@ -57,7 +60,7 @@ export default function Permisos() {
         <div className="px-5 py-3 border-t border-line bg-soft/60">
           <p className="text-[11px] text-faint m-0 leading-relaxed">
             No podés modificar tu propio rol ni elevar privilegios desde esta pantalla.
-            Eso es exclusivo del Superadmin desde el Panel de Administración.
+            Eso es exclusivo del Administrador desde el Panel de Administración.
           </p>
         </div>
       </div>

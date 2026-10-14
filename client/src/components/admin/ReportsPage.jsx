@@ -4,6 +4,7 @@ import { knowledgeBase } from "../../data/mockKnowledge";
 import { sigedRecords } from "../../data/mockSiged";
 import { documents } from "../../data/mockDocuments";
 import { CountUp } from "./ui";
+import PendingBackend from "./PendingBackend";
 
 // Tareas administrativas iniciales adaptadas a ChatAP y SIGED
 const INITIAL_TASKS = [
@@ -133,10 +134,18 @@ export default function ReportsPage() {
   const activeArticles = useMemo(() => knowledgeBase.filter((a) => a.active).length, []);
   const topArticles = useMemo(() => [...knowledgeBase].sort((a, b) => b.views - a.views).slice(0, 5), []);
   const topDocs = useMemo(() => [...documents].sort((a, b) => b.downloads - a.downloads).slice(0, 5), []);
-  const usersByRole = useMemo(() => ["Superadmin", "Administrador", "Ciudadano"].map((r) => ({
-    label: r,
-    count: users.filter((u) => u.role === r).length,
-  })), []);
+  const usersByRole = useMemo(
+    () =>
+      [
+        { key: "Superadmin", label: "Administrador" },
+        { key: "Administrador", label: "Empleado" },
+        { key: "Ciudadano", label: "Ciudadano" },
+      ].map(({ key, label }) => ({
+        label,
+        count: users.filter((u) => u.role === key).length,
+      })),
+    []
+  );
   const maxRole = useMemo(() => Math.max(...usersByRole.map((r) => r.count), 1), [usersByRole]);
 
   // Manejador de tareas
@@ -304,6 +313,8 @@ export default function ReportsPage() {
           </button>
         </div>
       </div>
+
+      <PendingBackend description="Los reportes combinan datos de demostración (SIGED, expedientes). Todavía no hay endpoints de reportes en el backend; para métricas reales usá el Dashboard." />
 
       {/* Tabs de vista: Dashboard General vs Base de Conocimiento */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">

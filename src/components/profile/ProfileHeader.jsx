@@ -20,9 +20,15 @@ const STATUS_TONE = {
 };
 
 const ROLE_TONE = {
-  Superadmin: "bg-ink text-paper",
-  Administrador: "bg-brand-deep/10 text-brand-deep border border-brand-deep/20",
-  Ciudadano: "bg-mist text-muted border border-line",
+  SUPERUSUARIO: "bg-ink text-paper",
+  ADMINISTRADOR: "bg-brand-deep/10 text-brand-deep border border-brand-deep/20",
+  CIUDADANO: "bg-mist text-muted border border-line",
+};
+
+const ROLE_LABEL = {
+  SUPERUSUARIO: "Administrador",
+  ADMINISTRADOR: "Empleado",
+  CIUDADANO: "Ciudadano",
 };
 
 function InfoItem({ label, value, mono = false }) {
@@ -36,11 +42,10 @@ function InfoItem({ label, value, mono = false }) {
 }
 
 export default function ProfileHeader({ onSaved }) {
-  const { user, userRole, isSuperadmin, isStaff } = useAuth();
+  const { user, userRole, isStaff } = useAuth();
   const [editOpen, setEditOpen] = useState(false);
 
   if (!user) return null;
-  const isAdmin = userRole === "Administrador";
 
   return (
     <>
@@ -70,7 +75,7 @@ export default function ProfileHeader({ onSaved }) {
                 <p className="text-sm text-muted m-0 mt-1 font-medium break-all">{user.email}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <span className={`inline-block px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full ${ROLE_TONE[userRole] || "bg-mist text-muted border border-line"}`}>
-                    {isSuperadmin ? "SuperAdmin" : isAdmin ? "Administrador" : "Ciudadano"}
+                    {ROLE_LABEL[userRole] || "Ciudadano"}
                   </span>
                   <span className={`inline-block px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-full ${STATUS_TONE[user.status] || "bg-muted/10 text-muted border border-line"}`}>
                     {user.status || "—"}

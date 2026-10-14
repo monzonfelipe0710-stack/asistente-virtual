@@ -1,19 +1,18 @@
 import prisma from '../config/prisma.js';
-import { usuarioTieneSector } from '../services/usuario.service.js';
 
-export const puedeGestionarTramite = async (req, res, next) => {
+export const esPropietario = async (req, res, next) => {
   const id = Number(req.params.id);
 
-  const tramite = await prisma.tramite.findUnique({ where: { id } });
+  const tramite = await prisma.tramite.findUnique({ where: { id } }); 
+
   if (!tramite) {
-    const error = new Error('Trámite no encontrado.');
+    const error = new Error('Tramite no encontrado.');
     error.statusCode = 404;
     throw error;
   }
 
-  const tieneAcceso = await usuarioTieneSector(req.usuario.id, tramite.sectorId);
-  if (!tieneAcceso) {
-    const error = new Error('No tenés asignado el sector de este trámite.');
+  if (tramite.encargadoId !== req.usuario.id) {
+    const error = new Error('No se puede modificar un tramite que no te pertenezca.');
     error.statusCode = 403;
     throw error;
   }

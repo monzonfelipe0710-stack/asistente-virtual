@@ -17,7 +17,9 @@ const EmployeeApprovals = lazy(() => import("../components/admin/EmployeeApprova
 const UserTable = lazy(() => import("../components/admin/UserTable"));
 const KnowledgeManager = lazy(() => import("../components/admin/KnowledgeManager"));
 const SigedIntegration = lazy(() => import("../components/admin/SigedIntegration"));
-const DocumentManager = lazy(() => import("../components/admin/DocumentManager"));
+const TramitesManager = lazy(() => import("../components/admin/TramitesManager"));
+const TramiteDetail = lazy(() => import("../components/admin/TramiteDetail"));
+const SectoresManager = lazy(() => import("../components/admin/SectoresManager"));
 const ChatbotSettings = lazy(() => import("../components/admin/ChatbotSettings"));
 const ReportsPage = lazy(() => import("../components/admin/ReportsPage"));
 const MesaDeEntrada = lazy(() => import("../components/admin/MesaDeEntrada"));
@@ -38,11 +40,11 @@ function StaffRoute() {
   const { user, userRole } = useAuth();
   const location = useLocation();
 
-  if (!user || user.status === "Suspendido") {
+  if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (userRole !== "Superadmin" && userRole !== "Administrador") {
+  if (userRole !== "SUPERUSUARIO" && userRole !== "ADMINISTRADOR") {
     return <Navigate to="/" replace />;
   }
 
@@ -83,6 +85,9 @@ export default function AppRoutes({ location }) {
           <Route element={<PermissionRoute permission="usuarios" />}>
             <Route path="usuarios" element={<Lazy><UserTable /></Lazy>} />
           </Route>
+          <Route element={<PermissionRoute permission="sectores" />}>
+            <Route path="sectores" element={<Lazy><SectoresManager /></Lazy>} />
+          </Route>
           <Route element={<PermissionRoute permission="mesa_entrada" />}>
             <Route path="mesa-de-entrada" element={<Lazy><MesaDeEntrada /></Lazy>} />
           </Route>
@@ -92,8 +97,9 @@ export default function AppRoutes({ location }) {
           <Route element={<PermissionRoute permission="siged" />}>
             <Route path="siged" element={<Lazy><SigedIntegration /></Lazy>} />
           </Route>
-          <Route element={<PermissionRoute permission="documentos" />}>
-            <Route path="documentos" element={<Lazy><DocumentManager /></Lazy>} />
+          <Route element={<PermissionRoute permission="tramites" />}>
+            <Route path="tramites" element={<Lazy><TramitesManager /></Lazy>} />
+            <Route path="tramites/:id" element={<Lazy><TramiteDetail /></Lazy>} />
           </Route>
           <Route element={<PermissionRoute permission="configuracion" />}>
             <Route path="configuracion" element={<Lazy><ChatbotSettings /></Lazy>} />

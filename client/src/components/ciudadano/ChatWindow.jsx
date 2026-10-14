@@ -1,38 +1,22 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import ChatBotAvatar from "../ChatBotAvatar";
 import { BotReactionController } from "./BotReactionController";
-import { botResponses } from "../../data/mockMessages";
 import { wizards, wizardLabels } from "../../data/wizard";
+import { preguntar } from "../../services/chat";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
-import {
-  scoreKnowledge,
-  relateDocument,
-  officeFor,
-  officeAction,
-  officeInfo,
-  documentDownloadAction,
-} from "../../lib/knowledgeEngine";
-import {
-  resolveFollowUp,
-  wizardFor,
-  buildRelated,
-  buildRecoverChips,
-} from "../../lib/chatFollowUp";
 import {
   rememberMessage,
   rememberAnswer,
   loadMemory,
   buildReminder,
   suggestedTopics,
-  detectOffice,
   detectTopic,
-  topicLabel,
 } from "../../lib/chatMemory";
 
-const KB_STRONG = 3.5;
-const KB_WEAK = 1.5;
+const MAX_PREGUNTA = 500;
 
 const CHATAP_PILLS = [
   {
@@ -97,67 +81,6 @@ const CHATAP_PILLS = [
   },
 ];
 
-function findIntent(input) {
-  const text = input.toLowerCase();
-  for (const entry of botResponses) {
-    if (entry.keywords.includes("default")) continue;
-    for (const kw of entry.keywords) {
-      if (text.includes(kw)) {
-        return entry;
-      }
-    }
-  }
-  return null;
-}
-
-function tidyLabel(text) {
-  return String(text || "")
-    .replace(/^¿/, "")
-    .replace(/\?+$/, "")
-    .trim();
-}
-
-function isErrorText(text) {
-  return /no encontr|no disponible|error|no se pudo|no tengo/.test((text || "").toLowerCase());
-}
-
-/**
- * Resuelve una consulta del ciudadano con prioridad:
- * 1) intent exacto, 2) base de conocimiento, 3) null (se resuelve después).
- */
-function resolveResponse(userText) {
-  const kb = scoreKnowledge(userText);
-  const intent = findIntent(userText);
-
-  if (intent) {
-    const r = intent.response;
-    const interactive = Boolean(r.action || r.reaction);
-    const bypassSecurity =
-      r.reaction === "worried" &&
-      /olvid|recuperar|resetear|restablecer/i.test(userText);
-
-    if (!bypassSecurity) {
-      if (interactive) {
-        // Si el intent es una descarga genérica pero hay un artículo muy
-        // específico, ganamos precisión con el conocimiento.
-        if (kb && kb.score >= KB_STRONG && r.action?.type === "download") {
-          return { kind: "knowledge", article: kb.article };
-        }
-        return { kind: "intent", entry: intent, query: userText };
-      }
-      if (kb && kb.score >= KB_WEAK) {
-        return { kind: "knowledge", article: kb.article };
-      }
-      return { kind: "intent", entry: intent, query: userText };
-    }
-  }
-
-  if (kb && kb.score >= KB_WEAK) {
-    return { kind: "knowledge", article: kb.article };
-  }
-  return null;
-}
-
 export default function ChatWindow({ initialQuery = null }) {
   const { messages, addMessage, clearHistory } = useChat();
   const { user, isAuthenticated } = useAuth();
@@ -178,9 +101,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const controllerRef = useRef(null);
   const typingTimerRef = useRef(null);
   const greetedRef = useRef(false);
-  const ctxRef = useRef({ officeData: null });
   const wizardRef = useRef(null);
   const [welcomeMem, setWelcomeMem] = useState(null);
+  const [showPromo, setShowPromo] = useState(true);
 
   const [speechSupported] = useState(
     () =>
@@ -260,11 +183,15 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
+  const sendTextRef = useRef(null);
+  useEffect(() => {
+    sendTextRef.current = sendText;
+  });
   useEffect(() => {
     if (initialQuery && !initialQueryHandled.current) {
       initialQueryHandled.current = true;
       const timer = setTimeout(() => {
-        sendText(initialQuery);
+        sendTextRef.current?.(initialQuery);
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -277,203 +204,113 @@ export default function ChatWindow({ initialQuery = null }) {
     setTimeout(() => setPhase("chat"), 480);
   }
 
-  function buildChipsAction(options) {
-    if (!options || options.length === 0) return null;
-    return {
-      type: "chips",
-      title: "También te puede servir:",
-      options: options.map((o) => ({ label: o.label, value: o.value ?? o.label })),
-    };
-  }
-
-  function simulateBotResponse(userText) {
+  /** Añade el mensaje del bot con efecto de tipeo y reacciones del avatar. */
+  function presentBotMessage(finalText, finalActions, { error = false } = {}) {
     setIsTyping(false);
     clearInterval(typingTimerRef.current);
 
+    const id = addMessage("bot", finalText, finalActions || undefined);
+    const long = finalText.length > 240;
+    const charStep = long ? 2 : 1;
+    const charDelay = long ? 16 : 24;
+
+    speakingRef.current = true;
+    speakingIdRef.current = id;
+    setSpeakingId(id);
+    setTypedText("");
+
+    // Pasamos la respuesta al controller para que detecte el tono
+    controllerRef.current?.onEvent("botResponding", {
+      text: finalText,
+      reaction: error ? "worried" : undefined,
+    });
+
+    let i = 0;
+    typeTimerRef.current = setInterval(() => {
+      if (speakingIdRef.current !== id) {
+        clearInterval(typeTimerRef.current);
+        return;
+      }
+      i += charStep;
+      setTypedText(finalText.slice(0, i));
+      if (i >= finalText.length) {
+        clearInterval(typeTimerRef.current);
+        setTimeout(() => {
+          if (speakingIdRef.current !== id) return;
+          speakingRef.current = false;
+          speakingIdRef.current = null;
+          setSpeakingId(null);
+          setTypedText("");
+          controllerRef.current?.onEvent(error ? "botError" : "botSuccess");
+        }, 550);
+      }
+    }, charDelay);
+  }
+
+  async function respondTo(userText) {
+    setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
-    const delay = 900 + Math.random() * 800;
-    setTimeout(() => {
-      clearInterval(typeTimerRef.current);
 
-      const mem = userId ? loadMemory(userId) : null;
-      const topic = detectTopic(userText);
-      const resolved = resolveResponse(userText);
+    let finalText;
+    let finalActions = null;
+    let error = false;
 
-      let finalText;
-      let finalActions;
-      let ctx;
-      let isClarification = false;
+    try {
+      const data = await preguntar(userText.slice(0, MAX_PREGUNTA));
+      finalText =
+        String(data?.respuesta || "").trim() ||
+        "No pude generar una respuesta. Probá reformulando la consulta.";
 
-      if (resolved?.kind === "knowledge") {
-        const article = resolved.article;
-        finalText = article.answer;
-        const actions = [];
-
-        const doc = relateDocument(`${article.question} ${article.answer}`);
-        if (doc) actions.push(documentDownloadAction(doc, article));
-
-        const officeName = officeFor(`${article.question} ${article.answer}`);
-        const oa = officeName ? officeAction(officeName) : null;
-        if (oa) actions.push(oa);
-
-        const wz = wizardFor(`${article.question} ${article.answer}`);
-        if (wz) {
-          actions.push({ type: "wizard", wizardId: wz.id, label: wizardLabels()[wz.id] });
-        }
-        const relatedAction = buildChipsAction(
-          buildRelated({ kind: "knowledge", category: article.category, articleId: article.id })
-        );
-        if (relatedAction) actions.push(relatedAction);
-
-        finalActions = actions;
-        ctx = {
-          kind: "knowledge",
-          category: article.category,
-          articleId: article.id,
-          label: tidyLabel(article.question),
-          officeData: officeName
-            ? { name: officeName, ...officeInfo(officeName) }
-            : null,
-        };
-      } else if (resolved?.kind === "intent") {
-        const r = resolved.entry.response;
-        const actions = r.action ? [r.action] : [];
-        finalText = r.text;
-
-        const wk = wizardFor(userText);
-        if (wk) {
-          actions.push({ type: "wizard", wizardId: wk.id, label: wizardLabels()[wk.id] });
-        }
-        const relatedIntentAction = buildChipsAction(
-          buildRelated({ kind: "intent", topic })
-        );
-        if (relatedIntentAction) actions.push(relatedIntentAction);
-
-        finalActions = actions.length ? actions : null;
-        const officeName =
-          r.action?.type === "location"
-            ? detectOffice(`${r.action.place} ${r.action.address}`)
-            : null;
-        ctx = {
-          kind: "intent",
-          topic,
-          label: topic ? topicLabel(topic) : resolved.entry.keywords[0],
-          officeData: officeName
-            ? {
-                name: officeName,
-                place: r.action.place,
-                address: r.action.address,
-                hours: r.action.hours,
-              }
-            : null,
-        };
+      const tramites = Array.isArray(data?.tramitesEncontrados)
+        ? data.tramitesEncontrados.filter((t) => t?.nombre)
+        : [];
+      if (tramites.length) {
+        finalActions = [
+          {
+            type: "chips",
+            title: "Trámites relacionados:",
+            options: tramites.map((t) => ({ label: t.nombre, value: t.nombre })),
+          },
+        ];
+      }
+    } catch (err) {
+      error = true;
+      const status = err?.response?.status;
+      if (status === 429) {
+        finalText =
+          "Estás consultando muy seguido. Esperá unos segundos y volvé a intentar.";
+      } else if (status === 400) {
+        finalText =
+          "No pude procesar la consulta. Revisá el texto e intentá de nuevo.";
       } else {
-        const followUp = resolveFollowUp(userText, ctxRef.current);
-        if (followUp) {
-          finalText = followUp.text;
-          finalActions = [followUp.action];
-          ctx = { ...ctxRef.current };
-        } else if (mem?.lastAnswer?.label) {
-          finalText = `No entendí del todo la consulta, pero vi que la última vez preguntabas sobre "${mem.lastAnswer.label}". ¿Retomamos eso?`;
-          finalActions = buildChipsAction(suggestedTopics(mem).map((s) => ({ label: s.label, value: s.query })));
-          ctx = { kind: "memory", suggested: suggestedTopics(mem), officeData: null };
-          isClarification = true;
-        } else if (mem?.lastTopic) {
-          finalText = `No entendí del todo la consulta, pero veo que la última vez estabas viendo ${topicLabel(
-            mem.lastTopic
-          )}. ¿Retomamos eso?`;
-          finalActions = buildChipsAction(
-            suggestedTopics(mem).map((s) => ({ label: s.label, value: s.query }))
-          );
-          ctx = { kind: "memory", suggested: suggestedTopics(mem), officeData: null };
-          isClarification = true;
-        } else {
-          finalText = "No entendí la consulta. ¿Podés reescribirla con otras palabras? O elegí una opción para empezar:";
-          finalActions = { type: "chips", options: buildRecoverChips() };
-          ctx = { kind: "default", officeData: null };
-          isClarification = true;
-        }
+        finalText =
+          "El asistente no está disponible en este momento. Reintentá en unos instantes.";
       }
+    }
 
-      // Si el usuario está autenticado, en su primer mensaje de la sesión el
-      // bot lo reconoce por su nombre y/o le recuerda lo que venía haciendo.
-      if (
-        isAuthenticated &&
-        user?.name &&
-        !greetedRef.current &&
-        !isErrorText(finalText) &&
-        !isClarification &&
-        resolved?.kind !== "knowledge"
-      ) {
-        greetedRef.current = true;
-        const firstName = user.name.split(" ")[0];
-        const reminder = mem && mem.count > 0 ? buildReminder(mem, user.name) : null;
-        if (reminder) {
-          finalText = reminder + " " + finalText.charAt(0).toLowerCase() + finalText.slice(1);
-        } else if (!/^(hola|buenas|buen)/i.test(finalText)) {
-          finalText = `Claro, ${firstName}. ` + finalText.charAt(0).toLowerCase() + finalText.slice(1);
-        }
+    // Primer mensaje de la sesión: el bot reconoce al usuario por su nombre
+    // y/o le recuerda lo que venía consultando.
+    if (!error && isAuthenticated && user?.name && !greetedRef.current) {
+      greetedRef.current = true;
+      const mem = userId ? loadMemory(userId) : null;
+      const firstName = user.name.split(" ")[0];
+      const reminder = mem && mem.count > 0 ? buildReminder(mem, user.name) : null;
+      if (reminder) {
+        finalText = reminder + " " + finalText.charAt(0).toLowerCase() + finalText.slice(1);
+      } else if (!/^(hola|buenas|buen)/i.test(finalText)) {
+        finalText = `Claro, ${firstName}. ` + finalText.charAt(0).toLowerCase() + finalText.slice(1);
       }
+    }
 
-      const id = addMessage("bot", finalText, finalActions);
-      const long = finalText.length > 240;
-      const charStep = long ? 2 : 1;
-      const charDelay = long ? 16 : 24;
-
-      speakingRef.current = true;
-      speakingIdRef.current = id;
-      setSpeakingId(id);
-      setTypedText("");
-
-      // Pasamos la respuesta completa al controller para que detecte el tono
-      const intentReaction =
-        resolved?.kind === "intent" ? resolved.entry.response.reaction : undefined;
-      controllerRef.current?.onEvent("botResponding", {
-        text: finalText,
-        reaction: intentReaction,
+    if (userId) {
+      rememberAnswer(userId, {
+        label: userText,
+        topic: detectTopic(userText),
+        kind: error ? "error" : "chat",
       });
+    }
 
-      if (intentReaction) {
-        controllerRef.current?.onEvent("botConcern", intentReaction);
-      }
-
-      ctxRef.current = ctx || { officeData: null };
-      if (userId) {
-        rememberAnswer(userId, {
-          label: (ctx && ctx.label) || (resolved?.kind === "knowledge" ? tidyLabel(resolved.article.question) : null),
-          topic,
-          category: ctx?.category ?? null,
-          kind: resolved?.kind ?? ctx?.kind ?? "default",
-        });
-      }
-
-      let i = 0;
-      typeTimerRef.current = setInterval(() => {
-        if (speakingIdRef.current !== id) {
-          clearInterval(typeTimerRef.current);
-          return;
-        }
-        i += charStep;
-        setTypedText(finalText.slice(0, i));
-        if (i >= finalText.length) {
-          clearInterval(typeTimerRef.current);
-          setTimeout(() => {
-            if (speakingIdRef.current !== id) return;
-            speakingRef.current = false;
-            speakingIdRef.current = null;
-            setSpeakingId(null);
-            setTypedText("");
-
-            // Si no hubo error, celebración sutil
-            if (!isErrorText(finalText) && !intentReaction) {
-              controllerRef.current?.onEvent("botSuccess");
-            } else {
-              controllerRef.current?.onEvent("botFinished");
-            }
-          }, 550);
-        }
-      }, charDelay);
-    }, delay);
+    presentBotMessage(finalText, finalActions, { error });
   }
 
   function sendText(text) {
@@ -488,7 +325,7 @@ export default function ChatWindow({ initialQuery = null }) {
     if (userId) rememberMessage(userId, t);
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
-    simulateBotResponse(t);
+    respondTo(t);
   }
 
   function handleSend(e) {
@@ -573,24 +410,9 @@ export default function ChatWindow({ initialQuery = null }) {
     wizardRef.current = null;
     if (!w) return;
     const flow = wizards[w.id];
-    const final = flow.steps[flow.steps.length - 1];
-    const summary = final.summary(w.data);
-
-    const actions = [];
-    const doc = relateDocument(flow.downloadText);
-    if (doc) {
-      actions.push(
-        documentDownloadAction(doc, {
-          question: flow.title,
-          answer: summary,
-          category: "Trámites",
-        })
-      );
-    }
-    const oa = officeAction(flow.office);
-    if (oa) actions.push(oa);
-
-    addMessage("bot", summary, actions.length ? actions : null);
+    // La asistencia guiada arma la consulta y la envía al backend.
+    const pregunta = [flow.title, ...Object.values(w.data).filter(Boolean)].join(". ");
+    respondTo(pregunta);
   }
 
   function resetConversation() {
@@ -609,7 +431,6 @@ export default function ChatWindow({ initialQuery = null }) {
     startedRef.current = false;
     greetedRef.current = false;
     wizardRef.current = null;
-    ctxRef.current = { officeData: null };
   }
 
   useEffect(() => {
@@ -697,6 +518,44 @@ export default function ChatWindow({ initialQuery = null }) {
         </button>
       </header>
 
+      {/* Aviso de inicio de sesión, estilo ChatGPT: invita a registrarse o
+          ingresar para personalizar y guardar la experiencia. */}
+      {!isAuthenticated && showPromo && (
+        <div className="px-4 sm:px-6 shrink-0 animate-fade-up">
+          <div className="max-w-3xl mx-auto flex items-center gap-3 rounded-2xl border border-line bg-mist/70 dark:bg-white/[0.04] px-3.5 py-2.5 sm:px-4 sm:py-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-deep text-white" aria-hidden="true">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zm6.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink m-0">
+                Obtené respuestas adaptadas a ti
+              </p>
+              <p className="hidden sm:block text-xs text-muted m-0 mt-0.5">
+                Iniciá sesión para guardar tus conversaciones y hacer seguimiento de tus trámites.
+              </p>
+            </div>
+            <Link
+              to="/login"
+              className="shrink-0 rounded-full bg-brand-deep text-white dark:bg-white dark:text-black text-xs font-semibold px-4 py-2 hover:opacity-90 active:scale-[0.98] transition-all no-underline"
+            >
+              Iniciar sesión
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowPromo(false)}
+              aria-label="Cerrar sugerencia"
+              className="shrink-0 grid h-7 w-7 place-items-center rounded-full text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div ref={messagesRef} className="flex-1 overflow-y-auto relative flex flex-col">
         {phase !== "chat" ? (
           <div
@@ -737,6 +596,23 @@ export default function ChatWindow({ initialQuery = null }) {
                 >
                   <span className="shrink-0">{pill.icon}</span>
                   <span>{pill.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Asistencias guiadas paso a paso */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                Asistencias guiadas:
+              </span>
+              {Object.entries(wizardLabels()).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => startWizard(id)}
+                  className="bubble-chip"
+                >
+                  {label}
                 </button>
               ))}
             </div>
@@ -786,6 +662,7 @@ export default function ChatWindow({ initialQuery = null }) {
             type="text"
             value={input}
             onChange={handleInputChange}
+            maxLength={MAX_PREGUNTA}
             placeholder={listening ? "Escuchando tu voz…" : "Escribí tu consulta aquí…"}
             aria-label="Consulta para ChatAP"
             required

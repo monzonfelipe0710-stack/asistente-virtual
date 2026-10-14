@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import AdminSidebar from "../components/admin/AdminSidebar";
 import { useAuth } from "../context/AuthContext";
+import { roleLabel } from "../lib/roles";
 
 function ThemeToggle() {
   const [dark, setDark] = useState(
@@ -64,8 +65,9 @@ const SECTION_TITLES = {
   "/admin/mesa-de-entrada": "Mesa de Entradas",
   "/admin/solicitudes": "Solicitudes",
   "/admin/usuarios": "Usuarios",
+  "/admin/sectores": "Sectores",
   "/admin/conocimiento": "Conocimiento",
-  "/admin/documentos": "Documentos",
+  "/admin/tramites": "Trámites",
   "/admin/siged": "Integración SIGED",
   "/admin/configuracion": "Configuración",
   "/admin/reportes": "Reportes",
@@ -82,9 +84,7 @@ export default function AdminLayout() {
   }, [pathname]);
 
   const allowed =
-    !!user &&
-    user.status !== "Suspendido" &&
-    (userRole === "Superadmin" || userRole === "Administrador");
+    !!user && (userRole === "SUPERUSUARIO" || userRole === "ADMINISTRADOR");
 
   const sectionTitle = Object.entries(SECTION_TITLES).find(([path]) =>
     pathname === path || (path !== "/admin" && pathname.startsWith(path))
@@ -103,8 +103,8 @@ export default function AdminLayout() {
           <h1 className="display-3 text-ink m-0 mt-4">ACCESO RESTRINGIDO.</h1>
           <p className="text-sm text-muted mt-4 m-0 max-w-sm mx-auto">
             {!user
-              ? "Iniciá sesión con una cuenta de Administrador o Superadmin para entrar al Panel de Administración."
-              : "Tu cuenta de Ciudadano no tiene permiso para entrar al Panel de Administración."}
+              ? "Iniciá sesión con una cuenta de administrador para entrar al Panel de Administración."
+              : "Tu cuenta no tiene permiso para entrar al Panel de Administración."}
           </p>
           <div className="flex items-center justify-center gap-2 mt-8">
             {!user && <Link to="/login" className="btn-primary no-underline">Iniciar sesión</Link>}
@@ -136,7 +136,7 @@ export default function AdminLayout() {
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">{user.name ? user.name[0] : "?"}</span>
                 <span className="flex flex-col leading-none">
                   <span className="text-xs font-semibold truncate max-w-32" style={{ color: "var(--sidebar-text-hover)" }}>{user.name}</span>
-                  <span className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--sidebar-text)" }}>{userRole}</span>
+                  <span className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--sidebar-text)" }}>{roleLabel(userRole)}</span>
                 </span>
               </span>
             )}

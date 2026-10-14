@@ -2,7 +2,6 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import * as chatController from '../controllers/chat.controller.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
-import { autenticarOpcional } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
@@ -12,7 +11,6 @@ const chatLimiter = rateLimit({
   message: { error: 'Demasiadas consultas. Esperá un momento e intentá de nuevo.' },
 });
 
-router.post('/', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultar));
-router.post('/stream', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultarStream));
+router.post('/', chatLimiter, asyncHandler(chatController.consultar));
 
 export default router;

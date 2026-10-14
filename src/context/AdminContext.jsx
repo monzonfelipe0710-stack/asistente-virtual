@@ -3,46 +3,41 @@ import { useAuth } from "./AuthContext";
 
 const AdminContext = createContext(null);
 
-// Únicos roles del sistema. El Ciudadano no tiene acceso al panel interno.
+// Roles del backend. El CIUDADANO no tiene acceso al panel interno.
 // eslint-disable-next-line react-refresh/only-export-components
-export const ROLES = ["Superadmin", "Administrador", "Ciudadano"];
+export const ROLES = ["SUPERUSUARIO", "ADMINISTRADOR", "CIUDADANO"];
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const PERMISSION_LABELS = {
   dashboard: { label: "Ver panel general", desc: "Resumen de la actividad del sistema." },
+  tramites: { label: "Gestionar trámites", desc: "Crear, editar, publicar y despublicar tus trámites, y cargar sus documentos." },
+  solicitudes: { label: "Gestionar solicitudes", desc: "Aprobar, rechazar, suspender y reactivar cuentas." },
+  usuarios: { label: "Gestionar usuarios", desc: "Listar, suspender y reactivar administradores." },
+  sectores: { label: "Gestionar sectores", desc: "Crear y editar el organigrama (ministerios, subsecretarías, departamentos)." },
+  reportes: { label: "Métricas y reportes", desc: "Consultas por trámite y consultas sin respuesta." },
   mesa_entrada: { label: "Mesa de Entradas", desc: "Ingreso y seguimiento de trámites y expedientes." },
-  usuarios: { label: "Gestionar usuarios", desc: "Crear, editar y suspender cuentas." },
-  solicitudes: { label: "Gestionar solicitudes", desc: "Aprobar, suspender o rechazar altas de empleados." },
   conocimiento: { label: "Gestionar conocimiento", desc: "Editar la base de respuestas del chatbot." },
   siged: { label: "Integración SIGED", desc: "Consultar y sincronizar expedientes." },
-  documentos: { label: "Gestionar documentos", desc: "Cargar y administrar la documentación." },
   configuracion: { label: "Configuración del sistema", desc: "Ajustes del chatbot y del panel." },
-  reportes: { label: "Reportes", desc: "Métricas y exportaciones de actividad." },
 };
 
+// Permisos según el contrato real del backend:
+// - SUPERUSUARIO: usuarios, sectores y métricas. NO puede crear/editar trámites (403).
+// - ADMINISTRADOR: sus propios trámites (con requisitos, mesas y documentos).
 const PERMISSIONS = {
-  Superadmin: [
+  SUPERUSUARIO: [
     "dashboard",
-    "mesa_entrada",
-    "usuarios",
     "solicitudes",
-    "conocimiento",
-    "siged",
-    "documentos",
-    "configuracion",
-    "reportes",
-  ],
-  Administrador: [
-    "dashboard",
-    "mesa_entrada",
     "usuarios",
+    "sectores",
+    "reportes",
+    "mesa_entrada",
     "conocimiento",
     "siged",
-    "documentos",
     "configuracion",
-    "reportes",
   ],
-  Ciudadano: [],
+  ADMINISTRADOR: ["dashboard", "tramites", "mesa_entrada"],
+  CIUDADANO: [],
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -55,9 +50,8 @@ export function permissionsForRole(role) {
 
 export function AdminProvider({ children }) {
   // El rol sale siempre del usuario logueado (sin selector manual).
-  const { userRole = "Ciudadano" } = useAuth();
-  let role = userRole || "Ciudadano";
-  if (!ROLES.includes(role)) role = "Ciudadano";
+  const { userRole } = useAuth();
+  const role = ROLES.includes(userRole) ? userRole : "CIUDADANO";
 
   const can = (perm) => (PERMISSIONS[role] || []).includes(perm);
   return (

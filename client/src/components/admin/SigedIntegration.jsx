@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { sigedRecords, sigedStatuses } from "../../data/mockSiged";
 import { formatDate } from "../../utils/date";
+import PendingBackend from "./PendingBackend";
 
 export default function SigedIntegration() {
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -27,6 +28,8 @@ export default function SigedIntegration() {
           Sistema de Gestión Documental · Mesa de Entradas
         </p>
       </div>
+
+      <PendingBackend description="La integración con SIGED todavía no tiene endpoints en el backend. Los datos que ves son de demostración; la conexión se habilitará cuando la API esté disponible." />
 
       <div className="bg-paper border border-line mb-8">
         <div className="px-6 py-4 border-b border-line bg-mist flex flex-wrap items-center justify-between gap-3">

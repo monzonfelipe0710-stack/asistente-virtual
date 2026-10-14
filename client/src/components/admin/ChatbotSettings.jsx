@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "../common/Toast";
 import { CardSkeleton } from "./Skeleton";
+import PendingBackend from "./PendingBackend";
 
 function AutoTextarea({ value, onChange, className, placeholder, minRows = 2 }) {
   const ref = useRef(null);
@@ -57,6 +58,8 @@ export default function ChatbotSettings() {
           </span>
         </div>
       </div>
+
+      <PendingBackend description="El backend todavía no persiste la configuración del chatbot. Los cambios se guardan solo en pantalla hasta que existan los endpoints correspondientes." />
 
       <form onSubmit={handleSave}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 stagger-children">
