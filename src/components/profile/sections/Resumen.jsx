@@ -5,14 +5,14 @@ import { Icon, ICONS, SectionHeader, EmptyNote } from "../ui";
 export default function Resumen({ data, role, onGo }) {
   const navigate = useNavigate();
   const isSuper = data.isSuperadmin;
-  const isAdmin = role === "Administrador";
+  const isAdmin = role === "ADMINISTRADOR";
 
   if (isSuper) {
     const stats = [
       { label: "Usuarios totales", value: data.usersTotales, icon: ICONS.users, tone: "brand" },
       { label: "Ciudadanos", value: data.usersCiudadanos, icon: ICONS.users, tone: "info" },
-      { label: "Administradores", value: data.usersAdministradores, icon: ICONS.key, tone: "ok" },
-      { label: "SuperAdmins", value: data.usersSuperAdmins, icon: ICONS.shield, tone: "muted" },
+      { label: "Empleados", value: data.usersAdministradores, icon: ICONS.key, tone: "ok" },
+      { label: "Administradores", value: data.usersSuperAdmins, icon: ICONS.shield, tone: "muted" },
       { label: "Cuentas activas", value: data.usersActivos, icon: ICONS.check, tone: "ok" },
       { label: "Suspendidas", value: data.usersSuspendidos, icon: ICONS.lock, tone: "bad" },
       { label: "Solicitudes pendientes", value: data.requestsPendientes, icon: ICONS.solicitud, tone: "warn" },

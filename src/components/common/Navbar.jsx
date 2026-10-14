@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { roleLabel } from "../../lib/roles";
 import GooeyNav from "./GooeyNav";
 
 const preloadAdmin = () => {
@@ -99,7 +100,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
               <p className="text-[11px] text-white/50 m-0 mt-0.5 truncate">{user.email}</p>
               {userRole && (
                 <span className="inline-block mt-2 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-widest rounded bg-brand/15 text-brand border border-brand/25">
-                  {userRole}
+                  {roleLabel(userRole)}
                 </span>
               )}
             </div>

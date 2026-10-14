@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { knowledgeBase, knowledgeCategories } from "../../data/mockKnowledge";
+import PendingBackend from "./PendingBackend";
 
 export default function KnowledgeManager() {
   const [activeCategory, setActiveCategory] = useState("Todas");
@@ -39,6 +40,8 @@ export default function KnowledgeManager() {
           + Nuevo Artículo
         </button>
       </div>
+
+      <PendingBackend description="La edición de artículos es de muestra. El backend todavía no expone endpoints para la base de conocimiento; cuando existan, esta pantalla se conectará a ellos." />
 
       <div className="flex flex-wrap gap-2 mb-6">
         {knowledgeCategories.map((cat) => (

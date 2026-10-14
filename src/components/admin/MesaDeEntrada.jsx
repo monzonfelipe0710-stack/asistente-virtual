@@ -3,6 +3,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useAdmin } from "../../context/AdminContext";
 import { useToast } from "../common/Toast";
+import { roleLabel } from "../../lib/roles";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 import {
@@ -21,6 +22,7 @@ import {
   EmptyState,
 } from "./ui";
 import { formatDate } from "../../utils/date";
+import PendingBackend from "./PendingBackend";
 
 function Icon({ path }) {
   return (
@@ -73,7 +75,7 @@ export default function MesaDeEntrada() {
         <div className="text-4xl mb-3">🔒</div>
         <h2 className="text-lg font-bold text-ink m-0">Acceso restringido</h2>
         <p className="text-sm text-muted mt-2">
-          Tu rol actual (<span className="font-semibold">{role}</span>) no tiene permiso para
+          Tu rol actual (<span className="font-semibold">{roleLabel(role)}</span>) no tiene permiso para
           gestionar la Mesa de Entradas. Contactá a un Administrador.
         </p>
       </div>
@@ -107,6 +109,8 @@ export default function MesaDeEntrada() {
           Registrar ingreso
         </button>
       </PageHeader>
+
+      <PendingBackend description="La Mesa de Entradas todavía no tiene endpoints en el backend. El registro y seguimiento de expedientes se guardan solo en pantalla hasta que la API esté disponible." />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
         <StatCard

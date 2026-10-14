@@ -1,49 +1,15 @@
-import { useEffect, useState } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useToast } from "../components/common/Toast";
-import PasswordField from "../components/common/PasswordField";
 import ChatBotAvatar from "../components/ChatBotAvatar";
 import Footer from "../components/common/Footer";
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
   const token = params.get("token") || "";
-  const { validateResetToken, resetPassword } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
 
-  const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-
-  const valid = validateResetToken(token);
-
-  // Al cambiar la contraseña, redirigí directo al login para iniciar sesión.
-  useEffect(() => {
-    if (!done) return;
-    const t = setTimeout(() => navigate("/login", { replace: true }), 1200);
-    return () => clearTimeout(t);
-  }, [done, navigate]);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (pw !== pw2) {
-      toast("Las contraseñas no coinciden.", "error");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await resetPassword(token, pw);
-      setDone(true);
-      toast("Contraseña actualizada con éxito.", "success");
-    } catch (err) {
-      toast(err.message || "Ocurrió un error.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  // El reseteo lo gestiona el backend: genera el token, lo manda por mail y lo
+  // valida. Acá solo se muestra la UI; se conectará al endpoint cuando exista.
+  const hasToken = Boolean(token);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-paper">
@@ -51,31 +17,23 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-md">
           <div className="flex flex-col items-center text-center mb-8">
             <div className="mb-4">
-              <ChatBotAvatar size={64} reaction={done ? "happy" : "idle"} />
+              <ChatBotAvatar size={64} reaction={hasToken ? "idle" : "worried"} />
             </div>
             <h1 className="text-2xl font-bold text-ink m-0 animate-type-in">
-              {!valid.ok
-                ? "Enlace no válido"
-                : done
-                ? "¡Listo!"
-                : "Nueva contraseña"}
+              {hasToken ? "Restablecer contraseña" : "Enlace no válido"}
             </h1>
             <p
               className="text-muted text-sm mt-1 m-0 animate-type-in"
               style={{ animationDelay: "80ms" }}
             >
-              {!valid.ok
-                ? "Ese enlace venció o ya fue usado."
-                : done
-                ? "Te redirigimos al login para iniciar sesión…"
-                : valid.email
-                ? `Para la cuenta ${valid.email}. Elegí al menos 6 caracteres.`
-                : "Elegí una contraseña de al menos 6 caracteres."}
+              {hasToken
+                ? "Este flujo estará disponible próximamente."
+                : "Ese enlace venció o no es válido."}
             </p>
           </div>
 
           <div className="rounded-2xl border border-line bg-mist p-6 sm:p-8 shadow-soft">
-            {!valid.ok ? (
+            {!hasToken ? (
               <div className="text-center space-y-4 animate-form-in">
                 <div className="w-12 h-12 mx-auto rounded-xl grid place-items-center bg-bad/10 text-bad">
                   <svg
@@ -94,9 +52,7 @@ export default function ResetPasswordPage() {
                 </div>
                 <p className="text-sm text-muted m-0">
                   Pedí un enlace nuevo desde{" "}
-                  <span className="font-semibold text-ink">
-                    “Olvidé mi contraseña”
-                  </span>{" "}
+                  <span className="font-semibold text-ink">“Olvidé mi contraseña”</span>{" "}
                   en el inicio de sesión.
                 </p>
                 <button
@@ -107,9 +63,9 @@ export default function ResetPasswordPage() {
                   Ir a iniciar sesión
                 </button>
               </div>
-            ) : done ? (
+            ) : (
               <div className="text-center space-y-4 animate-form-in">
-                <div className="w-12 h-12 mx-auto rounded-xl grid place-items-center bg-ok/10 text-ok">
+                <div className="w-12 h-12 mx-auto rounded-xl grid place-items-center bg-amber-500/15 text-amber-600 dark:text-amber-400">
                   <svg
                     className="w-6 h-6"
                     fill="none"
@@ -120,42 +76,24 @@ export default function ResetPasswordPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M5 13l4 4L19 7"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
                 </div>
+                <p className="text-sm text-muted m-0">
+                  <span className="font-semibold text-ink">Pendiente de backend.</span> El
+                  restablecimiento lo hace el backend: valida este enlace y recién ahí
+                  permite definir la nueva contraseña. La pantalla se conecta cuando exista
+                  el endpoint.
+                </p>
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
                   className="w-full py-3 rounded-xl bg-brand-deep text-paper text-sm font-semibold transition-all duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer"
                 >
-                  Iniciar sesión
+                  Volver a iniciar sesión
                 </button>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4 animate-form-in">
-                <PasswordField
-                  label="Nueva contraseña"
-                  value={pw}
-                  onChange={(e) => setPw(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
-                  autoComplete="new-password"
-                />
-                <PasswordField
-                  label="Repetir contraseña"
-                  value={pw2}
-                  onChange={(e) => setPw2(e.target.value)}
-                  placeholder="Repetí la contraseña"
-                  autoComplete="new-password"
-                />
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 rounded-xl bg-brand-deep text-paper text-sm font-semibold transition-all duration-200 hover:bg-brand-dark active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:active:scale-100"
-                >
-                  {submitting ? "Guardando…" : "Guardar nueva contraseña"}
-                </button>
-              </form>
             )}
           </div>
 

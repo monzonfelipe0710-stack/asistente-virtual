@@ -18,7 +18,7 @@ export default function ProfileLayout() {
   const data = useProfileData();
   const [go, setGo] = useState(null);
 
-  const isStaff = userRole === "Administrador" || isSuperadmin;
+  const isStaff = userRole === "ADMINISTRADOR" || isSuperadmin;
 
   const nav =
     isSuperadmin

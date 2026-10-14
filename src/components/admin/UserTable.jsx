@@ -1,167 +1,287 @@
-import { useState } from "react";
-import { users as seedUsers } from "../../data/mockUsers";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { listar, suspender, reactivar } from "../../services/usuarios";
+import { apiErrorMessage } from "../../lib/api";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../common/Toast";
-import UserFormModal from "./UserFormModal";
+import Modal from "../common/Modal";
+import Pagination, { usePagination } from "../common/Pagination";
+import { PageHeader, EmptyState } from "./ui";
+import { TableSkeleton } from "./Skeleton";
+import { formatDate } from "../../utils/date";
+import { roleLabel } from "../../lib/roles";
+
+const ESTADOS = ["Todos", "PENDIENTE", "APROBADO", "SUSPENDIDO", "RECHAZADO"];
+
+const ESTADO_META = {
+  PENDIENTE: { badge: "bg-warn/10 text-warn", dot: "bg-warn", label: "Pendiente de revisión" },
+  APROBADO: { badge: "bg-ok/10 text-ok", dot: "bg-ok", label: "Aprobado" },
+  SUSPENDIDO: { badge: "bg-muted/15 text-muted", dot: "bg-muted", label: "Acceso suspendido" },
+  RECHAZADO: { badge: "bg-bad/10 text-bad", dot: "bg-bad", label: "Rechazado" },
+};
+
+function RoleBadge({ role }) {
+  const tone =
+    role === "SUPERUSUARIO"
+      ? "bg-ink text-paper"
+      : role === "ADMINISTRADOR"
+        ? "bg-brand-deep text-paper"
+        : "bg-mist text-muted border border-line";
+  return (
+    <span className={`inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide rounded-full ${tone}`}>
+      {roleLabel(role)}
+    </span>
+  );
+}
+
+function EstadoPill({ estado }) {
+  const meta = ESTADO_META[estado] || ESTADO_META.PENDIENTE;
+  return (
+    <span className={`badge ${meta.badge}`} title={meta.label}>
+      <span className={`w-1.5 h-1.5 rounded-full bg-current ${estado === "PENDIENTE" ? "dot-ping" : ""}`} />
+      {estado}
+    </span>
+  );
+}
 
 export default function UserTable() {
-  const [search, setSearch] = useState("");
-  const [rows, setRows] = useState(seedUsers);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editUser, setEditUser] = useState(null);
-  const [justUpdated, setJustUpdated] = useState(null);
-  const push = useToast();
+  const addToast = useToast();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [usuarios, setUsuarios] = useState([]);
+  const [estado, setEstado] = useState("Todos");
+  const [query, setQuery] = useState("");
+  const [confirm, setConfirm] = useState(null);
+  const [working, setWorking] = useState(null);
 
-  const filtered = rows.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.department.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function openCreate() {
-    setEditUser(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(user) {
-    setEditUser(user);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setEditUser(null);
-  }
-
-  function handleSave(form) {
-    if (editUser) {
-      setRows((prev) => prev.map((u) => (u.id === editUser.id ? { ...u, ...form } : u)));
-      push(`Usuario "${form.name}" actualizado.`, "success");
-      setJustUpdated(editUser.id);
-    } else {
-      const nextId = Math.max(...rows.map((u) => u.id), 0) + 1;
-      const created = {
-        ...form,
-        id: nextId,
-        lastAccess: "—",
-        avatar: null,
-        phone: "",
-        createdAt: new Date().toLocaleDateString("es-AR"),
-      };
-      setRows((prev) => [created, ...prev]);
-      push(`Usuario "${form.name}" creado.`, "success");
-      setJustUpdated(nextId);
+  async function cargar() {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await listar();
+      setUsuarios(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(apiErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
-    setTimeout(() => setJustUpdated(null), 2000);
-    closeModal();
+  }
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const data = await listar();
+        if (!active) return;
+        setUsuarios(Array.isArray(data) ? data : []);
+      } catch (err) {
+        if (active) setError(apiErrorMessage(err));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const counts = useMemo(() => {
+    const c = { Todos: usuarios.length };
+    for (const e of ESTADOS.slice(1)) c[e] = usuarios.filter((u) => u.estado === e).length;
+    return c;
+  }, [usuarios]);
+
+  const filtrados = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return usuarios.filter((u) => {
+      const matchEstado = estado === "Todos" || u.estado === estado;
+      const matchQ =
+        !q ||
+        u.nombre?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q);
+      return matchEstado && matchQ;
+    });
+  }, [usuarios, estado, query]);
+
+  const { page, totalPages, paginatedItems, setPage } = usePagination(filtrados, 8);
+
+  async function aplicar() {
+    if (!confirm) return;
+    const { usuario, accion } = confirm;
+    setConfirm(null);
+    setWorking(usuario.id);
+    try {
+      if (accion === "suspender") await suspender(usuario.id);
+      else await reactivar(usuario.id);
+      addToast(
+        accion === "suspender" ? "Usuario suspendido" : "Usuario reactivado",
+        accion === "suspender" ? "info" : "success"
+      );
+      await cargar();
+    } catch (err) {
+      addToast(apiErrorMessage(err), "error");
+    } finally {
+      setWorking(null);
+    }
   }
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold uppercase tracking-wide text-ink m-0">
-            Gestión de Usuarios
-          </h1>
-          <p className="text-xs uppercase tracking-wide text-muted m-0 mt-2">
-            {rows.length} usuarios registrados
-          </p>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Usuarios"
+        description="Empleados registrados. Las altas pendientes se gestionan desde Solicitudes."
+      />
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">
+          {error}
+          <button onClick={cargar} className="ml-2 underline cursor-pointer bg-transparent border-none text-bad">
+            Reintentar
+          </button>
         </div>
-        <button
-          onClick={openCreate}
-          className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5 self-start cursor-pointer"
-        >
-          + Nuevo Usuario
-        </button>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {ESTADOS.map((e) => {
+          const active = estado === e;
+          return (
+            <button
+              key={e}
+              onClick={() => {
+                setEstado(e);
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
+                active
+                  ? "bg-brand-deep text-paper border-brand-deep shadow-sm"
+                  : "bg-paper text-muted border-line hover:text-ink hover:bg-mist"
+              }`}
+            >
+              {e}
+              <span
+                className={`min-w-5 h-5 px-1 grid place-items-center rounded-full text-[10px] font-bold tabular-nums ${
+                  active ? "bg-paper/20 text-paper" : "bg-mist text-muted"
+                }`}
+              >
+                {counts[e] || 0}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="bg-paper border border-line">
-        <div className="p-6 border-b border-line">
-          <div className="relative max-w-xs">
-            <svg className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+      {loading ? (
+        <TableSkeleton rows={5} cols={5} />
+      ) : (
+        <div className="card card-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-line">
             <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar usuarios..."
-              className="w-full pl-9 pr-3 py-3 text-sm border border-line outline-none bg-paper text-ink placeholder:text-muted focus:border-brand transition-colors"
-              aria-label="Buscar usuarios"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Buscar por nombre o email…"
+              className="input-field max-w-xs text-sm"
             />
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-mist text-left text-[10px] uppercase tracking-widest text-muted">
-                <th className="px-6 py-3 font-semibold">Nombre</th>
-                <th className="px-6 py-3 font-semibold">Email</th>
-                <th className="px-6 py-3 font-semibold">Rol</th>
-                <th className="px-6 py-3 font-semibold">Departamento</th>
-                <th className="px-6 py-3 font-semibold">Estado</th>
-                <th className="px-6 py-3 font-semibold">Último acceso</th>
-                <th className="px-6 py-3 font-semibold text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {filtered.map((user) => (
-                <tr
-                  key={user.id}
-                  className={`hover:bg-mist transition-colors ${justUpdated === user.id ? "row-new" : ""}`}
-                >
-                  <td className="px-6 py-4 font-semibold text-ink">{user.name}</td>
-                  <td className="px-6 py-4 text-muted text-xs">{user.email}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                      user.role === "Superadmin"
-                        ? "bg-ink text-paper"
-                        : user.role === "Administrador"
-                        ? "bg-brand-deep text-paper"
-                        : "bg-mist text-muted"
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-muted text-xs">{user.department}</td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${
-                      user.status === "Activo" ? "text-ok" : "text-muted"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 ${user.status === "Activo" ? "bg-ok" : "bg-line"}`} />
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-muted text-xs">{user.lastAccess}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => openEdit(user)}
-                      className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
-                    >
-                      Editar
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-soft/80 text-left text-xs text-muted uppercase tracking-wider">
+                  <th className="px-4 py-3 font-semibold">Usuario</th>
+                  <th className="px-4 py-3 font-semibold">Rol</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  <th className="px-4 py-3 font-semibold">Registrado</th>
+                  <th className="px-4 py-3 font-semibold text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {paginatedItems.map((u) => {
+                  const esUnoMismo = u.id === user?.id;
+                  return (
+                    <tr key={u.id} className="table-row">
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-medium text-ink m-0">{u.nombre}</p>
+                        <p className="text-[11px] text-muted m-0 mt-0.5">{u.email}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <RoleBadge role={u.rol} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <EstadoPill estado={u.estado} />
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted">{formatDate(u.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end items-center gap-2">
+                          {u.estado === "PENDIENTE" && (
+                            <Link
+                              to="/admin/solicitudes"
+                              className="text-[10px] font-medium text-brand-deep hover:underline no-underline"
+                            >
+                              Gestionar en Solicitudes
+                            </Link>
+                          )}
+                          {u.estado === "APROBADO" && (
+                            <button
+                              onClick={() => setConfirm({ usuario: u, accion: "suspender" })}
+                              disabled={esUnoMismo || working === u.id}
+                              title={esUnoMismo ? "No podés suspender tu propia cuenta" : "Suspender acceso"}
+                              className="px-2.5 py-1 text-[10px] font-medium text-warn bg-warn/10 rounded-lg cursor-pointer hover:bg-warn/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              Suspender
+                            </button>
+                          )}
+                          {u.estado === "SUSPENDIDO" && (
+                            <button
+                              onClick={() => setConfirm({ usuario: u, accion: "reactivar" })}
+                              disabled={working === u.id}
+                              className="px-2.5 py-1 text-[10px] font-medium text-ok bg-ok/10 rounded-lg cursor-pointer hover:bg-ok/20 transition-colors disabled:opacity-50"
+                            >
+                              Reactivar
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-        {filtered.length === 0 && (
-          <p className="text-sm text-muted text-center py-8 m-0">
-            No se encontraron usuarios con ese criterio de búsqueda.
+          {filtrados.length === 0 && (
+            <EmptyState
+              title="Sin usuarios"
+              description={query ? "No hay usuarios que coincidan con la búsqueda." : "No hay usuarios en este estado."}
+            />
+          )}
+
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+        </div>
+      )}
+
+      <Modal
+        open={confirm !== null}
+        onClose={() => setConfirm(null)}
+        onConfirm={aplicar}
+        title={confirm?.accion === "suspender" ? "Suspender usuario" : "Reactivar usuario"}
+        confirmText={confirm?.accion === "suspender" ? "Suspender" : "Reactivar"}
+        confirmDanger={confirm?.accion === "suspender"}
+      >
+        {confirm?.accion === "suspender" ? (
+          <p className="m-0">
+            ¿Suspender el acceso de <strong>{confirm.usuario.nombre}</strong>? No podrá iniciar
+            sesión hasta que lo reactives.
+          </p>
+        ) : (
+          <p className="m-0">
+            ¿Reactivar el acceso de <strong>{confirm?.usuario.nombre}</strong>?
           </p>
         )}
-      </div>
-
-      <UserFormModal
-        key={`${modalOpen}-${editUser?.id || "new"}`}
-        open={modalOpen}
-        onClose={closeModal}
-        onSave={handleSave}
-        editUser={editUser}
-      />
+      </Modal>
     </div>
   );
 }

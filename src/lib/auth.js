@@ -60,3 +60,45 @@ export function makeSession(user) {
   writeJSON(SESSION_KEY, session);
   return session;
 }
+
+// --- Cuentas de ciudadano (demo, sólo navegador) -------------------------
+// El backend no expone registro público de ciudadanos, así que estas cuentas
+// viven en localStorage y se validan localmente. No usan JWT.
+const CIUDADANO = "CIUDADANO";
+
+/** Busca una cuenta de ciudadano local por email. */
+export function findLocalCitizen(email) {
+  const target = (email || "").trim().toLowerCase();
+  if (!target) return null;
+  return (
+    loadUsers().find(
+      (u) => u.rol === CIUDADANO && (u.email || "").toLowerCase() === target
+    ) || null
+  );
+}
+
+/** Crea una cuenta de ciudadano local. Devuelve el usuario guardado. */
+export async function registerLocalCitizen({ nombre, email, password }) {
+  const target = (email || "").trim().toLowerCase();
+  if (findLocalCitizen(target)) {
+    throw new Error("Ya existe una cuenta con esa dirección de correo electrónico.");
+  }
+  const user = {
+    id: uid(),
+    nombre,
+    email: target,
+    passwordHash: await hashPassword(password),
+    rol: CIUDADANO,
+    createdAt: new Date().toISOString(),
+  };
+  saveUsers([...loadUsers(), user]);
+  return user;
+}
+
+/** Valida credenciales de una cuenta de ciudadano local. */
+export async function verifyLocalCitizen(email, password) {
+  const user = findLocalCitizen(email);
+  if (!user) return null;
+  const hash = await hashPassword(password);
+  return user.passwordHash === hash ? user : null;
+}

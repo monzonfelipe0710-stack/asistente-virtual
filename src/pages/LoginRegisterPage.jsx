@@ -4,127 +4,49 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/common/Toast";
 import ChatBotAvatar from "../components/ChatBotAvatar";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
-import { employeeDepartments } from "../data/mockEmployeeApprovals";
 import Footer from "../components/common/Footer";
-import { getGoogleClientId, saveGoogleClientId, startGoogleOAuth } from "../lib/googleAuth";
+
+/**
+ * Contenedor plegable con altura animada. Al cambiar de modo, los campos que
+ * no corresponden (nombre, aviso de empleado, "recordarme") se despliegan o se
+ * ocultan de forma fluida en lugar de aparecer/desaparecer de golpe.
+ */
+function Collapse({ open, children, className = "" }) {
+  return (
+    <div
+      className={`grid transition-[grid-template-rows,opacity,margin] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        open ? "grid-rows-[1fr] opacity-100 mb-4" : "grid-rows-[0fr] opacity-0 mb-0"
+      } ${className}`}
+      aria-hidden={!open}
+    >
+      <div inert={!open} className={`overflow-hidden min-h-0 ${open ? "" : "pointer-events-none"}`}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function LoginRegisterPage() {
-  const { login, loginWithGoogle, register, requestPasswordReset } = useAuth();
+  const { login, register } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mode, setMode] = useState("login"); // "login" | "register"
+  const [accountType, setAccountType] = useState("ciudadano"); // "ciudadano" | "empleado"
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // Solicitud de empleado
-  const [wantsEmployee, setWantsEmployee] = useState(false);
-  const [cuil, setCuil] = useState("");
-  const [phone, setPhone] = useState("");
-  const [department, setDepartment] = useState("");
-  const [position, setPosition] = useState("");
-  const [reason, setReason] = useState("");
-
   // Estado de carga y recuperación
   const [submitting, setSubmitting] = useState(false);
   const [recovery, setRecovery] = useState(false);
-  const [recoverySent, setRecoverySent] = useState(false);
-  const [recoveryLink, setRecoveryLink] = useState("");
-  const [recoveryEmailed, setRecoveryEmailed] = useState(false);
-  const [recoveryWarning, setRecoveryWarning] = useState("");
-
-  // Google OAuth Config y Modal
-  const [googleClientId, setGoogleClientIdState] = useState(() => getGoogleClientId());
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [inputClientId, setInputClientId] = useState(() => getGoogleClientId());
-  const [showClientIdInput, setShowClientIdInput] = useState(false);
+  const [recoveryPending, setRecoveryPending] = useState(false);
 
   const from = location.state?.from?.pathname || "/";
   const isLogin = mode === "login";
-
-  // Cuentas de demostración de Google para prueba inmediata
-  const DEMO_GOOGLE_ACCOUNTS = [
-    {
-      name: "Juan Carlos Pérez",
-      email: "juan.perez@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80",
-    },
-    {
-      name: "María Elena Gómez",
-      email: "m.gomez@gmail.com",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&h=120&q=80",
-    },
-  ];
-
-  // Disparador principal del botón "Continue with Google"
-  function handleContinueWithGoogle() {
-    const activeClientId = googleClientId || getGoogleClientId();
-
-    if (activeClientId && activeClientId.trim()) {
-      // Flujo real con ventana emergente de Google
-      setSubmitting(true);
-      startGoogleOAuth({
-        clientId: activeClientId.trim(),
-        onSuccess: async (googleProfile) => {
-          try {
-            await loginWithGoogle(googleProfile);
-            toast(`¡Bienvenido/a, ${googleProfile.name}! Sesión iniciada con Google.`, "success");
-            navigate(from, { replace: true });
-          } catch (err) {
-            toast(err.message || "Error al registrar la sesión con Google.", "error");
-          } finally {
-            setSubmitting(false);
-          }
-        },
-        onError: (err) => {
-          setSubmitting(false);
-          toast(err.message || "No se pudo completar la autenticación con Google.", "error");
-          // Si el Client ID falla, abre el modal de configuración para que pueda ajustarlo
-          setShowGoogleModal(true);
-        },
-      });
-    } else {
-      // Si aún no está configurado el Client ID en .env ni en localStorage,
-      // abre el asistente interactivo de Google para configurarlo o probarlo al instante
-      setShowGoogleModal(true);
-    }
-  }
-
-  // Guardar nuevo Client ID en vivo
-  function handleSaveClientId(e) {
-    e.preventDefault();
-    if (!inputClientId.trim()) {
-      toast("Ingresá un Google Client ID válido.", "error");
-      return;
-    }
-    saveGoogleClientId(inputClientId.trim());
-    setGoogleClientIdState(inputClientId.trim());
-    toast("Google Client ID guardado con éxito.", "success");
-    setShowGoogleModal(false);
-    // Ejecuta de inmediato la ventana real de Google
-    setTimeout(() => {
-      handleContinueWithGoogle();
-    }, 200);
-  }
-
-  // Acceso rápido con cuenta de prueba
-  async function handleDemoGoogleSelect(account) {
-    setSubmitting(true);
-    try {
-      await loginWithGoogle(account);
-      setShowGoogleModal(false);
-      toast(`¡Bienvenido/a, ${account.name}! Acceso con Google confirmado.`, "success");
-      navigate(from, { replace: true });
-    } catch (err) {
-      toast(err.message || "Error al conectar con Google.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   // Envío de formulario estándar (Email + Contraseña)
   async function handleSubmit(e) {
@@ -134,26 +56,26 @@ export default function LoginRegisterPage() {
       if (mode === "login") {
         await login(email, password);
         toast("¡Bienvenido/a de nuevo!", "success");
+        navigate(from, { replace: true });
       } else {
-        await register({
-          name,
-          email,
-          password,
-          requestsEmployeeAccess: wantsEmployee,
-          cuil,
-          phone,
-          department,
-          position,
-          reason,
-        });
+        // Dos circuitos:
+        // - Empleado → solicitud al backend (queda PENDIENTE de aprobación).
+        // - Ciudadano → cuenta local (demo) e inicio de sesión inmediato.
+        const rol = accountType === "empleado" ? "ADMINISTRADOR" : "CIUDADANO";
+        const result = await register({ name, email, password, rol });
         toast(
-          wantsEmployee
-            ? "¡Solicitud enviada! Un Superadmin revisará tus datos para el panel interno."
-            : "¡Cuenta creada con éxito!",
+          result?.mensaje ||
+            (accountType === "empleado"
+              ? "Solicitud registrada. La administración revisará tu solicitud."
+              : "Cuenta creada. ¡Ya iniciaste sesión!"),
           "success"
         );
+        if (result?.autoLogin) {
+          navigate(from, { replace: true });
+        } else {
+          setMode("login");
+        }
       }
-      navigate(from, { replace: true });
     } catch (err) {
       toast(err.message || "Ocurrió un error.", "error");
     } finally {
@@ -161,54 +83,32 @@ export default function LoginRegisterPage() {
     }
   }
 
+  function goTo(nextMode) {
+    setMode(nextMode);
+    setRecovery(false);
+  }
+
   function openRecovery() {
-    setRecoverySent(false);
-    setRecoveryLink("");
-    setRecoveryEmailed(false);
-    setRecoveryWarning("");
+    setRecoveryPending(false);
     setRecovery(true);
   }
 
-  async function handleRecovery(e) {
+  function handleRecovery(e) {
     e.preventDefault();
     if (!email || !email.includes("@")) {
       toast("Ingresá un correo electrónico válido.", "error");
       return;
     }
-    setSubmitting(true);
-    try {
-      const result = await requestPasswordReset(email);
-      setRecoveryLink(result?.link || "");
-      setRecoveryEmailed(Boolean(result?.emailed));
-      setRecoveryWarning(result?.emailError || "");
-      setRecoverySent(true);
-      if (result?.emailed) {
-        toast("¡Correo de recuperación enviado con éxito por EmailJS!", "success");
-      } else if (result?.emailError) {
-        toast("Aviso de EmailJS: " + result.emailError, "warning");
-      }
-    } catch (err) {
-      toast(err.message || "Ocurrió un error al procesar la solicitud.", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function copyRecoveryLink() {
-    if (!recoveryLink) return;
-    try {
-      await navigator.clipboard.writeText(recoveryLink);
-      toast("Enlace de recuperación copiado al portapapeles.", "success");
-    } catch {
-      toast("No se pudo copiar automáticamente. Copialo manualmente.", "error");
-    }
+    // El reseteo lo hace el backend (genera y valida un token por mail).
+    // No se implementa con EmailJS.
+    setRecoveryPending(true);
   }
 
   return (
     <div className="min-h-[100svh] flex flex-col justify-between bg-paper font-sans">
-      {/* Grilla Principal: 
+      {/* Grilla Principal:
           - Izquierda: Decoración editorial previa + Fotografía de Montañas
-          - Derecha: Formulario implementando exactamente la foto del usuario con Google Auth
+          - Derecha: Formulario de acceso (login / solicitud de cuenta)
       */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
         {/* 1. Columna Izquierda: Decoración Editorial Previa + Fotografía de Montañas */}
@@ -226,7 +126,7 @@ export default function LoginRegisterPage() {
                 ChatAP
               </span>
             </span>
-            <Kicker className="text-right">Acceso ciudadano</Kicker>
+            <Kicker className="text-right">Acceso al sistema</Kicker>
           </div>
 
           {/* Bloque editorial principal */}
@@ -260,7 +160,7 @@ export default function LoginRegisterPage() {
           </div>
         </div>
 
-        {/* 2. Columna Derecha: Formulario implementando la estructura de la foto */}
+        {/* 2. Columna Derecha: Formulario */}
         <div className="flex flex-col justify-between px-6 sm:px-12 xl:px-20 py-10 lg:py-14 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100">
           {/* Barra superior con navegación de retorno y toggle de modo */}
           <div className="flex items-center justify-between w-full max-w-md mx-auto">
@@ -283,10 +183,7 @@ export default function LoginRegisterPage() {
             <div className="flex items-center gap-1 p-0.5 rounded-full bg-mist dark:bg-neutral-900 border border-line dark:border-neutral-800 text-xs">
               <button
                 type="button"
-                onClick={() => {
-                  setMode("login");
-                  setRecovery(false);
-                }}
+                onClick={() => goTo("login")}
                 className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                   isLogin && !recovery
                     ? "bg-brand-deep text-white dark:bg-white dark:text-black font-semibold shadow-sm"
@@ -297,10 +194,7 @@ export default function LoginRegisterPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setMode("register");
-                  setRecovery(false);
-                }}
+                onClick={() => goTo("register")}
                 className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                   !isLogin && !recovery
                     ? "bg-brand-deep text-white dark:bg-white dark:text-black font-semibold shadow-sm"
@@ -324,32 +218,39 @@ export default function LoginRegisterPage() {
               </span>
             </div>
 
-            {/* Encabezado del Formulario (con la tipografía y textos de la foto) */}
-            <div className="mb-6">
+            {/* Encabezado del Formulario */}
+            <div
+              key={recovery ? "recovery" : !isLogin ? `register-${accountType}` : mode}
+              className="mb-6 animate-form-in"
+            >
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink dark:text-white m-0">
                 {recovery
                   ? "Recuperá tu contraseña"
                   : isLogin
-                  ? "Sign in to your account"
-                  : "Create your account"}
+                  ? "Iniciá sesión en tu cuenta"
+                  : accountType === "empleado"
+                  ? "Solicitá tu cuenta de empleado"
+                  : "Creá tu cuenta de ciudadano"}
               </h1>
               <p className="text-xs sm:text-sm text-muted m-0 mt-1.5">
                 {recovery
                   ? "Ingresá tu correo para recibir un enlace de restablecimiento seguro."
                   : isLogin
                   ? "Ingresá a tu cuenta para continuar tus trámites y consultas."
-                  : "Creá tu cuenta ciudadana para gestionar expedientes y formularios."}
+                  : accountType === "empleado"
+                  ? "Completá tus datos para solicitar el acceso. La administración revisará tu solicitud."
+                  : "Completá tus datos para empezar a usar ChatAP. Tu cuenta se habilita al instante."}
               </p>
             </div>
 
             {recovery ? (
               /* Flujo de Recuperación */
-              <div className="space-y-4">
-                {!recoverySent ? (
+              <div className="space-y-4 animate-form-in">
+                {!recoveryPending ? (
                   <form onSubmit={handleRecovery} className="space-y-4">
                     <div>
                       <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
-                        Email address
+                        Correo electrónico
                       </label>
                       <input
                         type="email"
@@ -362,77 +263,38 @@ export default function LoginRegisterPage() {
                     </div>
                     <button
                       type="submit"
-                      disabled={submitting}
-                      className="w-full py-3.5 rounded-full bg-brand-deep text-white dark:bg-white dark:text-black font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                      className="w-full py-3.5 rounded-full bg-brand-deep text-white dark:bg-white dark:text-black font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
                     >
-                      {submitting ? "Enviando enlace..." : "Enviar enlace de recuperación"}
+                      Enviar enlace de recuperación
                     </button>
                   </form>
                 ) : (
-                  <div className="p-5 rounded-2xl border border-line bg-mist/50 dark:bg-slate-900/60 text-center space-y-4">
-                    <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center">
+                  <div className="p-5 rounded-2xl border border-line bg-mist/50 dark:bg-slate-900/60 text-center space-y-4 animate-scale-in">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 grid place-items-center">
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
 
                     <div className="space-y-1">
                       <h3 className="text-sm font-bold text-ink dark:text-white m-0">
-                        {recoveryEmailed
-                          ? "¡Correo enviado con EmailJS!"
-                          : "Enlace de recuperación generado"}
+                        Pendiente de backend
                       </h3>
                       <p className="text-xs text-muted m-0 leading-relaxed">
-                        {recoveryEmailed ? (
-                          <>
-                            Enviamos el enlace a{" "}
-                            <strong className="text-ink dark:text-white">{email}</strong>.
-                            Revisá tu bandeja de entrada o spam para continuar.
-                          </>
-                        ) : (
-                          <>
-                            El enlace de restablecimiento para{" "}
-                            <strong className="text-ink dark:text-white">{email}</strong> está
-                            listo para ser utilizado.
-                          </>
-                        )}
+                        La recuperación de contraseña la gestiona el backend: genera un
+                        enlace seguro y lo envía por correo a{" "}
+                        <strong className="text-ink dark:text-white">{email}</strong>. Va a
+                        estar disponible cuando se habilite el endpoint.
                       </p>
                     </div>
-
-                    {recoveryWarning && (
-                      <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400">
-                        Aviso del servicio: {recoveryWarning}
-                      </div>
-                    )}
-
-                    {recoveryLink && (
-                      <div className="space-y-2 pt-1">
-                        <Link
-                          to={recoveryLink.replace(/^https?:\/\/[^/]+/, "")}
-                          className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-deep text-white dark:bg-white dark:text-black font-semibold text-xs hover:opacity-90 active:scale-[0.98] transition-all no-underline shadow-sm"
-                        >
-                          Restablecer contraseña ahora →
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={copyRecoveryLink}
-                          className="w-full py-2.5 text-xs font-medium rounded-xl bg-card border border-line text-ink hover:bg-mist dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                        >
-                          Copiar enlace de recuperación
-                        </button>
-                      </div>
-                    )}
 
                     <div className="pt-2 border-t border-line/60">
                       <button
                         type="button"
-                        onClick={() => {
-                          setRecoverySent(false);
-                          setRecoveryLink("");
-                        }}
+                        onClick={() => setRecoveryPending(false)}
                         className="text-xs text-brand hover:underline font-medium cursor-pointer bg-transparent border-none"
                       >
-                        Enviar a otro correo
+                        Probar con otro correo
                       </button>
                     </div>
                   </div>
@@ -447,42 +309,91 @@ export default function LoginRegisterPage() {
               </div>
             ) : (
               <>
-                {/* Formulario Principal de Login o Registro (estructura exacta de la foto) */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {!isLogin && (
+                {/* Formulario Principal de Login o Solicitud de cuenta */}
+                <form onSubmit={handleSubmit} className="flex flex-col">
+                  {/* Selector de tipo de cuenta: sólo en registro. */}
+                  <Collapse open={!isLogin}>
                     <div>
                       <label className="block text-xs font-medium text-muted mb-1.5">
-                        Full name
+                        Tipo de cuenta
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAccountType("ciudadano")}
+                          aria-pressed={accountType === "ciudadano"}
+                          className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                            accountType === "ciudadano"
+                              ? "border-brand bg-brand/5 ring-1 ring-brand/20"
+                              : "border-line bg-card hover:border-brand/40"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                            <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            Ciudadano
+                          </span>
+                          <span className="text-[11px] text-muted">Acceso inmediato</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAccountType("empleado")}
+                          aria-pressed={accountType === "empleado"}
+                          className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
+                            accountType === "empleado"
+                              ? "border-brand bg-brand/5 ring-1 ring-brand/20"
+                              : "border-line bg-card hover:border-brand/40"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Empleado
+                          </span>
+                          <span className="text-[11px] text-muted">Requiere aprobación</span>
+                        </button>
+                      </div>
+                    </div>
+                  </Collapse>
+
+                  {/* Nombre: sólo en registro. Se despliega con altura animada. */}
+                  <Collapse open={!isLogin}>
+                    <div>
+                      <label className="block text-xs font-medium text-muted mb-1.5">
+                        Nombre completo
                       </label>
                       <input
                         type="text"
-                        required
+                        required={!isLogin}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ej: Juan Carlos Pérez"
                         className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                       />
                     </div>
-                  )}
+                  </Collapse>
 
-                  <div>
+                  <div className="mb-4">
                     <label className="block text-xs font-medium text-muted mb-1.5">
-                      Email address
+                      Correo electrónico
                     </label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      placeholder="tucorreo@ejemplo.com"
                       autoComplete="email"
                       className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                     />
                   </div>
 
-                  <div>
+                  <div className="mb-4">
                     <label className="block text-xs font-medium text-muted mb-1.5">
-                      Password
+                      Contraseña
                     </label>
                     <div className="relative">
                       <input
@@ -490,7 +401,7 @@ export default function LoginRegisterPage() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder={isLogin ? "••••••••" : "Mínimo 6 caracteres"}
+                        placeholder={isLogin ? "••••••••" : "Mínimo 8 caracteres"}
                         autoComplete={isLogin ? "current-password" : "new-password"}
                         className="w-full pl-4 pr-10 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                       />
@@ -513,8 +424,40 @@ export default function LoginRegisterPage() {
                     </div>
                   </div>
 
-                  {/* Fila de Remember me & Forgot your password (idéntica a la imagen) */}
-                  {isLogin && (
+                  {/* Aviso de solicitud de empleado: sólo en registro + tipo empleado. */}
+                  <Collapse open={!isLogin && accountType === "empleado"}>
+                    <div className="flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </span>
+                      <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300 m-0">
+                        <strong className="font-semibold">Solicitud sujeta a aprobación.</strong>{" "}
+                        La administración revisará tu solicitud y vas a poder iniciar sesión
+                        una vez que sea aprobada.
+                      </p>
+                    </div>
+                  </Collapse>
+
+                  {/* Aviso de cuenta de ciudadano: sólo en registro + tipo ciudadano. */}
+                  <Collapse open={!isLogin && accountType === "ciudadano"}>
+                    <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </span>
+                      <p className="text-xs leading-relaxed text-emerald-700 dark:text-emerald-300 m-0">
+                        <strong className="font-semibold">Acceso inmediato.</strong> Tu cuenta
+                        se crea en este dispositivo y entrás al instante; después vas a poder
+                        iniciar sesión con tu correo y contraseña.
+                      </p>
+                    </div>
+                  </Collapse>
+
+                  {/* Recordarme & recuperación: sólo en login. */}
+                  <Collapse open={isLogin}>
                     <div className="flex items-center justify-between text-xs pt-1">
                       <label className="flex items-center gap-2 cursor-pointer select-none text-muted hover:text-ink transition-colors">
                         <input
@@ -523,7 +466,7 @@ export default function LoginRegisterPage() {
                           onChange={(e) => setRememberMe(e.target.checked)}
                           className="w-4 h-4 rounded border-line bg-card text-brand-deep cursor-pointer accent-brand-deep"
                         />
-                        <span>Remember me</span>
+                        <span>Recordarme</span>
                       </label>
 
                       <button
@@ -531,81 +474,12 @@ export default function LoginRegisterPage() {
                         onClick={openRecovery}
                         className="text-muted hover:text-ink transition-colors cursor-pointer bg-transparent border-none p-0"
                       >
-                        Forgot your password?
+                        ¿Olvidaste tu contraseña?
                       </button>
                     </div>
-                  )}
+                  </Collapse>
 
-                  {/* Opción para solicitar acceso de empleado público al registrarse */}
-                  {!isLogin && (
-                    <div className="pt-2">
-                      <label className="flex items-start gap-2.5 p-3 rounded-xl border border-line bg-mist/50 dark:bg-slate-900/40 cursor-pointer hover:border-brand/40 transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={wantsEmployee}
-                          onChange={(e) => setWantsEmployee(e.target.checked)}
-                          className="mt-0.5 w-4 h-4 rounded border-line bg-card text-brand-deep cursor-pointer accent-brand-deep"
-                        />
-                        <div className="text-xs">
-                          <span className="font-semibold text-ink block">
-                            Soy agente público y solicito acceso al panel de administración
-                          </span>
-                          <span className="text-muted block mt-0.5">
-                            Un Superadmin revisará tus datos antes de activarte.
-                          </span>
-                        </div>
-                      </label>
-
-                      {wantsEmployee && (
-                        <div className="mt-3 p-3 rounded-xl border border-line bg-card space-y-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              placeholder="CUIL (20-12345678-3)"
-                              value={cuil}
-                              onChange={(e) => setCuil(e.target.value)}
-                              className="w-full px-3 py-2 text-xs rounded-lg border border-line bg-paper text-ink placeholder-faint focus:outline-none focus:border-brand"
-                            />
-                            <input
-                              type="tel"
-                              placeholder="Teléfono"
-                              value={phone}
-                              onChange={(e) => setPhone(e.target.value)}
-                              className="w-full px-3 py-2 text-xs rounded-lg border border-line bg-paper text-ink placeholder-faint focus:outline-none focus:border-brand"
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <select
-                              value={department}
-                              onChange={(e) => setDepartment(e.target.value)}
-                              className="w-full px-3 py-2 text-xs rounded-lg border border-line bg-paper text-ink focus:outline-none focus:border-brand cursor-pointer"
-                            >
-                              <option value="">Dependencia...</option>
-                              {employeeDepartments.map((d) => (
-                                <option key={d} value={d}>{d}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="text"
-                              placeholder="Puesto / Función"
-                              value={position}
-                              onChange={(e) => setPosition(e.target.value)}
-                              className="w-full px-3 py-2 text-xs rounded-lg border border-line bg-paper text-ink placeholder-faint focus:outline-none focus:border-brand"
-                            />
-                          </div>
-                          <textarea
-                            rows={2}
-                            placeholder="Motivo de la solicitud (opcional)..."
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            className="w-full px-3 py-2 text-xs rounded-lg border border-line bg-paper text-ink placeholder-faint focus:outline-none focus:border-brand resize-none"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Botón Principal (Sign in / Create account - estilo exacto a la imagen) */}
+                  {/* Botón Principal */}
                   <button
                     type="submit"
                     disabled={submitting}
@@ -614,53 +488,10 @@ export default function LoginRegisterPage() {
                     {submitting
                       ? "Procesando..."
                       : isLogin
-                      ? "Sign in"
-                      : "Create account"}
+                      ? "Iniciar sesión"
+                      : "Crear cuenta"}
                   </button>
                 </form>
-
-                {/* Divisor "or continue with" (exacto a la imagen) */}
-                <div className="relative my-6 text-center">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-line" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-paper dark:bg-[#09090b] px-3 text-muted font-medium tracking-wider">
-                      or continue with
-                    </span>
-                  </div>
-                </div>
-
-                {/* Botón "Continue with Google" */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={handleContinueWithGoogle}
-                    disabled={submitting}
-                    className="w-full py-3 px-4 rounded-full border border-line bg-card hover:bg-mist/70 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-ink dark:text-white text-sm font-medium flex items-center justify-center gap-3 transition-colors cursor-pointer group shadow-sm active:scale-[0.99]"
-                  >
-                    {/* Logo multicolor oficial SVG de Google */}
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                    <span>Continue with Google</span>
-                  </button>
-                </div>
 
                 {/* Alternador inferior */}
                 <div className="mt-8 text-center text-xs text-muted">
@@ -669,10 +500,10 @@ export default function LoginRegisterPage() {
                       ¿No tenés una cuenta?{" "}
                       <button
                         type="button"
-                        onClick={() => setMode("register")}
+                        onClick={() => goTo("register")}
                         className="font-semibold text-brand hover:underline cursor-pointer bg-transparent border-none p-0 ml-1"
                       >
-                        Registrate gratis
+                        Creá tu cuenta
                       </button>
                     </span>
                   ) : (
@@ -680,7 +511,7 @@ export default function LoginRegisterPage() {
                       ¿Ya tenés una cuenta registrada?{" "}
                       <button
                         type="button"
-                        onClick={() => setMode("login")}
+                        onClick={() => goTo("login")}
                         className="font-semibold text-brand hover:underline cursor-pointer bg-transparent border-none p-0 ml-1"
                       >
                         Iniciá sesión
@@ -698,145 +529,9 @@ export default function LoginRegisterPage() {
         </div>
       </div>
 
-      {/* 3. Footer Completo (como lo teníamos antes) */}
+      {/* 3. Footer Completo */}
       <Footer />
 
-      {/* 4. Modal / Asistente de Autenticación con Google */}
-      {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in">
-          <div
-            className="w-full max-w-md rounded-2xl bg-card border border-line p-6 shadow-2xl relative text-ink"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header del Modal */}
-            <div className="flex items-center justify-between pb-3 border-b border-line">
-              <div className="flex items-center gap-2.5">
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span className="text-sm font-bold">Autenticación con Google</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGoogleModal(false)}
-                className="text-muted hover:text-ink p-1 rounded-md cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Explicación clara de cómo funciona y qué se necesita para que sea 100% real */}
-            <div className="mt-4 p-3.5 rounded-xl bg-mist/60 dark:bg-slate-900/60 border border-line text-xs space-y-2">
-              <p className="font-semibold text-ink m-0 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                ¿Cómo funciona el inicio con Google real?
-              </p>
-              <p className="text-muted m-0 leading-relaxed">
-                Para que la ventana de Google se abra con tu aplicación en producción, se requiere un <strong>Google Client ID</strong> obtenido en la consola de Google Cloud (gratuito).
-              </p>
-            </div>
-
-            {/* Opciones: 1. Probar rápido / 2. Configurar Client ID real */}
-            <div className="mt-4 space-y-3">
-              <div>
-                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-2">
-                  1. Acceso de prueba inmediato:
-                </span>
-                <div className="space-y-2">
-                  {DEMO_GOOGLE_ACCOUNTS.map((acc) => (
-                    <button
-                      key={acc.email}
-                      type="button"
-                      onClick={() => handleDemoGoogleSelect(acc)}
-                      disabled={submitting}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-line bg-card hover:bg-mist/70 text-left transition-colors cursor-pointer group"
-                    >
-                      <img
-                        src={acc.avatar}
-                        alt={acc.name}
-                        className="w-8 h-8 rounded-full object-cover border border-line shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-ink m-0 truncate group-hover:text-brand transition-colors">
-                          {acc.name}
-                        </p>
-                        <p className="text-[11px] text-muted m-0 truncate font-mono">
-                          {acc.email}
-                        </p>
-                      </div>
-                      <span className="text-[10px] text-muted px-2 py-0.5 rounded bg-mist">
-                        Entrar
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-line">
-                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block mb-2">
-                  2. Conectar tu propio Google Client ID real:
-                </span>
-
-                {!showClientIdInput ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowClientIdInput(true)}
-                    className="w-full py-2 px-3 rounded-xl border border-dashed border-line hover:border-brand text-xs font-medium text-muted hover:text-ink transition-colors cursor-pointer text-center"
-                  >
-                    + {googleClientId ? "Modificar Google Client ID" : "Configurar Google Client ID ahora"}
-                  </button>
-                ) : (
-                  <form onSubmit={handleSaveClientId} className="space-y-2.5 animate-fade-in">
-                    <input
-                      type="text"
-                      placeholder="Ej: 1234567890-abcdef.apps.googleusercontent.com"
-                      value={inputClientId}
-                      onChange={(e) => setInputClientId(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-lg border border-line bg-card text-ink placeholder-faint focus:outline-none focus:border-brand font-mono"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowClientIdInput(false)}
-                        className="flex-1 py-1.5 text-xs font-medium rounded-lg border border-line text-muted hover:text-ink"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-deep text-white hover:bg-brand-dark"
-                      >
-                        Guardar y Probar
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-5 text-center">
-              <span className="text-[10px] text-muted leading-tight">
-                Integración con Google Identity Services (GIS SDK OAuth 2.0).
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

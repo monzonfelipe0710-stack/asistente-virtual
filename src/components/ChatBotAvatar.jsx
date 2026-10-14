@@ -343,8 +343,8 @@ export default function ChatBotAvatar({
       const intensity = Math.min(1, dist / 240);
       // yaw positivo = mira a la derecha (dx > 0); yaw negativo = mira a la izquierda (dx < 0)
       const yaw = (dx / dist) * MAX_YAW * intensity;
-      // pitch negativo = mira arriba (dy < 0); pitch positivo = mira abajo (dy > 0)
-      const pitch = (dy / dist) * MAX_PITCH * intensity;
+      // pitch positivo = mira arriba (dy < 0); pitch negativo = mira abajo (dy > 0)
+      const pitch = (-dy / dist) * MAX_PITCH * intensity;
       engineRef.current.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current, 0.12);
     };
 
