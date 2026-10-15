@@ -91,7 +91,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const [speakingId, setSpeakingId] = useState(null);
   const [typedText, setTypedText] = useState("");
   const [reaction, setReaction] = useState("idle");
+  const [announce, setAnnounce] = useState("");
   const messagesRef = useRef(null);
+  const nearBottomRef = useRef(true);
   const recognitionRef = useRef(null);
   const transcriptRef = useRef("");
   const startedRef = useRef(false);
@@ -111,10 +113,19 @@ export default function ChatWindow({ initialQuery = null }) {
       !!(window.SpeechRecognition || window.webkitSpeechRecognition)
   );
 
+  // Auto-scroll: solo sigue el final si el usuario ya estaba cerca del final.
+  // No arrebata el scroll mientras lee mensajes anteriores.
   useEffect(() => {
+    if (!nearBottomRef.current) return;
     const el = messagesRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, isTyping, phase, typedText]);
+
+  function handleMessagesScroll() {
+    const el = messagesRef.current;
+    if (!el) return;
+    nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+  }
 
   useEffect(() => {
     const controller = new BotReactionController({
@@ -210,6 +221,20 @@ export default function ChatWindow({ initialQuery = null }) {
     clearInterval(typingTimerRef.current);
 
     const id = addMessage("bot", finalText, finalActions || undefined);
+
+    // Anuncio para tecnologías de asistencia: texto completo, una sola vez.
+    setAnnounce(finalText);
+
+    // Con movimiento reducido se muestra el texto completo de inmediato.
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      !!window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      controllerRef.current?.onEvent(error ? "botError" : "botSuccess");
+      return;
+    }
+
     const long = finalText.length > 240;
     const charStep = long ? 2 : 1;
     const charDelay = long ? 16 : 24;
@@ -431,6 +456,8 @@ export default function ChatWindow({ initialQuery = null }) {
     startedRef.current = false;
     greetedRef.current = false;
     wizardRef.current = null;
+    nearBottomRef.current = true;
+    setAnnounce("");
   }
 
   useEffect(() => {
@@ -489,7 +516,7 @@ export default function ChatWindow({ initialQuery = null }) {
           onClick={resetConversation}
           title="Reiniciar y ver opciones"
           aria-label="Reiniciar y ver opciones"
-          className="w-9 h-9 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+          className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="5" cy="5" r="2" />
@@ -510,7 +537,7 @@ export default function ChatWindow({ initialQuery = null }) {
           onClick={resetConversation}
           title="Nueva conversación"
           aria-label="Nueva conversación"
-          className="w-9 h-9 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+          className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -538,7 +565,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
             <Link
               to="/login"
-              className="shrink-0 rounded-full bg-brand-deep text-white dark:bg-white dark:text-black text-xs font-semibold px-4 py-2 hover:opacity-90 active:scale-[0.98] transition-all no-underline"
+              className="shrink-0 inline-flex items-center rounded-full bg-brand-deep text-white dark:bg-white dark:text-black text-sm font-semibold px-5 min-h-11 hover:opacity-90 active:scale-[0.98] transition-all no-underline"
             >
               Iniciar sesión
             </Link>
@@ -546,7 +573,7 @@ export default function ChatWindow({ initialQuery = null }) {
               type="button"
               onClick={() => setShowPromo(false)}
               aria-label="Cerrar sugerencia"
-              className="shrink-0 grid h-7 w-7 place-items-center rounded-full text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+              className="shrink-0 grid h-11 w-11 place-items-center rounded-full text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -556,7 +583,16 @@ export default function ChatWindow({ initialQuery = null }) {
         </div>
       )}
 
-      <div ref={messagesRef} className="flex-1 overflow-y-auto relative flex flex-col">
+      {/* Región viva: anuncia las respuestas del asistente sin releer todo */}
+      <div aria-live="polite" role="status" className="sr-only">
+        {announce}
+      </div>
+
+      <div
+        ref={messagesRef}
+        onScroll={handleMessagesScroll}
+        className="flex-1 overflow-y-auto relative flex flex-col"
+      >
         {phase !== "chat" ? (
           <div
             className={`welcome-content flex-1 flex flex-col items-center justify-center px-4 py-8 text-center transition-all duration-300 ease-out ${
@@ -581,7 +617,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
 
             {/* Subtítulo descriptivo */}
-            <p className="text-xs sm:text-sm text-muted font-neue-text max-w-md mx-auto leading-relaxed mb-6 m-0">
+            <p className="text-sm sm:text-base text-muted font-neue-text max-w-md mx-auto leading-relaxed mb-6 m-0">
               Estoy para ayudarte con tus gestiones y trámites provinciales. Elegí una de las opciones o escribí directamente lo que necesitás.
             </p>
 
@@ -674,8 +710,9 @@ export default function ChatWindow({ initialQuery = null }) {
               type="button"
               onClick={toggleMic}
               aria-label={listening ? "Detener dictado" : "Hablar con el asistente"}
+              aria-pressed={listening}
               title={listening ? "Detener dictado" : "Hablar con el asistente"}
-              className={`p-2 rounded-xl transition-all cursor-pointer ${
+              className={`min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                 listening
                   ? "text-bad bg-bad/10 animate-pulse"
                   : "text-muted hover:text-ink hover:bg-mist"
@@ -692,7 +729,7 @@ export default function ChatWindow({ initialQuery = null }) {
           <button
             type="submit"
             disabled={!input.trim()}
-            className={`ml-1 p-2 rounded-xl flex items-center justify-center transition-all ${
+            className={`ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all ${
               input.trim()
                 ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
                 : "text-muted/40 cursor-not-allowed opacity-0 pointer-events-none w-0 p-0 overflow-hidden"

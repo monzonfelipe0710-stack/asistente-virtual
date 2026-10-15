@@ -112,7 +112,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={item.name}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted hover:text-ink hover:bg-mist/70 border border-transparent hover:border-line transition-all duration-150 no-underline"
+                  className="w-11 h-11 rounded-lg flex items-center justify-center text-muted hover:text-ink hover:bg-mist/70 border border-transparent hover:border-line transition-all duration-150 no-underline"
                 >
                   {item.icon}
                 </a>
@@ -132,7 +132,7 @@ export default function Footer() {
                   <li key={item.label}>
                     <Link
                       to={item.to}
-                      className="text-xs sm:text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
+                      className="text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
                     >
                       {item.label}
                     </Link>
@@ -153,7 +153,7 @@ export default function Footer() {
                       <button
                         type="button"
                         onClick={() => setShowTeamModal(true)}
-                        className="text-xs sm:text-sm text-left p-0 bg-transparent border-0 cursor-pointer text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text inline-flex items-center gap-1.5 group"
+                        className="text-sm text-left p-0 bg-transparent border-0 cursor-pointer text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text inline-flex items-center gap-1.5 group"
                       >
                         <span>{item.label}</span>
                         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-brand/10 text-brand font-semibold group-hover:bg-brand group-hover:text-white transition-colors">
@@ -163,7 +163,7 @@ export default function Footer() {
                     ) : item.to ? (
                       <Link
                         to={item.to}
-                        className="text-xs sm:text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
+                        className="text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
                       >
                         {item.label}
                       </Link>
@@ -196,7 +196,7 @@ export default function Footer() {
                     {item.to ? (
                       <Link
                         to={item.to}
-                        className="text-xs sm:text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
+                        className="text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
                       >
                         {item.label}
                       </Link>
@@ -205,7 +205,7 @@ export default function Footer() {
                         href={item.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs sm:text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
+                        className="text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
                       >
                         {item.label}
                       </a>
@@ -267,7 +267,7 @@ export default function Footer() {
               <button
                 type="button"
                 onClick={() => setShowTeamModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors border border-line shrink-0"
+                className="w-11 h-11 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors border border-line shrink-0 cursor-pointer"
                 aria-label="Cerrar modal"
               >
                 ✕
@@ -350,7 +350,7 @@ export default function Footer() {
               <button
                 type="button"
                 onClick={() => setShowTeamModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-ink text-paper font-semibold text-xs hover:opacity-90 transition-opacity"
+                className="inline-flex items-center min-h-11 px-6 rounded-xl bg-ink text-paper font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer"
               >
                 Cerrar
               </button>

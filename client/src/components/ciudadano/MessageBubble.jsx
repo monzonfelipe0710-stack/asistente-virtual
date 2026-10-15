@@ -12,7 +12,7 @@ function DownloadButton({ action }) {
   }
 
   return (
-    <button type="button" onClick={downloadTemplate} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand-deep px-3 py-2 text-xs font-semibold text-paper transition-colors hover:bg-brand">
+    <button type="button" onClick={downloadTemplate} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand-deep px-4 py-2.5 min-h-11 text-sm font-semibold text-paper transition-colors hover:bg-brand">
       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" /></svg>
       {action.label}
     </button>
@@ -21,7 +21,7 @@ function DownloadButton({ action }) {
 
 function LocationCard({ action }) {
   return (
-    <div className="mt-2 rounded-xl border border-line bg-paper p-3 text-xs text-ink shadow-sm">
+    <div className="mt-2 rounded-xl border border-line bg-paper p-3 text-sm text-ink shadow-sm">
       <p className="m-0 font-semibold">{action.place}</p>
       <p className="m-0 mt-1 text-muted">{action.address}</p>
       <p className="m-0 mt-1 text-muted">{action.hours}</p>
@@ -37,7 +37,7 @@ function Chips({ action, onFollowUp }) {
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2">
       {action.title && (
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">
           {action.title}
         </span>
       )}

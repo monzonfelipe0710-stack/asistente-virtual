@@ -60,9 +60,18 @@ const SCENARIOS = [
   },
 ];
 
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export default function InteractiveChatMockup() {
   const [scenarioIdx, setScenarioIdx] = useState(0);
-  const [step, setStep] = useState(1);
+  // Con movimiento reducido arrancamos en la conversación completa (sin bucle).
+  const [step, setStep] = useState(() => (prefersReducedMotion() ? 6 : 1));
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [activeChipToast, setActiveChipToast] = useState(null);
   const chatScrollRef = useRef(null);
@@ -76,7 +85,7 @@ export default function InteractiveChatMockup() {
       } else {
         chatScrollRef.current.scrollTo({
           top: chatScrollRef.current.scrollHeight,
-          behavior: "smooth",
+          behavior: prefersReducedMotion() ? "auto" : "smooth",
         });
       }
     }
@@ -85,6 +94,7 @@ export default function InteractiveChatMockup() {
   // Continuous fluid conversation loop
   useEffect(() => {
     if (isTransitioning) return;
+    if (prefersReducedMotion()) return undefined;
 
     // Fluid timings for seamless progression
     const delays = {
