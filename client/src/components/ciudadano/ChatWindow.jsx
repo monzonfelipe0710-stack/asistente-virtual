@@ -105,7 +105,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const greetedRef = useRef(false);
   const wizardRef = useRef(null);
   const [welcomeMem, setWelcomeMem] = useState(null);
-  const [showPromo, setShowPromo] = useState(true);
+  const [promoReady, setPromoReady] = useState(false);
+  const [promoDismissed, setPromoDismissed] = useState(false);
+  const [promoLeaving, setPromoLeaving] = useState(false);
 
   const [speechSupported] = useState(
     () =>
@@ -113,9 +115,45 @@ export default function ChatWindow({ initialQuery = null }) {
       !!(window.SpeechRecognition || window.webkitSpeechRecognition)
   );
 
-  // Auto-scroll: solo sigue el final si el usuario ya estaba cerca del final.
+  // Tamaño del avatar adaptable a la altura de pantalla para que la bienvenida
+  // entre completa, sin scroll y sin quedar tapada por las barras.
+  const [avatarSize, setAvatarSize] = useState(() => {
+    if (typeof window === "undefined") return 92;
+    const h = window.innerHeight;
+    return h >= 840 ? 92 : h >= 720 ? 78 : h >= 620 ? 62 : 50;
+  });
+
+  useEffect(() => {
+    function onResize() {
+      const h = window.innerHeight;
+      setAvatarSize(h >= 840 ? 92 : h >= 720 ? 78 : h >= 620 ? 62 : 50);
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      if (phase === "chat" || root.hasAttribute("data-a11y-text")) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (messagesRef.current) messagesRef.current.scrollTop = 0;
+        nearBottomRef.current = true;
+      });
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["data-a11y-text"] });
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [phase]);
+
+  // Auto-scroll: solo en el chat y si el usuario ya estaba cerca del final.
   // No arrebata el scroll mientras lee mensajes anteriores.
   useEffect(() => {
+    if (phase !== "chat") return;
     if (!nearBottomRef.current) return;
     const el = messagesRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
@@ -215,12 +253,22 @@ export default function ChatWindow({ initialQuery = null }) {
     setTimeout(() => setPhase("chat"), 480);
   }
 
+  /** Cierra la invitación de forma fluida; mantiene el aviso hasta el próximo ingreso. */
+  function dismissPromo() {
+    if (promoDismissed || promoLeaving) return;
+    setPromoLeaving(true);
+    window.setTimeout(() => setPromoDismissed(true), 320);
+  }
+
   /** Añade el mensaje del bot con efecto de tipeo y reacciones del avatar. */
   function presentBotMessage(finalText, finalActions, { error = false } = {}) {
     setIsTyping(false);
     clearInterval(typingTimerRef.current);
 
     const id = addMessage("bot", finalText, finalActions || undefined);
+
+    // La invitación a iniciar sesión aparece de forma fluida tras la primera respuesta.
+    setPromoReady(true);
 
     // Anuncio para tecnologías de asistencia: texto completo, una sola vez.
     setAnnounce(finalText);
@@ -453,6 +501,7 @@ export default function ChatWindow({ initialQuery = null }) {
     setReaction("idle");
     setInput("");
     setPhase("welcome");
+    if (messagesRef.current) messagesRef.current.scrollTop = 0;
     startedRef.current = false;
     greetedRef.current = false;
     wizardRef.current = null;
@@ -510,78 +559,21 @@ export default function ChatWindow({ initialQuery = null }) {
   return (
     <div className="flex flex-col h-full bg-paper relative">
       <header className="flex items-center justify-end px-4 sm:px-6 h-14 shrink-0 gap-2">
-        {/* Menú de opciones (9 puntos) */}
+        {/* Reiniciar el chat (ícono de mensaje nuevo) */}
         <button
           type="button"
           onClick={resetConversation}
-          title="Reiniciar y ver opciones"
-          aria-label="Reiniciar y ver opciones"
-          className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
-        >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="5" cy="5" r="2" />
-            <circle cx="12" cy="5" r="2" />
-            <circle cx="19" cy="5" r="2" />
-            <circle cx="5" cy="12" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="19" cy="12" r="2" />
-            <circle cx="5" cy="19" r="2" />
-            <circle cx="12" cy="19" r="2" />
-            <circle cx="19" cy="19" r="2" />
-          </svg>
-        </button>
-
-        {/* Botón Cerrar / Nueva Conversación */}
-        <button
-          type="button"
-          onClick={resetConversation}
-          title="Nueva conversación"
-          aria-label="Nueva conversación"
+          title="Reiniciar el chat"
+          aria-label="Reiniciar el chat"
           className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
           </svg>
         </button>
-      </header>
 
-      {/* Aviso de inicio de sesión, estilo ChatGPT: invita a registrarse o
-          ingresar para personalizar y guardar la experiencia. */}
-      {!isAuthenticated && showPromo && (
-        <div className="px-4 sm:px-6 shrink-0 animate-fade-up">
-          <div className="max-w-3xl mx-auto flex items-center gap-3 rounded-2xl border border-line bg-mist/70 dark:bg-white/[0.04] px-3.5 py-2.5 sm:px-4 sm:py-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-deep text-white" aria-hidden="true">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zm6.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" />
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-ink m-0">
-                Obtené respuestas adaptadas a ti
-              </p>
-              <p className="hidden sm:block text-xs text-muted m-0 mt-0.5">
-                Iniciá sesión para guardar tus conversaciones y hacer seguimiento de tus trámites.
-              </p>
-            </div>
-            <Link
-              to="/login"
-              className="shrink-0 inline-flex items-center rounded-full bg-brand-deep text-white dark:bg-white dark:text-black text-sm font-semibold px-5 min-h-11 hover:opacity-90 active:scale-[0.98] transition-all no-underline"
-            >
-              Iniciar sesión
-            </Link>
-            <button
-              type="button"
-              onClick={() => setShowPromo(false)}
-              aria-label="Cerrar sugerencia"
-              className="shrink-0 grid h-11 w-11 place-items-center rounded-full text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
+      </header>
 
       {/* Región viva: anuncia las respuestas del asistente sin releer todo */}
       <div aria-live="polite" role="status" className="sr-only">
@@ -591,17 +583,21 @@ export default function ChatWindow({ initialQuery = null }) {
       <div
         ref={messagesRef}
         onScroll={handleMessagesScroll}
-        className="flex-1 overflow-y-auto relative flex flex-col"
+        className={`flex-1 min-h-0 relative flex flex-col overscroll-contain ${
+          phase === "chat"
+            ? "overflow-y-auto"
+            : "chat-welcome-scroll overflow-hidden"
+        }`}
       >
         {phase !== "chat" ? (
           <div
-            className={`welcome-content flex-1 flex flex-col items-center justify-center px-4 py-8 text-center transition-all duration-300 ease-out ${
+            className={`welcome-content flex-1 min-h-max flex flex-col items-center justify-center px-4 py-4 sm:py-6 text-center transition-all duration-300 ease-out ${
               phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
             }`}
           >
             {/* Avatar interactivo de ChatAP grande, sin marco ni fondo, con mirada interactiva */}
             <div className="mb-4 relative flex items-center justify-center select-none">
-              <ChatBotAvatar size={92} reaction={reaction} followMouse={true} />
+              <ChatBotAvatar size={avatarSize} reaction={reaction} followMouse={true} />
             </div>
 
             {/* Saludo personalizado */}
@@ -685,6 +681,46 @@ export default function ChatWindow({ initialQuery = null }) {
 
       {/* Barra flotante inferior de consulta */}
       <div className="p-4 sm:pb-6 pt-2 bg-transparent shrink-0">
+        {/* Invitación a iniciar sesión: aparece al pie de forma fluida tras la
+            primera respuesta y solo se cierra con la “x”. */}
+        {!isAuthenticated && promoReady && !promoDismissed && (
+          <div
+            className={`max-w-2xl mx-auto mb-3 ${promoLeaving ? "promo-leave" : "promo-enter"}`}
+          >
+            <div className="flex items-center gap-3 rounded-2xl border border-line bg-mist/70 dark:bg-white/[0.04] px-3.5 py-2.5 sm:px-4 sm:py-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-deep text-white" aria-hidden="true">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zm6.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ink m-0">
+                  Obtené respuestas adaptadas a ti
+                </p>
+                <p className="hidden sm:block text-sm text-muted m-0 mt-0.5">
+                  Iniciá sesión para guardar tus conversaciones y hacer seguimiento de tus trámites.
+                </p>
+              </div>
+              <Link
+                to="/login"
+                className="shrink-0 inline-flex items-center rounded-full bg-brand-deep text-white dark:bg-white dark:text-black text-sm font-semibold px-5 min-h-11 hover:opacity-90 active:scale-[0.98] transition-all no-underline"
+              >
+                Iniciar sesión
+              </Link>
+              <button
+                type="button"
+                onClick={dismissPromo}
+                aria-label="Cerrar sugerencia"
+                className="shrink-0 grid h-11 w-11 place-items-center rounded-full text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSend} className="chatap-floating-bar max-w-2xl mx-auto">
           {/* Lupa / búsqueda */}
           <span className="text-muted/70 pl-2 pr-1 flex items-center justify-center shrink-0 pointer-events-none" aria-hidden="true">
@@ -695,6 +731,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
           {/* Input de consulta */}
           <input
+            id="chat-here"
             type="text"
             value={input}
             onChange={handleInputChange}

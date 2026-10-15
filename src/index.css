@@ -217,6 +217,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes promo-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes promo-out {
+  from { opacity: 1; transform: translateY(0); max-height: 12rem; }
+  to { opacity: 0; transform: translateY(10px); max-height: 0; }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -269,7 +279,7 @@
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -324,6 +334,14 @@ select {
   .animate-fade-in { animation: fade-in 0.25s ease-out backwards; }
   .animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
 
+  /* Invitación de inicio de sesión del chat: aparición/cierre fluidos */
+  .promo-enter { animation: promo-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .promo-leave {
+    animation: promo-out 0.32s cubic-bezier(0.4, 0, 1, 1) both;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
   .animate-form-in { animation: form-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
   .animate-form-out { animation: form-out 0.18s ease-in both; }
   .animate-field-in { animation: field-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
@@ -332,7 +350,7 @@ select {
 
   .animate-route-enter {
     animation: route-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
-    will-change: opacity, transform;
+    will-change: opacity;
   }
   .animate-route-exit {
     animation: route-exit 0.18s cubic-bezier(0.4, 0, 1, 1) both;
@@ -779,6 +797,20 @@ select {
 
   .welcome-content {
     gap: 1.25rem;
+  }
+
+  /* En pantallas bajas compactamos los espacios, pero preservamos el tamaño
+     de texto elegido y dejamos que la bienvenida se desplace si hace falta. */
+  @media (max-height: 820px) {
+    .welcome-content { gap: 0.85rem; }
+  }
+
+  @media (max-height: 720px) {
+    .welcome-content { gap: 0.6rem; }
+  }
+
+  @media (max-height: 620px) {
+    .welcome-content { gap: 0.45rem; }
   }
 
   .navbar-action {
@@ -1528,27 +1560,46 @@ select {
   /* Spotlight del tutorial */
   .tour-dim {
     position: fixed;
-    background: rgba(5, 10, 25, 0.22);
+    background: transparent;
     z-index: 30;
+    pointer-events: none;
   }
   .tour-ring {
     position: fixed;
     z-index: 31;
-    border: 2px solid var(--color-brand);
-    border-radius: 0.375rem;
+    border: 2px solid color-mix(in srgb, var(--color-brand) 82%, white);
+    border-radius: 0.75rem;
     animation: tour-glow 1.8s ease-in-out infinite;
-    transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1), left 0.42s cubic-bezier(0.22, 1, 0.36, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1), height 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .tour-card {
+    max-width: 27rem;
+    padding: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--color-line) 75%, transparent);
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--color-paper) 94%, transparent);
+    box-shadow: 0 20px 60px rgba(5, 10, 25, 0.22);
+    backdrop-filter: blur(18px);
+  }
+  .tour-avatar {
+    border-radius: 1rem;
+    box-shadow: 0 8px 22px rgba(15, 40, 100, 0.14);
+  }
+  .tour-avatar > * {
+    animation: tour-avatar-float 2.4s ease-in-out infinite;
   }
 
   /* Nube de texto del tutorial */
   .tour-bubble {
     position: relative;
     flex: 1;
-    padding: 12px 16px;
+    padding: 14px 16px;
     background: var(--color-paper);
     border: 1px solid var(--color-line);
-    border-radius: 0.375rem;
+    border-radius: 1rem;
     color: var(--color-ink);
+    box-shadow: 0 8px 24px rgba(5, 10, 25, 0.08);
   }
   .tour-bubble[data-placement="below"]::before,
   .tour-bubble[data-placement="below"]::after {
@@ -1602,6 +1653,21 @@ select {
     line-height: 1.45;
     color: var(--color-muted);
     font-weight: 500;
+    margin-top: 0.4rem;
+  }
+  .tour-progress {
+    width: min(100%, 25rem);
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-line);
+  }
+  .tour-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-brand), #62a5ff);
+    transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* Controles mínimos del tutorial */
@@ -1609,19 +1675,24 @@ select {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 4px;
-    background: var(--color-paper);
-    border: 1px solid var(--color-line);
-    border-radius: 0.375rem;
-    box-shadow: var(--shadow-soft);
+    padding: 0.25rem;
+    background: transparent;
+  }
+  .tour-step-count {
+    min-width: 2.8rem;
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    text-align: center;
   }
   .tour-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    height: 30px;
-    padding: 0 0.7rem;
-    border-radius: 0.25rem;
+    min-height: 36px;
+    padding: 0 0.9rem;
+    border-radius: 999px;
     border: 1px solid var(--color-line);
     background: var(--color-paper);
     color: var(--color-muted);
@@ -1630,15 +1701,16 @@ select {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     cursor: pointer;
-    transition: color 0.18s ease, background 0.18s ease;
+    transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   }
-  .tour-btn:hover { color: var(--color-ink); background: var(--color-mist); }
+  .tour-btn:hover { color: var(--color-ink); background: var(--color-mist); transform: translateY(-1px); }
   .tour-btn-primary {
     background: var(--color-brand-deep);
     border-color: var(--color-brand-deep);
     color: #ffffff;
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--color-brand) 24%, transparent);
   }
-  .tour-btn-primary:hover { background: var(--color-brand); color: #ffffff; }
+  .tour-btn-primary:hover { background: var(--color-brand); color: #ffffff; box-shadow: 0 8px 20px color-mix(in srgb, var(--color-brand) 34%, transparent); }
   .tour-btn-ghost { color: var(--color-ink); }
   .tour-skip {
     background: none;
@@ -1661,6 +1733,22 @@ select {
     transition: all 0.3s ease;
   }
   .tour-dot.is-active { width: 18px; background: var(--color-brand-deep); }
+
+  @keyframes tour-avatar-float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(-2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tour-dim,
+    .tour-ring,
+    .tour-avatar > *,
+    .tour-card,
+    .tour-bubble,
+    .tour-progress > span {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 
   .delay-100 { animation-delay: 100ms; }
   .delay-200 { animation-delay: 200ms; }
@@ -3258,3 +3346,60 @@ select {
   100% { transform: scaleY(1); }
 }
 
+/* ── Accesibilidad del ciudadano ────────────────────────────────
+   El menú flotante guarda las preferencias y las refleja como
+   atributos en <html>. Escala el texto, activa alto contraste o una
+   tipografía más legible sin tocar el resto de la estética. */
+html[data-a11y-text="large"] { font-size: 112.5%; }
+html[data-a11y-text="xlarge"] { font-size: 125%; }
+html[data-a11y-text="huge"] { font-size: 140%; }
+
+html[data-a11y-text="large"] .chat-welcome-scroll,
+html[data-a11y-text="xlarge"] .chat-welcome-scroll,
+html[data-a11y-text="huge"] .chat-welcome-scroll {
+  overflow-y: auto;
+}
+
+html[data-a11y-contrast="high"] {
+  --color-paper: #ffffff;
+  --color-mist: #ffffff;
+  --color-soft: #ebebeb;
+  --color-line: #000000;
+  --color-ink: #000000;
+  --color-muted: #1a1a1a;
+  --color-faint: #2b2b2b;
+  --color-brand: #0b3d91;
+  --color-brand-dark: #0b3d91;
+  --color-brand-deep: #0b3d91;
+  --color-info: #0b3d91;
+  --color-primary-light: #eef3ff;
+  --color-primary-lighter: #f6f9ff;
+  --color-band: #ffffff;
+  --color-band-fg: #000000;
+  color-scheme: light;
+}
+
+html[data-a11y-contrast="high"] :focus-visible {
+  outline: 3px solid #000000;
+  outline-offset: 2px;
+}
+
+html[data-a11y-readable="true"] body,
+html[data-a11y-readable="true"] body * {
+  font-family: "Verdana", "Tahoma", "Segoe UI", system-ui, sans-serif !important;
+  letter-spacing: 0.02em !important;
+  word-spacing: 0.1em !important;
+}
+
+html[data-a11y-readable="true"] p,
+html[data-a11y-readable="true"] li,
+html[data-a11y-readable="true"] label {
+  line-height: 1.65 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-a11y-text],
+  html[data-a11y-text] body {
+    transition: none !important;
+  }
+}

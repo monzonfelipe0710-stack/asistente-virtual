@@ -36,6 +36,16 @@
           } else {
             document.documentElement.classList.remove("dark");
           }
+
+          // Preferencias de accesibilidad: se aplican antes del primer pintado.
+          var raw = localStorage.getItem("chatap_a11y");
+          if (raw) {
+            var a = JSON.parse(raw);
+            var r = document.documentElement;
+            if (a.text && a.text !== "normal") r.setAttribute("data-a11y-text", a.text);
+            r.setAttribute("data-a11y-contrast", a.contrast ? "high" : "normal");
+            r.setAttribute("data-a11y-readable", a.readable ? "true" : "false");
+          }
         } catch (e) {}
       })();
     </script>

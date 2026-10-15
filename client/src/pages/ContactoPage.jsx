@@ -69,6 +69,7 @@ export default function ContactoPage() {
     name: user?.name || "",
     contact: user?.email || "",
     motivo: initialMotivo,
+    expediente: "",
     message: "",
   });
 
@@ -224,9 +225,21 @@ export default function ContactoPage() {
                   <h2 className="text-xl sm:text-2xl font-bold text-ink tracking-tight m-0">
                     Dejanos tu mensaje
                   </h2>
-                  <p className="text-sm text-muted mt-1.5 mb-6 m-0">
-                    Completá tus datos y la Mesa de Ayuda de la Subsecretaría de Recursos Humanos te responderá a la brevedad.
-                  </p>
+                  <div className="mt-1.5 mb-6">
+                    <p className="text-sm text-muted m-0">
+                      Completá tus datos y la Mesa de Ayuda de la Subsecretaría de Recursos Humanos te responderá a la brevedad.
+                    </p>
+                    {user ? (
+                      <div className="mt-3 flex items-center gap-2 rounded-xl border border-brand/20 bg-brand/5 px-3.5 py-2.5">
+                        <svg className="w-4 h-4 shrink-0 text-brand-deep" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <p className="text-xs text-ink m-0">
+                          Escribís como <span className="font-semibold">{user.name || user.email}</span>. Te respondemos al correo de tu cuenta.
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
 
                   {sent ? (
                     <div className="py-8 text-center animate-scale-in">
@@ -300,6 +313,20 @@ export default function ContactoPage() {
                         </select>
                       </div>
 
+                      {/* N° de expediente (opcional) */}
+                      <div>
+                        <label className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
+                          N° de expediente <span className="font-medium normal-case tracking-normal text-faint">(opcional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.expediente}
+                          onChange={(e) => setForm({ ...form, expediente: e.target.value })}
+                          placeholder="Ej: EXP-2026-00123456"
+                          className="w-full px-4 py-3 rounded-xl border border-line bg-mist/30 text-ink text-sm focus:outline-none focus:border-brand-deep focus:bg-paper transition-all"
+                        />
+                      </div>
+
                       {/* Mensaje */}
                       <div>
                         <label className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
@@ -335,6 +362,13 @@ export default function ContactoPage() {
                           </>
                         )}
                       </button>
+
+                      <p className="flex items-center justify-center gap-1.5 text-xs text-muted m-0 pt-1">
+                        <svg className="w-3.5 h-3.5 shrink-0 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Respuesta estimada: menos de 24 hs hábiles. Usamos tus datos solo para responderte.
+                      </p>
                     </form>
                   )}
                 </div>

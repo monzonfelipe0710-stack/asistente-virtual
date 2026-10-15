@@ -28,8 +28,23 @@ describe('registroSchema', () => {
   });
 
   it('acepta un registro completo', () => {
-    const r = registroSchema.safeParse({ nombre: 'Ana', email: 'a@b.com', password: '12345678' });
+    const r = registroSchema.safeParse({
+      nombre: 'Ana',
+      email: 'a@b.com',
+      password: '12345678',
+      cuil: '20-12345678-6',
+    });
     assert.equal(r.success, true);
+  });
+
+  it('rechaza un CUIL con dígito verificador inválido', () => {
+    const r = registroSchema.safeParse({
+      nombre: 'Ana',
+      email: 'a@b.com',
+      password: '12345678',
+      cuil: '20-12345678-0',
+    });
+    assert.equal(r.success, false);
   });
 });
 

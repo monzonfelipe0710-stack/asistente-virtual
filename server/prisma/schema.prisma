@@ -136,6 +136,7 @@ model Usuario {
   id            Int @id @default(autoincrement())
   nombre        String
   email         String @unique
+  cuil          String? @unique @db.VarChar(11)
   passwordHash  String @map("password_hash")
   rol           Rol @default(ADMINISTRADOR)
   estado        EstadoUsuario @default(PENDIENTE)
