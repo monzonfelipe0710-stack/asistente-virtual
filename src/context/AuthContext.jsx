@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
     [setSession]
   );
 
-  const register = useCallback(async ({ name, email, password, rol = "CIUDADANO" }) => {
+  const register = useCallback(async ({ name, email, password, rol = "CIUDADANO", cuil }) => {
     const cleanName = (name || "").trim();
     const cleanEmail = (email || "").trim().toLowerCase();
     if (!cleanName) throw new Error("Ingresá tu nombre.");
@@ -94,7 +94,11 @@ export function AuthProvider({ children }) {
           token: null,
           usuario: { id: local.id, nombre: local.nombre, email: local.email, rol: local.rol },
         });
-        return { mensaje: "¡Cuenta creada! Ya iniciaste sesión.", autoLogin: true };
+        return {
+          mensaje: "¡Cuenta creada! Ya iniciaste sesión.",
+          autoLogin: true,
+          user: toFrontUser(local),
+        };
       } catch (err) {
         throw new Error(apiErrorMessage(err, "No se pudo crear la cuenta."), { cause: err });
       }
@@ -102,7 +106,12 @@ export function AuthProvider({ children }) {
 
     // Empleado → solicitud al backend; la cuenta queda PENDIENTE de aprobación.
     try {
-      return await registroRequest({ nombre: cleanName, email: cleanEmail, password });
+      return await registroRequest({
+        nombre: cleanName,
+        email: cleanEmail,
+        password,
+        cuil: String(cuil || "").replace(/\D/g, ""),
+      });
     } catch (err) {
       throw new Error(apiErrorMessage(err, "No se pudo completar el registro."), { cause: err });
     }

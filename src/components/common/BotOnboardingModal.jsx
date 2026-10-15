@@ -11,79 +11,23 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Bienvenido/a a ChatAP!",
     title: (user) => `¡Hola, ${user?.name ? user.name.split(" ")[0] : "amigo/a"}!`,
-    description:
-      "Soy tu Asistente Virtual Oficial. Te voy a mostrar cómo funciona la plataforma en pocos pasos.",
-    tip: "Esta breve guía no volverá a molestarte.",
-    badge: "Paso 1 de 7",
-    badgeColor: "bg-brand-deep/10 text-brand-deep",
-  },
-  {
-    reaction: "curious",
-    kicker: "Sección 1 · Inicio",
-    title: "Todo lo importante en un solo lugar",
-    description:
-      "El Inicio es el punto de partida: novedades, trámites frecuentes y métricas en tiempo real. ¡Ya estamos ahí!",
-    tip: "El siguiente paso te muestra dónde arrancar a chatear.",
-    badge: "Paso 2 de 7",
-    badgeColor: "bg-brand-deep/10 text-brand-deep",
-    route: "/",
+    description: "En tres pasos vas a conocer el chat y las opciones para adaptar la página.",
   },
   {
     reaction: "playful",
-    kicker: "Sección 2 · Chatear (24/7)",
-    title: "Acá arrancá tu consulta",
-    description:
-      "El botón iluminado, 'Preguntar a ChatAP', te lleva directo a la pantalla de chat. Un solo clic y estás adentro.",
-    tip: "También llegás desde el menú superior, en la pestaña 'Chatear'.",
-    badge: "Paso 3 de 7",
-    badgeColor: "bg-emerald-50 text-emerald-700",
-    route: "/",
-    target: "#chat-cta",
-  },
-  {
-    reaction: "attention",
-    kicker: "Dentro del chat",
-    title: "Esto es lo que podés hacer acá",
-    description:
-      "Preguntá por trámites y expedientes, consultá recibos, pedí certificados o empezá tocando una pregunta sugerida. También podés dictar con el micrófono.",
-    tip: "Escribí como hablarías con una persona: entendemos tu idioma.",
-    badge: "Paso 4 de 7",
-    badgeColor: "bg-sky-50 text-sky-700",
+    kicker: "Tu primera consulta",
+    title: "Escribí o elegí una consulta",
+    description: "Preguntá sobre trámites, expedientes o recibos. También podés empezar con un tema sugerido.",
     route: "/chat",
     target: "#chat-here",
   },
   {
-    reaction: "attention",
-    kicker: "Sección 3 · Soporte & Ayuda",
-    title: "Atención humana y canales directos",
-    description:
-      "En 'Soporte' tenés WhatsApp oficial, línea 0800 gratuita y un formulario para hablar con nuestro equipo.",
-    tip: "WhatsApp es el canal más rápido para inconvenientes técnicos.",
-    badge: "Paso 5 de 7",
-    badgeColor: "bg-amber-50 text-amber-700",
-    route: "/contacto",
-  },
-  {
-    reaction: "proud",
-    kicker: "Sección 4 · Mi Perfil",
-    title: "Tu espacio personal y seguro",
-    description:
-      "En 'Mi Perfil' podés revisar tus datos, cambiar tu contraseña y seguir el estado de tus gestiones.",
-    tip: "Tu información es confidencial.",
-    badge: "Paso 6 de 7",
-    badgeColor: "bg-purple-50 text-purple-700",
-    route: "/perfil",
-  },
-  {
     reaction: "happy",
-    kicker: "¡Todo listo para comenzar!",
-    title: "Ya conocés lo fundamental",
-    description:
-      "Este tutorial no volverá a aparecer. Podés explorar la plataforma o hacer tu primera consulta en el chat.",
-    tip: "¿Hacemos la primera pregunta juntos?",
-    badge: "Completado",
-    badgeColor: "bg-emerald-100 text-emerald-800",
-    isFinal: true,
+    kicker: "A tu manera",
+    title: "Adaptá la página a tus necesidades",
+    description: "Abrí Accesibilidad para agrandar el texto, activar alto contraste o elegir una letra más legible.",
+    route: "/chat",
+    target: "#accessibility-menu",
   },
 ];
 
@@ -190,7 +134,7 @@ export default function BotOnboardingModal() {
           lastRect = rect;
           setSpotlight({
             rect,
-            placement: rect.bottom + 280 < window.innerHeight ? "below" : "above",
+            placement: rect.bottom + 260 < window.innerHeight ? "below" : "above",
           });
           if (stableFrames >= 8) {
             measureRef.current = null;
@@ -228,6 +172,7 @@ export default function BotOnboardingModal() {
   const goToNext = useCallback(() => {
     const nextIndex = Math.min(step + 1, STEPS.length - 1);
     const nextRoute = STEPS[nextIndex]?.route;
+    setSpotlight(null);
     if (nextRoute) {
       navigate(nextRoute);
     }
@@ -238,6 +183,7 @@ export default function BotOnboardingModal() {
   const goToPrev = useCallback(() => {
     const prevIndex = Math.max(step - 1, 0);
     const prevRoute = STEPS[prevIndex]?.route;
+    setSpotlight(null);
     if (prevRoute) {
       navigate(prevRoute);
     }
@@ -265,6 +211,7 @@ export default function BotOnboardingModal() {
 
   const hasSpotlight = !!spotlight;
   const placement = hasSpotlight ? spotlight.placement : null;
+  const progress = ((step + 1) / STEPS.length) * 100;
   const current = {
     ...STEPS[step],
     title: typeof STEPS[step].title === "function" ? STEPS[step].title(user) : STEPS[step].title,
@@ -283,22 +230,12 @@ export default function BotOnboardingModal() {
           };
   }
 
-  const dots = (
-    <div className="flex items-center gap-1.5">
-      {STEPS.map((_, i) => (
-        <span
-          key={i}
-          className={i === step ? "tour-dot is-active" : "tour-dot"}
-        />
-      ))}
-    </div>
-  );
-
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Tutorial de bienvenida"
+      aria-describedby="tour-description"
       className={`fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${
         hasSpotlight ? "" : "justify-center"
       } ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
@@ -330,14 +267,14 @@ export default function BotOnboardingModal() {
 
       {/* El bot junto a su nube de texto */}
       <div
-        className={`relative z-[60] flex flex-col items-center gap-3 w-full ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
+        key={step}
+        className={`tour-card relative z-[60] flex flex-col items-center gap-3 w-full ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
         style={wrapStyle}
       >
         <div className="flex items-center gap-3 w-full" style={{ maxWidth: 400 }}>
           <div className="relative inline-block shrink-0">
             <div
-              key={`avatar-${step}`}
-              className="w-16 h-16 rounded-2xl bg-paper border border-line shadow-soft flex items-center justify-center overflow-hidden animate-avatar-pop"
+              className="tour-avatar w-16 h-16 rounded-2xl bg-paper border border-line shadow-soft flex items-center justify-center overflow-hidden animate-avatar-pop"
             >
               <ChatBotAvatar size={44} reaction={current.reaction} followMouse={false} />
             </div>
@@ -350,16 +287,23 @@ export default function BotOnboardingModal() {
             className={`tour-bubble ${direction === "next" ? "animate-step-next" : "animate-step-prev"}`}
             data-placement={placement}
           >
-            <div key={step} className="animate-fade-in">
+            <div>
               <p className="tour-kicker m-0">{current.kicker}</p>
               <h2 className="tour-title m-0">{current.title}</h2>
-              <p className="tour-desc m-0">{current.description}</p>
+              <p id="tour-description" className="tour-desc m-0">{current.description}</p>
             </div>
           </div>
         </div>
 
+        <div className="tour-progress" aria-hidden="true">
+          <span style={{ width: `${progress}%` }} />
+        </div>
+
         {/* Controles mínimos */}
         <div className="tour-controls">
+          <span className="tour-step-count" aria-live="polite">
+            {step + 1} / {STEPS.length}
+          </span>
           {!isFirst && (
             <button
               type="button"
@@ -372,8 +316,6 @@ export default function BotOnboardingModal() {
               </svg>
             </button>
           )}
-
-          {dots}
 
           {isLast ? (
             <>

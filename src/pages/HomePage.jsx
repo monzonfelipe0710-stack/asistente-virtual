@@ -203,12 +203,12 @@ export default function HomePage() {
         <section
           id="inicio"
           aria-label="Inicio ChatAP"
-          className="hero-cinematic section-bleed relative flex flex-col justify-between min-h-[92svh] lg:min-h-screen"
+          className="hero-cinematic section-bleed relative flex flex-col justify-between"
         >
           {/* Layer 1 & 2: Fondo Cinematográfico con Ken Burns, Crossfade y Overlays */}
           <HeroCinematicBackground />
 
-          <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4 pt-28 sm:pt-32 pb-10">
+          <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4">
             {/* Gran Titular Editorial con ScrollFloat */}
             <div className="hero-anim-title max-w-4xl mx-auto">
               <ScrollFloat
@@ -251,22 +251,8 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Acción principal del hero */}
-            <div className="hero-anim-cta mt-9">
-              <Link
-                to="/chat"
-                onPointerEnter={prefetchChat}
-                className="btn-primary no-underline text-base font-bold px-9 py-4 rounded-full inline-flex items-center gap-2 shadow-xl shadow-brand/25 transition-all transform hover:-translate-y-0.5"
-              >
-                <span>Hacer una consulta ahora</span>
-                <span>→</span>
-              </Link>
-              <p className="text-xs text-muted/80 mt-3 mb-0 text-center">
-                Sin registro. Escribí tu consulta y recibí respuesta al instante.
-              </p>
-            </div>
           </div>
-          <div className="hero-anim-footer hero-cinematic__footer relative z-10 w-full bg-transparent pb-6">
+          <div className="hero-anim-footer hero-cinematic__footer relative z-10 w-full bg-transparent">
             <div className="ed-max flex flex-col items-center gap-2">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted/70 font-semibold m-0 select-none">
                 Un proyecto del Gobierno de la Provincia de Formosa

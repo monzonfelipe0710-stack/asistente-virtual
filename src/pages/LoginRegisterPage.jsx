@@ -4,7 +4,25 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/common/Toast";
 import ChatBotAvatar from "../components/ChatBotAvatar";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
-import Footer from "../components/common/Footer";
+import { triggerOnboardingForUser } from "../components/common/BotOnboardingModal";
+
+function formatCuil(value) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+}
+
+function isValidCuil(value) {
+  const digits = value.replace(/\D/g, "");
+  if (!/^\d{11}$/.test(digits)) return false;
+
+  const weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const sum = weights.reduce((total, weight, index) => total + Number(digits[index]) * weight, 0);
+  const checkDigit = 11 - (sum % 11);
+  const expected = checkDigit === 11 ? [0] : checkDigit === 10 ? [4, 9] : [checkDigit];
+  return expected.includes(Number(digits[10]));
+}
 
 /**
  * Contenedor plegable con altura animada. Al cambiar de modo, los campos que
@@ -35,6 +53,7 @@ export default function LoginRegisterPage() {
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [accountType, setAccountType] = useState("ciudadano"); // "ciudadano" | "empleado"
   const [name, setName] = useState("");
+  const [cuil, setCuil] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -62,7 +81,18 @@ export default function LoginRegisterPage() {
         // - Empleado → solicitud al backend (queda PENDIENTE de aprobación).
         // - Ciudadano → cuenta local (demo) e inicio de sesión inmediato.
         const rol = accountType === "empleado" ? "ADMINISTRADOR" : "CIUDADANO";
-        const result = await register({ name, email, password, rol });
+        if (rol === "ADMINISTRADOR" && !isValidCuil(cuil)) {
+          toast("Ingresá un CUIL válido de 11 dígitos.", "error");
+          setSubmitting(false);
+          return;
+        }
+        const result = await register({
+          name,
+          email,
+          password,
+          rol,
+          cuil: rol === "ADMINISTRADOR" ? cuil.replace(/\D/g, "") : undefined,
+        });
         toast(
           result?.mensaje ||
             (accountType === "empleado"
@@ -71,6 +101,7 @@ export default function LoginRegisterPage() {
           "success"
         );
         if (result?.autoLogin) {
+          if (result.user?.id) triggerOnboardingForUser(result.user.id);
           navigate(from, { replace: true });
         } else {
           setMode("login");
@@ -105,14 +136,14 @@ export default function LoginRegisterPage() {
   }
 
   return (
-    <div className="min-h-[100svh] flex flex-col justify-between bg-paper font-sans">
+    <div className="min-h-[100svh] lg:h-[100svh] flex flex-col bg-paper font-sans lg:overflow-hidden">
       {/* Grilla Principal:
           - Izquierda: Decoración editorial previa + Fotografía de Montañas
           - Derecha: Formulario de acceso (login / solicitud de cuenta)
       */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2">
         {/* 1. Columna Izquierda: Decoración Editorial Previa + Fotografía de Montañas */}
-        <div className="relative hidden lg:flex flex-col justify-between overflow-hidden border-r border-line bg-mist/50 dark:bg-slate-900/40 p-12 xl:p-16 select-none">
+        <div className="relative hidden lg:flex min-h-0 flex-col justify-between overflow-hidden border-r border-line bg-mist/50 dark:bg-slate-900/40 p-10 xl:p-12 select-none">
           {/* Cabecera institucional */}
           <div className="relative z-10 flex items-start justify-between">
             <span className="inline-flex items-center gap-3">
@@ -131,11 +162,11 @@ export default function LoginRegisterPage() {
 
           {/* Bloque editorial principal */}
           <div className="relative z-10 my-8">
-            <DisplayTitle as={1} className="max-w-xl">
-              ChatAP, EL ASISTENTE INTELIGENTE PARA LA <span className="text-brand">ADMINISTRACIÓN PÚBLICA</span>.
+            <DisplayTitle as={1} className="max-w-lg">
+              Trámites simples, <span className="text-brand">respuestas al instante</span>.
             </DisplayTitle>
-            <Lead className="max-w-md mt-6">
-              Asistente inteligente de la Subsecretaría de Recursos Humanos, dependiente del Ministerio Jefatura de Gabinete de la Provincia de Formosa. Consultá trámites, descargá documentos y seguí tus expedientes en un solo lugar.
+            <Lead className="max-w-sm mt-5">
+              Hablá con ChatAP cuando lo necesites.
             </Lead>
           </div>
 
@@ -160,9 +191,9 @@ export default function LoginRegisterPage() {
         </div>
 
         {/* 2. Columna Derecha: Formulario */}
-        <div className="flex flex-col justify-between px-6 sm:px-12 xl:px-20 py-10 lg:py-14 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100">
+        <div className="flex min-h-0 flex-col px-6 sm:px-12 xl:px-20 py-6 lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100">
           {/* Barra superior con navegación de retorno y toggle de modo */}
-          <div className="flex items-center justify-between w-full max-w-md mx-auto">
+          <div className="flex items-center justify-between w-full max-w-md mx-auto shrink-0">
             <Link
               to="/"
               className="inline-flex items-center gap-2 text-xs font-medium text-muted hover:text-ink transition-colors no-underline group"
@@ -206,7 +237,7 @@ export default function LoginRegisterPage() {
           </div>
 
           {/* Tarjeta Central del Formulario */}
-          <div className="w-full max-w-md mx-auto my-auto py-6">
+          <div className="w-full max-w-md mx-auto my-auto py-3">
             {/* Logo en móvil */}
             <div className="lg:hidden flex items-center gap-3 mb-6">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-deep text-white">
@@ -355,6 +386,30 @@ export default function LoginRegisterPage() {
                           <span className="text-[11px] text-muted">Requiere aprobación</span>
                         </button>
                       </div>
+                    </div>
+                  </Collapse>
+
+                  <Collapse open={!isLogin && accountType === "empleado"}>
+                    <div>
+                      <label htmlFor="employee-cuil" className="block text-sm font-medium text-muted mb-1.5">
+                        CUIL
+                      </label>
+                      <input
+                        id="employee-cuil"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        maxLength={13}
+                        required={!isLogin && accountType === "empleado"}
+                        value={cuil}
+                        onChange={(e) => setCuil(formatCuil(e.target.value))}
+                        placeholder="20-12345678-6"
+                        aria-describedby="employee-cuil-hint"
+                        className="w-full px-4 py-2.5 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
+                      />
+                      <p id="employee-cuil-hint" className="mt-1 text-[11px] text-muted">
+                        Ingresá los 11 dígitos tal como figuran en tu constancia.
+                      </p>
                     </div>
                   </Collapse>
 
@@ -530,9 +585,6 @@ export default function LoginRegisterPage() {
           </div>
         </div>
       </div>
-
-      {/* 3. Footer Completo */}
-      <Footer />
 
     </div>
   );

@@ -5,10 +5,10 @@ import { api } from "../lib/api";
  * rol ADMINISTRADOR (empleado) → estado PENDIENTE (requiere aprobación).
  * rol CIUDADANO → estado APROBADO (habilitado al instante).
  */
-export async function registro({ nombre, email, password, rol }) {
+export async function registro({ nombre, email, password, cuil }) {
   const { data } = await api.post(
     "/api/usuarios/registro",
-    { nombre, email, password, rol },
+    { nombre, email, password, cuil },
     { skipAuthHandler: true }
   );
   return data;
