@@ -254,7 +254,7 @@ export default function ContactoPage() {
                     <form onSubmit={handleSubmit} className="space-y-4">
                       {/* Nombre */}
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+                        <label className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
                           Nombre y Apellido *
                         </label>
                         <input
@@ -269,7 +269,7 @@ export default function ContactoPage() {
 
                       {/* Contacto (Email o Teléfono) */}
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+                        <label className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
                           Email o Teléfono de contacto *
                         </label>
                         <input
@@ -284,7 +284,7 @@ export default function ContactoPage() {
 
                       {/* Motivo */}
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+                        <label className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
                           ¿Sobre qué es tu consulta? *
                         </label>
                         <select
@@ -302,7 +302,7 @@ export default function ContactoPage() {
 
                       {/* Mensaje */}
                       <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+                        <label className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
                           Mensaje o detalle *
                         </label>
                         <textarea

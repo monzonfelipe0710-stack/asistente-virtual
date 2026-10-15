@@ -32,33 +32,38 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={addToast}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
             className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg bg-linear-to-r text-paper text-sm font-medium animate-slide-up ${typeStyles[t.type] || typeStyles.success}`}
           >
             {t.type === "success" && (
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             )}
             {t.type === "error" && (
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             )}
             {t.type === "info" && (
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
             <span className="flex-1">{t.message}</span>
             <button
               onClick={() => removeToast(t.id)}
-              className="text-paper/60 hover:text-paper cursor-pointer"
+              aria-label="Cerrar aviso"
+              className="shrink-0 grid h-11 w-11 place-items-center rounded-lg text-paper/80 hover:text-paper hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

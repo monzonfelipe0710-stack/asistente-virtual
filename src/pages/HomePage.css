@@ -81,6 +81,10 @@
   animation: heroSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.58s both;
 }
 
+.hero-anim-cta {
+  animation: heroSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.66s both;
+}
+
 .hero-anim-footer {
   animation: heroSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.68s both;
 }
@@ -103,6 +107,7 @@
   .hero-anim-search,
   .hero-anim-pills,
   .hero-anim-trust,
+  .hero-anim-cta,
   .hero-anim-footer {
     animation: none !important;
     opacity: 1 !important;

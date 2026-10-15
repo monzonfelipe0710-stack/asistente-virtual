@@ -250,9 +250,22 @@ export default function HomePage() {
                 Subsecretaría de Recursos Humanos
               </span>
             </div>
-          </div>
 
-          {/* Marquesina institucional continua integrada */}
+            {/* Acción principal del hero */}
+            <div className="hero-anim-cta mt-9">
+              <Link
+                to="/chat"
+                onPointerEnter={prefetchChat}
+                className="btn-primary no-underline text-base font-bold px-9 py-4 rounded-full inline-flex items-center gap-2 shadow-xl shadow-brand/25 transition-all transform hover:-translate-y-0.5"
+              >
+                <span>Hacer una consulta ahora</span>
+                <span>→</span>
+              </Link>
+              <p className="text-xs text-muted/80 mt-3 mb-0 text-center">
+                Sin registro. Escribí tu consulta y recibí respuesta al instante.
+              </p>
+            </div>
+          </div>
           <div className="hero-anim-footer hero-cinematic__footer relative z-10 w-full bg-transparent pb-6">
             <div className="ed-max flex flex-col items-center gap-2">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted/70 font-semibold m-0 select-none">

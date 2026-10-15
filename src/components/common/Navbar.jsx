@@ -79,7 +79,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
           <span className="nav-profile-avatar" aria-hidden="true">
             {user.name?.[0] ?? "?"}
           </span>
-          <span className="hidden sm:inline-block text-xs font-medium text-white/90 max-w-[5.5rem] truncate">
+          <span className="hidden sm:inline-block text-sm font-medium text-white/90 max-w-[5.5rem] truncate">
             {firstName}
           </span>
           <svg
@@ -109,7 +109,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
                 to="/perfil"
                 onClick={() => setOpen(false)}
                 role="menuitem"
-                className="flex items-center gap-2.5 px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-white/5 transition-colors no-underline"
+                className="flex items-center gap-2.5 px-4 min-h-11 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors no-underline"
               >
                 <svg className="w-3.5 h-3.5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -122,7 +122,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
                 rel="noopener noreferrer"
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-white/5 transition-colors no-underline"
+                className="flex items-center gap-2.5 px-4 min-h-11 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors no-underline"
               >
                 <svg className="w-3.5 h-3.5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -136,7 +136,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
                   onFocus={preloadAdmin}
                   onClick={() => setOpen(false)}
                   role="menuitem"
-                  className="flex items-center gap-2.5 px-4 py-2 text-xs text-white/80 hover:text-white hover:bg-white/5 transition-colors no-underline"
+                  className="flex items-center gap-2.5 px-4 min-h-11 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors no-underline"
                 >
                   <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -150,7 +150,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
                 type="button"
                 role="menuitem"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+                className="w-full flex items-center gap-2.5 px-4 min-h-11 text-sm text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5 text-red-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -197,7 +197,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
               key={l.id}
               to={l.to}
               onClick={onClose}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium tracking-wide transition-colors no-underline ${
+              className={`flex items-center justify-between px-3.5 min-h-12 rounded-xl text-sm font-medium tracking-wide transition-colors no-underline ${
                 active
                   ? "bg-white/10 text-white font-semibold"
                   : "text-white/70 hover:text-white hover:bg-white/5"
@@ -229,7 +229,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
             <Link
               to="/perfil"
               onClick={onClose}
-              className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
+              className="flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
             >
               <span>Mi perfil</span>
               <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,7 +242,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
               target="_blank"
               rel="noopener noreferrer"
               onClick={onClose}
-              className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
+              className="flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
             >
               <span>MiPortal</span>
               <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,7 +254,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
               <Link
                 to="/admin"
                 onClick={onClose}
-                className="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
+                className="flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
               >
                 <span>Panel Admin</span>
                 <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,7 +269,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
                 onClose();
                 logout();
               }}
-              className="w-full mt-1 flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+              className="w-full mt-1 flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
             >
               <span>Cerrar sesión</span>
               <svg className="w-3.5 h-3.5 text-red-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +282,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
             <Link
               to="/login"
               onClick={onClose}
-              className="flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-xl text-white bg-brand hover:bg-brand-dark transition-colors no-underline shadow-xs"
+              className="flex items-center justify-center px-4 min-h-12 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-dark transition-colors no-underline shadow-xs"
             >
               Ingresar
             </Link>
@@ -376,7 +376,7 @@ export default function Navbar() {
         <span className="nav-divider hidden md:block" aria-hidden="true" />
 
         {/* ── Centro: Navegación Principal con GooeyNav (React Bits) ── */}
-        <div className="hidden md:flex items-center" aria-label="Navegación principal">
+        <nav aria-label="Navegación principal" className="hidden md:flex items-center">
           <GooeyNav
             items={NAV_LINKS.map((l) => ({ label: l.label, href: l.to }))}
             initialActiveIndex={activeNavIndex}
@@ -388,7 +388,7 @@ export default function Navbar() {
             timeVariance={300}
             colors={[1, 2, 3, 1, 2, 3, 1, 4]}
           />
-        </div>
+        </nav>
 
         <span className="nav-divider hidden md:block" aria-hidden="true" />
 
@@ -404,7 +404,7 @@ export default function Navbar() {
             <span className="relative flex items-center justify-center w-full h-full transition-transform duration-300 group-active:scale-90">
               {dark ? (
                 <svg
-                  className="w-3.5 h-3.5 text-amber-300 transition-transform duration-500 rotate-0 group-hover:rotate-45"
+                  className="w-5 h-5 text-amber-300 transition-transform duration-500 rotate-0 group-hover:rotate-45"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -419,7 +419,7 @@ export default function Navbar() {
                 </svg>
               ) : (
                 <svg
-                  className="w-3.5 h-3.5 text-white/75 transition-transform duration-500 rotate-0 group-hover:-rotate-12"
+                  className="w-5 h-5 text-white/75 transition-transform duration-500 rotate-0 group-hover:-rotate-12"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -453,11 +453,11 @@ export default function Navbar() {
             className="nav-icon-btn md:hidden"
           >
             {menuOpen ? (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
               </svg>
             )}

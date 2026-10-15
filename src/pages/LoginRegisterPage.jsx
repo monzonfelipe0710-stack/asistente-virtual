@@ -248,7 +248,7 @@ export default function LoginRegisterPage() {
                 {!recoveryPending ? (
                   <form onSubmit={handleRecovery} className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
+                      <label className="block text-sm font-semibold text-muted uppercase tracking-wider mb-1.5">
                         Correo electrónico
                       </label>
                       <input
@@ -313,7 +313,7 @@ export default function LoginRegisterPage() {
                   {/* Selector de tipo de cuenta: sólo en registro. */}
                   <Collapse open={!isLogin}>
                     <div>
-                      <label className="block text-xs font-medium text-muted mb-1.5">
+                      <label className="block text-sm font-medium text-muted mb-1.5">
                         Tipo de cuenta
                       </label>
                       <div className="grid grid-cols-2 gap-2">
@@ -361,7 +361,7 @@ export default function LoginRegisterPage() {
                   {/* Nombre: sólo en registro. Se despliega con altura animada. */}
                   <Collapse open={!isLogin}>
                     <div>
-                      <label className="block text-xs font-medium text-muted mb-1.5">
+                      <label className="block text-sm font-medium text-muted mb-1.5">
                         Nombre completo
                       </label>
                       <input
@@ -369,6 +369,7 @@ export default function LoginRegisterPage() {
                         required={!isLogin}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
+                        autoComplete="name"
                         placeholder="Ej: Juan Carlos Pérez"
                         className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                       />
@@ -376,7 +377,7 @@ export default function LoginRegisterPage() {
                   </Collapse>
 
                   <div className="mb-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">
+                    <label className="block text-sm font-medium text-muted mb-1.5">
                       Correo electrónico
                     </label>
                     <input
@@ -391,7 +392,7 @@ export default function LoginRegisterPage() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-xs font-medium text-muted mb-1.5">
+                    <label className="block text-sm font-medium text-muted mb-1.5">
                       Contraseña
                     </label>
                     <div className="relative">
@@ -407,7 +408,9 @@ export default function LoginRegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer p-1"
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                        aria-pressed={showPassword}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer p-2"
                       >
                         {showPassword ? (
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

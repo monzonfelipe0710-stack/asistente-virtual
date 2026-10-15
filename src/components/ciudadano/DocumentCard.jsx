@@ -29,16 +29,16 @@ export default function DocumentCard({ document }) {
           {document.description}
         </p>
         <div className="flex items-center gap-2 mt-2">
-          <span className="text-[10px] uppercase tracking-wide text-muted">{document.format}</span>
-          <span className="text-[10px] text-line">|</span>
-          <span className="text-[10px] uppercase tracking-wide text-muted">{document.fileSize}</span>
-          <span className="text-[10px] text-line">|</span>
-          <span className="text-[10px] uppercase tracking-wide text-muted">{document.category.slice(0, -1)}</span>
+          <span className="text-xs uppercase tracking-wide text-muted">{document.format}</span>
+          <span className="text-xs text-line">|</span>
+          <span className="text-xs uppercase tracking-wide text-muted">{document.fileSize}</span>
+          <span className="text-xs text-line">|</span>
+          <span className="text-xs uppercase tracking-wide text-muted">{document.category.slice(0, -1)}</span>
         </div>
       </div>
 
       <button
-        className="shrink-0 px-4 py-2 text-xs font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
+        className="shrink-0 inline-flex items-center px-5 min-h-11 text-sm font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
         onClick={() => alert(`Descargando: ${document.title}`)}
       >
         Descargar
