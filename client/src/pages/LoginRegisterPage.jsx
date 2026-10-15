@@ -132,11 +132,10 @@ export default function LoginRegisterPage() {
           {/* Bloque editorial principal */}
           <div className="relative z-10 my-8">
             <DisplayTitle as={1} className="max-w-xl">
-              HABLÁ CON EL ESTADO.
+              ChatAP, EL ASISTENTE INTELIGENTE PARA LA <span className="text-brand">ADMINISTRACIÓN PÚBLICA</span>.
             </DisplayTitle>
             <Lead className="max-w-md mt-6">
-              Entrá para seguir tus conversaciones, consultar tus trámites y recibir tus
-              documentos. Todo en Formosa. Todo en línea.
+              Asistente inteligente de la Subsecretaría de Recursos Humanos, dependiente del Ministerio Jefatura de Gabinete de la Provincia de Formosa. Consultá trámites, descargá documentos y seguí tus expedientes en un solo lugar.
             </Lead>
           </div>
 

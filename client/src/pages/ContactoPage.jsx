@@ -7,29 +7,55 @@ import { useAuth } from "../context/AuthContext";
 
 const FAQS_RAPIDAS = [
   {
-    q: "¿Dónde consulto mis recibos de haberes?",
-    a: "Podés ver y descargar tus recibos ingresando al portal SUAF con tu CUIL y contraseña. Si no podés ingresar, escribinos por el formulario o por WhatsApp para blanquear tu acceso.",
+    q: "¿Qué es ChatAP y para qué sirve?",
+    a: "ChatAP es el asistente inteligente de la Subsecretaría de Recursos Humanos. Te orienta en trámites, responde preguntas frecuentes, entrega documentos y consulta el SIGED para conocer el estado de tus expedientes.",
   },
   {
-    q: "¿Cómo solicito una licencia médica o anual?",
-    a: "Las licencias se solicitan mediante el formulario oficial con firma de tu superior y deben presentarse en Mesa de Entradas. En caso de enfermedad, contás con 48 hs hábiles para presentar el certificado médico.",
+    q: "¿Dónde descargo documentos, modelos y plantillas?",
+    a: "Desde ChatAP podés descargar formularios oficiales, notas de elevación, declaraciones juradas, constancias y demás modelos y plantillas administrativas aprobadas por la Subsecretaría, listos para presentar.",
   },
   {
-    q: "¿Cómo hago el seguimiento de un expediente en SIGED?",
-    a: "Ingresá con tu número de expediente (ej. EXP-0028/2026) en la sección SIGED o consultanos con tu DNI para que verifiquemos en qué oficina se encuentra.",
+    q: "¿Cómo sigo mi expediente en el SIGED?",
+    a: "Con el número de tu expediente, ChatAP consulta el Sistema de Gestión Documental por API y te informa su ubicación actual y último movimiento. Podés hacerlo desde el chat o consultarnos por este formulario.",
   },
   {
-    q: "¿Qué hago si olvidé mi contraseña o no puedo ingresar?",
-    a: "Podés restablecer tu clave desde la pantalla de inicio de sesión haciendo clic en '¿Olvidaste tu contraseña?'. Si persistís con inconvenientes, envianos tu DNI por WhatsApp para una solución inmediata.",
+    q: "¿Necesito registrarme para consultar?",
+    a: "No. Podés consultar de forma libre y anónima. Si iniciás sesión, guardás el historial de conversaciones y el seguimiento de tus trámites.",
+  },
+  {
+    q: "¿Dónde presento un trámite de forma presencial?",
+    a: "En la Mesa de Entrada Central: Belgrano 836, Formosa Capital. El equipo de ChatAP trabaja con las mesas de entrada para orientarte correctamente antes de presentar.",
+  },
+  {
+    q: "¿Qué incluyen el panel de usuarios y el de conocimiento?",
+    a: "El panel de usuarios permite gestionar cuentas, altas y permisos de ciudadanos y usuarios internos. El panel de conocimiento mantiene actualizado el dominio de conocimiento del chatbot para que sus respuestas sean actuales.",
+  },
+  {
+    q: "¿Qué hay de MiPortal, WhatsApp y la mesa de entradas?",
+    a: "La vinculación a MiPortal y eventuales funcionalidades por WhatsApp están contempladas como funcionalidades futuras. La articulación con las mesas de entrada es parte del alcance actual del proyecto.",
+  },
+  {
+    q: "¿Cuánto cuesta utilizar ChatAP?",
+    a: "No tiene costo. Es un servicio 100% gratuito, público y de libre acceso desarrollado por el Gobierno de la Provincia de Formosa, a través de la Subsecretaría de Recursos Humanos, dependiente del Ministerio Jefatura de Gabinete.",
   },
 ];
 
 const MOTIVOS = [
+  { id: "tramites", label: "Orientación sobre trámites" },
+  { id: "documentos", label: "Documentos, modelos y plantillas" },
+  { id: "siged", label: "Seguimiento de expediente / SIGED" },
   { id: "acceso", label: "Problemas para ingresar o contraseña" },
   { id: "haberes", label: "Recibos de sueldo / Liquidaciones" },
-  { id: "licencias", label: "Licencias e inasistencias" },
-  { id: "siged", label: "Seguimiento de expediente / Trámites" },
+  { id: "miportal", label: "MiPortal / integración" },
+  { id: "entrada", label: "Mesa de entradas / Presentación de trámite" },
   { id: "otro", label: "Otra consulta o gestión" },
+];
+
+const INFO_CONTACTO = [
+  { label: "Asistente", value: "ChatAP 24/7", hint: "Respuestas automáticas" },
+  { label: "Correo oficial", value: "mesadeayuda@subsechh.formosa.gob.ar", hint: "Mesa de ayuda" },
+  { label: "Teléfono", value: "0800 555 1234", hint: "Lun a Vie 07–19 hs" },
+  { label: "Mesa de Entrada", value: "Belgrano 836, Formosa", hint: "07–13 y 14–19 hs" },
 ];
 
 export default function ContactoPage() {
@@ -199,7 +225,7 @@ export default function ContactoPage() {
                     Dejanos tu mensaje
                   </h2>
                   <p className="text-sm text-muted mt-1.5 mb-6 m-0">
-                    Completá tus datos y te responderemos por correo o teléfono en el transcurso del día.
+                    Completá tus datos y la Mesa de Ayuda de la Subsecretaría de Recursos Humanos te responderá a la brevedad.
                   </p>
 
                   {sent ? (
@@ -211,8 +237,8 @@ export default function ContactoPage() {
                       </div>
                       <h3 className="text-lg font-bold text-ink m-0">¡Consulta enviada con éxito!</h3>
                       <p className="text-sm text-muted mt-2 max-w-md mx-auto">
-                        Recibimos tu mensaje. Un agente de la Subsecretaría de Recursos Humanos se pondrá en contacto a la brevedad.
-                      </p>
+                              Un agente de la Subsecretaría de Recursos Humanos se pondrá en contacto a la brevedad.
+                            </p>
                       <button
                         type="button"
                         onClick={() => {
@@ -385,6 +411,46 @@ export default function ContactoPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        {/* Bloque institucional + canales directos */}
+        <section className="border-t border-line/40 bg-mist/35 py-12 sm:py-16">
+          <div className="ed-max section-bleed">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="lg:col-span-7">
+                <p className="kicker mb-2">SUBSECRETARÍA DE RECURSOS HUMANOS</p>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink m-0">
+                  Atención oficial del Estado provincial
+                </h2>
+                <p className="text-sm sm:text-base text-muted mt-3 m-0 leading-relaxed max-w-2xl">
+                  ChatAP se desarrolla en el ámbito de la Subsecretaría de Recursos Humanos,
+                  dependiente del Ministerio Jefatura de Gabinete de la Provincia de Formosa.
+                  Brinda orientación, respuestas, documentos y seguimiento de expedientes tanto
+                  a ciudadanos como a usuarios internos de la administración.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {["Orientación de trámites", "Preguntas frecuentes", "Documentos y plantillas", "SIGED", "Mesa de entradas"].map((tag) => (
+                    <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line bg-paper text-xs font-semibold text-muted">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {INFO_CONTACTO.map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-line bg-paper p-5">
+                    <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-muted m-0">
+                      {item.label}
+                    </p>
+                    <p className="text-sm font-bold text-ink mt-1.5 m-0">{item.value}</p>
+                    {item.hint ? (
+                      <p className="text-xs text-muted mt-1 m-0">{item.hint}</p>
+                    ) : null}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

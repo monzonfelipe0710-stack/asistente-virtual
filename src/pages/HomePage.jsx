@@ -52,26 +52,64 @@ const FEATURES = [
   },
 ];
 
-const FAQ_ITEMS = [
+const SOLUTIONS = [
   {
-    id: "costo",
-    question: "¿Tiene algún costo utilizar ChatAP?",
-    answer: "No, es un servicio 100% gratuito, público y de libre acceso desarrollado por el Gobierno de la Provincia de Formosa a través de la Subsecretaría de Recursos Humanos.",
+    id: "orientacion",
+    title: "Orientación y guía de trámites",
+    description: "Guía interactiva de trámites administrativos y respuestas automáticas a las preguntas frecuentes de ciudadanos y empleados.",
   },
   {
-    id: "registro",
-    question: "¿Es obligatorio registrarse para consultar?",
-    answer: "No es necesario. Podés consultar de forma libre y anónima en cualquier momento. Si iniciás sesión, podrás guardar el historial de tus conversaciones y el seguimiento de tus trámites.",
-  },
-  {
-    id: "formularios",
-    question: "¿Qué formularios oficiales puedo descargar directamente?",
-    answer: "Podés descargar el Formulario F-04 para justificación de licencias médicas, modelos de notas de elevación, declaraciones juradas y constancias oficiales con un solo clic.",
+    id: "documentos",
+    title: "Documentos y plantillas al instante",
+    description: "Acceso y descarga directa de documentos administrativos, modelos y plantillas oficiales listos para presentar.",
   },
   {
     id: "siged",
-    question: "¿Cómo funciona el rastreo de expedientes?",
-    answer: "Solo tenés que escribir el número de tu expediente o trámite en la conversación. ChatAP consulta la base del Sistema de Gestión Documental e informa su ubicación actual y último movimiento.",
+    title: "Integración con el SIGED",
+    description: "Consultas vía API al Sistema de Gestión Documental existente para conocer el estado real de cada expediente en tiempo real.",
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    id: "alcance",
+    question: "¿Qué puedo resolver exactamente con ChatAP?",
+    answer: "ChatAP te orienta en trámites administrativos, responde preguntas frecuentes, te entrega documentos, modelos y plantillas, y consulta el SIGED para informarte sobre tus expedientes. Además acompaña la atención de mesa de entradas.",
+  },
+  {
+    id: "tramites",
+    question: "¿Cómo me guía paso a paso en un trámite?",
+    answer: "Escribí en lenguaje cotidiano qué necesitás resolver. ChatAP identifica el trámite y te indica requisitos, plazos y el organismo o mesa de entradas donde presentarlo, uno por uno.",
+  },
+  {
+    id: "documentos",
+    question: "¿Qué documentos, modelos y plantillas puedo descargar?",
+    answer: "Formularios oficiales como el F-04 para justificación de licencias médicas, notas de elevación, declaraciones juradas y constancias oficiales: todos aprobados por la Subsecretaría y listos para presentar.",
+  },
+  {
+    id: "siged",
+    question: "¿Cómo funciona la integración con el SIGED?",
+    answer: "Mediante una API, ChatAP consulta el Sistema de Gestión Documental existente. Con el número de tu expediente te informa su ubicación actual y último movimiento, sin trámites adicionales ni llamados.",
+  },
+  {
+    id: "registro",
+    question: "¿Necesito registrarme o iniciar sesión para consultar?",
+    answer: "No es obligatorio: podés consultar de forma libre y anónima en cualquier momento. Si iniciás sesión, guardás el historial de tus conversaciones y el seguimiento de tus trámites.",
+  },
+  {
+    id: "usuarios",
+    question: "¿Qué incluyen el panel de usuarios y el de conocimiento?",
+    answer: "El panel de usuarios permite gestionar cuentas, altas y permisos de ciudadanos y usuarios internos. El panel de conocimiento administra dinámicamente el dominio de conocimiento del chatbot, para que sus respuestas siempre estén actualizadas.",
+  },
+  {
+    id: "integracion",
+    question: "¿Qué hay de MiPortal, WhatsApp y la mesa de entradas?",
+    answer: "La vinculación a MiPortal y eventuales funcionalidades por WhatsApp están contempladas como funcionalidades futuras del proyecto. El trabajo con las mesas de entrada se articula para formalizar correctamente cada circuito administrativo.",
+  },
+  {
+    id: "costo",
+    question: "¿Tiene algún costo utilizar ChatAP?",
+    answer: "No. Es un servicio 100% gratuito, público y de libre acceso desarrollado por el Gobierno de la Provincia de Formosa a través de la Subsecretaría de Recursos Humanos, dependiente del Ministerio Jefatura de Gabinete.",
   },
 ];
 
@@ -182,13 +220,13 @@ export default function HomePage() {
                 containerClassName="hero-cinematic__title-container"
                 textClassName="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0 block"
               >
-                Tus trámites en Formosa, simples y al instante.
+                El Estado te responde a la primera.
               </ScrollFloat>
             </div>
 
             {/* Subtítulo limpio y de alto contraste */}
             <p className="hero-anim-sub mt-6 text-base sm:text-lg lg:text-xl text-muted max-w-2xl mx-auto leading-relaxed m-0 font-normal">
-              Consultá expedientes SIGED, descargá formularios oficiales y obtené respuestas verificadas las 24 horas, sin filas ni traslados.
+              ChatAP es el asistente inteligente de la Subsecretaría de Recursos Humanos de Formosa: te orienta en tus trámites, responde tus preguntas frecuentes, te entrega documentos y consulta tus expedientes en el SIGED. Las 24 horas, sin filas ni traslados.
             </p>
 
             {/* Sellos de Confianza Institucionales */}
@@ -235,18 +273,81 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 2 · El Asistente en Acción (Showcase Real y Directo) */}
+        {/* 2 · La problemática, resumida y directa */}
+        <section id="problema" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col items-center gap-7 text-center">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+              El punto de partida
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight m-0 leading-[1.1] max-w-3xl">
+              Cada consulta administrativa te cuesta <span className="text-brand">tiempo que no recuperás.</span>
+            </h2>
+            <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed m-0">
+              Los ciudadanos y los usuarios internos que necesitan una respuesta sobre trámites administrativos o documentos del gobierno siguen dependiendo de llamados, traslados y esperas. Cada gestión, lejos de un acceso rápido y eficiente.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+              {["Horas de espera", "Traslados innecesarios", "Formularios que no encontrás", "Expedientes sin novedades", "Consultas repetidas sin respuesta"].map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-mist/70 dark:bg-neutral-800/70 border border-line/60 text-xs font-semibold text-muted"
+                >
+                  <svg className="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 3 · Qué queremos resolver */}
+        <section id="solucion" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col gap-12">
+            <div className="max-w-2xl space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Nuestro objetivo
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Acceso rápido y eficiente a información, trámites y documentos.
+              </h2>
+              <p className="text-base text-muted m-0 leading-relaxed">
+                ChatAP es una plataforma conversacional inteligente que mejora la calidad de
+                atención al ciudadano y a los usuarios internos, con respuestas automatizadas
+                y conocimiento institucional de la Subsecretaría de Recursos Humanos.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {SOLUTIONS.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-line bg-card/70 p-6 flex flex-col gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                  <h3 className="text-lg font-bold text-ink tracking-tight m-0">{item.title}</h3>
+                  <p className="text-sm text-muted leading-relaxed m-0">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 4 · Presentación del asistente (Showcase Real y Directo) */}
         <section id="en-accion" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
           <div className="ed-max flex flex-col items-center gap-12">
             <div className="text-center max-w-2xl mx-auto space-y-3">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
-                Demostración en vivo
+                Presentamos a ChatAP
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
                 Una conversación, una respuesta oficial.
               </h2>
               <p className="text-base text-muted m-0 leading-relaxed">
-                Mirá cómo resuelve dudas en tiempo real con datos de la Subsecretaría de Recursos Humanos y el Sistema SIGED.
+                El asistente inteligente de la Administración Pública de Formosa: orienta sobre
+                trámites, responde preguntas frecuentes, entrega documentos y consulta el SIGED
+                en tiempo real, todo en una misma conversación.
               </p>
             </div>
 
@@ -268,22 +369,22 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 3 · Tres Capacidades Clave (Minimalista, Espacioso, Claro) */}
+        {/* 5 · Funciones Clave */}
         <section id="capacidades" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
           <div className="ed-max flex flex-col gap-12">
             <div className="max-w-2xl space-y-3">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
-                Servicios integrados
+                Funciones clave
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
-                Todo lo que necesitás, en un solo lugar.
+                Todo lo que ChatAP resuelve por vos.
               </h2>
               <p className="text-base text-muted m-0 leading-relaxed">
-                Diseñado para reducir la burocracia y brindarte respuestas inmediatas desde tu casa o lugar de trabajo.
+                Orientación, respuestas, documentos y consultas al SIGED, más el panel de usuarios y la gestión del conocimiento de la Subsecretaría de Recursos Humanos.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {FEATURES.map((item) => (
                 <div key={item.id} className="minimal-feature-card group">
                   <div className="space-y-4">
@@ -318,7 +419,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 4 · Preguntas Frecuentes Concisas (FAQ) */}
+        {/* 6 · Preguntas Frecuentes Concisas (FAQ) */}
         <section id="preguntas" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
           <div className="ed-max flex flex-col gap-10 max-w-3xl mx-auto">
             <div className="text-center space-y-3">
@@ -351,7 +452,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 5 · Cierre Tipográfico Minimalista */}
+        {/* 7 · Cierre Tipográfico Minimalista */}
         <section id="cierre" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
           <div className="ed-max">
             <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
@@ -379,7 +480,7 @@ export default function HomePage() {
               </div>
 
               <p className="text-xs text-muted/70 font-mono m-0">
-                Servicio público oficial · Subsecretaría de Recursos Humanos de Formosa
+                Servicio público oficial · Subsecretaría de Recursos Humanos · Ministerio Jefatura de Gabinete
               </p>
             </div>
           </div>
