@@ -2,6 +2,9 @@ import { readJSON, writeJSON } from "./auth";
 
 const MEMORY_PREFIX = "chatap.memory.";
 
+// Máximo de consultas que guardamos y mostramos en el historial.
+export const HISTORY_LIMIT = 4;
+
 const TOPICS = {
   licencias: {
     label: "licencias",
@@ -156,7 +159,23 @@ export function rememberMessage(userId, text) {
   }
   mem.count = (mem.count || 0) + 1;
   mem.lastAt = new Date().toISOString();
-  mem.messages = [...(mem.messages || []), { text, at: mem.lastAt }].slice(-8);
+  mem.messages = [...(mem.messages || []), { text, at: mem.lastAt }].slice(-HISTORY_LIMIT);
+  saveMemory(userId, mem);
+  return mem;
+}
+
+export function removeMemoryMessage(userId, at) {
+  if (!userId || !at) return null;
+  const mem = loadMemory(userId);
+  mem.messages = (mem.messages || []).filter((m) => m.at !== at);
+  saveMemory(userId, mem);
+  return mem;
+}
+
+export function clearMemoryMessages(userId) {
+  if (!userId) return null;
+  const mem = loadMemory(userId);
+  mem.messages = [];
   saveMemory(userId, mem);
   return mem;
 }

@@ -1,12 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import ChatBotAvatar from "../ChatBotAvatar";
+import ChatHistoryPanel from "./ChatHistoryPanel";
+import Modal from "../common/Modal";
 import { BotReactionController } from "./BotReactionController";
 import { wizards, wizardLabels } from "../../data/wizard";
 import { preguntar } from "../../services/chat";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
+import useA11y from "../../hooks/useA11y";
 import {
   rememberMessage,
   rememberAnswer,
@@ -14,9 +17,14 @@ import {
   buildReminder,
   suggestedTopics,
   detectTopic,
+  removeMemoryMessage,
+  clearMemoryMessages,
 } from "../../lib/chatMemory";
+import { speak, stopSpeaking, canSpeak } from "../../lib/speech";
 
 const MAX_PREGUNTA = 500;
+const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
+const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
 
 const CHATAP_PILLS = [
   {
@@ -85,6 +93,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const { messages, addMessage, clearHistory } = useChat();
   const { user, isAuthenticated } = useAuth();
   const [input, setInput] = useState("");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageError, setImageError] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [phase, setPhase] = useState("welcome");
   const [listening, setListening] = useState(false);
@@ -93,6 +104,8 @@ export default function ChatWindow({ initialQuery = null }) {
   const [reaction, setReaction] = useState("idle");
   const [announce, setAnnounce] = useState("");
   const messagesRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const imageReadRef = useRef(0);
   const nearBottomRef = useRef(true);
   const recognitionRef = useRef(null);
   const transcriptRef = useRef("");
@@ -104,10 +117,21 @@ export default function ChatWindow({ initialQuery = null }) {
   const typingTimerRef = useRef(null);
   const greetedRef = useRef(false);
   const wizardRef = useRef(null);
+  const answeredRef = useRef(false);
   const [welcomeMem, setWelcomeMem] = useState(null);
   const [promoReady, setPromoReady] = useState(false);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [promoLeaving, setPromoLeaving] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const a11y = useA11y();
+  const screenReader = !!a11y.screenReader;
+  // Lectura por voz disponible: es el canal principal del modo lector de
+  // pantalla para que la persona escuche las respuestas sin depender de un
+  // lector externo. Si el navegador no soporta voz, caemos en la región viva.
+  const voiceReading = screenReader && canSpeak();
 
   const [speechSupported] = useState(
     () =>
@@ -230,6 +254,43 @@ export default function ChatWindow({ initialQuery = null }) {
     setWelcomeMem(userId ? loadMemory(userId) : null);
   }, [userId]);
 
+  // Historial de consultas del usuario con cuenta (hasta 4, más nuevas
+  // primero). Se recalcula cuando cambia la conversación o al borrar entradas.
+  const historyQueries = useMemo(() => {
+    if (!userId) return [];
+    const mem = loadMemory(userId);
+    return (mem?.messages ?? []).slice().reverse();
+    // La memoria vive en localStorage y se actualiza fuera de React: recalculamos
+    // cuando cambia la conversación o el historial (dependencias intencionales).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, messages, historyVersion]);
+
+  // Lectura por voz: al activar el modo se avisa en voz alta y al desactivarlo
+  // se corta cualquier lectura en curso.
+  // Lectura por voz: cuando el modo está activo, el anuncio de activación lo
+  // hace el menú de accesibilidad (está en todas las páginas). Acá solo
+  // paramos cualquier lectura en curso al desactivar y al salir del chat.
+  useEffect(() => {
+    if (!screenReader) stopSpeaking();
+  }, [screenReader]);
+
+  useEffect(() => () => stopSpeaking(), []);
+
+  // Modo lector de pantalla sin voz disponible: al terminar de responder, el
+  // foco pasa a la última respuesta para que el lector externo la lea. No le
+  // quitamos el foco al ciudadano si está escribiendo otra consulta.
+  useEffect(() => {
+    if (!screenReader || voiceReading) return;
+    if (phase !== "chat" || speakingId) return;
+    if (!answeredRef.current) return;
+    const active = typeof document !== "undefined" ? document.activeElement : null;
+    if (active && active.id === "chat-here") return;
+    const last = messages[messages.length - 1];
+    if (!last || last.type !== "bot") return;
+    const el = messagesRef.current?.querySelector("[data-bot-message]:last-of-type");
+    el?.focus?.();
+  }, [screenReader, voiceReading, phase, speakingId, messages]);
+
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
   const sendTextRef = useRef(null);
@@ -271,7 +332,17 @@ export default function ChatWindow({ initialQuery = null }) {
     setPromoReady(true);
 
     // Anuncio para tecnologías de asistencia: texto completo, una sola vez.
-    setAnnounce(finalText);
+    // En modo lector de pantalla aclaramos de quién es la respuesta.
+    // Anuncio para tecnologías de asistencia. Si el modo lector de pantalla
+    // está activo y hay voz disponible, la respuesta se lee en voz alta y no
+    // duplicamos con la región viva; si no, usamos la región viva.
+    answeredRef.current = true;
+    if (voiceReading) {
+      speak(finalText);
+      setAnnounce("");
+    } else {
+      setAnnounce(screenReader ? `Respuesta del asistente: ${finalText}` : finalText);
+    }
 
     // Con movimiento reducido se muestra el texto completo de inmediato.
     const reduceMotion =
@@ -320,7 +391,7 @@ export default function ChatWindow({ initialQuery = null }) {
     }, charDelay);
   }
 
-  async function respondTo(userText) {
+  async function respondTo(userText, image = null) {
     setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
 
@@ -329,7 +400,7 @@ export default function ChatWindow({ initialQuery = null }) {
     let error = false;
 
     try {
-      const data = await preguntar(userText.slice(0, MAX_PREGUNTA));
+      const data = await preguntar(userText.slice(0, MAX_PREGUNTA), image);
       finalText =
         String(data?.respuesta || "").trim() ||
         "No pude generar una respuesta. Probá reformulando la consulta.";
@@ -352,6 +423,10 @@ export default function ChatWindow({ initialQuery = null }) {
       if (status === 429) {
         finalText =
           "Estás consultando muy seguido. Esperá unos segundos y volvé a intentar.";
+      } else if (status === 413) {
+        finalText = "La imagen es demasiado grande. Elegí una imagen de hasta 8 MB.";
+      } else if (status === 415) {
+        finalText = "El formato de imagen no es compatible. Usá JPEG, PNG o WebP.";
       } else if (status === 400) {
         finalText =
           "No pude procesar la consulta. Revisá el texto e intentá de nuevo.";
@@ -386,26 +461,107 @@ export default function ChatWindow({ initialQuery = null }) {
     presentBotMessage(finalText, finalActions, { error });
   }
 
-  function sendText(text) {
+  function sendText(text, image = null, preview = "") {
     const t = (text ?? "").trim();
     if (!t) return;
+    if (screenReader) stopSpeaking();
     beginChat();
-    addMessage("user", t);
-    if (wizardRef.current) {
+    addMessage("user", t, image ? {
+      type: "image",
+      dataUrl: preview,
+      fileName: image.name,
+    } : undefined);
+    if (wizardRef.current && !image) {
       runWizardStep(t);
       return;
     }
+    if (image) wizardRef.current = null;
     if (userId) rememberMessage(userId, t);
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
-    respondTo(t);
+    respondTo(t, image);
   }
 
   function handleSend(e) {
     e?.preventDefault();
-    const t = input;
+    const t = input.trim();
+    if (!t || (imageFile && !imagePreview)) return;
     setInput("");
-    sendText(t);
+    imageReadRef.current += 1;
+    const file = imageFile;
+    const preview = imagePreview;
+    setImageFile(null);
+    setImagePreview("");
+    setImageError("");
+    imageReadRef.current += 1;
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    sendText(t, file, preview);
+  }
+
+  function handleImageSelect(e) {
+    const file = e.target.files?.[0];
+    const readId = ++imageReadRef.current;
+    setImageFile(null);
+    setImagePreview("");
+    setImageError("");
+    if (!file) return;
+    if (!TIPOS_IMAGEN.includes(file.type)) {
+      setImageError("Elegí una imagen JPEG, PNG o WebP.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_IMAGEN_BYTES) {
+      setImageError("La imagen no puede superar los 8 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (readId !== imageReadRef.current) return;
+      if (typeof reader.result === "string") {
+        const source = new Image();
+        source.onload = () => {
+          if (readId !== imageReadRef.current) return;
+          const scale = Math.min(1, 960 / Math.max(source.width, source.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(source.width * scale));
+          canvas.height = Math.max(1, Math.round(source.height * scale));
+          const context = canvas.getContext("2d");
+          if (!context) {
+            setImagePreview(reader.result);
+            return;
+          }
+          context.fillStyle = "#fff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(source, 0, 0, canvas.width, canvas.height);
+          setImagePreview(canvas.toDataURL("image/jpeg", 0.78));
+        };
+        source.onerror = () => {
+          if (readId !== imageReadRef.current) return;
+          setImageError("No se pudo procesar la imagen. Intentá elegirla otra vez.");
+          setImageFile(null);
+          if (imageInputRef.current) imageInputRef.current.value = "";
+        };
+        source.src = reader.result;
+      }
+    };
+    reader.onerror = () => {
+      if (readId !== imageReadRef.current) return;
+      setImageError("No se pudo leer la imagen. Intentá elegirla otra vez.");
+      setImageFile(null);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeSelectedImage() {
+    imageReadRef.current += 1;
+    setImageFile(null);
+    setImagePreview("");
+    setImageError("");
+    if (imageInputRef.current) imageInputRef.current.value = "";
   }
 
   function handleInputChange(e) {
@@ -500,15 +656,59 @@ export default function ChatWindow({ initialQuery = null }) {
     controllerRef.current?.reset();
     setReaction("idle");
     setInput("");
+    setImageFile(null);
+    setImagePreview("");
+    setImageError("");
+    if (imageInputRef.current) imageInputRef.current.value = "";
     setPhase("welcome");
     if (messagesRef.current) messagesRef.current.scrollTop = 0;
     startedRef.current = false;
     greetedRef.current = false;
     wizardRef.current = null;
+    answeredRef.current = false;
     nearBottomRef.current = true;
-    setAnnounce("");
+    const resetMsg = "Se inició un chat nuevo. Escribí tu consulta cuando quieras.";
+    if (voiceReading) {
+      speak(resetMsg);
+      setAnnounce("");
+    } else {
+      setAnnounce(screenReader ? resetMsg : "");
+    }
   }
 
+  // El botón de "nuevo chat" solo reinicia directo si no hay nada que perder.
+  // Si ya hay una conversación, pedimos confirmación antes de borrarla.
+  function handleResetRequest() {
+    if (messages.length > 0) {
+      setConfirmReset(true);
+      return;
+    }
+    resetConversation();
+  }
+
+  // Retomar una consulta del historial: la escribimos como si la tipeara el usuario.
+  function handleHistorySelect(text) {
+    setHistoryOpen(false);
+    sendText(text);
+  }
+
+  // Borrar una consulta puntual del historial guardado.
+  function handleDeleteQuery(at) {
+    if (!userId) return;
+    removeMemoryMessage(userId, at);
+    setHistoryVersion((v) => v + 1);
+    if (voiceReading) speak("Consulta borrada del historial.");
+  }
+
+  // Vaciar todo el historial guardado.
+  function handleClearHistory() {
+    if (!userId) return;
+    clearMemoryMessages(userId);
+    setHistoryVersion((v) => v + 1);
+    if (voiceReading) speak("Historial borrado.");
+  }
+
+  // Volver a leer en voz alta la última respuesta del asistente.
   useEffect(() => {
     if (!speechSupported) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -557,23 +757,80 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-paper relative">
-      <header className="flex items-center justify-end px-4 sm:px-6 h-14 shrink-0 gap-2">
-        {/* Reiniciar el chat (ícono de mensaje nuevo) */}
-        <button
-          type="button"
-          onClick={resetConversation}
-          title="Reiniciar el chat"
-          aria-label="Reiniciar el chat"
-          className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+    <div className="flex h-full bg-paper relative">
+      {/* Apartado lateral solo para usuarios con cuenta (pantallas grandes).
+          Se puede ocultar y mostrar con el botón "Ocultar/Mostrar historial". */}
+      {isAuthenticated && (
+        <aside
+          id="chat-history-panel"
+          aria-label="Historial de consultas"
+          aria-hidden={historyCollapsed}
+          className={`hidden lg:block shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none ${
+            historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
+          }`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-          </svg>
-        </button>
+          <div className="w-72 xl:w-80 h-full border-r border-line bg-mist/40" inert={historyCollapsed}>
+            <ChatHistoryPanel
+              queries={historyQueries}
+              onSelect={handleHistorySelect}
+              onNewChat={handleResetRequest}
+              onDelete={handleDeleteQuery}
+              onClearAll={handleClearHistory}
+            />
+          </div>
+        </aside>
+      )}
 
-      </header>
+      <div className="flex flex-col h-full flex-1 min-w-0">
+        <header className="flex items-center justify-between px-4 sm:px-6 h-14 shrink-0 gap-2">
+          <div className="flex items-center">
+            {isAuthenticated && (
+              <>
+                {/* Pantallas chicas: el historial se abre como diálogo. */}
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(true)}
+                  aria-label="Ver historial de consultas"
+                  className="lg:hidden inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-line text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
+                  </svg>
+                  <span>Historial</span>
+                </button>
+
+                {/* Pantallas grandes: oculta y muestra el panel lateral. */}
+                <button
+                  type="button"
+                  onClick={() => setHistoryCollapsed((v) => !v)}
+                  aria-expanded={!historyCollapsed}
+                  aria-controls="chat-history-panel"
+                  aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
+                  className="hidden lg:inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-line text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
+                  </svg>
+                  <span>{historyCollapsed ? "Mostrar historial" : "Ocultar historial"}</span>
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Iniciar un nuevo chat (ícono de mensaje nuevo) */}
+          <button
+            type="button"
+            onClick={handleResetRequest}
+            title="Iniciar un nuevo chat"
+            aria-label="Iniciar un nuevo chat"
+            className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
+          </button>
+        </header>
 
       {/* Región viva: anuncia las respuestas del asistente sin releer todo */}
       <div aria-live="polite" role="status" className="sr-only">
@@ -666,14 +923,29 @@ export default function ChatWindow({ initialQuery = null }) {
         ) : (
           <div className="max-w-3xl w-full mx-auto px-4 py-6 space-y-6 animate-fade-up">
             {messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                speaking={msg.id === speakingId}
-                typedText={msg.id === speakingId ? typedText : ""}
-                reaction={reaction}
-                onFollowUp={handleFollowUp}
-              />
+              <div key={msg.id}>
+                {msg.type === "user" && msg.action?.type === "image" && msg.action.dataUrl && (
+                  <div className="mb-2 flex justify-end">
+                    <figure className="m-0 max-w-[16rem] overflow-hidden rounded-xl border border-line bg-paper">
+                      <img
+                        src={msg.action.dataUrl}
+                        alt={`Imagen adjunta: ${msg.action.fileName}`}
+                        className="max-h-52 w-auto max-w-full object-contain"
+                      />
+                      <figcaption className="truncate px-2 py-1 text-xs text-muted">
+                        {msg.action.fileName}
+                      </figcaption>
+                    </figure>
+                  </div>
+                )}
+                <MessageBubble
+                  message={msg}
+                  speaking={msg.id === speakingId}
+                  typedText={msg.id === speakingId ? typedText : ""}
+                  reaction={reaction}
+                  onFollowUp={handleFollowUp}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -721,6 +993,34 @@ export default function ChatWindow({ initialQuery = null }) {
           </div>
         )}
 
+        {false}
+
+        {imageFile && imagePreview && (
+          <div className="mx-auto mb-2 flex max-w-2xl items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2">
+            <img
+              src={imagePreview}
+              alt={`Vista previa de ${imageFile.name}`}
+              className="h-12 w-12 shrink-0 rounded-lg object-cover"
+            />
+            <span className="min-w-0 flex-1 truncate text-sm text-ink">{imageFile.name}</span>
+            <button
+              type="button"
+              onClick={removeSelectedImage}
+              aria-label={`Quitar imagen ${imageFile.name}`}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted hover:bg-mist hover:text-ink"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </div>
+        )}
+        {imageError && (
+          <p id="chat-image-error" role="alert" className="mx-auto mb-2 max-w-2xl text-sm text-bad">
+            {imageError}
+          </p>
+        )}
+
         <form onSubmit={handleSend} className="chatap-floating-bar max-w-2xl mx-auto">
           {/* Lupa / búsqueda */}
           <span className="text-muted/70 pl-2 pr-1 flex items-center justify-center shrink-0 pointer-events-none" aria-hidden="true">
@@ -740,6 +1040,28 @@ export default function ChatWindow({ initialQuery = null }) {
             aria-label="Consulta para ChatAP"
             required
           />
+
+          <input
+            ref={imageInputRef}
+            id="chat-image-upload"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleImageSelect}
+            aria-label="Seleccionar una imagen JPEG, PNG o WebP"
+            aria-describedby={imageError ? "chat-image-error" : undefined}
+            aria-invalid={!!imageError}
+            className="sr-only"
+          />
+          <label
+            htmlFor="chat-image-upload"
+            title="Adjuntar una imagen"
+            aria-label="Adjuntar una imagen"
+            className="grid min-h-11 min-w-11 cursor-pointer place-items-center rounded-xl p-2 text-muted transition-colors hover:bg-mist hover:text-ink"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12l4-4a3 3 0 114 4l-5 5a5 5 0 01-7-7l5-5" />
+            </svg>
+          </label>
 
           {/* Dictado por voz */}
           {speechSupported && (
@@ -765,7 +1087,7 @@ export default function ChatWindow({ initialQuery = null }) {
           {/* Botón Enviar */}
           <button
             type="submit"
-            disabled={!input.trim()}
+            disabled={!input.trim() || (!!imageFile && !imagePreview)}
             className={`ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all ${
               input.trim()
                 ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
@@ -779,6 +1101,41 @@ export default function ChatWindow({ initialQuery = null }) {
           </button>
         </form>
       </div>
+      </div>
+
+      {/* Historial en pantallas chicas: se abre como diálogo accesible. */}
+      <Modal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title="Historial de consultas"
+        showActions={false}
+      >
+        <div className="h-[50vh] min-h-[18rem] max-h-[70vh] -mx-1">
+          <ChatHistoryPanel
+            queries={historyQueries}
+            onSelect={handleHistorySelect}
+            onDelete={handleDeleteQuery}
+            onClearAll={handleClearHistory}
+            onNewChat={() => {
+              setHistoryOpen(false);
+              handleResetRequest();
+            }}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        onConfirm={resetConversation}
+        title="¿Iniciar un nuevo chat?"
+        confirmText="Sí, iniciar un nuevo chat"
+        cancelText="Cancelar"
+        confirmDanger
+      >
+        Se va a borrar la conversación actual y esta acción no se puede deshacer.
+        Si necesitás guardar algo, copialo antes de continuar. ¿Querés empezar un chat nuevo?
+      </Modal>
     </div>
   );
 }

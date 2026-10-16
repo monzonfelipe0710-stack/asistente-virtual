@@ -66,11 +66,11 @@ export default function ProfileHeader({ onSaved }) {
           <div className="relative mt-10 flex flex-wrap items-start justify-between gap-6">
             <div className="flex items-center gap-5 min-w-0">
               <span className="w-20 h-20 rounded-full bg-brand-deep text-paper grid place-items-center text-2xl font-bold uppercase ring-4 ring-brand-deep/10 shrink-0">
-                {initials(user.name)}
+                {initials(user.name || user.email)}
               </span>
               <div className="min-w-0">
                 <p className="text-2xl font-extrabold tracking-tight text-ink m-0 truncate leading-tight">
-                  {user.name}
+                  {user.name || user.email}
                 </p>
                 <p className="text-sm text-muted m-0 mt-1 font-medium break-all">{user.email}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -104,6 +104,7 @@ export default function ProfileHeader({ onSaved }) {
           <InfoItem label="Nombre completo" value={user.name} />
           <InfoItem label="Correo electrónico" value={user.email} mono />
           <InfoItem label="DNI" value={user.dni || "—"} mono />
+          <InfoItem label="Género" value={user.genero || "—"} />
           <InfoItem label="CUIL" value={user.cuil || "—"} mono />
           <InfoItem label="Teléfono" value={user.phone || "—"} mono />
           <InfoItem label="Dependencia" value={user.department || "—"} />

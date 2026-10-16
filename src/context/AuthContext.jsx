@@ -6,6 +6,8 @@ import {
   findLocalCitizen,
   registerLocalCitizen,
   verifyLocalCitizen,
+  normalizeDni,
+  isValidDni,
 } from "../lib/auth";
 import { apiErrorMessage } from "../lib/api";
 
@@ -24,16 +26,24 @@ const PENDING_MESSAGE =
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** `usuario` del backend: { id, nombre, email, rol }. `name` es alias de `nombre`. */
+/** `usuario` del backend: { id, nombre, email, rol, dni? }. `name` es alias de `nombre`. */
 function toFrontUser(usuario) {
   if (!usuario) return null;
+  const nombre = usuario.nombre || "";
+  const email = usuario.email || "";
+  const dni = usuario.dni || "";
+  const genero = usuario.genero || "";
   return {
     id: usuario.id,
-    nombre: usuario.nombre,
-    email: usuario.email,
+    nombre,
+    email,
+    dni,
+    genero,
     rol: usuario.rol,
     role: usuario.rol,
-    name: usuario.nombre || "",
+    name: nombre,
+    // Identificación visible cuando no hay nombre: DNI o correo.
+    displayName: nombre || (dni ? `DNI ${dni}` : email),
   };
 }
 
@@ -46,21 +56,38 @@ export function AuthProvider({ children }) {
   const userRole = user?.role || null;
 
   const login = useCallback(
-    async (email, password) => {
-      const cleanEmail = (email || "").trim().toLowerCase();
-      if (!emailRegex.test(cleanEmail)) throw new Error("Ingresá un correo electrónico válido.");
+    async (identifier, password) => {
+      const raw = (identifier || "").trim();
+      const cleanEmail = raw.toLowerCase();
+      const looksLikeEmail = emailRegex.test(cleanEmail);
+      const looksLikeDni = isValidDni(raw);
+
+      if (!looksLikeEmail && !looksLikeDni) {
+        throw new Error("Ingresá tu DNI (7 u 8 números) o tu correo electrónico.");
+      }
       if (!password) throw new Error("Ingresá tu contraseña.");
 
       // Cuenta de ciudadano local (demo): se valida en el navegador, sin JWT.
-      if (findLocalCitizen(cleanEmail)) {
-        const cuenta = await verifyLocalCitizen(cleanEmail, password);
+      // El identificador puede ser el DNI o el correo.
+      const local = findLocalCitizen(raw);
+      if (local) {
+        const cuenta = await verifyLocalCitizen(raw, password);
         if (!cuenta) throw new Error("Credenciales inválidas.");
         setSession({
           token: null,
-          usuario: { id: cuenta.id, nombre: cuenta.nombre, email: cuenta.email, rol: cuenta.rol },
+          usuario: {
+            id: cuenta.id,
+            nombre: cuenta.nombre,
+            dni: cuenta.dni,
+            email: cuenta.email,
+            rol: cuenta.rol,
+          },
         });
         return toFrontUser(cuenta);
       }
+
+      // Sin cuenta local: sólo el correo puede validarse contra el backend.
+      if (!looksLikeEmail) throw new Error("Credenciales inválidas.");
 
       try {
         // POST /api/auth/login → { token, usuario }
@@ -74,10 +101,13 @@ export function AuthProvider({ children }) {
     [setSession]
   );
 
-  const register = useCallback(async ({ name, email, password, rol = "CIUDADANO", cuil }) => {
+  const register = useCallback(async ({ name, dni, gender, genero, email, password, rol = "CIUDADANO", cuil }) => {
     const cleanName = (name || "").trim();
+    const cleanDni = normalizeDni(dni);
+    const cleanGender = (gender || genero || "").trim();
     const cleanEmail = (email || "").trim().toLowerCase();
-    if (!cleanName) throw new Error("Ingresá tu nombre.");
+    if (!isValidDni(cleanDni)) throw new Error("Ingresá tu DNI (7 u 8 números).");
+    if (!cleanGender) throw new Error("Seleccioná tu género.");
     if (!emailRegex.test(cleanEmail)) throw new Error("Ingresá un correo electrónico válido.");
     if (!password || password.length < 8)
       throw new Error("La contraseña debe tener al menos 8 caracteres.");
@@ -86,13 +116,22 @@ export function AuthProvider({ children }) {
     if (rol === "CIUDADANO") {
       try {
         const local = await registerLocalCitizen({
+          dni: cleanDni,
           nombre: cleanName,
+          genero: cleanGender,
           email: cleanEmail,
           password,
         });
         setSession({
           token: null,
-          usuario: { id: local.id, nombre: local.nombre, email: local.email, rol: local.rol },
+          usuario: {
+            id: local.id,
+            nombre: local.nombre,
+            dni: local.dni,
+            genero: local.genero,
+            email: local.email,
+            rol: local.rol,
+          },
         });
         return {
           mensaje: "¡Cuenta creada! Ya iniciaste sesión.",
@@ -107,7 +146,9 @@ export function AuthProvider({ children }) {
     // Empleado → solicitud al backend; la cuenta queda PENDIENTE de aprobación.
     try {
       return await registroRequest({
-        nombre: cleanName,
+        nombre: cleanName || `DNI ${cleanDni}`,
+        dni: cleanDni,
+        genero: cleanGender,
         email: cleanEmail,
         password,
         cuil: String(cuil || "").replace(/\D/g, ""),
