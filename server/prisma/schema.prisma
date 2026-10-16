@@ -23,6 +23,7 @@ enum TipoSector {
   MINISTERIO
   SUBSECRETARIA
   DEPARTAMENTO
+  ORGANISMO
 }
 
 enum EstadoUsuario {
@@ -72,6 +73,8 @@ model Tramite {
   documentos  Documento[]
   mesas       TramiteMesa[]
   consultas   Consulta[]
+
+  fuenteUrl   String?  @unique @map("fuente_url")
 
   @@index([sectorId])
   @@map("tramites")
