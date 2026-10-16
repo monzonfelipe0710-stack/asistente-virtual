@@ -1,14 +1,40 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
-export default function Modal({ open, onClose, title, children, onConfirm, confirmText = "Confirmar", cancelText = "Cancelar", confirmDanger = false }) {
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export default function Modal({ open, onClose, title, children, onConfirm, confirmText = "Confirmar", cancelText = "Cancelar", confirmDanger = false, showActions = true }) {
   const panelRef = useRef(null);
+  const titleId = useId();
+  const descId = useId();
 
   useEffect(() => {
     if (!open) return undefined;
     const previous = document.activeElement;
+
     function handleKeyDown(event) {
-      if (event.key === "Escape") onClose?.();
+      if (event.key === "Escape") {
+        onClose?.();
+        return;
+      }
+      // Trampa de foco: el foco no debe salir del diálogo mientras está abierto.
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll(FOCUSABLE));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
+
     document.addEventListener("keydown", handleKeyDown);
     panelRef.current?.focus();
     return () => {
@@ -26,12 +52,13 @@ export default function Modal({ open, onClose, title, children, onConfirm, confi
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="chatap-modal-title"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
         tabIndex={-1}
         className="relative bg-paper rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 animate-slide-up outline-none"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 id="chatap-modal-title" className="text-base font-semibold text-primary m-0">{title}</h3>
+          <h3 id={titleId} className="text-base font-semibold text-primary m-0">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Cerrar"
@@ -42,20 +69,22 @@ export default function Modal({ open, onClose, title, children, onConfirm, confi
             </svg>
           </button>
         </div>
-        <div className="text-sm text-muted mb-6 leading-relaxed">{children}</div>
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="btn-ghost">{cancelText}</button>
-          <button
-            onClick={() => { onConfirm?.(); onClose(); }}
-            className={`inline-flex items-center min-h-11 px-5 text-sm font-medium text-paper rounded-lg cursor-pointer transition-colors duration-200 ${
-              confirmDanger
-                ? "bg-linear-to-r from-red-500 to-red-600 hover:shadow-md hover:shadow-red-200/50"
-                : "bg-linear-to-r from-primary to-primary-light hover:shadow-md"
-            }`}
-          >
-            {confirmText}
-          </button>
-        </div>
+        <div id={descId} className={`text-sm text-muted leading-relaxed ${showActions ? "mb-6" : ""}`}>{children}</div>
+        {showActions && (
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose} className="btn-ghost">{cancelText}</button>
+            <button
+              onClick={() => { onConfirm?.(); onClose(); }}
+              className={`inline-flex items-center min-h-11 px-5 text-sm font-medium text-white rounded-lg cursor-pointer transition-colors duration-200 ${
+                confirmDanger
+                  ? "bg-linear-to-r from-red-500 to-red-600 hover:shadow-md hover:shadow-red-200/50"
+                  : "bg-linear-to-r from-primary to-primary-light hover:shadow-md"
+              }`}
+            >
+              {confirmText}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

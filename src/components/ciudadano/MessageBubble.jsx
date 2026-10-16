@@ -82,7 +82,10 @@ export default function MessageBubble({ message, speaking = false, typedText = "
       : [];
 
   return (
-    <div className={`flex gap-3 ${isBot ? "justify-start" : "justify-end"} animate-fade-up`}>
+    <div
+      className={`flex gap-3 ${isBot ? "justify-start" : "justify-end"} animate-fade-up`}
+      {...(isBot ? { "data-bot-message": "", tabIndex: -1 } : {})}
+    >
       {isBot && (
         <ChatBotAvatar
           reaction={speaking ? reaction : "idle"}

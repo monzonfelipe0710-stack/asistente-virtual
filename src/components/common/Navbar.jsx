@@ -63,7 +63,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
     }, 550);
   }
 
-  const firstName = (user?.name || "").split(" ")[0] || "Perfil";
+  const firstName = (user?.name || "").split(" ")[0] || user?.dni || user?.email || "Perfil";
 
   return (
     <>
@@ -77,7 +77,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
           className="nav-profile-btn"
         >
           <span className="nav-profile-avatar" aria-hidden="true">
-            {user.name?.[0] ?? "?"}
+            {(user.name || user.dni || user.email || "?").charAt(0).toUpperCase()}
           </span>
           <span className="hidden sm:inline-block text-sm font-medium text-white/90 max-w-[5.5rem] truncate">
             {firstName}
@@ -96,7 +96,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
         {open && (
           <div role="menu" className="nav-dropdown animate-fade-up">
             <div className="px-4 py-3 border-b border-white/10">
-              <p className="text-xs font-semibold text-white m-0 truncate">{user.name}</p>
+              <p className="text-xs font-semibold text-white m-0 truncate">{user.name || user.displayName}</p>
               <p className="text-[11px] text-white/50 m-0 mt-0.5 truncate">{user.email}</p>
               {userRole && (
                 <span className="inline-block mt-2 px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-widest rounded bg-brand/15 text-brand border border-brand/25">
@@ -218,10 +218,10 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
           <div className="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
             <div className="px-3.5 py-1.5 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-brand-deep text-white text-[10px] font-bold flex items-center justify-center ring-1 ring-white/20">
-                {user.name?.[0] ?? "?"}
+                {(user.name || user.dni || user.email || "?").charAt(0).toUpperCase()}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white m-0 truncate">{user.name}</p>
+              <p className="text-xs font-semibold text-white m-0 truncate">{user.name || user.displayName}</p>
                 <p className="text-[10px] text-white/50 m-0 truncate">{user.email}</p>
               </div>
             </div>
@@ -296,9 +296,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [dark, setDark] = useState(
-    typeof document !== "undefined" && document.documentElement.classList.contains("dark")
-  );
+  const [hidden, setHidden] = useState(false);
   const { user, isAuthenticated, isStaff, userRole, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -313,12 +311,24 @@ export default function Navbar() {
 
   useEffect(() => {
     let lastScrolled = window.scrollY > 24;
+    let lastY = window.scrollY;
     const onScroll = () => {
-      const isScrolled = window.scrollY > 24;
+      const y = window.scrollY;
+      const isScrolled = y > 24;
       if (isScrolled !== lastScrolled) {
         lastScrolled = isScrolled;
         setScrolled(isScrolled);
       }
+      // Ocultar al bajar, mostrar al subir. Cerca del tope siempre visible.
+      const delta = y - lastY;
+      const active = document.activeElement;
+      const navHasFocus = !!(navRef.current && active && navRef.current.contains(active));
+      if (y <= 96 || navHasFocus) {
+        setHidden(false);
+      } else if (Math.abs(delta) > 6) {
+        setHidden(delta > 0);
+      }
+      lastY = y;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -350,20 +360,8 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
-  function toggleTheme() {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-
-    try {
-      localStorage.setItem("theme", next ? "dark" : "light");
-    } catch {
-      /* noop */
-    }
-  }
-
   return (
-    <header className="nav-shell" ref={navRef}>
+    <header className={`nav-shell${hidden && !menuOpen ? " nav-shell--hidden" : ""}`} ref={navRef}>
       <div className={`nav-pill${scrolled ? " nav-pill--scrolled" : ""}`}>
         {/* ── Izquierda: Identidad ChatAP ── */}
         <Link to="/" aria-label="ChatAP inicio" className="nav-brand no-underline">
@@ -394,47 +392,7 @@ export default function Navbar() {
 
         {/* ── Derecha: Controles y Perfil/Auth ── */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={dark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-            className="nav-icon-btn group"
-            title={dark ? "Modo claro" : "Modo oscuro"}
-          >
-            <span className="relative flex items-center justify-center w-full h-full transition-transform duration-300 group-active:scale-90">
-              {dark ? (
-                <svg
-                  className="w-5 h-5 text-amber-300 transition-transform duration-500 rotate-0 group-hover:rotate-45"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 3v2m0 14v2m9-9h-2M5 12H3m16.95 6.95l-1.41-1.41M6.46 6.46L5.05 5.05m12.49 0l-1.41 1.41M6.46 17.54l-1.41 1.41M12 8a4 4 0 100 8 4 4 0 000-8z"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-5 h-5 text-white/75 transition-transform duration-500 rotate-0 group-hover:-rotate-12"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
-                  />
-                </svg>
-              )}
-            </span>
-          </button>
+          <div id="accessibility-menu-anchor" className="flex items-center" />
 
           {isAuthenticated && user ? (
             <ProfileMenu user={user} isStaff={isStaff} userRole={userRole} logout={logout} />

@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { readA11y, saveA11y } from "../../lib/accessibility";
+import { speak, stopSpeaking } from "../../lib/speech";
+import useTheme from "../../hooks/useTheme";
 
 const TEXT_OPTIONS = [
   { id: "normal", label: "Normal", preview: "0.85rem" },
@@ -17,17 +20,20 @@ const A11Y_ICON = (
 );
 
 function Switch({ checked, label, hint, onToggle }) {
+  const hintId = useId();
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
+      aria-describedby={hintId}
       onClick={onToggle}
       className="w-full flex items-center justify-between gap-3 rounded-xl border border-line bg-mist/40 px-3.5 py-3 text-left hover:bg-mist transition-colors cursor-pointer"
     >
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-ink">{label}</span>
-        <span className="block text-xs text-muted mt-0.5">{hint}</span>
+        <span id={hintId} className="block text-xs text-muted mt-0.5">{hint}</span>
       </span>
       <span
         className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${
@@ -46,19 +52,66 @@ function Switch({ checked, label, hint, onToggle }) {
 }
 
 /**
- * Menú de accesibilidad global. Botón flotante discreto (abajo a la izquierda)
- * que abre un panel para agrandar el texto, activar alto contraste o una
- * tipografía más legible. Las preferencias se recuerdan en el navegador.
+ * Menú de accesibilidad que abre un panel para agrandar el texto, activar
+ * alto contraste, una tipografía más legible o el modo lector de pantalla.
+ * Las preferencias se recuerdan en el navegador.
  */
 export default function AccessibilityMenu() {
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState(() => readA11y());
+  const [navAnchor, setNavAnchor] = useState(null);
+  const [panelPosition, setPanelPosition] = useState({
+    top: 0,
+    left: 0,
+    maxHeight: "calc(100dvh - 1.5rem)",
+  });
   const panelRef = useRef(null);
   const btnRef = useRef(null);
+  const theme = useTheme();
+
+  useEffect(() => {
+    const updateAnchor = () => {
+      setNavAnchor(document.getElementById("accessibility-menu-anchor"));
+    };
+    const observer = new MutationObserver(updateAnchor);
+    observer.observe(document.body, { childList: true, subtree: true });
+    updateAnchor();
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     saveA11y(prefs);
   }, [prefs]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    function positionPanel() {
+      const trigger = btnRef.current?.getBoundingClientRect();
+      const panel = panelRef.current;
+      if (!trigger || !panel) return;
+
+      const margin = 12;
+      const left = Math.max(
+        margin,
+        Math.min(trigger.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - margin)
+      );
+      const top = trigger.bottom + 8;
+      const maxHeight = Math.max(
+        120,
+        Math.min(panel.scrollHeight, window.innerHeight - top - margin)
+      );
+      setPanelPosition({ top, left, maxHeight: `${maxHeight}px` });
+    }
+
+    positionPanel();
+    window.addEventListener("resize", positionPanel);
+    window.addEventListener("scroll", positionPanel, true);
+    return () => {
+      window.removeEventListener("resize", positionPanel);
+      window.removeEventListener("scroll", positionPanel, true);
+    };
+  }, [open, navAnchor]);
 
   useEffect(() => {
     if (!open) return;
@@ -88,26 +141,55 @@ export default function AccessibilityMenu() {
     setPrefs((p) => ({ ...p, ...patch }));
   }
 
+  // El modo lector de pantalla da feedback hablado al instante, en cualquier
+  // página, para que la persona sepa que quedó activado o desactivado.
+  function toggleScreenReader() {
+    const next = !prefs.screenReader;
+    update({ screenReader: next });
+    if (next) {
+      speak(
+        "Modo lector de pantalla activado. Usá la tecla TAB para recorrer la página: te voy a decir en qué elemento estás y leo las respuestas del asistente en voz alta."
+      );
+    } else {
+      stopSpeaking();
+    }
+  }
+
   function reset() {
-    setPrefs({ text: "normal", contrast: false, readable: false });
+    if (prefs.screenReader) stopSpeaking();
+    setPrefs({ text: "normal", contrast: false, readable: false, screenReader: false });
+  }
+
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    try {
+      localStorage.setItem("theme", nextTheme);
+    } catch {
+      // The selected theme still applies for this page when storage is unavailable.
+    }
   }
 
   const activeCount =
     (prefs.text !== "normal" ? 1 : 0) +
     (prefs.contrast ? 1 : 0) +
-    (prefs.readable ? 1 : 0);
+    (prefs.readable ? 1 : 0) +
+    (prefs.screenReader ? 1 : 0);
   const currentLabel =
     TEXT_OPTIONS.find((o) => o.id === prefs.text)?.label || "Normal";
 
-  return (
-    <div className="fixed bottom-4 left-4 z-40 print:hidden">
-      {open && (
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-label="Opciones de accesibilidad"
-          className="animate-scale-in absolute bottom-14 left-0 w-[19rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-line bg-paper p-4 shadow-xl"
-        >
+  const panel = open && createPortal(
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-label="Opciones de accesibilidad"
+      style={{
+        top: panelPosition.top,
+        left: panelPosition.left,
+        maxHeight: panelPosition.maxHeight,
+      }}
+      className="animate-scale-in fixed z-[80] w-[19rem] max-w-[calc(100vw-2rem)] overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl"
+    >
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-brand/10 text-brand">
@@ -126,6 +208,13 @@ export default function AccessibilityMenu() {
               </svg>
             </button>
           </div>
+
+          <Switch
+            checked={theme === "dark"}
+            label="Modo oscuro"
+            hint="Cambiar entre el tema claro y el oscuro."
+            onToggle={toggleTheme}
+          />
 
           <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
             Tamaño del texto
@@ -154,6 +243,12 @@ export default function AccessibilityMenu() {
 
           <div className="space-y-2">
             <Switch
+              checked={prefs.screenReader}
+              label="Modo lector de pantalla"
+              hint="Pensado para personas ciegas: lee en voz alta las respuestas y refuerza los avisos para NVDA, JAWS o VoiceOver."
+              onToggle={toggleScreenReader}
+            />
+            <Switch
               checked={prefs.contrast}
               label="Alto contraste"
               hint="Colores más fuertes y fondo blanco."
@@ -175,9 +270,12 @@ export default function AccessibilityMenu() {
           >
             Restablecer
           </button>
-        </div>
-      )}
+    </div>,
+    document.body
+  );
 
+  const menu = (
+    <div className={`print:hidden ${navAnchor ? "relative z-50" : "fixed top-4 right-4 z-40"}`}>
       <button
         id="accessibility-menu"
         ref={btnRef}
@@ -200,5 +298,12 @@ export default function AccessibilityMenu() {
         )}
       </button>
     </div>
+  );
+
+  return (
+    <>
+      {navAnchor ? createPortal(menu, navAnchor) : menu}
+      {panel}
+    </>
   );
 }

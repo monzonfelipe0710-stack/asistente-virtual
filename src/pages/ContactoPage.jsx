@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
@@ -58,6 +58,10 @@ const INFO_CONTACTO = [
   { label: "Mesa de Entrada", value: "Belgrano 836, Formosa", hint: "07–13 y 14–19 hs" },
 ];
 
+const MAX_ADJUNTOS = 4;
+const MAX_TAMANO_ADJUNTO = 8 * 1024 * 1024;
+const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
+
 export default function ContactoPage() {
   const [searchParams] = useSearchParams();
   const addToast = useToast();
@@ -76,6 +80,19 @@ export default function ContactoPage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const attachmentsRef = useRef([]);
+
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  useEffect(
+    () => () => {
+      attachmentsRef.current.forEach((attachment) => URL.revokeObjectURL(attachment.preview));
+    },
+    []
+  );
 
   useEffect(() => {
     if (user && !form.name) {
@@ -90,6 +107,48 @@ export default function ContactoPage() {
     }
   }, [user, form.name]);
 
+  function handleAttachmentChange(e) {
+    const selectedFiles = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!selectedFiles.length) return;
+
+    const availableSlots = MAX_ADJUNTOS - attachments.length;
+    const validFiles = [];
+    const errors = [];
+
+    selectedFiles.forEach((file) => {
+      if (!TIPOS_IMAGEN.includes(file.type)) {
+        errors.push(`${file.name}: formato no admitido`);
+      } else if (file.size > MAX_TAMANO_ADJUNTO) {
+        errors.push(`${file.name}: supera los 8 MB`);
+      } else if (validFiles.length >= availableSlots) {
+        errors.push(`${file.name}: podés adjuntar hasta ${MAX_ADJUNTOS} imágenes`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (validFiles.length) {
+      const newAttachments = validFiles.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+      setAttachments((current) => [
+        ...current,
+        ...newAttachments,
+      ]);
+    }
+
+    if (errors.length) {
+      addToast(errors.slice(0, 2).join(". "), "error");
+    }
+  }
+
+  function removeAttachment(preview) {
+    URL.revokeObjectURL(preview);
+    setAttachments((current) => current.filter((attachment) => attachment.preview !== preview));
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim() || !form.contact.trim() || !form.message.trim()) {
@@ -102,7 +161,9 @@ export default function ContactoPage() {
     setTimeout(() => {
       setLoading(false);
       setSent(true);
-      addToast("¡Consulta enviada! Te responderemos a la brevedad.", "success");
+      attachments.forEach((attachment) => URL.revokeObjectURL(attachment.preview));
+      setAttachments([]);
+      addToast("Consulta simulada correctamente. No se envió a la Mesa de Ayuda.", "success");
     }, 500);
   }
 
@@ -248,15 +309,16 @@ export default function ContactoPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <h3 className="text-lg font-bold text-ink m-0">¡Consulta enviada con éxito!</h3>
+                      <h3 className="text-lg font-bold text-ink m-0">Consulta registrada en esta demo</h3>
                       <p className="text-sm text-muted mt-2 max-w-md mx-auto">
-                              Un agente de la Subsecretaría de Recursos Humanos se pondrá en contacto a la brevedad.
-                            </p>
+                        Este formulario solo simula el envío. Ni el mensaje ni las imágenes se envían al correo de Mesa de Ayuda.
+                      </p>
                       <button
                         type="button"
                         onClick={() => {
                           setSent(false);
                           setForm((prev) => ({ ...prev, message: "" }));
+                          setAttachments([]);
                         }}
                         className="mt-6 px-5 py-2.5 rounded-xl border border-line bg-mist/60 text-xs font-bold uppercase tracking-wider text-ink hover:bg-paper cursor-pointer transition-colors"
                       >
@@ -340,6 +402,49 @@ export default function ContactoPage() {
                           placeholder="Escribí brevemente en qué podemos ayudarte..."
                           className="w-full px-4 py-3 rounded-xl border border-line bg-mist/30 text-ink text-sm focus:outline-none focus:border-brand-deep focus:bg-paper transition-all resize-none leading-relaxed"
                         />
+                      </div>
+
+                      {/* Adjuntos opcionales */}
+                      <div>
+                        <label htmlFor="contacto-imagenes" className="block text-sm font-bold uppercase tracking-wider text-muted mb-1.5">
+                          Imágenes <span className="font-medium normal-case tracking-normal text-faint">(opcional)</span>
+                        </label>
+                        <input
+                          id="contacto-imagenes"
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          multiple
+                          aria-describedby="contacto-imagenes-ayuda"
+                          onChange={handleAttachmentChange}
+                          className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand-deep file:px-4 file:py-2 file:font-semibold file:text-paper hover:file:bg-brand"
+                        />
+                        <p id="contacto-imagenes-ayuda" className="mt-1.5 text-xs text-muted">
+                          JPEG, PNG o WebP; hasta {MAX_ADJUNTOS} imágenes de 8 MB cada una. La demo no envía archivos ni los adjunta al correo oficial.
+                        </p>
+                        {attachments.length > 0 && (
+                          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Imágenes adjuntas">
+                            {attachments.map((attachment) => (
+                              <li key={attachment.preview} className="relative overflow-hidden rounded-xl border border-line bg-mist/30">
+                                <img
+                                  src={attachment.preview}
+                                  alt={`Vista previa de ${attachment.file.name}`}
+                                  className="h-28 w-full object-cover"
+                                />
+                                <p className="truncate px-2 py-1.5 text-xs text-ink" title={attachment.file.name}>
+                                  {attachment.file.name}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAttachment(attachment.preview)}
+                                  aria-label={`Quitar imagen ${attachment.file.name}`}
+                                  className="absolute right-1 top-1 rounded-full border border-line bg-paper px-2 py-1 text-xs font-bold text-ink shadow-soft hover:bg-mist"
+                                >
+                                  Quitar
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
 
                       {/* Botón enviar */}

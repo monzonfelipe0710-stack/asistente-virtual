@@ -1414,6 +1414,9 @@ select {
     word-break: normal;
     overflow-wrap: normal;
   }
+  .auth-display-title {
+    font-size: clamp(2.75rem, 5vw, 4.75rem);
+  }
   .display-2 {
     font-family: "PP Neue Montreal", sans-serif;
     font-size: clamp(1.85rem, 3.8vw, 3rem);
@@ -2270,6 +2273,18 @@ select {
   @media (min-width: 640px) {
     .nav-shell {
       top: 1.25rem;
+    }
+  }
+
+  /* Ocultar al bajar, mostrar al subir (desliza fuera de pantalla). */
+  .nav-shell--hidden {
+    top: -7rem;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-shell {
+      transition: none;
     }
   }
 
@@ -3395,6 +3410,17 @@ html[data-a11y-readable="true"] p,
 html[data-a11y-readable="true"] li,
 html[data-a11y-readable="true"] label {
   line-height: 1.65 !important;
+}
+
+/* Modo lector de pantalla: refuerza el foco visible para uso solo con teclado. */
+html[data-a11y-sr="true"] :focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+}
+html[data-a11y-sr="true"] [data-bot-message]:focus {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
 }
 
 @media (prefers-reduced-motion: reduce) {

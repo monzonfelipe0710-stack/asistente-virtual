@@ -13,6 +13,10 @@ function formatCuil(value) {
   return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
 }
 
+function formatDni(value) {
+  return value.replace(/\D/g, "").slice(0, 8);
+}
+
 function isValidCuil(value) {
   const digits = value.replace(/\D/g, "");
   if (!/^\d{11}$/.test(digits)) return false;
@@ -52,7 +56,8 @@ export default function LoginRegisterPage() {
 
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [accountType, setAccountType] = useState("ciudadano"); // "ciudadano" | "empleado"
-  const [name, setName] = useState("");
+  const [dni, setDni] = useState("");
+  const [gender, setGender] = useState("");
   const [cuil, setCuil] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -87,7 +92,8 @@ export default function LoginRegisterPage() {
           return;
         }
         const result = await register({
-          name,
+          dni,
+          gender,
           email,
           password,
           rol,
@@ -136,14 +142,14 @@ export default function LoginRegisterPage() {
   }
 
   return (
-    <div className="min-h-[100svh] lg:h-[100svh] flex flex-col bg-paper font-sans lg:overflow-hidden">
+    <div className="min-h-[100svh] flex flex-col bg-paper font-sans">
       {/* Grilla Principal:
           - Izquierda: Decoración editorial previa + Fotografía de Montañas
           - Derecha: Formulario de acceso (login / solicitud de cuenta)
       */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2">
+      <div className="flex-1 grid grid-cols-1 items-start lg:grid-cols-2">
         {/* 1. Columna Izquierda: Decoración Editorial Previa + Fotografía de Montañas */}
-        <div className="relative hidden lg:flex min-h-0 flex-col justify-between overflow-hidden border-r border-line bg-mist/50 dark:bg-slate-900/40 p-10 xl:p-12 select-none">
+        <div className="relative hidden lg:sticky lg:top-0 lg:flex lg:h-[100svh] lg:self-start min-h-0 flex-col justify-between overflow-hidden border-r border-line bg-mist/50 dark:bg-slate-900/40 p-10 xl:p-12 select-none">
           {/* Cabecera institucional */}
           <div className="relative z-10 flex items-start justify-between">
             <span className="inline-flex items-center gap-3">
@@ -162,7 +168,7 @@ export default function LoginRegisterPage() {
 
           {/* Bloque editorial principal */}
           <div className="relative z-10 my-8">
-            <DisplayTitle as={1} className="max-w-lg">
+            <DisplayTitle as={1} className="auth-display-title max-w-lg">
               Trámites simples, <span className="text-brand">respuestas al instante</span>.
             </DisplayTitle>
             <Lead className="max-w-sm mt-5">
@@ -191,7 +197,7 @@ export default function LoginRegisterPage() {
         </div>
 
         {/* 2. Columna Derecha: Formulario */}
-        <div className="flex min-h-0 flex-col px-6 sm:px-12 xl:px-20 py-6 lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100">
+        <div className="flex flex-col px-6 sm:px-12 xl:px-20 py-6 lg:min-h-[100svh] lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100">
           {/* Barra superior con navegación de retorno y toggle de modo */}
           <div className="flex items-center justify-between w-full max-w-md mx-auto shrink-0">
             <Link
@@ -237,7 +243,7 @@ export default function LoginRegisterPage() {
           </div>
 
           {/* Tarjeta Central del Formulario */}
-          <div className="w-full max-w-md mx-auto my-auto py-3">
+          <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center py-3 px-1 sm:px-0">
             {/* Logo en móvil */}
             <div className="lg:hidden flex items-center gap-3 mb-6">
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-deep text-white">
@@ -413,35 +419,88 @@ export default function LoginRegisterPage() {
                     </div>
                   </Collapse>
 
-                  {/* Nombre: sólo en registro. Se despliega con altura animada. */}
+                  {/* DNI: sólo en registro. Se despliega con altura animada. */}
+                  <Collapse open={!isLogin}>
+                    <div>
+                      <label htmlFor="register-dni" className="block text-sm font-medium text-muted mb-1.5">
+                        DNI
+                      </label>
+                      <input
+                        id="register-dni"
+                        type="text"
+                        inputMode="numeric"
+                        required={!isLogin}
+                        value={dni}
+                        onChange={(e) => setDni(formatDni(e.target.value))}
+                        autoComplete="off"
+                        maxLength={8}
+                        placeholder="Ej: 30123456"
+                        aria-describedby="register-dni-hint"
+                        className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
+                      />
+                      <p id="register-dni-hint" className="mt-1 text-[11px] text-muted">
+                        Tu DNI se usa para identificarte e iniciar sesión.
+                      </p>
+                    </div>
+                  </Collapse>
+
+                  {/* Género: sólo en registro. */}
                   <Collapse open={!isLogin}>
                     <div>
                       <label className="block text-sm font-medium text-muted mb-1.5">
-                        Nombre completo
+                        Género
                       </label>
-                      <input
-                        type="text"
-                        required={!isLogin}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        autoComplete="name"
-                        placeholder="Ej: Juan Carlos Pérez"
-                        className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
-                      />
+                      <div role="radiogroup" aria-label="Género" className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={gender === "Femenino"}
+                          onClick={() => setGender("Femenino")}
+                          className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition-all cursor-pointer ${
+                            gender === "Femenino"
+                              ? "border-brand bg-brand/5 ring-1 ring-brand/20 text-ink"
+                              : "border-line bg-card hover:border-brand/40 text-muted"
+                          }`}
+                        >
+                          <svg className="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="8" r="5" strokeWidth={2} />
+                            <path strokeLinecap="round" strokeWidth={2} d="M12 13v8m-3-3h6" />
+                          </svg>
+                          Femenino
+                        </button>
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={gender === "Masculino"}
+                          onClick={() => setGender("Masculino")}
+                          className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition-all cursor-pointer ${
+                            gender === "Masculino"
+                              ? "border-brand bg-brand/5 ring-1 ring-brand/20 text-ink"
+                              : "border-line bg-card hover:border-brand/40 text-muted"
+                          }`}
+                        >
+                          <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="10" cy="14" r="5" strokeWidth={2} />
+                            <path strokeLinecap="round" strokeWidth={2} d="M14 10l6-6m0 0h-5m5 0v5" />
+                          </svg>
+                          Masculino
+                        </button>
+                      </div>
                     </div>
                   </Collapse>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-muted mb-1.5">
-                      Correo electrónico
+                    <label htmlFor="auth-email" className="block text-sm font-medium text-muted mb-1.5">
+                      {isLogin ? "DNI o correo electrónico" : "Correo electrónico (Gmail)"}
                     </label>
                     <input
-                      type="email"
+                      id="auth-email"
+                      type={isLogin ? "text" : "email"}
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tucorreo@ejemplo.com"
-                      autoComplete="email"
+                      placeholder={isLogin ? "30123456 o tucorreo@gmail.com" : "tucorreo@gmail.com"}
+                      autoComplete={isLogin ? "username" : "email"}
                       className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                     />
                   </div>
@@ -580,7 +639,7 @@ export default function LoginRegisterPage() {
             )}
           </div>
 
-          <div className="w-full max-w-md mx-auto text-center text-[11px] text-muted pt-4">
+          <div className="w-full max-w-md mx-auto text-center text-[11px] text-muted pt-4 pb-4 mt-auto">
             ChatAP Formosa © 2026 · Subsecretaría de Recursos Humanos
           </div>
         </div>
