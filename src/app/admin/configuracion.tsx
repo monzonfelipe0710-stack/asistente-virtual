@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -8,11 +8,14 @@ import { Text } from "@/components/ui/Text";
 
 import { Radius, Spacing, Type, useColors } from "@/constants/theme";
 import { Toggle } from "@/components/ui/Toggle";
+import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
 import { useToast } from "@/components/ui/Toast";
+import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { Btn } from "@/components/ui/Btn";
-import { Field, Input } from "@/components/ui/Fields";
-import { SkeletonList } from "@/components/ui/Lists";
-import { Screen, PageHeader } from "@/components/ui/Screen";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { Screen } from "@/components/ui/Screen";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 
 const WORKING_HOURS = [
@@ -47,24 +50,9 @@ const DEFAULTS: Settings = {
 export default function ChatbotSettings() {
   const C = useColors();
   const push = useToast();
+  const avisarNoDisponible = useAvisoNoDisponible();
 
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (loading) {
-    return (
-      <Screen>
-        <View>
-          <SkeletonList rows={5} />
-        </View>
-      </Screen>
-    );
-  }
 
   return (
     <Screen>
@@ -72,6 +60,8 @@ export default function ChatbotSettings() {
         title="Configuración"
         description="Comportamiento y mensajes del asistente."
       />
+
+      <AvisoDeEjemplo />
 
       <View style={styles.form}>
         {/* Interruptores agrupados en una superficie: la fila entera es el área táctil */}
@@ -114,6 +104,7 @@ export default function ChatbotSettings() {
               setSettings((s) => ({ ...s, welcomeMessage }))
             }
             multiline
+            soloAlTocar
             style={{ minHeight: 120 }}
           />
         </Field>
@@ -125,6 +116,7 @@ export default function ChatbotSettings() {
               setSettings((s) => ({ ...s, secondaryMessage }))
             }
             multiline
+            soloAlTocar
           />
         </Field>
 
@@ -137,7 +129,7 @@ export default function ChatbotSettings() {
 
         <Btn
           label="Guardar cambios"
-          onPress={() => push("Configuración guardada")}
+          onPress={() => avisarNoDisponible()}
         />
         <Btn
           label="Restablecer valores"

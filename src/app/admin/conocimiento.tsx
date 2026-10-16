@@ -4,21 +4,26 @@ import { Text } from "@/components/ui/Text";
 
 import { Spacing, Type, useColors } from "@/constants/theme";
 import {
-  knowledgeBase,
   knowledgeCategories,
   type KnowledgeCategory,
   type KnowledgeEntry,
 } from "@/data/mockKnowledge";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
-import { useToast } from "@/components/ui/Toast";
+import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
 import { Badge } from "@/components/ui/Badge";
+import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { Btn } from "@/components/ui/Btn";
-import { Segmented } from "@/components/ui/Choices";
-import { Field, Input } from "@/components/ui/Fields";
-import { EmptyState, Row } from "@/components/ui/Lists";
-import { Screen, SectionHeader, PageHeader } from "@/components/ui/Screen";
+import { Segmented } from "@/components/ui/Segmented";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Row } from "@/components/ui/Row";
+import { Screen } from "@/components/ui/Screen";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
+import { formatDate } from "@/utils/date";
 
 type ArticleCategory = Exclude<KnowledgeCategory, "Todas">;
 type Visibility = "Publicado" | "Borrador";
@@ -30,10 +35,10 @@ const VISIBILITY: Visibility[] = ["Publicado", "Borrador"];
 
 export default function KnowledgeManager() {
   const C = useColors();
-  const push = useToast();
+  const avisarNoDisponible = useAvisoNoDisponible();
 
   const [activeCategory, setActiveCategory] = useState<KnowledgeCategory>("Todas");
-  const [items, setItems] = useState<KnowledgeEntry[]>(knowledgeBase);
+  const [items] = useState<KnowledgeEntry[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -79,50 +84,12 @@ export default function KnowledgeManager() {
       return;
     }
 
-    const now = new Date().toLocaleDateString("es-AR");
-    const active = visibility === "Publicado";
-
-    if (editingId !== null) {
-      setItems((prev) =>
-        prev.map((k) =>
-          k.id === editingId
-            ? {
-                ...k,
-                question: question.trim(),
-                answer: answer.trim(),
-                category,
-                active,
-                updatedAt: now,
-              }
-            : k
-        )
-      );
-      push("Artículo actualizado");
-    } else {
-      const nextId = Math.max(0, ...items.map((k) => k.id)) + 1;
-      setItems((prev) => [
-        {
-          id: nextId,
-          question: question.trim(),
-          answer: answer.trim(),
-          category,
-          active,
-          views: 0,
-          createdAt: now,
-          updatedAt: now,
-        },
-        ...prev,
-      ]);
-      push(active ? "Artículo publicado" : "Artículo guardado como borrador");
-    }
-    setSheetOpen(false);
+    avisarNoDisponible();
   }
 
   function deleteArticle() {
     if (editingId === null) return;
-    setItems((prev) => prev.filter((k) => k.id !== editingId));
-    setSheetOpen(false);
-    push("Artículo eliminado");
+    avisarNoDisponible();
   }
 
   return (
@@ -131,6 +98,8 @@ export default function KnowledgeManager() {
         title="Conocimiento"
         description="Lo que sabe el asistente y con qué responde."
       />
+
+      <AvisoDeEjemplo />
 
       <Tabs
         items={knowledgeCategories.map((cat) => ({
@@ -164,7 +133,7 @@ export default function KnowledgeManager() {
                 {article.question}
               </Text>
               <Text style={[Type.meta, { color: C.ink3 }]} numberOfLines={1}>
-                {article.category} · {article.views} consultas · {article.updatedAt}
+                {article.category} · {article.views} consultas · {formatDate(article.updatedAt)}
               </Text>
             </View>
             <Badge

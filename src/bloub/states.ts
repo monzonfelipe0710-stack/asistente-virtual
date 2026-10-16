@@ -27,39 +27,39 @@ import {
 } from './shape'
 
 export interface EyeCfg {
-  /** largeur locale (axe court de la gelule), en unites de rayon de boule */
+  /** local width (short axis of the capsule), in ball-radius units */
   w: number
-  /** hauteur locale (axe long) */
+  /** local height (long axis) */
   h: number
-  /** 1 = ouvert, 0 = ferme */
+  /** 1 = open, 0 = closed */
   open: number
   /**
-   * Inclinaison propre de la gelule, en degres, positif = le haut part a
-   * droite. Appliquee APRES le repere tangent de la sphere. Sans elle, les deux
-   * yeux penchent forcement du meme cote (le roulis de tete) et la colere comme
-   * la tristesse, qui demandent des inclinaisons en miroir, sont hors de portee.
+   * Individual tilt of the capsule, in degrees, positive = the top leans to
+   * the right. Applied AFTER the tangent frame of the sphere. Without it, both
+   * eyes necessarily lean to the same side (the head roll), and anger as well
+   * as sadness, which need mirrored tilts, are out of reach.
    */
   tilt?: number
 }
 
 export interface Pose {
-  /** silhouette du corps, en unites de rayon de boule */
+  /** body silhouette, in ball-radius units */
   sil: Silhouette
-  /** decalage global du corps ET des yeux */
+  /** global offset of the body AND the eyes */
   offX: number
   offY: number
   gaze: HeadGaze
-  /** demi-ecart des yeux sur la sphere, en degres */
+  /** half-spacing of the eyes on the sphere, in degrees */
   split: number
-  /** [oeil interieur, oeil exterieur] */
+  /** [inner eye, outer eye] */
   eyes: [EyeCfg, EyeCfg]
-  /** opacite des yeux : sert aux etats sans visage */
+  /** eye opacity: used by states without a face */
   eyeAlpha: number
   bodyAlpha: number
   dots: DotRender[]
   arcs: ArcSpec[]
   notif: { x: number; y: number; r: number; notch: number } | null
-  /** true = le decor passe derriere le corps (particules de l'eclatement) */
+  /** true = the decor goes behind the body (burst particles) */
   dotsBehind: boolean
 }
 
@@ -86,12 +86,12 @@ function base(over: Partial<Pose> = {}): Pose {
   }
 }
 
-/* --------------------------------------------------- formes non radiales */
+/* --------------------------------------------------------- non-radial shapes */
 
 /**
- * Barre du "!" vertical : enveloppe convexe de deux cercles.
- * Mesure : cercle haut (0, -0.505) r 0.132, cercle bas (0, +0.130) r 0.075,
- * flancs rectilignes. Elle est donc tronconique (rapport haut/bas 1.76).
+ * Bar of the vertical "!": convex hull of two circles.
+ * Measured: top circle (0, -0.505) r 0.132, bottom circle (0, +0.130) r 0.075,
+ * straight sides. It is therefore tapered (top/bottom ratio 1.76).
  */
 const BAR_UPRIGHT_CY = -0.1875
 const BAR_UPRIGHT = profileFromPolygon(
@@ -100,7 +100,7 @@ const BAR_UPRIGHT = profileFromPolygon(
   BAR_UPRIGHT_CY
 )
 
-/** Barre du "!" penche : capsule pure (largeur constante 0.269, longueur 0.776). */
+/** Bar of the tilted "!": pure capsule (constant width 0.269, length 0.776). */
 const BAR_ITALIC = profileFromPolygon(hullOfCircles(0, -0.2535, 0.1345, 0, 0.2535, 0.1345), 0, 0)
 
 const barUpright = (pose: Partial<Silhouette> = {}): Silhouette => ({
@@ -124,16 +124,16 @@ const barItalic = (pose: Partial<Silhouette> = {}): Silhouette => ({
 })
 
 /**
- * Le point du "!" penche n'est pas un disque : c'est une goutte, bout rond
- * (r 0.118) du cote de la barre et pointe effilee a l'oppose, longueur 0.300
- * dans l'axe du glyphe. Centree sur le barycentre du bout rond.
+ * The dot of the tilted "!" is not a disc: it is a teardrop, round end
+ * (r 0.118) on the bar side and a tapered tip on the opposite side, length 0.300
+ * along the glyph axis. Centered on the barycenter of the round end.
  */
 const TEAR = polyPath(hullOfCircles(0, 0, 0.118, 0, 0.172, 0.012))
 
 /**
- * Le triangle ne tourne pas sur lui-meme : son centre decrit un cercle de
- * rayon 0.213 autour de l'origine (mesure). C'est ce decalage qui donne
- * l'impression qu'il bascule au lieu de pivoter sur place.
+ * The triangle does not spin on itself: its center describes a circle of
+ * radius 0.213 around the origin (measured). That offset is what gives the
+ * impression that it tumbles instead of pivoting in place.
  */
 const TRI_ORBIT = 0.213
 
@@ -145,7 +145,7 @@ function spinningTriangle(rot: number): Silhouette {
   })
 }
 
-/* ------------------------------------------------------------------ etats */
+/* -------------------------------------------------------------------- states */
 
 export type StateId =
   | 'idle'
@@ -162,41 +162,41 @@ export type StateId =
   | 'orbit'
   | 'burst'
   | 'comet'
-  /** transition d'interface, pas une animation du catalogue : hors `SEQUENCE` */
+  /** interface transition, not an animation from the catalog */
   | 'swirl'
 
 export interface StateDef {
   id: StateId
-  /** duree de maintien quand la sequence complete est jouee */
+  /** hold duration when the full sequence is played */
   duration: number
   /**
-   * duree en dessous de laquelle l'animation est coupee avant d'aboutir : le
-   * "!" ne revient pas, le corps reste eclate. Elle se lit dans les constantes
-   * de `pose` ci-dessous, elle ne se choisit pas. Absente = l'etat ignore le
-   * temps ou boucle, n'importe quelle duree lui va (voir `MIN_BLOCK`).
+   * duration below which the animation is cut before it completes: the
+   * "!" does not come back, the body stays burst. It is read from the constants
+   * of `pose` below, it is not chosen. Absent = the state ignores
+   * time or loops, any duration works for it.
    */
   minDuration?: number
-  /** duree du morph d'entree */
+  /** duration of the entry morph */
   morph: number
-  /** true = l'entree est masquee par un clignement, comme dans la video */
+  /** true = the entry is masked by a blink, as in the video */
   blinkIn: boolean
   /**
-   * true = le corps est la silhouette "au repos", donc remplacable par la forme
-   * choisie dans le personnalisateur. Les etats qui dessinent leur propre forme
-   * (le "!", les points, l'oeuf, le triangle...) valent false : c'est cette forme
-   * la qui EST l'animation.
+   * true = the body is the "resting" silhouette, so it can be replaced by the shape
+   * chosen in the customizer. States that draw their own shape
+   * (the "!", the dots, the egg, the triangle...) are false: that shape
+   * IS the animation.
    */
   baseBody: boolean
   /**
-   * true = l'etat porte le visage "au repos", donc remplacable par l'expression
-   * choisie. Seul `idle` : les autres etats a visage ont une expression relevee
-   * sur la video, c'est precisement ce qu'on reproduit.
+   * true = the state carries the "resting" face, so it can be replaced by the chosen
+   * expression. Only `idle`: the other states with a face have an expression measured
+   * on the video, which is precisely what we reproduce.
    */
   baseFace: boolean
   pose(local: number): Pose
 }
 
-/** Onde de pulsation qui parcourt les trois points de gauche a droite. */
+/** Pulse wave that runs through the three dots from left to right. */
 function dotPulse(t: number, index: number): number {
   const p = ((((t - index * 0.5) / 1.5) % 1) + 1) % 1
   const k = p < 0.5 ? 0.5 - 0.5 * Math.cos(p * TAU) : 0
@@ -223,11 +223,11 @@ export const STATES: StateDef[] = [
     blinkIn: true,
     pose: (t) => {
       const mid = dotPulse(t, 1)
-      // Les points lateraux sortent des flancs de la boule : dans la video ils
-      // restent fusionnes avec elle 1-2 frames avant de se detacher.
+      // The side dots come out of the flanks of the ball: in the video they
+      // stay merged with it for 1-2 frames before detaching.
       const emerge = 0.3 + 0.7 * easings.easeOutCubic(clamp(t / 0.3))
       return base({
-        // la boule DEVIENT le point du milieu : le morph reste continu
+        // the ball BECOMES the middle dot: the morph stays continuous
         sil: circle(DOT_R * (1 + (DOT_PEAK - 1) * mid), { cx: DOT_X[1]! }),
         eyeAlpha: 0,
         dots: [0, 2].map((i) => {
@@ -254,8 +254,8 @@ export const STATES: StateDef[] = [
       base({
         gaze: { yaw: -5.37, pitch: 4.55, roll: 6.7 },
         split: 16.25,
-        // L'oeil ferme n'est pas l'oeil ouvert ecrase : c'est un tiret
-        // horizontal PLUS LARGE que l'oeil ouvert (0.447 contre 0.236).
+        // The closed eye is not the open eye squashed: it is a horizontal
+        // dash WIDER than the open eye (0.447 versus 0.236).
         eyes: [
           { w: 0.236, h: 0.464, open: 1 },
           { w: 0.447, h: 0.089, open: 1 }
@@ -281,19 +281,19 @@ export const STATES: StateDef[] = [
   {
     id: 'alert',
     duration: 2.4,
-    // le "!" revient en place a 1.6 + 0.4
+    // the "!" comes back into place at 1.6 + 0.4
     minDuration: 2,
     morph: 0.45,
     baseFace: false,
     baseBody: false,
     blinkIn: false,
     pose: (t) => {
-      // Course mesuree : -0.087 -> +0.732 en 1.5 s, ease-in-out, micro-overshoot.
+      // Measured travel: -0.087 -> +0.732 in 1.5 s, ease-in-out, micro-overshoot.
       const p = clamp(t / 1.5)
       const travel = easings.easeInOutCubic(p) * 0.82 - 0.087
       const back = t > 1.6 ? clamp((t - 1.6) / 0.4) : 0
       const x = travel * (1 - back) + 0.1 * back
-      // Vibration secondaire a 2.5 Hz, barre et point en opposition de phase.
+      // Secondary vibration at 2.5 Hz, bar and dot in phase opposition.
       const buzz = Math.sin(t * 2.5 * TAU) * 0.005
       const tilt = (17.7 * Math.PI) / 180
       return base({
@@ -301,7 +301,7 @@ export const STATES: StateDef[] = [
         eyeAlpha: 0,
         dots: [
           {
-            // le point suit l'axe du glyphe, a 0.580 du centre de la barre
+            // the dot follows the glyph axis, at 0.580 from the center of the bar
             x: x - Math.sin(tilt) * 0.58,
             y: -0.325 + Math.cos(tilt) * 0.58 + buzz * 2.8,
             r: 0.118,
@@ -322,13 +322,13 @@ export const STATES: StateDef[] = [
     baseFace: false,
     baseBody: true,
     pose: (t) => {
-      // Pop du point bleu : pic a +14 % vers 0.3 s puis stabilisation.
+      // Pop of the blue dot: peak at +14 % around 0.3 s, then settles.
       const p = clamp(t / 0.45)
       const pop = 1 + (NOTIF_POP - 1) * Math.sin(p * Math.PI) * (1 - p * 0.35)
       const r = NOTIF_R * (p < 1 ? pop : 1)
       const a = (NOTIF_ANGLE * Math.PI) / 180
       return base({
-        // le regard part a l'oppose de la pastille
+        // the gaze goes away from the badge
         gaze: { yaw: -21.94, pitch: -5.82, roll: -12.2 },
         split: 18.89,
         eyes: pair(0.505, 0.498),
@@ -366,7 +366,7 @@ export const STATES: StateDef[] = [
     blinkIn: false,
     pose: (t) =>
       base({
-        // Rebond vertical mesure : +-0.19 autour de +0.11, periode 0.6 s.
+        // Measured vertical bounce: +-0.19 around +0.11, period 0.6 s.
         sil: circle(0.1585, { cy: 0.11 + Math.sin(t * (TAU / 0.6)) * 0.19 }),
         eyeAlpha: 0
       })
@@ -383,7 +383,7 @@ export const STATES: StateDef[] = [
       base({
         sil: silhouette('egg'),
         gaze: { yaw: 19.97, pitch: 26.01, roll: -17.1 },
-        // les yeux se resserrent comme le corps
+        // the eyes draw closer together like the body
         split: 11.07,
         eyes: pair(0.164, 0.385)
       })
@@ -413,14 +413,14 @@ export const STATES: StateDef[] = [
     baseBody: false,
     blinkIn: true,
     pose: (t) => {
-      // Le triangle reste quasi immobile pendant que le bouquet le traverse.
+      // The triangle stays almost still while the bundle crosses it.
       const fade = clamp(t / 0.35) * clamp((2.2 - t) / 0.5)
       return base({
         sil: spinningTriangle(0),
         gaze: { yaw: 12, pitch: -8, roll: -6 },
         split: 15,
         eyes: pair(0.18, 0.34),
-        // le bouquet balaie de la droite vers la gauche par-dessus le triangle
+        // the bundle sweeps from right to left over the triangle
         arcs: SWOOSH.map((s, i) => ({
           id: `sw${i}`,
           seed: { ...s, cx: 0.45 - t * 0.42 },
@@ -434,17 +434,17 @@ export const STATES: StateDef[] = [
   {
     id: 'orbit',
     duration: 3.4,
-    // le corps a fini de se relacher du triangle vers la boule a 1.6 + 0.9
+    // the body has finished relaxing from the triangle to the ball at 1.6 + 0.9
     minDuration: 2.5,
     morph: 0.6,
     baseFace: false,
     baseBody: false,
     blinkIn: false,
     pose: (t) => {
-      // Rotation mesuree : rampe sur 0.35 s puis 1.25 tour/s (sens antihoraire).
+      // Measured rotation: ramp over 0.35 s then 1.25 turn/s (counterclockwise).
       const ramp = easings.easeInOutCubic(clamp(t / 0.35))
       const rot = -TAU * 1.25 * t * ramp
-      // Le corps se relache du triangle vers la boule pendant l'orbite.
+      // The body relaxes from the triangle to the ball during the orbit.
       const back = easings.easeInOutCubic(clamp((t - 1.6) / 0.9))
       const tri = spinningTriangle(rot)
       const ball = circle(1, { rot })
@@ -459,14 +459,14 @@ export const STATES: StateDef[] = [
       const fade = clamp(t / 0.8) * clamp((3.6 - t) / 0.9)
       return base({
         sil,
-        // les yeux filent autour de la sphere ~3x plus vite que la silhouette
+        // the eyes race around the sphere ~3x faster than the silhouette
         gaze: {
           yaw: REST_GAZE.yaw + Math.sin(t * 6.5) * 65 * (1 - back),
           pitch: -4 + back * 32,
           roll: -13
         },
         eyes: pair(0.18, 0.34 + back * 0.07),
-        // les anneaux entrent un par un sur 0.8 s
+        // the rings come in one by one over 0.8 s
         arcs: RINGS.map((s, i) => ({
           id: `rg${i}`,
           seed: s,
@@ -479,45 +479,45 @@ export const STATES: StateDef[] = [
 
   {
     /**
-     * Entree dans la vue des reglages.
+     * Entry into the settings view.
      *
-     * SEUL etat qui n'est pas releve sur la video : il est CHOISI, comme la
-     * couleur `--ink`. Il emprunte le vocabulaire d'`orbit` — les memes anneaux,
-     * avec leurs parametres mesures — mais coupe court : 1 s au lieu de 3,4, la
-     * moitie des anneaux, et aucun triangle.
+     * The ONLY state not measured on the video: it is CHOSEN, like the
+     * `--ink` color. It borrows the vocabulary of `orbit` — the same rings,
+     * with their measured parameters — but cuts it short: 1 s instead of 3.4, half
+     * the rings, and no triangle.
      *
-     * Les deux drapeaux a `true` sont tout l'interet de cet etat :
+     * The two flags set to `true` are the whole point of this state:
      *
-     * - `baseBody` laisse la forme choisie remplacer le corps, donc la vue peut
-     *   imposer le cercle et le galet ou la goutte y MORPHENT au lieu de sauter ;
-     * - `baseFace` fait porter le visage de repos, donc le suivi du curseur
-     *   s'applique des cette entree. Un etat qui aurait sa propre pose de regard
-     *   (comme `orbit`) rendrait la main a l'etat suivant en pleine course, et
-     *   les yeux sauteraient d'un coup a la reprise.
+     * - `baseBody` lets the chosen shape replace the body, so the view can
+     *   force the circle instead of jumping;
+     * - `baseFace` makes it carry the resting face, so cursor tracking
+     *   applies from this entry on. A state with its own gaze pose
+     *   (like `orbit`) would hand over to the next state mid-motion, and
+     *   the eyes would jump all at once on resume.
      *
-     * Il n'est volontairement PAS dans `SEQUENCE` : ce n'est pas une animation du
-     * catalogue, c'est une transition d'interface.
+     * It is deliberately NOT an animation from the catalog, it is an
+     * interface transition.
      */
     id: 'swirl',
-    // un peu plus que le tour du regard (`TURN_TIME`, 1,1 s) : les yeux doivent
-    // etre poses a gauche avant que les anneaux ne s'effacent
+    // a bit more than the gaze turn (1.1 s): the eyes must
+    // have settled on the left before the rings fade out
     duration: 1.3,
     minDuration: 1.3,
     morph: 0.3,
     baseFace: true,
     baseBody: true,
-    // le morph de forme est masque par un clignement, comme partout ailleurs
+    // the shape morph is masked by a blink, as everywhere else
     blinkIn: true,
     pose: (t) =>
       base({
-        // trois anneaux sur les six d'`orbit` : la moitie du bouquet suffit a le
-        // reconnaitre, et c'est autant d'arcs en moins a rasteriser par image
+        // three rings out of the six of `orbit`: half the bundle is enough to
+        // recognize it, and that is that many fewer arcs to rasterize per frame
         arcs: RINGS.slice(0, 3).map((s, i) => ({
           id: `sw${i}`,
           seed: s,
           t,
-          // ils entrent l'un apres l'autre puis s'effacent avant la fin du bloc,
-          // pour que la reprise au repos se fasse sur une image deja propre
+          // they come in one after the other then fade out before the end of the block,
+          // so that the return to rest happens on an already clean image
           opacity: clamp((t - i * 0.06) / 0.14) * clamp((1.22 - t) / 0.34)
         }))
       })
@@ -526,14 +526,14 @@ export const STATES: StateDef[] = [
   {
     id: 'burst',
     duration: 2.6,
-    // le corps est recompose a 1.7 + 0.7
+    // the body is reassembled at 1.7 + 0.7
     minDuration: 2.4,
     morph: 0.4,
     baseFace: false,
     baseBody: false,
     blinkIn: false,
     pose: (t) => {
-      // Effondrement mesure : 1.0 -> 0.166 en 0.7 s, ease-out, sans rebond.
+      // Measured collapse: 1.0 -> 0.166 in 0.7 s, ease-out, no bounce.
       const collapse = 1 - 0.834 * easings.easeOutQuint(clamp(t / 0.7))
       const regrow = easings.easeOutQuint(clamp((t - 1.7) / 0.7))
       return base({
@@ -548,9 +548,9 @@ export const STATES: StateDef[] = [
   {
     id: 'comet',
     duration: 2.4,
-    // le point se recompose a 1.85 + 0.6 = 2.45, soit 0.05 s apres la coupe de
-    // la video : ce reliquat se termine pendant le fondu suivant, comme dans la
-    // reference. On ne descend donc pas sous la duree mesuree.
+    // the dot reassembles at 1.85 + 0.6 = 2.45, i.e. 0.05 s after the cut of
+    // the video: this remainder finishes during the next fade, as in the
+    // reference. So we do not go below the measured duration.
     minDuration: 2.4,
     morph: 0.45,
     baseFace: false,
@@ -561,7 +561,7 @@ export const STATES: StateDef[] = [
       const regrow = easings.easeOutQuint(clamp((t - 1.85) / 0.6))
       const fade = clamp((t - 0.15) / 0.25) * clamp((1.95 - t) / 0.3)
       return base({
-        // Le point derive de 0.035 vers le bas puis remonte (wobble mesure).
+        // The dot drifts 0.035 down then comes back up (measured wobble).
         sil: circle(collapse + (1 - collapse) * regrow, {
           cy: Math.sin(clamp(t / 1.7) * Math.PI) * 0.035
         }),
@@ -574,11 +574,10 @@ export const STATES: StateDef[] = [
 
 export const STATE_BY_ID = new Map(STATES.map((s) => [s.id, s]))
 
-/** Ordre de lecture de la sequence complete, calque sur la video de reference. */
 /**
- * Date, en temps local, ou chaque etat est le plus lisible : c'est la pose que
- * montrent les vignettes et la planche. Rendu deterministe, donc comparable
- * d'une execution a l'autre. Le type force a couvrir tout nouvel etat.
+ * Time, in local time, at which each state is most readable: it is the pose that
+ * the thumbnails and the contact sheet show. Deterministic rendering, so comparable
+ * from one run to another. The type forces covering any new state.
  */
 export const POSES: Record<StateId, number> = {
   idle: 1,
@@ -597,20 +596,3 @@ export const POSES: Record<StateId, number> = {
   burst: 0.45,
   comet: 1.15
 }
-
-export const SEQUENCE: StateId[] = [
-  'idle',
-  'thinking',
-  'wink',
-  'wide',
-  'alert',
-  'notify',
-  'exclaim',
-  'sleep',
-  'egg',
-  'hexagon',
-  'play',
-  'orbit',
-  'burst',
-  'comet'
-]

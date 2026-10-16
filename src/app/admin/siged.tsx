@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Animated,
   Easing,
@@ -9,34 +9,29 @@ import {
 import { Text } from "@/components/ui/Text";
 
 import { Radius, Size, Spacing, Type, useColors } from "@/constants/theme";
-import { sigedRecords, sigedStatuses, type SigedStatus } from "@/data/mockSiged";
-import { formatDate } from "@/utils/date";
+import { sigedStatuses, type SigedRecord, type SigedStatus } from "@/data/mockSiged";
+import { formatDate, formatDateTime, todayISO } from "@/utils/date";
 import { Icon } from "@/components/ui/Icon";
 import { Tabs } from "@/components/ui/Tabs";
-import { useToast } from "@/components/ui/Toast";
-import { EmptyState, KeyValue, RecordRow } from "@/components/ui/Lists";
-import { Screen, PageHeader } from "@/components/ui/Screen";
+import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { KeyValue } from "@/components/ui/KeyValue";
+import { RecordRow } from "@/components/ui/RecordRow";
+import { Screen } from "@/components/ui/Screen";
+import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type Filter = "Todos" | SigedStatus;
 
-/** Fecha y hora como en el resto del panel: 09/10/2026, 11:57. */
-function stamp(d: Date) {
-  return `${formatDate(d)}, ${d.toLocaleTimeString("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })}`;
-}
-
 export default function SigedIntegration() {
   const C = useColors();
-  const push = useToast();
+  const avisarNoDisponible = useAvisoNoDisponible();
 
+  const [sigedRecords] = useState<SigedRecord[]>([]);
   const [statusFilter, setStatusFilter] = useState<Filter>("Todos");
-  const [syncedAt, setSyncedAt] = useState(() => new Date());
-  const [syncing, setSyncing] = useState(false);
-  const spin = useRef(new Animated.Value(0)).current;
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [syncedAt] = useState<Date | null>(null);
+  const [syncing] = useState(false);
+  const [spin] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     if (!syncing) return;
@@ -55,21 +50,9 @@ export default function SigedIntegration() {
     };
   }, [syncing, spin]);
 
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    []
-  );
-
   function sync() {
     if (syncing) return;
-    setSyncing(true);
-    timer.current = setTimeout(() => {
-      setSyncing(false);
-      setSyncedAt(new Date());
-      push("Sincronización completa · sin errores");
-    }, 1500);
+    avisarNoDisponible();
   }
 
   const filtered = useMemo(
@@ -77,10 +60,10 @@ export default function SigedIntegration() {
       statusFilter === "Todos"
         ? sigedRecords
         : sigedRecords.filter((r) => r.status === statusFilter),
-    [statusFilter]
+    [sigedRecords, statusFilter]
   );
 
-  const todayCount = sigedRecords.filter((r) => r.date === "2026-06-04").length;
+  const todayCount = sigedRecords.filter((r) => r.date === todayISO()).length;
 
   return (
     <Screen>
@@ -89,13 +72,15 @@ export default function SigedIntegration() {
         description="Sistema de Gestión Documental · Mesa de Entradas"
       />
 
+      <AvisoDeEjemplo texto="Los expedientes de abajo son de ejemplo. La sincronización real todavía no está disponible." />
+
       {/* Estado de la conexión: lo primero que se necesita saber acá */}
       <View style={[styles.syncTop, { borderBottomColor: C.border }]}>
         <View style={styles.statusRow}>
-          <View style={[styles.halo, { backgroundColor: C.okBg }]}>
-            <View style={[styles.dot, { backgroundColor: C.ok }]} />
+          <View style={[styles.halo, { backgroundColor: C.surface }]}>
+            <View style={[styles.dot, { backgroundColor: C.ink3 }]} />
           </View>
-          <Text style={[Type.rowTitle, { color: C.ink }]}>API conectada</Text>
+          <Text style={[Type.rowTitle, { color: C.ink }]}>API sin conectar</Text>
         </View>
         <Pressable
           onPress={sync}
@@ -123,9 +108,8 @@ export default function SigedIntegration() {
 
       <KeyValue
         label="Última sincronización"
-        value={syncing ? "En curso…" : stamp(syncedAt)}
+        value={syncing ? "En curso…" : syncedAt ? formatDateTime(syncedAt) : "Nunca"}
       />
-      <KeyValue label="Latencia" value="45 ms · operativa" />
       <KeyValue label="Consultas hoy" value={String(todayCount)} />
 
       <View style={{ marginTop: Spacing[6] }}>

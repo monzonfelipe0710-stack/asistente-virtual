@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -85,21 +85,6 @@ export function Pagination({
       </Pressable>
     </View>
   );
-}
-
-export function usePagination<T>(items: T[], pageSize = 5) {
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-
-  // Al filtrar, la página actual puede quedar fuera de rango y la lista se ve
-  // vacía sin motivo. Se vuelve a la última página que sí existe.
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const paginatedItems = items.slice((page - 1) * pageSize, page * pageSize);
-
-  return { page, totalPages, paginatedItems, setPage };
 }
 
 const styles = StyleSheet.create({

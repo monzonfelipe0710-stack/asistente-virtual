@@ -5,21 +5,21 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
+import { Icon, type IconName } from "./Icon";
 import { Text } from "./Text";
 import { Radius, Size, Spacing, Weight, useColors } from "@/constants/theme";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "dangerFill";
 
 /**
- * Botón.
- * - primary:    azul profundo con texto blanco. Uno por pantalla.
- * - secondary:  contorno neutro.
+ * Botón de 56 con radio 18; `size="md"` es el compacto de 48.
+ * - primary:    azul con texto `onAccent`. Uno por pantalla.
+ * - secondary:  contorno fuerte.
  * - ghost:      texto azul, sin superficie (un enlace).
- * - danger:     texto rojo, sin superficie.
+ * - danger:     contorno y texto rojos.
  * - dangerFill: relleno rojo, para confirmar un borrado.
- * `size="md"` es la variante de 44 con radio 12, para pares de botones.
+ * Deshabilitado se ve como una pastilla gris plana.
  */
 export function Btn({
   label,
@@ -35,36 +35,30 @@ export function Btn({
   onPress?: () => void;
   variant?: Variant;
   size?: "lg" | "md";
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: IconName;
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const C = useColors();
-  const compact = size === "md";
-  const filled = variant === "primary" || variant === "dangerFill";
 
-  function textColor() {
-    if (filled) return "#FFFFFF";
-    if (variant === "ghost") return C.accentText;
-    if (variant === "danger") return C.danger;
-    return C.ink;
+  function colors(): { fg: string; bg: string; border: string } {
+    if (disabled) return { fg: C.ink3, bg: C.surface2, border: C.surface2 };
+    switch (variant) {
+      case "primary":
+        return { fg: C.onAccent, bg: C.accent, border: C.accent };
+      case "secondary":
+        return { fg: C.ink, bg: "transparent", border: C.borderStrong };
+      case "ghost":
+        return { fg: C.accentText, bg: "transparent", border: "transparent" };
+      case "danger":
+        return { fg: C.danger, bg: "transparent", border: C.danger };
+      case "dangerFill":
+        return { fg: C.onDangerFill, bg: C.dangerFill, border: C.dangerFill };
+    }
   }
 
-  function background(pressed: boolean) {
-    if (variant === "dangerFill") return C.danger;
-    if (variant === "primary") return pressed ? C.primaryHover : C.primary;
-    if (variant === "ghost") return "transparent";
-    return pressed ? C.surface : "transparent";
-  }
-
-  function opacity(pressed: boolean) {
-    if (disabled) return 0.45;
-    if (variant === "ghost" && pressed) return 0.6;
-    return 1;
-  }
-
-  const color = textColor();
+  const { fg, bg, border } = colors();
 
   return (
     <Pressable
@@ -76,28 +70,20 @@ export function Btn({
       style={({ pressed }) => [
         styles.btn,
         {
-          height: compact || variant === "ghost" ? Size.touch : Size.button,
-          borderRadius: compact ? Radius.lg : Radius.xl,
-          backgroundColor: background(pressed),
-          opacity: opacity(pressed),
+          minHeight: size === "md" ? Size.buttonCompact : Size.button,
+          backgroundColor: bg,
+          borderColor: border,
+          opacity: pressed ? 0.82 : 1,
         },
-        variant === "ghost" && styles.ghost,
-        variant === "secondary" && { borderWidth: 1, borderColor: C.border },
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={color} />
+        <ActivityIndicator size="small" color={fg} />
       ) : (
         <>
-          {!!icon && <Ionicons name={icon} size={20} color={color} />}
-          <Text
-            style={{
-              fontSize: compact ? 15 : 16,
-              fontWeight: filled ? Weight.semibold : Weight.medium,
-              color,
-            }}
-          >
+          {!!icon && <Icon name={icon} size={20} color={fg} />}
+          <Text style={{ fontSize: 17, lineHeight: 21, fontWeight: Weight.semibold, color: fg }}>
             {label}
           </Text>
         </>
@@ -113,8 +99,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: Spacing[2],
     paddingHorizontal: Spacing[5],
-  },
-  ghost: {
-    paddingHorizontal: 0,
+    paddingVertical: Spacing[3],
+    borderRadius: Radius.button,
+    borderWidth: 1,
   },
 });

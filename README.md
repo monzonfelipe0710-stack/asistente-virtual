@@ -28,6 +28,7 @@ src/
       accesos.tsx           /accesos
     (publico)/              Grupo sin layout propio
       login.tsx             /login       Con sesión abierta redirige
+      recuperar.tsx         /recuperar   Pide el enlace para cambiar la contraseña
       restablecer.tsx       /restablecer
     admin/
       _layout.tsx           Guard de entrada + Drawer del panel + permisos por pantalla
@@ -35,16 +36,19 @@ src/
       mesa-de-entrada.tsx · solicitudes.tsx · usuarios.tsx · conocimiento.tsx
       documentos.tsx · siged.tsx · configuracion.tsx · reportes.tsx
   components/
+    admin/                  Formularios del panel: usuarios y alta de Mesa de Entradas
+    auth/                   Campos de la solicitud de empleado del registro
     avatar/                 ChatBotAvatar (se dibuja con el motor de src/bloub)
     chat/                   Piezas del chat
-    menu/                   Menú lateral compartido y encabezado
+    descargas/              Tarjeta de documento de /descargas
+    menu/                   Menú lateral compartido, sus filas, pies y encabezado
     reportes/               Gráficos de la pantalla de reportes
-    admin/                  Formulario de usuarios
-    ui/                     Piezas reutilizables: Btn, Fields, Select, Tabs, Modal, Toast…
-  context/                  Sesión (AuthContext) y permisos del panel (AdminContext)
-  data/                     Datos simulados (todavía no hay backend)
-  hooks/                    useChat, useSortable, useKeyboardHeight
-  lib/                      Sesión guardada, correo, almacenamiento
+    ui/                     Piezas reutilizables: Btn, Input, Select, Tabs, Modal, Toast…
+  context/                  Sesión (AuthContext)
+  data/                     Tipos de datos y listas fijas (los registros vienen del backend)
+  hooks/                    useChat, useCuentas, usePagination, usePermisos, useSortable, useKeyboardHeight
+  lib/                      Validaciones, permisos, almacenamiento y el aviso de backend sin conectar
+  utils/                    Fechas, tamaño de archivo e iniciales
   constants/theme.ts        Colores, tipografía, espaciado y radios
   bloub/                    Motor que anima la mascota
 ```
@@ -55,7 +59,7 @@ src/
 | --- | --- | --- |
 | `(ciudadano)` | Cualquiera | — |
 | `login` | Sin sesión | Con sesión redirige: personal al panel, el resto al chat |
-| `admin` | Personal (Superadmin o Administrador) | Sin sesión redirige a `/login`; con una cuenta de Ciudadano muestra "Acceso restringido" |
+| `admin` | Personal (Superadmin o Administrador) | Sin sesión redirige a `/login`; con una cuenta de Ciudadano muestra "Acceso restringido" con la opción de cerrar sesión |
 | Cada pantalla de `admin` | Según el permiso del rol | La pantalla no existe para quien no tiene permiso |
 
 ## Convenciones
@@ -63,12 +67,8 @@ src/
 - **Solo rutas en `src/app`.** Un componente o un hook ahí se convertiría en una ruta (`Boton.tsx` pasaría a ser `/Boton`).
 - **Un componente por archivo, con export nombrado.** Los archivos de `src/app` son la excepción: llevan `export default`, que Expo Router exige.
 - **Imports con `@/`.** `@/components/ui/Btn` en vez de `../../components/ui/Btn`. Dentro de la misma carpeta se usa `./`.
-- **Permisos en el layout, no en cada pantalla.** `src/app/admin/_layout.tsx` decide qué pantallas existen para cada rol.
+- **Permisos en el layout, no en cada pantalla.** `src/app/admin/_layout.tsx` decide qué pantallas existen para cada rol, con los permisos de `src/lib/permisos.ts`.
 - **Dependencias con `npx expo install`**, no con `npm install`, para que la versión coincida con el SDK de Expo Go.
-
-## Cuentas de prueba
-
-Los datos son simulados y se guardan en el dispositivo. Para entrar al panel usá la cuenta Superadmin que se crea sola la primera vez; su correo y su clave están en `src/context/AuthContext.tsx`. Cualquier otra cuenta que registres entra como Ciudadano hasta que un Superadmin apruebe su solicitud en **Solicitudes**.
 
 ## Diseño
 

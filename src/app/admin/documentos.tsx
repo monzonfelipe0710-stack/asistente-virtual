@@ -1,5 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -11,22 +10,26 @@ import { Radius, Spacing, Type, useColors } from "@/constants/theme";
 import {
   documentCategories,
   documentFormats,
-  documents as initialDocs,
   type DocumentCategory,
   type DocumentFormat,
   type MockDocument,
 } from "@/data/mockDocuments";
 import { useSortable } from "@/hooks/useSortable";
-import { formatDate } from "@/utils/date";
 import { Modal } from "@/components/ui/Modal";
 import { Icon } from "@/components/ui/Icon";
-import { Pagination, usePagination } from "@/components/ui/Pagination";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/ui/Pagination";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
 import { useToast } from "@/components/ui/Toast";
+import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { Btn } from "@/components/ui/Btn";
-import { Field, Input } from "@/components/ui/Fields";
-import { EmptyState, Row, SkeletonList } from "@/components/ui/Lists";
-import { Screen, PageHeader } from "@/components/ui/Screen";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Row } from "@/components/ui/Row";
+import { Screen } from "@/components/ui/Screen";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Select } from "@/components/ui/Select";
 
 type DocCategory = Exclude<DocumentCategory, "Todos">;
@@ -64,20 +67,15 @@ type SortLabel = keyof typeof SORT_OPTIONS;
 export default function DocumentManager() {
   const C = useColors();
   const push = useToast();
+  const avisarNoDisponible = useAvisoNoDisponible();
 
-  const [docs, setDocs] = useState<MockDocument[]>(initialDocs);
+  const [docs] = useState<MockDocument[]>([]);
   const [filterCat, setFilterCat] = useState<DocumentCategory>("Todos");
   const [sortLabel, setSortLabel] = useState<SortLabel>("Título");
   const [formOpen, setFormOpen] = useState(false);
   const [editDoc, setEditDoc] = useState<MockDocument | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState<DocForm>(EMPTY_DOC);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(t);
-  }, []);
 
   const filtered = useMemo(
     () => (filterCat === "Todos" ? docs : docs.filter((d) => d.category === filterCat)),
@@ -95,6 +93,7 @@ export default function DocumentManager() {
   }
 
   function changeSort(label: SortLabel) {
+    if (label === sortLabel) return;
     setSortLabel(label);
     toggleSort(SORT_OPTIONS[label]);
   }
@@ -123,39 +122,12 @@ export default function DocumentManager() {
       return;
     }
 
-    if (editDoc) {
-      setDocs((prev) => prev.map((d) => (d.id === editDoc.id ? { ...d, ...form } : d)));
-      push("Documento actualizado.");
-    } else {
-      setDocs((prev) => [
-        ...prev,
-        {
-          id: Math.max(0, ...prev.map((d) => d.id)) + 1,
-          ...form,
-          fileSize: form.fileSize || "—",
-          downloads: 0,
-          updatedAt: formatDate(new Date()),
-        },
-      ]);
-      push("Documento creado.");
-    }
-    setFormOpen(false);
+    avisarNoDisponible();
   }
 
   function confirmDelete() {
-    setDocs((prev) => prev.filter((d) => d.id !== deleteId));
     setDeleteId(null);
-    push("Documento eliminado.");
-  }
-
-  if (loading) {
-    return (
-      <Screen>
-        <View>
-          <SkeletonList rows={5} />
-        </View>
-      </Screen>
-    );
+    avisarNoDisponible();
   }
 
   return (
@@ -164,6 +136,8 @@ export default function DocumentManager() {
         title="Documentos"
         description={`Formularios que los agentes pueden descargar. ${docs.length} archivos · ${totalDownloads.toLocaleString("es-AR")} descargas.`}
       />
+
+      <AvisoDeEjemplo />
 
       <Tabs
         items={documentCategories.map((cat) => ({
@@ -195,8 +169,8 @@ export default function DocumentManager() {
           }
           style={({ pressed }) => [styles.sortDir, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <Ionicons
-            name={sortDir === "asc" ? "arrow-up" : "arrow-down"}
+          <Icon
+            name={sortDir === "asc" ? "arrowUp" : "arrowDown"}
             size={18}
             color={C.ink2}
           />

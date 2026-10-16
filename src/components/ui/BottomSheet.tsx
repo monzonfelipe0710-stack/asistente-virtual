@@ -1,15 +1,18 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   Animated,
   Easing,
   Modal as RNModal,
+  Platform,
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Motion, Radius, Shadows, Spacing, useColors } from "@/constants/theme";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 
 /**
  * Hoja inferior: velo al 40 %, superficie con radio 28 arriba, asa de 36 × 5 y
@@ -26,7 +29,11 @@ export function BottomSheet({
 }) {
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const entrada = useRef(new Animated.Value(0)).current; // 0 abajo, 1 arriba
+  const { height: alturaDePantalla } = useWindowDimensions();
+  // En Android el teclado se dibuja encima de la hoja: se la sube su alto. En iOS lo hace el Modal.
+  const teclado = useKeyboardHeight();
+  const alzar = Platform.OS === "android" ? teclado : 0;
+  const [entrada] = useState(() => new Animated.Value(0)); // 0 abajo, 1 arriba
 
   useEffect(() => {
     if (!open) return;
@@ -64,14 +71,16 @@ export function BottomSheet({
           Shadows.sheet,
           {
             backgroundColor: C.canvas,
-            paddingBottom: Math.max(insets.bottom, Spacing[5]) + Spacing[2],
+            bottom: alzar,
+            maxHeight: alzar > 0 ? alturaDePantalla - alzar - insets.top - Spacing[4] : "93%",
+            paddingBottom: alzar > 0 ? Spacing[3] : Math.max(insets.bottom, Spacing[5]) + Spacing[2],
             transform: [
               { translateY: entrada.interpolate({ inputRange: [0, 1], outputRange: [700, 0] }) },
             ],
           },
         ]}
       >
-        <View style={[styles.handle, { backgroundColor: C.surface2 }]} />
+        <View style={[styles.handle, { backgroundColor: C.borderStrong }]} />
         {children}
       </Animated.View>
     </RNModal>
@@ -84,15 +93,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: "88%",
-    borderTopLeftRadius: Radius["3xl"],
-    borderTopRightRadius: Radius["3xl"],
+    maxHeight: "93%",
+    borderTopLeftRadius: Platform.OS === "ios" ? Radius["3xl"] : 32,
+    borderTopRightRadius: Platform.OS === "ios" ? Radius["3xl"] : 32,
     paddingTop: Spacing[2],
     paddingHorizontal: Spacing[5],
     gap: Spacing[4],
   },
   handle: {
-    width: 36,
+    width: 40,
     height: 5,
     borderRadius: 3,
     alignSelf: "center",

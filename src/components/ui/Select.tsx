@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
 import { BottomSheet } from "./BottomSheet";
+import { Icon } from "./Icon";
 import { Text } from "./Text";
 import { Radius, Size, Spacing, Weight, useColors } from "@/constants/theme";
 
 /**
  * Desplegable. React Native no tiene `<select>`: el valor se ve como un campo
- * relleno y las opciones salen en una hoja inferior.
+ * con borde fuerte y las opciones salen en una hoja inferior.
  */
 export function Select<T extends string>({
   value,
@@ -37,13 +37,13 @@ export function Select<T extends string>({
         accessibilityLabel={value || placeholder}
         style={({ pressed }) => [
           styles.field,
-          { backgroundColor: pressed ? C.surface2 : C.surface },
+          { backgroundColor: pressed ? C.surface : C.canvas, borderColor: C.borderStrong },
         ]}
       >
         <Text style={[styles.value, { color: value ? C.ink : C.ink3 }]} numberOfLines={1}>
           {value || placeholder}
         </Text>
-        <Ionicons name="chevron-down" size={18} color={C.ink3} />
+        <Icon name="chevronDown" size={22} color={C.ink} />
       </Pressable>
 
       <BottomSheet open={open} onClose={() => setOpen(false)}>
@@ -64,12 +64,12 @@ export function Select<T extends string>({
                 <Text
                   style={[
                     styles.optionText,
-                    { color: C.ink, fontWeight: selected ? Weight.semibold : Weight.normal },
+                    { color: C.ink, fontWeight: selected ? Weight.bold : Weight.normal },
                   ]}
                 >
                   {option}
                 </Text>
-                {selected && <Ionicons name="checkmark" size={20} color={C.accent} />}
+                {selected && <Icon name="check" size={22} color={C.accent} />}
               </Pressable>
             );
           })}
@@ -85,12 +85,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: Spacing[2],
-    height: Size.input,
+    minHeight: Size.input,
     borderRadius: Radius.xl,
+    borderWidth: 1.5,
     paddingHorizontal: Spacing[4],
   },
   value: {
-    fontSize: 16,
+    fontSize: 17,
     flexShrink: 1,
   },
   list: {
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 17,
     flexShrink: 1,
   },
 });

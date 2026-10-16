@@ -16,3 +16,19 @@ export function formatDate(value: string | number | Date | null | undefined): st
     .map((part) => String(part).padStart(2, "0"))
     .join("/");
 }
+
+/** Fecha y hora como en el resto del panel: 09/10/2026, 11:57. */
+export function formatDateTime(d: Date): string {
+  return `${formatDate(d)}, ${d.toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })}`;
+}
+
+export function todayISO(): string {
+  const d = new Date();
+  return [d.getFullYear(), d.getMonth() + 1, d.getDate()]
+    .map((part) => String(part).padStart(2, "0"))
+    .join("-");
+}

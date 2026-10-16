@@ -1,8 +1,16 @@
 import { Children, type ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { Text } from "./Text";
 
 import { BottomSheet } from "./BottomSheet";
+import { Icon } from "./Icon";
 import { Spacing, Type, useColors } from "@/constants/theme";
 
 /**
@@ -33,9 +41,19 @@ export function Modal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flexShrink}
       >
-        <Text style={[Type.sheetTitle, { color: C.ink }]} accessibilityRole="header">
-          {title}
-        </Text>
+        <View style={styles.titulo}>
+          <Text style={[Type.sheetTitle, styles.tituloTexto, { color: C.ink }]} accessibilityRole="header">
+            {title}
+          </Text>
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
+            style={({ pressed }) => [styles.cerrar, pressed && { backgroundColor: C.surface2 }]}
+          >
+            <Icon name="close" size={24} color={C.ink} />
+          </Pressable>
+        </View>
 
         <ScrollView
           style={styles.flexShrink}
@@ -63,6 +81,21 @@ export function Modal({
 const styles = StyleSheet.create({
   flexShrink: {
     flexShrink: 1,
+  },
+  titulo: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: -Spacing[3],
+  },
+  tituloTexto: {
+    flex: 1,
+  },
+  cerrar: {
+    width: 48,
+    height: 48,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
   },
   body: {
     paddingTop: Spacing[4],

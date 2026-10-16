@@ -1,8 +1,76 @@
-import { ScrollView, StyleSheet, View } from "react-native";
+import { createContext, useCallback, useContext, useEffect, useRef } from "react";
+import { ScrollView, useWindowDimensions, View, type ScrollViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Text } from "./Text";
-import { Spacing, Type, useColors } from "@/constants/theme";
+import { Spacing, useColors } from "@/constants/theme";
+import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+
+/** Lo que queda de aire entre el borde de abajo del campo y el borde de arriba del teclado. */
+const AIRE_SOBRE_EL_TECLADO = 12;
+
+type AvisarFoco = (campo: View | null) => void;
+
+const FocoContext = createContext<AvisarFoco>(() => {});
+
+/** Lo usan los campos de texto para avisarle a la pantalla que ahora están enfocados. */
+export function useAvisarFoco(): AvisarFoco {
+  return useContext(FocoContext);
+}
+
+/**
+ * ScrollView para pantallas con campos de texto. Con el teclado arriba agrega
+ * al final un espacio del alto del teclado y desplaza lo justo para que el
+ * campo enfocado quede apenas por encima de él; si ya se ve entero, no mueve nada.
+ */
+export function ScrollConTeclado({ children, ...rest }: ScrollViewProps) {
+  const teclado = useKeyboardHeight();
+  const { height: alturaDeVentana } = useWindowDimensions();
+  const scroll = useRef<ScrollView>(null);
+  const desplazamiento = useRef(0);
+  const enfocado = useRef<View | null>(null);
+
+  const subirCampo = useCallback(() => {
+    const campo = enfocado.current;
+    if (!campo || teclado === 0) return;
+    campo.measureInWindow((_x, y, _ancho, alto) => {
+      const tapado = y + alto - (alturaDeVentana - teclado - AIRE_SOBRE_EL_TECLADO);
+      if (tapado > 0) {
+        scroll.current?.scrollTo({ y: desplazamiento.current + tapado, animated: true });
+      }
+    });
+  }, [teclado, alturaDeVentana]);
+
+  // El teclado llega después del foco: recién entonces el contenido es lo bastante largo para desplazarse.
+  useEffect(() => {
+    subirCampo();
+  }, [subirCampo]);
+
+  const avisarFoco = useCallback<AvisarFoco>(
+    (campo) => {
+      enfocado.current = campo;
+      subirCampo();
+    },
+    [subirCampo]
+  );
+
+  return (
+    <FocoContext.Provider value={avisarFoco}>
+      <ScrollView
+        ref={scroll}
+        onScroll={(e) => {
+          desplazamiento.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        {...rest}
+      >
+        {children}
+        {teclado > 0 && <View style={{ height: teclado }} />}
+      </ScrollView>
+    </FocoContext.Provider>
+  );
+}
 
 /** El fondo de cada pantalla del panel: una sola superficie con 20 de margen lateral. */
 export function Screen({ children }: { children: React.ReactNode }) {
@@ -10,94 +78,15 @@ export function Screen({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView
+    <ScrollConTeclado
       style={{ flex: 1, backgroundColor: C.canvas }}
       contentContainerStyle={{
         paddingHorizontal: Spacing[5],
         paddingTop: Spacing[1],
         paddingBottom: insets.bottom + Spacing[12],
       }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
     >
       {children}
-    </ScrollView>
+    </ScrollConTeclado>
   );
 }
-
-/** Título de pantalla 28/34 y bajada 15/22. Las acciones van debajo. */
-export function PageHeader({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children?: React.ReactNode;
-}) {
-  const C = useColors();
-  return (
-    <View style={styles.pageHeader}>
-      <Text style={[Type.pageTitle, { color: C.ink }]}>{title}</Text>
-      {!!description && <Text style={[Type.lead, { color: C.ink2 }]}>{description}</Text>}
-      {!!children && <View style={styles.actions}>{children}</View>}
-    </View>
-  );
-}
-
-/** Título que abre un grupo de contenido, con 32 de aire arriba. */
-export function SectionTitle({ children }: { children: string }) {
-  const C = useColors();
-  return <Text style={[Type.cardTitle, styles.sectionTitle, { color: C.ink }]}>{children}</Text>;
-}
-
-/** Título de un bloque (17/600) con su bajada; la acción va a la derecha. */
-export function SectionHeader({
-  title,
-  subtitle,
-  right,
-}: {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-}) {
-  const C = useColors();
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionText}>
-        <Text style={[Type.cardTitle, { color: C.ink }]}>{title}</Text>
-        {!!subtitle && <Text style={[Type.meta, { color: C.ink2 }]}>{subtitle}</Text>}
-      </View>
-      {right}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  pageHeader: {
-    marginBottom: Spacing[6],
-    gap: 6,
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: Spacing[3],
-    marginTop: Spacing[3],
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: Spacing[3],
-    paddingBottom: Spacing[1],
-  },
-  sectionTitle: {
-    marginTop: Spacing[8],
-    marginBottom: Spacing[1],
-  },
-  sectionText: {
-    flexShrink: 1,
-    gap: 2,
-  },
-});

@@ -2,24 +2,38 @@ import { memo, useState } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/Icon";
-import { TextInput } from "@/components/ui/Text";
+import { TextInput } from "@/components/ui/TextInput";
 import { Radius, Size, Spacing, useColors } from "@/constants/theme";
 
 /**
- * Barra de mensaje: superficie gris sobre el fondo, radio 28, 56 de alto como
- * mínimo. Al enfocarla, borde azul y anillo de 4 px. Enviar es un círculo de 40
- * que pasa a azul profundo cuando hay texto.
+ * Barra de mensaje: fondo de superficie, radio 22, 56 de alto como mínimo y
+ * borde fuerte. Al enfocarla, borde azul de 2 y anillo de 4 px. Enviar es un
+ * botón de 48 con radio 16 que pasa a azul cuando hay texto y no hay una
+ * respuesta pendiente.
  *
  * El texto vive acá y no en `useChat`: así escribir no vuelve a dibujar la lista.
  */
-function ChatInputBase({ onSend }: { onSend: (texto: string) => void }) {
+function ChatInputBase({
+  onSend,
+  onStop,
+  onFocusChange,
+  disabled = false,
+}: {
+  onSend: (texto: string) => void;
+  /** Avisa cuando el campo gana o pierde el foco, para que la pantalla se acomode. */
+  onFocusChange?: (enfocado: boolean) => void;
+  /** Mientras `disabled` es verdadero, el botón de enviar pasa a ser el de detener. */
+  onStop?: () => void;
+  disabled?: boolean;
+}) {
   const C = useColors();
   const [texto, setTexto] = useState("");
   const [enfocado, setEnfocado] = useState(false);
   const hayTexto = texto.trim().length > 0;
+  const puedeEnviar = hayTexto && !disabled;
 
   function enviar() {
-    if (!hayTexto) return;
+    if (!puedeEnviar) return;
     onSend(texto.trim());
     setTexto("");
   }
@@ -31,15 +45,25 @@ function ChatInputBase({ onSend }: { onSend: (texto: string) => void }) {
       <View
         style={[
           styles.barra,
-          { backgroundColor: C.surface, borderColor: enfocado ? C.accent : C.composerBorder },
+          {
+            backgroundColor: C.surface,
+            borderColor: enfocado ? C.accent : C.borderStrong,
+            borderWidth: enfocado ? 2 : 1.5,
+          },
         ]}
       >
         <TextInput
           style={[styles.campo, { color: C.ink }]}
           value={texto}
           onChangeText={setTexto}
-          onFocus={() => setEnfocado(true)}
-          onBlur={() => setEnfocado(false)}
+          onFocus={() => {
+            setEnfocado(true);
+            onFocusChange?.(true);
+          }}
+          onBlur={() => {
+            setEnfocado(false);
+            onFocusChange?.(false);
+          }}
           placeholder="Escribí tu consulta"
           placeholderTextColor={C.ink3}
           multiline
@@ -52,16 +76,27 @@ function ChatInputBase({ onSend }: { onSend: (texto: string) => void }) {
           submitBehavior="blurAndSubmit"
           accessibilityLabel="Escribí tu consulta"
         />
-        <Pressable
-          onPress={enviar}
-          disabled={!hayTexto}
-          accessibilityRole="button"
-          accessibilityLabel="Enviar"
-          accessibilityState={{ disabled: !hayTexto }}
-          style={[styles.enviar, { backgroundColor: hayTexto ? C.primary : C.surface2 }]}
-        >
-          <Icon name="send" size={20} color={hayTexto ? "#FFFFFF" : C.ink3} />
-        </Pressable>
+        {disabled && onStop ? (
+          <Pressable
+            onPress={onStop}
+            accessibilityRole="button"
+            accessibilityLabel="Detener respuesta"
+            style={[styles.enviar, { backgroundColor: C.accent }]}
+          >
+            <Icon name="stop" size={20} color={C.onAccent} />
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={enviar}
+            disabled={!puedeEnviar}
+            accessibilityRole="button"
+            accessibilityLabel="Enviar consulta"
+            accessibilityState={{ disabled: !puedeEnviar }}
+            style={[styles.enviar, { backgroundColor: puedeEnviar ? C.accent : C.surface2 }]}
+          >
+            <Icon name="send" size={22} color={puedeEnviar ? C.onAccent : C.ink3} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -71,33 +106,33 @@ export const ChatInput = memo(ChatInputBase);
 
 const styles = StyleSheet.create({
   anillo: {
-    marginHorizontal: Spacing[5] - 4,
+    marginHorizontal: Spacing[4] - 4,
     borderWidth: 4,
-    borderRadius: Radius["3xl"] + 4,
+    borderRadius: 22 + 4,
   },
   barra: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: Spacing[2],
     minHeight: Size.composer,
-    paddingLeft: 15,
-    paddingRight: Spacing[2],
-    paddingVertical: Spacing[2] - 1,
-    borderWidth: 1,
-    borderRadius: Radius["3xl"],
+    paddingLeft: Spacing[4],
+    paddingRight: 4,
+    paddingVertical: 4,
+    borderRadius: 22,
   },
   campo: {
     flex: 1,
     minWidth: 0,
     maxHeight: 120,
+    alignSelf: "center",
     paddingVertical: Spacing[2],
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 17,
+    lineHeight: 23,
   },
   enviar: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
+    width: 48,
+    height: 48,
+    borderRadius: Radius.xl,
     alignItems: "center",
     justifyContent: "center",
   },

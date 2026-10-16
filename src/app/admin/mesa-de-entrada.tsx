@@ -1,5 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
-import * as DocumentPicker from "expo-document-picker";
 import { useMemo, useState } from "react";
 import {
   Linking,
@@ -11,72 +9,43 @@ import { Text } from "@/components/ui/Text";
 
 import { Radius, Spacing, Type, useColors } from "@/constants/theme";
 import {
-  createMesaEntrada,
-  initialMesaEntradas,
-  mesaDependencias,
-  mesaPriorities,
   mesaStatuses,
-  mesaTipoDocumento,
-  peekNextMesaId,
   type MesaAdjunto,
   type MesaEntrada,
-  type MesaPriority,
   type MesaStatus,
 } from "@/data/mockMesaEntrada";
 import { formatDate } from "@/utils/date";
+import { MesaIngresoModal } from "@/components/admin/MesaIngresoModal";
 import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
+import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
 import { useToast } from "@/components/ui/Toast";
+import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { Btn } from "@/components/ui/Btn";
-import { OptionGrid, Segmented } from "@/components/ui/Choices";
-import { Field, Input } from "@/components/ui/Fields";
-import { EmptyState, KeyValue, RecordRow } from "@/components/ui/Lists";
-import { Screen, PageHeader, SectionTitle } from "@/components/ui/Screen";
-import { Select } from "@/components/ui/Select";
-import { StatGrid, StatCard } from "@/components/ui/Stats";
-
-const MAX_ASUNTO = 120;
-
-interface FormState {
-  solicitante: string;
-  tipo: string;
-  dependencia: string;
-  prioridad: MesaPriority;
-  asunto: string;
-  observaciones: string;
-}
-
-const EMPTY_FORM: FormState = {
-  solicitante: "",
-  tipo: mesaTipoDocumento[0],
-  dependencia: "Mesa de Entradas",
-  prioridad: "Normal",
-  asunto: "",
-  observaciones: "",
-};
-
-function formatFileSize(bytes?: number): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { OptionGrid } from "@/components/ui/OptionGrid";
+import { Field } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { RecordRow } from "@/components/ui/RecordRow";
+import { Screen } from "@/components/ui/Screen";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { StatGrid } from "@/components/ui/StatGrid";
+import { StatCard } from "@/components/ui/StatCard";
 
 export default function MesaDeEntrada() {
   const C = useColors();
   const push = useToast();
+  const avisarNoDisponible = useAvisoNoDisponible();
 
-  const [items, setItems] = useState<MesaEntrada[]>(initialMesaEntradas);
+  const [items] = useState<MesaEntrada[]>([]);
   const [query, setQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"todos" | MesaStatus>("todos");
   const [formOpen, setFormOpen] = useState(false);
   const [detail, setDetail] = useState<MesaEntrada | null>(null);
   // el estado se elige en la hoja y se aplica al guardar
   const [detailStatus, setDetailStatus] = useState<MesaStatus>("Ingresado");
-
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [adjuntos, setAdjuntos] = useState<MesaAdjunto[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -91,58 +60,23 @@ export default function MesaDeEntrada() {
     });
   }, [items, query, filterStatus]);
 
-  const stats = useMemo(
-    () => ({
-      total: items.length,
-      ingresado: items.filter((i) => i.estado === "Ingresado").length,
-      proceso: items.filter((i) => i.estado === "En proceso").length,
-      observado: items.filter((i) => i.estado === "Observado").length,
-      finalizado: items.filter((i) => i.estado === "Finalizado").length,
-    }),
-    [items]
-  );
+  const conteos = useMemo(() => {
+    const porEstado: Record<MesaStatus, number> = {
+      Ingresado: 0,
+      "En proceso": 0,
+      Observado: 0,
+      Finalizado: 0,
+    };
+    for (const it of items) porEstado[it.estado] += 1;
+    return porEstado;
+  }, [items]);
 
-  function openForm() {
-    setForm(EMPTY_FORM);
-    setAdjuntos([]);
-    setErrors({});
-    setFormOpen(true);
+  function registrar() {
+    avisarNoDisponible();
   }
 
-  async function pickFiles() {
-    const res = await DocumentPicker.getDocumentAsync({
-      multiple: true,
-      copyToCacheDirectory: true,
-    });
-    if (res.canceled) return;
-    setAdjuntos((prev) => [
-      ...prev,
-      ...res.assets.map((a) => ({
-        name: a.name,
-        uri: a.uri,
-        size: a.size ?? undefined,
-        mimeType: a.mimeType ?? undefined,
-      })),
-    ]);
-  }
-
-  function submitForm() {
-    const next: Partial<Record<keyof FormState, string>> = {};
-    if (!form.solicitante.trim()) next.solicitante = "El solicitante es obligatorio.";
-    if (!form.asunto.trim()) next.asunto = "El asunto es obligatorio.";
-    setErrors(next);
-    if (Object.keys(next).length > 0) return;
-
-    const entry = createMesaEntrada({ ...form, adjuntos });
-    setItems((prev) => [entry, ...prev]);
-    push(`Ingreso ${entry.id} registrado.`);
-    setFormOpen(false);
-  }
-
-  function changeStatus(id: string, estado: MesaStatus) {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, estado } : it)));
-    setDetail((prev) => (prev && prev.id === id ? { ...prev, estado } : prev));
-    push(`Ingreso ${id} pasó a "${estado}".`);
+  function changeStatus() {
+    avisarNoDisponible();
   }
 
   async function openAttachment(file: MesaAdjunto) {
@@ -159,44 +93,45 @@ export default function MesaDeEntrada() {
         title="Mesa de Entradas"
         description="Registrá y seguí los ingresos de trámites y expedientes."
       >
-        <Btn label="Registrar ingreso" icon="add" onPress={openForm} />
+        <Btn label="Registrar ingreso" icon="plus" onPress={() => setFormOpen(true)} />
       </PageHeader>
+
+      <AvisoDeEjemplo />
 
       <StatGrid>
         <StatCard
           label="Ingresados"
-          value={stats.ingresado}
+          value={conteos.Ingresado}
           tone="info"
-          icon="cube-outline"
+          icon="box"
           hint="sin asignar"
         />
         <StatCard
           label="En proceso"
-          value={stats.proceso}
+          value={conteos["En proceso"]}
           tone="warn"
-          icon="time-outline"
+          icon="clock"
           hint="en curso"
         />
         <StatCard
           label="Observados"
-          value={stats.observado}
+          value={conteos.Observado}
           tone="bad"
-          icon="alert-circle-outline"
+          icon="alert"
           hint="con reparos"
         />
         <StatCard
           label="Finalizados"
-          value={stats.finalizado}
+          value={conteos.Finalizado}
           tone="ok"
-          icon="checkmark-done-outline"
+          icon="checkDouble"
           hint="cerrados"
         />
       </StatGrid>
 
       <SectionTitle>Ingresos</SectionTitle>
 
-      <Input
-        icon="search"
+      <SearchInput
         value={query}
         onChangeText={setQuery}
         placeholder="Buscar por solicitante, asunto o número"
@@ -206,11 +141,11 @@ export default function MesaDeEntrada() {
       <View style={{ marginTop: Spacing[3] }}>
         <Tabs
           items={[
-            { id: "todos" as const, label: "Todos", count: stats.total },
+            { id: "todos" as const, label: "Todos", count: items.length },
             ...mesaStatuses.map((st) => ({
               id: st,
               label: st,
-              count: items.filter((i) => i.estado === st).length,
+              count: conteos[st],
             })),
           ]}
           value={filterStatus}
@@ -237,7 +172,7 @@ export default function MesaDeEntrada() {
             extra={
               !!it.adjuntos?.length && (
                 <View style={styles.attachCount}>
-                  <Ionicons name="attach-outline" size={13} color={C.ink3} />
+                  <Icon name="paperclip" size={13} color={C.ink3} />
                   <Text style={[Type.mono, { color: C.ink3 }]}>{it.adjuntos.length}</Text>
                 </View>
               )
@@ -249,115 +184,12 @@ export default function MesaDeEntrada() {
       </View>
 
       {/* Alta de ingreso */}
-      <Modal
-        open={formOpen}
-        title="Registrar ingreso"
-        onClose={() => setFormOpen(false)}
-        footer={<Btn label="Registrar" onPress={submitForm} />}
-      >
-        <View style={styles.previewId}>
-          <KeyValue label="Expediente" value={peekNextMesaId()} />
-          <KeyValue label="Fecha" value={formatDate(new Date())} />
-        </View>
-
-        <Field label="Solicitante" error={errors.solicitante}>
-          <Input
-            value={form.solicitante}
-            onChangeText={(solicitante) => setForm((f) => ({ ...f, solicitante }))}
-            placeholder="Nombre y apellido"
-            autoCapitalize="words"
-          />
-        </Field>
-
-        <View style={{ flexDirection: "row", gap: Spacing[3] }}>
-          <View style={{ flex: 1 }}>
-            <Field label="Tipo">
-              <Select
-                value={form.tipo}
-                options={mesaTipoDocumento}
-                onChange={(tipo) => setForm((f) => ({ ...f, tipo }))}
-              />
-            </Field>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Field label="Dependencia">
-              <Select
-                value={form.dependencia}
-                options={mesaDependencias}
-                onChange={(dependencia) => setForm((f) => ({ ...f, dependencia }))}
-              />
-            </Field>
-          </View>
-        </View>
-
-        {/* Segmentado y no chips: acá se elige un valor del trámite, no se filtra */}
-        <Field label="Prioridad">
-          <Segmented
-            value={form.prioridad}
-            options={mesaPriorities}
-            onChange={(prioridad) => setForm((f) => ({ ...f, prioridad }))}
-          />
-        </Field>
-
-        <Field
-          label="Asunto"
-          
-          error={errors.asunto}
-          hint={`${form.asunto.length} de ${MAX_ASUNTO} caracteres`}
-        >
-          <Input
-            value={form.asunto}
-            onChangeText={(asunto) =>
-              setForm((f) => ({ ...f, asunto: asunto.slice(0, MAX_ASUNTO) }))
-            }
-            placeholder="Motivo del ingreso"
-            maxLength={MAX_ASUNTO}
-          />
-        </Field>
-
-        <Field label="Observaciones">
-          <Input
-            value={form.observaciones}
-            onChangeText={(observaciones) => setForm((f) => ({ ...f, observaciones }))}
-            placeholder="Documentación presentada, datos adicionales"
-            multiline
-            style={{ minHeight: 84, textAlignVertical: "top" }}
-          />
-        </Field>
-
-        <Field label="Adjuntos">
-          <View style={{ gap: Spacing[2] }}>
-            {adjuntos.map((file, i) => (
-              <View
-                key={`${file.uri}-${i}`}
-                style={[styles.fileRow, { backgroundColor: C.surface }]}
-              >
-                <Ionicons name="document-outline" size={16} color={C.ink2} />
-                <Text style={[Type.meta, { color: C.ink, flex: 1 }]} numberOfLines={1}>
-                  {file.name}
-                </Text>
-                <Text style={[Type.meta, { color: C.ink3 }]}>
-                  {formatFileSize(file.size)}
-                </Text>
-                <Pressable
-                  onPress={() => setAdjuntos((a) => a.filter((_, idx) => idx !== i))}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Quitar ${file.name}`}
-                  hitSlop={8}
-                >
-                  <Ionicons name="close" size={16} color={C.bad} />
-                </Pressable>
-              </View>
-            ))}
-            <Btn
-              label="Adjuntar archivo"
-              variant="secondary"
-              icon="attach-outline"
-              onPress={pickFiles}
-            />
-          </View>
-        </Field>
-      </Modal>
+      {formOpen && (
+        <MesaIngresoModal
+          onClose={() => setFormOpen(false)}
+          onSave={registrar}
+        />
+      )}
 
       {/* Detalle: número, asunto, datos en dos columnas y estado con radios */}
       <Modal
@@ -369,7 +201,7 @@ export default function MesaDeEntrada() {
             label="Guardar cambios"
             onPress={() => {
               if (detail && detail.estado !== detailStatus) {
-                changeStatus(detail.id, detailStatus);
+                changeStatus();
               }
               setDetail(null);
             }}
@@ -414,11 +246,11 @@ export default function MesaDeEntrada() {
                       accessibilityLabel={`Abrir ${file.name}`}
                       style={[styles.fileRow, { backgroundColor: C.surface }]}
                     >
-                      <Ionicons name="document-outline" size={18} color={C.ink2} />
+                      <Icon name="file" size={18} color={C.ink2} />
                       <Text style={[Type.body, { color: C.ink, flex: 1 }]} numberOfLines={1}>
                         {file.name}
                       </Text>
-                      <Ionicons name="open-outline" size={18} color={C.accentText} />
+                      <Icon name="external" size={18} color={C.accentText} />
                     </Pressable>
                   ))}
                 </View>
@@ -444,9 +276,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-  },
-  previewId: {
-    gap: 0,
   },
   grid: {
     flexDirection: "row",

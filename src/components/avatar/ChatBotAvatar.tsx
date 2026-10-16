@@ -6,16 +6,16 @@ import {
   Easing,
   Pressable,
   StyleSheet,
-  View,
 } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 
 import { BotEngine, type BotFrame, type Look } from "@/bloub/engine";
-import { EXPRESSION_BY_ID, type BotExpression } from "@/bloub/expressions";
-import { DEMI_VIEWBOX, RAYON } from "@/bloub/repere";
+import { EXPRESSION_BY_ID } from "@/bloub/expressions";
+import { RADIUS } from "@/bloub/frame";
 import { DEFAULT_SHAPE, SHAPE_BY_ID } from "@/bloub/skins";
 import { POSES, type StateId } from "@/bloub/states";
-import { Weight, useColors } from "@/constants/theme";
+import { useColors } from "@/constants/theme";
+import { useAjustes } from "@/lib/accesibilidad";
 
 /**
  * Avatar del asistente. El motor (`src/bloub/`) es matemática pura: devuelve
@@ -29,66 +29,42 @@ interface ReactionCfg {
   blink?: boolean;
   state?: StateId;
   expr?: string;
-  customExpr?: BotExpression;
   look?: Look;
   transform?: TransformId;
 }
-
-/** Ojos cerrados e inclinación leve: se usa cuando el bot lleva rato dormido. */
-const SLEEP_EXPRESSION: BotExpression = {
-  id: "somnolent",
-  gaze: { yaw: 4, pitch: -6, roll: -3 },
-  split: 16,
-  eyes: [
-    { w: 0.2, h: 0.42, tilt: 0, open: 0 },
-    { w: 0.2, h: 0.42, tilt: 0, open: 0 },
-  ],
-};
 
 const REACTION_CONFIG = {
   idle:        { state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   blink:       { blink: true },
   lookLeft:    { look: { yaw: -35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
   lookRight:   { look: { yaw: 35, pitch: 0, mix: 1, spin: 0, wander: 0 } },
-  lookAround:  { look: { yaw: 0, pitch: 0, mix: 0, spin: 360, wander: 0 } },
   lookUp:      { look: { yaw: 0, pitch: -20, mix: 1, spin: 0, wander: 0 } },
   lookDown:    { look: { yaw: 0, pitch: 20, mix: 1, spin: 0, wander: 0 } },
-  tilt:        { transform: "rx-tilt", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   tiltLeft:    { transform: "rx-tilt", state: "idle", look: { yaw: -15, pitch: 5, mix: 1, spin: 0, wander: 0 } },
   tiltRight:   { transform: "rx-tilt", state: "idle", look: { yaw: 15, pitch: 5, mix: 1, spin: 0, wander: 0 } },
-  bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  squash:      { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   stretch:     { transform: "rx-stretch", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   microBounce: { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   microSquash: { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   wink:        { state: "wink" },
   surprised:   { state: "wide" },
   thinking:    { state: "thinking" },
-  attention:   { expr: "attentif" },
-  happy:       { expr: "heureux", look: { yaw: 5, pitch: 9, mix: 1, spin: 0, wander: 0 } },
-  excited:     { expr: "excite", state: "idle", look: { yaw: 6, pitch: -14, mix: 1, spin: 0, wander: 0 } },
-  proud:       { expr: "fier", look: { yaw: 5, pitch: 17, mix: 1, spin: 0, wander: 0 } },
-  shy:         { expr: "timide", look: { yaw: -19, pitch: -14, mix: 1, spin: 0, wander: 0 } },
-  relieved:    { expr: "heureux", state: "idle", look: { yaw: 0, pitch: 5, mix: 0.5, spin: 0, wander: 0.5 } },
-  worried:     { expr: "triste" },
-  confus:      { expr: "confus", look: { yaw: -14, pitch: 3, mix: 1, spin: 0, wander: 0 } },
-  curious:     { expr: "curieux", look: { yaw: 16, pitch: -9, mix: 1, spin: 0, wander: 0 } },
-  angry:       { expr: "colere", look: { yaw: 3, pitch: 7, mix: 1, spin: 0, wander: 0 } },
-  scared:      { expr: "effraye", look: { yaw: 2, pitch: -20, mix: 1, spin: 0, wander: 0 } },
-  bored:       { expr: "blase", look: { yaw: -22, pitch: 2, mix: 1, spin: 0, wander: 0 } },
-  sleepy:      { expr: "somnolent", look: { yaw: 6, pitch: -9, mix: 1, spin: 0, wander: 0 } },
-  suspicious:  { expr: "mefiant", look: { yaw: 12, pitch: 6, mix: 1, spin: 0, wander: 0 } },
-  fierce:      { expr: "colere", state: "alert", look: { yaw: 0, pitch: 5, mix: 1, spin: 0, wander: 0 } },
-  notify:      { state: "notify" },
+  attention:   { expr: "attentive" },
+  happy:       { expr: "happy", look: { yaw: 5, pitch: 9, mix: 1, spin: 0, wander: 0 } },
+  excited:     { expr: "excited", state: "idle", look: { yaw: 6, pitch: -14, mix: 1, spin: 0, wander: 0 } },
+  proud:       { expr: "proud", look: { yaw: 5, pitch: 17, mix: 1, spin: 0, wander: 0 } },
+  shy:         { expr: "shy", look: { yaw: -19, pitch: -14, mix: 1, spin: 0, wander: 0 } },
+  relieved:    { expr: "happy", state: "idle", look: { yaw: 0, pitch: 5, mix: 0.5, spin: 0, wander: 0.5 } },
+  confused:    { expr: "confused", look: { yaw: -14, pitch: 3, mix: 1, spin: 0, wander: 0 } },
+  curious:     { expr: "curious", look: { yaw: 16, pitch: -9, mix: 1, spin: 0, wander: 0 } },
+  bored:       { expr: "bored", look: { yaw: -22, pitch: 2, mix: 1, spin: 0, wander: 0 } },
+  sleepy:      { expr: "sleepy", look: { yaw: 6, pitch: -9, mix: 1, spin: 0, wander: 0 } },
+  suspicious:  { expr: "suspicious", look: { yaw: 12, pitch: 6, mix: 1, spin: 0, wander: 0 } },
   exclaim:     { state: "exclaim" },
-  playful:     { state: "wink", expr: "excite", look: { yaw: 8, pitch: -5, mix: 1, spin: 0, wander: 0 } },
+  playful:     { state: "wink", expr: "excited", look: { yaw: 8, pitch: -5, mix: 1, spin: 0, wander: 0 } },
   nod:         { look: { yaw: 0, pitch: 12, mix: 1, spin: 0, wander: 0 } },
-  shake:       { look: { yaw: 0, pitch: 0, mix: 1, spin: 0, wander: 0 }, expr: "confus" },
-  apologetic:  { expr: "triste", look: { yaw: 0, pitch: 15, mix: 1, spin: 0, wander: 0 } },
-  sleep:       { customExpr: SLEEP_EXPRESSION, look: { yaw: 4, pitch: -6, mix: 0.5, spin: 0, wander: 0 } },
 } satisfies Record<string, ReactionCfg>;
 
-export type BotReaction = keyof typeof REACTION_CONFIG;
+type BotReaction = keyof typeof REACTION_CONFIG;
 
 const DOT_POOL = 6;
 
@@ -100,7 +76,7 @@ const AUTO_REACTIONS: BotReaction[] = [
   "microBounce", "microSquash", "stretch",
   "surprised", "thinking", "attention",
   "happy", "excited", "proud", "shy", "relieved",
-  "curious", "confus", "playful", "nod",
+  "curious", "confused", "playful", "nod",
   "bored", "sleepy", "exclaim", "suspicious",
 ];
 
@@ -117,152 +93,34 @@ function applyConfig(engine: BotEngine, cfg: ReactionCfg, t: number) {
     return;
   }
   if (cfg.state) engine.setState(cfg.state, t);
-  if (cfg.customExpr) {
-    engine.setExpression(cfg.customExpr, t);
-  } else if (cfg.expr) {
-    engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
-  }
+  if (cfg.expr) engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
   if (cfg.look) engine.setLook(cfg.look, t);
 }
 
-function ZzzLetter({
-  size,
-  delay,
-  top,
-  left,
-  color,
-  char,
-}: {
-  size: number;
-  delay: number;
-  top: number;
-  left: number;
-  color: string;
-  char: string;
-}) {
-  const t = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(t, {
-          toValue: 1,
-          duration: 2400,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [delay, t]);
-
-  return (
-    <Animated.Text
-      style={{
-        position: "absolute",
-        top,
-        left,
-        fontSize: size,
-        fontWeight: Weight.semibold,
-        color,
-        opacity: t.interpolate({
-          inputRange: [0, 0.2, 0.8, 1],
-          outputRange: [0, 1, 0.8, 0],
-        }),
-        transform: [
-          {
-            translateX: t.interpolate({
-              inputRange: [0, 0.2, 0.8, 1],
-              outputRange: [0, 4, 10, 12],
-            }),
-          },
-          {
-            translateY: t.interpolate({
-              inputRange: [0, 0.2, 0.8, 1],
-              outputRange: [0, -8, -28, -34],
-            }),
-          },
-          {
-            scale: t.interpolate({
-              inputRange: [0, 0.2, 0.8, 1],
-              outputRange: [0.6, 1, 1.1, 1.1],
-            }),
-          },
-        ],
-      }}
-    >
-      {char}
-    </Animated.Text>
-  );
-}
-
-/** Las tres "Z" que flotan cuando el bot duerme. */
-function ZzzOverlay({ size, color }: { size: number; color: string }) {
-  const base = size * 0.38;
-  const letters = [
-    { size: base, delay: 0, top: 0, left: 0 },
-    { size: base * 0.8, delay: 600, top: -base * 0.3, left: base * 0.4 },
-    { size: base * 0.6, delay: 1200, top: -base * 0.7, left: base * 0.8 },
-  ];
-
-  return (
-    <View
-      pointerEvents="none"
-      style={[styles.zzzLayer, { top: -size * 0.15, right: -size * 0.1 }]}
-    >
-      {letters.map((l, i) => (
-        <ZzzLetter
-          key={i}
-          size={l.size}
-          delay={l.delay}
-          top={l.top}
-          left={l.left}
-          color={color}
-          char={i === 0 ? "Z" : "z"}
-        />
-      ))}
-    </View>
-  );
-}
-
 interface Props {
-  reaction?: BotReaction;
   size?: number;
-  speaking?: boolean;
   /** Un solo cuadro, sin reloj: para listas y avatares chicos. */
   static?: boolean;
-  /**
-   * Recorta el lienzo a la boule: `size` pasa a ser el diámetro del círculo y
-   * no el del lienzo con margen para los anillos (que esta app no dibuja).
-   */
-  tight?: boolean;
 }
 
-export function ChatBotAvatar({
-  reaction = "idle",
-  size = 44,
-  speaking = false,
-  static: isStatic = false,
-  tight = false,
-}: Props) {
+export function ChatBotAvatar({ size = 44, static: isStatic = false }: Props) {
   const C = useColors();
   const bodyColor = C.bot;
   const eyeColor = C.botEye;
 
   const [frame, setFrame] = useState<BotFrame | null>(null);
   const [autoReaction, setAutoReaction] = useState<BotReaction | null>(null);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [reduceMotionSO, setReduceMotion] = useState(false);
+  const { reducirAnimaciones } = useAjustes();
+  const reduceMotion = reduceMotionSO || reducirAnimaciones;
   const [rxKind, setRxKind] = useState<TransformId | "">("");
 
   const engineRef = useRef<BotEngine | null>(null);
   const clockRef = useRef(0);
-  const reactionRef = useRef<BotReaction>(reaction);
+  const reactionRef = useRef<BotReaction>("idle");
   const drawRef = useRef<(() => void) | null>(null);
 
-  const rx = useRef(new Animated.Value(0)).current;
-  const speak = useRef(new Animated.Value(0)).current;
+  const [rx] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     let alive = true;
@@ -283,7 +141,7 @@ export function ChatBotAvatar({
   // movimiento reducido; nada más lo toca.
   useEffect(() => {
     const engine = new BotEngine(
-      RAYON,
+      RADIUS,
       "idle",
       SHAPE_BY_ID.get(DEFAULT_SHAPE)?.radii ?? null,
       null
@@ -346,9 +204,8 @@ export function ChatBotAvatar({
     };
   }, [isStatic, reduceMotion]);
 
-  // Reacción efectiva: la que pidan, o la automática cuando está en reposo.
   useEffect(() => {
-    const eff = reaction === "idle" && autoReaction ? autoReaction : reaction;
+    const eff = autoReaction ?? "idle";
     reactionRef.current = eff;
 
     const engine = engineRef.current;
@@ -358,7 +215,7 @@ export function ChatBotAvatar({
     applyConfig(engine, cfg, clockRef.current);
 
     const kind =
-      cfg.transform && !speaking && !reduceMotion ? cfg.transform : "";
+      cfg.transform && !reduceMotion ? cfg.transform : "";
     setRxKind(kind);
 
     if (kind) {
@@ -372,29 +229,11 @@ export function ChatBotAvatar({
     }
 
     if (reduceMotion || isStatic) drawRef.current?.();
-  }, [reaction, autoReaction, speaking, isStatic, reduceMotion, rx]);
-
-  // Pulso mientras "habla".
-  useEffect(() => {
-    if (!speaking || reduceMotion) {
-      speak.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.timing(speak, {
-        toValue: 1,
-        duration: 900,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
-      })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [speaking, reduceMotion, speak]);
+  }, [autoReaction, isStatic, reduceMotion, rx]);
 
   // Vida propia en reposo: cada tanto se manda una reacción al azar.
   useEffect(() => {
-    if (isStatic || reduceMotion || reaction !== "idle") return;
+    if (isStatic || reduceMotion) return;
 
     let timer: ReturnType<typeof setTimeout> | null = null;
     const clear = () => {
@@ -419,7 +258,7 @@ export function ChatBotAvatar({
       clear();
       setAutoReaction(null);
     };
-  }, [isStatic, reduceMotion, reaction]);
+  }, [isStatic, reduceMotion]);
 
   const transform: any[] = [];
   if (rxKind === "rx-tilt") {
@@ -454,23 +293,6 @@ export function ChatBotAvatar({
     );
   }
 
-  if (speaking && !reduceMotion) {
-    transform.push(
-      {
-        translateY: speak.interpolate({
-          inputRange: [0, 0.25, 0.5, 0.75, 1],
-          outputRange: [0, -2, 0, -1, 0],
-        }),
-      },
-      {
-        scale: speak.interpolate({
-          inputRange: [0, 0.25, 0.5, 0.75, 1],
-          outputRange: [1, 1.03, 1, 1.02, 1],
-        }),
-      }
-    );
-  }
-
   /**
    * Un toque le hace pestañear. Va directo al motor en vez de pasar por el
    * estado de React: el parpadeo dura 0,2 s y un re-render de por medio se
@@ -480,9 +302,8 @@ export function ChatBotAvatar({
     engineRef.current?.forceBlink(clockRef.current);
   };
 
-  const isSleeping = reaction === "sleep";
-  // 1.04 × RAYON: deja aire para el rebote y el aplastado sin cortar el borde
-  const vb = tight ? RAYON * 1.04 : DEMI_VIEWBOX;
+  // 1.04 × RADIUS: deja aire para el rebote y el aplastado sin cortar el borde
+  const vb = RADIUS * 1.04;
 
   return (
     <Pressable
@@ -497,8 +318,7 @@ export function ChatBotAvatar({
       }
       style={[styles.wrap, { width: size, height: size }]}
     >
-      {isSleeping && <ZzzOverlay size={size} color={C.ink2} />}
-      <Animated.View style={{ transform, opacity: isSleeping ? 0.7 : 1 }}>
+      <Animated.View style={{ transform }}>
         <Svg
           width={size}
           height={size}
@@ -548,11 +368,5 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  zzzLayer: {
-    position: "absolute",
-    zIndex: 10,
-    width: 1,
-    height: 1,
   },
 });

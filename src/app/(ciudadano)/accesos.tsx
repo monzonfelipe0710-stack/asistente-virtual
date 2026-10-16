@@ -1,47 +1,15 @@
 import { Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { Encabezado } from "@/components/menu/Encabezado";
-import { Icon, type IconName } from "@/components/ui/Icon";
+import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
+import { Icon } from "@/components/ui/Icon";
 import { Screen } from "@/components/ui/Screen";
 import { Text } from "@/components/ui/Text";
 import { useToast } from "@/components/ui/Toast";
-import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
+import { Radius, Spacing, Type, useColors } from "@/constants/theme";
+import { accesos, type Acceso } from "@/data/mockAccesos";
 
-interface Acceso {
-  nombre: string;
-  descripcion: string;
-  icono: IconName;
-  /** Sin dirección, el toque muestra la descripción como aviso. */
-  url?: string;
-}
-
-const ACCESOS: Acceso[] = [
-  {
-    nombre: "MiPortal",
-    descripcion: "Datos y recibos",
-    icono: "user",
-    url: "https://miportal.formosa.gob.ar",
-  },
-  {
-    nombre: "Recibo de haberes",
-    descripcion: "Último período",
-    icono: "cash",
-    url: "https://miportal.formosa.gob.ar",
-  },
-  {
-    nombre: "WhatsApp",
-    descripcion: "3704-000000",
-    icono: "phone",
-    url: "https://wa.me/5493700000000",
-  },
-  {
-    nombre: "Mesa de Entradas",
-    descripcion: "Lun a vie, 07 a 13 h",
-    icono: "pin",
-  },
-];
-
-/** Ruta "/accesos": sistemas provinciales, en una grilla de dos columnas. */
+/** Ruta "/accesos": sistemas y contactos de Recursos Humanos, en una lista. */
 export default function Accesos() {
   const C = useColors();
   const toast = useToast();
@@ -59,29 +27,45 @@ export default function Accesos() {
       <Encabezado titulo="Accesos" />
 
       <Screen>
-        <Text style={[Type.lead, { color: C.ink2, marginBottom: Spacing[2] }]}>
-          Sistemas provinciales, a un toque.
+        <Text style={[Type.lead, { color: C.ink2, marginBottom: Spacing[4] }]}>
+          Sistemas y contactos de Recursos Humanos.
         </Text>
 
-        <View style={styles.grilla}>
-          {ACCESOS.map((acceso) => (
+        <View>
+          {accesos.map((acceso, indice) => (
             <Pressable
               key={acceso.nombre}
               onPress={() => abrir(acceso)}
               accessibilityRole="link"
               accessibilityLabel={`${acceso.nombre}. ${acceso.descripcion}`}
               style={({ pressed }) => [
-                styles.tarjeta,
-                { backgroundColor: pressed ? C.surface2 : C.surface },
+                styles.fila,
+                {
+                  borderBottomColor: C.border,
+                  borderBottomWidth: indice === accesos.length - 1 ? 0 : 1,
+                },
+                pressed && { backgroundColor: C.surface },
               ]}
             >
-              <Icon name={acceso.icono} size={22} color={C.ink2} />
-              <View>
-                <Text style={[styles.nombre, { color: C.ink }]}>{acceso.nombre}</Text>
-                <Text style={[styles.descripcion, { color: C.ink2 }]}>{acceso.descripcion}</Text>
+              <View style={[styles.icono, { backgroundColor: C.surface2 }]}>
+                <Icon name={acceso.icono} size={22} color={C.ink} />
               </View>
+              <View style={styles.texto}>
+                <Text style={[Type.rowTitle, { color: C.ink }]}>{acceso.nombre}</Text>
+                <Text style={[Type.meta, { color: C.ink2 }]}>{acceso.descripcion}</Text>
+                {!!acceso.url && (
+                  <Text style={[Type.mono, styles.url, { color: C.ink2 }]} numberOfLines={1}>
+                    {acceso.url.replace(/^https?:\/\//, "")}
+                  </Text>
+                )}
+              </View>
+              {!!acceso.url && <Icon name="chevronRight" size={20} color={C.ink2} />}
             </Pressable>
           ))}
+        </View>
+
+        <View style={styles.aviso}>
+          <AvisoDeEjemplo texto="El teléfono y el horario son de ejemplo hasta que la Subsecretaría los confirme." />
         </View>
       </Screen>
     </View>
@@ -92,30 +76,29 @@ const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
   },
-  grilla: {
+  fila: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     gap: Spacing[3],
-    marginTop: Spacing[2],
+    minHeight: 72,
+    paddingVertical: Spacing[3] + 2,
   },
-  tarjeta: {
-    // dos columnas exactas: (100 % − 12) / 2
-    width: "48%",
-    flexGrow: 1,
-    minHeight: 140,
-    justifyContent: "space-between",
-    gap: Spacing[6],
-    padding: Spacing[4],
+  icono: {
+    width: 44,
+    height: 44,
     borderRadius: Radius.xl,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  nombre: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: Weight.semibold,
+  texto: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  descripcion: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 2,
+  url: {
+    marginTop: 4,
+  },
+  aviso: {
+    marginTop: Spacing[4],
   },
 });

@@ -2,24 +2,21 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import { Text } from "@/components/ui/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ChatBotAvatar } from "@/components/avatar/ChatBotAvatar";
+import { BotonVolver } from "@/components/ui/BotonVolver";
 import { Btn } from "@/components/ui/Btn";
-import { Field, Input } from "@/components/ui/Fields";
-import { Icon } from "@/components/ui/Icon";
-import { Radius, Size, Spacing, Type, useColors } from "@/constants/theme";
+import { ScrollConTeclado } from "@/components/ui/Screen";
+import { Field } from "@/components/ui/Field";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { Spacing, Type, useColors } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 
-/** Misma composición que el login: volver arriba, avatar, título 28 y bajada. */
+/** Misma composición que el login: volver arriba, título 28 y bajada. */
 export default function ResetPasswordScreen() {
   const C = useColors();
   const router = useRouter();
@@ -37,11 +34,15 @@ export default function ResetPasswordScreen() {
 
   useEffect(() => {
     let alive = true;
-    validateResetToken(token ?? "").then((res) => {
-      if (!alive) return;
-      setValid(res.ok);
-      setChecking(false);
-    });
+    validateResetToken(token ?? "")
+      .then((res) => {
+        if (!alive) return;
+        setValid(res.ok);
+        setChecking(false);
+      })
+      .catch(() => {
+        if (alive) setChecking(false);
+      });
     return () => {
       alive = false;
     };
@@ -68,19 +69,16 @@ export default function ResetPasswordScreen() {
     ? "Contraseña cambiada"
     : !valid
       ? "Enlace inválido"
-      : "Nueva contraseña";
+      : "Creá una contraseña nueva";
   const sub = done
     ? "Ya podés entrar con tu nueva contraseña."
     : !valid
       ? "El enlace es inválido o venció. Pedí uno nuevo desde la pantalla de inicio de sesión."
-      : "Elegí una contraseña de al menos 6 caracteres.";
+      : "Elegí una que no uses en otro lado.";
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1, backgroundColor: C.canvas }}
-    >
-      <ScrollView
+    <View style={{ flex: 1, backgroundColor: C.canvas }}>
+      <ScrollConTeclado
         contentContainerStyle={[
           styles.scroll,
           {
@@ -90,16 +88,10 @@ export default function ResetPasswordScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => router.replace("/login")}
-            accessibilityRole="button"
-            accessibilityLabel="Volver a iniciar sesión"
-            style={({ pressed }) => [styles.back, pressed && { backgroundColor: C.surface }]}
-          >
-            <Icon name="chevronLeft" size={22} color={C.ink} />
-          </Pressable>
-        </View>
+        <BotonVolver
+          etiqueta="Volver a iniciar sesión"
+          onPress={() => router.replace("/login")}
+        />
 
         {checking ? (
           <View style={styles.loading}>
@@ -107,13 +99,10 @@ export default function ResetPasswordScreen() {
           </View>
         ) : (
           <>
-            <View style={{ marginTop: Spacing[4], alignSelf: "flex-start" }}>
-              <ChatBotAvatar size={48} tight static />
-            </View>
-            <Text style={[Type.pageTitle, { color: C.ink, marginTop: Spacing[6] }]}>
+            <Text style={[Type.pageTitle, { color: C.ink, marginTop: Spacing[2] }]}>
               {title}
             </Text>
-            <Text style={[Type.lead, { color: C.ink2, marginTop: Spacing[2] }]}>{sub}</Text>
+            <Text style={[Type.lead, { color: C.ink2, marginTop: 6 }]}>{sub}</Text>
 
             {done || !valid ? (
               <Btn
@@ -125,30 +114,28 @@ export default function ResetPasswordScreen() {
             ) : (
               <>
                 <View style={styles.form}>
-                  <Field label="Nueva contraseña">
-                    <Input
+                  <Field label="Nueva contraseña" hint="Al menos 8 caracteres.">
+                    <PasswordInput
                       value={password}
                       onChangeText={setPassword}
-                      placeholder="Mínimo 6 caracteres"
-                      secureTextEntry
-                      autoCapitalize="none"
+                      placeholder="Mínimo 8 caracteres"
+                      autoComplete="new-password"
                     />
                   </Field>
 
-                  <Field label="Repetir contraseña" error={error}>
-                    <Input
+                  <Field label="Repetí la contraseña" error={error || undefined}>
+                    <PasswordInput
                       value={confirm}
                       onChangeText={setConfirm}
                       placeholder="Repetí la contraseña"
-                      secureTextEntry
-                      autoCapitalize="none"
+                      autoComplete="new-password"
                       invalid={!!error}
                     />
                   </Field>
                 </View>
 
                 <Btn
-                  label="Guardar"
+                  label="Guardar contraseña"
                   onPress={submit}
                   loading={submitting}
                   style={{ marginTop: Spacing[6] }}
@@ -157,8 +144,8 @@ export default function ResetPasswordScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </ScrollConTeclado>
+    </View>
   );
 }
 
@@ -166,19 +153,6 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: Spacing[5],
-  },
-  topBar: {
-    height: Size.header,
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: -11,
-  },
-  back: {
-    width: Size.touch,
-    height: Size.touch,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
   },
   loading: {
     flex: 1,

@@ -1,78 +1,77 @@
 import { memo } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
+import { Icon } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Weight, useColors } from "@/constants/theme";
+import { Radius, Spacing, Type, useColors } from "@/constants/theme";
 import { quickReplies } from "@/data/mockQuickReplies";
 
 /**
- * Sugerencias de la bienvenida: tarjetas de 184 con título y descripción, sin
- * color de ícono, pegadas a la barra de mensaje.
+ * Sugerencias de la bienvenida: filas con ícono en un recuadro, título,
+ * descripción y flecha, separadas por una línea. Todas visibles a la vez y sin
+ * desplazamiento, pegadas a la barra de mensaje.
  */
 function QuickRepliesBase({ onSelect }: { onSelect: (consulta: string) => void }) {
   const C = useColors();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      // Sin esto el primer toque solo cierra el teclado y hay que tocar dos veces.
-      keyboardShouldPersistTaps="handled"
-      style={styles.carrusel}
-      contentContainerStyle={styles.contenido}
-    >
-      {quickReplies.map((sugerencia) => (
+    <View style={styles.lista}>
+      {quickReplies.map((sugerencia, indice) => (
         <Pressable
           key={sugerencia.label}
           onPress={() => onSelect(sugerencia.query)}
           accessibilityRole="button"
           accessibilityLabel={`${sugerencia.label}. ${sugerencia.description}`}
           style={({ pressed }) => [
-            styles.tarjeta,
-            { backgroundColor: pressed ? C.surface2 : C.surface },
+            styles.fila,
+            {
+              borderBottomColor: C.border,
+              borderBottomWidth: indice === quickReplies.length - 1 ? 0 : 1,
+            },
+            pressed && { backgroundColor: C.surface },
           ]}
         >
-          <Text style={[styles.titulo, { color: C.ink }]}>{sugerencia.label}</Text>
-          <Text style={[styles.descripcion, { color: C.ink2 }]}>{sugerencia.description}</Text>
+          <View style={[styles.icono, { backgroundColor: C.surface2 }]}>
+            <Icon name={sugerencia.icon} size={22} color={C.ink} />
+          </View>
+          <View style={styles.texto}>
+            <Text style={[Type.rowTitle, { color: C.ink }]}>{sugerencia.label}</Text>
+            <Text style={[Type.meta, { color: C.ink2 }]}>{sugerencia.description}</Text>
+          </View>
+          <Icon name="chevronRight" size={20} color={C.ink2} />
         </Pressable>
       ))}
-      {/* Margen final: la última tarjeta no queda pegada al borde al desplazar. */}
-      <View style={styles.margenFinal} />
-    </ScrollView>
+    </View>
   );
 }
 
 export const QuickReplies = memo(QuickRepliesBase);
 
 const styles = StyleSheet.create({
-  carrusel: {
-    flexGrow: 0,
+  lista: {
+    width: "100%",
+    maxWidth: 720,
+    alignSelf: "center",
+    paddingHorizontal: Spacing[5],
+    paddingBottom: 6,
   },
-  contenido: {
+  fila: {
     flexDirection: "row",
-    // Sin esto las tarjetas se estiran al alto del carrusel.
-    alignItems: "flex-start",
-    gap: Spacing[2],
-    paddingLeft: Spacing[5],
-    paddingBottom: Spacing[3],
+    alignItems: "center",
+    gap: Spacing[3],
+    minHeight: 64,
+    paddingVertical: Spacing[3] + 2,
   },
-  tarjeta: {
-    width: 184,
-    gap: 2,
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
+  icono: {
+    width: 44,
+    height: 44,
     borderRadius: Radius.xl,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  titulo: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: Weight.medium,
-  },
-  descripcion: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  margenFinal: {
-    width: Spacing[3],
+  texto: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
 });

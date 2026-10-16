@@ -22,7 +22,9 @@
         {
           "backgroundColor": "#208AEF"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true

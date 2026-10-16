@@ -1,49 +1,63 @@
 import { useMemo, useState } from "react";
 
-export type SortDir = "asc" | "desc";
+type Direccion = "asc" | "desc";
 
-/**
- * Ordena una lista por una de sus claves y alterna asc/desc al repetir la
- * misma. Los textos se comparan con `localeCompare` en español: sin eso,
- * "Álvarez" queda después de "Zapata" porque se ordena por código de carácter.
- */
+function compararValores<V>(a: V, b: V) {
+  if (typeof a === "string" && typeof b === "string") {
+    return a.localeCompare(b, "es", { sensitivity: "base" });
+  }
+  if (a < b) {
+    return -1;
+  }
+  if (a > b) {
+    return 1;
+  }
+  return 0;
+}
+
+function invertirDireccion(direccion: Direccion): Direccion {
+  if (direccion === "asc") {
+    return "desc";
+  }
+  return "asc";
+}
+
 export function useSortable<T extends object>(
-  items: T[],
-  defaultKey: keyof T | null = null,
-  defaultDir: SortDir = "asc"
+  elementos: T[],
+  claveInicial: keyof T | null = null,
+  direccionInicial: Direccion = "asc"
 ) {
-  const [sortKey, setSortKey] = useState<keyof T | null>(defaultKey);
-  const [sortDir, setSortDir] = useState<SortDir>(defaultDir);
+  const [claveElegida, setClaveElegida] = useState<keyof T | null>(claveInicial);
+  const [direccion, setDireccion] = useState<Direccion>(direccionInicial);
 
-  const sorted = useMemo(() => {
-    if (!sortKey) return items;
-    return [...items].sort((a, b) => {
-      const aVal = a[sortKey];
-      const bVal = b[sortKey];
-      let cmp = 0;
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        cmp = aVal.localeCompare(bVal, "es", { sensitivity: "base" });
-      } else {
-        cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+  const elementosOrdenados = useMemo(() => {
+    if (claveElegida === null) {
+      return elementos;
+    }
+
+    const copia = [...elementos];
+    copia.sort((a, b) => {
+      const resultado = compararValores(a[claveElegida], b[claveElegida]);
+      if (direccion === "asc") {
+        return resultado;
       }
-      return sortDir === "asc" ? cmp : -cmp;
+      return -resultado;
     });
-  }, [items, sortKey, sortDir]);
+    return copia;
+  }, [elementos, claveElegida, direccion]);
 
-  function toggleSort(key: keyof T) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+  function cambiarOrden(clave: keyof T) {
+    if (clave === claveElegida) {
+      setDireccion(invertirDireccion(direccion));
     } else {
-      setSortKey(key);
-      setSortDir("asc");
+      setClaveElegida(clave);
+      setDireccion("asc");
     }
   }
 
-  function getSortIndicator(key: keyof T): string | null {
-    if (sortKey !== key) return null;
-    return sortDir === "asc" ? "▲" : "▼";
-  }
-
-  return { sorted, sortKey, sortDir, toggleSort, getSortIndicator };
+  return {
+    sorted: elementosOrdenados,
+    sortDir: direccion,
+    toggleSort: cambiarOrden,
+  };
 }
-

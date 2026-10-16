@@ -1,22 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { FlatList } from "react-native";
+import { useCallback, useRef, useState } from "react";
+import type { ChatMessage } from "@/data/mockMessages";
+import { consultarChat } from "@/lib/backend";
 
-import { findResponse, type ChatMessage } from "@/data/mockMessages";
-
-/** Mensajes de la conversación y cómo enviar uno. El asistente responde tras una pausa. */
+/** Mensajes de la conversación, cómo enviar uno, reintentar el que falló y detener la espera. */
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  const listRef = useRef<FlatList>(null);
+  const [fallo, setFallo] = useState<string | null>(null);
   const siguienteId = useRef(1);
-  const respuestaPendiente = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // "Nuevo chat" vuelve a montar el chat: sin esto queda una respuesta huérfana en camino.
-  useEffect(() => {
-    return () => {
-      if (respuestaPendiente.current) clearTimeout(respuestaPendiente.current);
-    };
-  }, []);
+  const ultimaConsulta = useRef("");
+  const pedidoActual = useRef<AbortController | null>(null);
 
   const agregar = useCallback((type: ChatMessage["type"], text: string) => {
     const mensaje: ChatMessage = {
@@ -28,19 +21,47 @@ export function useChat() {
     setMessages((anteriores) => [...anteriores, mensaje]);
   }, []);
 
-  // No depende del texto: la referencia nunca cambia y los hijos con memo la aguantan.
-  const send = useCallback(
-    (text: string) => {
-      agregar("user", text);
+  const preguntar = useCallback(
+    async (text: string) => {
+      ultimaConsulta.current = text;
+      const pedido = new AbortController();
+      pedidoActual.current = pedido;
+      setFallo(null);
       setIsTyping(true);
-
-      respuestaPendiente.current = setTimeout(() => {
-        agregar("bot", findResponse(text));
-        setIsTyping(false);
-      }, 800 + Math.random() * 1200);
+      try {
+        const { respuesta } = await consultarChat(text, pedido.signal);
+        if (!pedido.signal.aborted) agregar("bot", respuesta);
+      } catch (error) {
+        if (!pedido.signal.aborted) {
+          setFallo(error instanceof Error ? error.message : "No se pudo obtener la respuesta.");
+        }
+      } finally {
+        if (pedidoActual.current === pedido) {
+          pedidoActual.current = null;
+          setIsTyping(false);
+        }
+      }
     },
     [agregar]
   );
 
-  return { messages, isTyping, listRef, send };
+  // No depende del texto: la referencia nunca cambia y los hijos con memo la aguantan.
+  const send = useCallback(
+    (text: string) => {
+      agregar("user", text);
+      return preguntar(text);
+    },
+    [agregar, preguntar]
+  );
+
+  const reintentar = useCallback(() => preguntar(ultimaConsulta.current), [preguntar]);
+
+  // Corta la espera: la respuesta que llegue después se descarta.
+  const detener = useCallback(() => {
+    pedidoActual.current?.abort();
+    pedidoActual.current = null;
+    setIsTyping(false);
+  }, []);
+
+  return { messages, isTyping, send, fallo, reintentar, detener };
 }

@@ -62,6 +62,23 @@ const PATHS = {
   phone:
     "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z",
   mail: "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z m18 2-10 7L2 6",
+  paperclip:
+    "m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48",
+  arrowUp: "m5 12 7-7 7 7 M12 19V5",
+  arrowDown: "M12 5v14 M19 12l-7 7-7-7",
+  arrowLeft: "M19 12H5M11 6l-6 6 6 6",
+  inbox: "M4 13l2-8h12l2 8v6H4zM4 13h5l1 2h4l1-2h5",
+  access:
+    "M12 3.5a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6zM5 9l7 1.5L19 9M12 10.5V15M9 20.5l3-5.5 3 5.5",
+  more: "M12 5.5h.01M12 12h.01M12 18.5h.01",
+  shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
+  sort: "M8 5v14M5 16l3 3 3-3M16 19V5M13 8l3-3 3 3",
+  sliders: "M4 7h10M18 7h2M4 17h2M10 17h10M16 4v6M8 14v6",
+  book: "M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11",
+  info: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 8v.01",
+  wifiOff:
+    "M3 3l18 18M8.5 12.5a6 6 0 013.5-1.5M5 9.5a10 10 0 014-2.3M16 12.5a6 6 0 012 1.5M12 18h.01M19 9.5a10 10 0 00-6-2.4",
+  stop: "M6 6h12v12H6z",
 } as const;
 
 export type IconName = keyof typeof PATHS;
@@ -81,6 +98,7 @@ export function Icon({
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d={PATHS[name]}
+        fill={name === "stop" ? color : "none"}
         stroke={color}
         strokeWidth={strokeWidth ?? (name === "send" ? 2.4 : 2)}
         strokeLinecap="round"

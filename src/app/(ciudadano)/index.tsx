@@ -1,32 +1,20 @@
 import Head from "expo-router/head";
-import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChatWindow } from "@/components/chat/ChatWindow";
-import { BotonDeEncabezado, Encabezado } from "@/components/menu/Encabezado";
-import { Spacing, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { Encabezado } from "@/components/menu/Encabezado";
+import { useColors } from "@/constants/theme";
+import { useConversacion } from "@/context/ChatContext";
 
-/** Ruta "/": la conversación con el asistente. */
+/**
+ * Ruta "/": la conversación con el asistente. El chat ocupa toda la pantalla y
+ * el encabezado flota encima, así los mensajes pasan por detrás al desplazarse.
+ */
 export default function Asistente() {
   const C = useColors();
-  const insets = useSafeAreaInsets();
-  const { user } = useAuth();
-  const alturaDelTeclado = useKeyboardHeight();
 
-  // "Nuevo chat" cambia la key y la conversación se vuelve a montar vacía.
-  const [conversacion, setConversacion] = useState(0);
-  const [conversando, setConversando] = useState(false);
-
-  function nuevoChat() {
-    setConversando(false);
-    setConversacion((n) => n + 1);
-  }
-
-  // Con el teclado arriba, el borde inferior lo pone el teclado y no la barra del sistema.
-  const aireInferior = alturaDelTeclado > 0 ? Spacing[3] : Math.max(insets.bottom, Spacing[3]);
+  // "Nuevo chat" (en el menú) cambia la key y la conversación se vuelve a montar vacía.
+  const { conversacion } = useConversacion();
 
   return (
     <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
@@ -40,22 +28,10 @@ export default function Asistente() {
         />
       </Head>
 
-      <Encabezado
-        titulo="ChatAP"
-        derecha={
-          conversando ? (
-            <BotonDeEncabezado icono="newChat" etiqueta="Nuevo chat" onPress={nuevoChat} />
-          ) : undefined
-        }
-      />
+      <ChatWindow key={conversacion} />
 
-      <View style={[styles.chat, { paddingBottom: alturaDelTeclado }]}>
-        <ChatWindow
-          key={conversacion}
-          onConversationStart={setConversando}
-          greetingName={user?.name}
-          bottomInset={aireInferior}
-        />
+      <View style={styles.encabezado}>
+        <Encabezado />
       </View>
     </View>
   );
@@ -65,7 +41,11 @@ const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
   },
-  chat: {
-    flex: 1,
+  encabezado: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: "box-none",
   },
 });

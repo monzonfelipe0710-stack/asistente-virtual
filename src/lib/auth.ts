@@ -1,79 +1,54 @@
-import * as Crypto from "expo-crypto";
+import type { EstadoApi, UsuarioApi } from "@/lib/backend";
 
-import { readJSON, writeJSON } from "./storage";
+export type AuthRole = "Administración" | "Empleado" | "Ciudadano";
 
-export const USERS_KEY = "chatap.users";
-export const SESSION_KEY = "chatap.session";
+export const authRoles: AuthRole[] = ["Administración", "Empleado", "Ciudadano"];
 
-export type AuthRole = "Superadmin" | "Administrador" | "Ciudadano";
+export const rolesDePersonal: AuthRole[] = ["Administración", "Empleado"];
 
-/** Cuenta guardada en el dispositivo. `password` es el hash, nunca el texto. */
+export type AuthStatus = "Activo" | "Pendiente" | "Rechazado" | "Suspendido";
+
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  password: string;
   role: AuthRole;
-  status?: "Activo" | "Pendiente" | "Rechazado";
-  dni?: string;
-  cuil?: string;
-  phone?: string;
-  department?: string;
-  position?: string;
-  provider: string;
+  status?: AuthStatus;
   createdAt: string;
-  lastAccessAt: string;
 }
 
-export interface Session {
-  token: string;
-  userId: string;
-  issuedAt: string;
-}
+const ROL_DESDE_API: Record<UsuarioApi["rol"], AuthRole> = {
+  SUPERUSUARIO: "Administración",
+  ADMINISTRADOR: "Empleado",
+};
 
-export function uid(): string {
-  try {
-    return Crypto.randomUUID();
-  } catch {
-    return "u_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-}
+const ESTADO_DESDE_API: Record<EstadoApi, AuthStatus> = {
+  APROBADO: "Activo",
+  PENDIENTE: "Pendiente",
+  RECHAZADO: "Rechazado",
+  SUSPENDIDO: "Suspendido",
+};
 
-export async function loadUsers(): Promise<AuthUser[]> {
-  const users = await readJSON<AuthUser[]>(USERS_KEY, []);
-  return Array.isArray(users) ? users : [];
-}
-
-export async function saveUsers(users: AuthUser[]): Promise<void> {
-  await writeJSON(USERS_KEY, users);
-}
-
-/**
- * Hash de demostración con SHA-256 y sal fija, igual que el panel web.
- *
- * NO es apto para producción: un SHA-256 se calcula demasiado rápido y una sal
- * compartida no protege contra tablas precalculadas. En producción esto lo hace
- * el backend con bcrypt/argon2 y la contraseña nunca se guarda en el equipo.
- * ponytail: se mantiene tal cual mientras los datos sean simulados; cambia el
- * día que haya API real.
- */
-export async function hashPassword(password: string): Promise<string> {
-  try {
-    return await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      "chatap::" + password + "::formosa"
-    );
-  } catch {
-    return "plain:" + password;
-  }
-}
-
-export async function makeSession(user: AuthUser): Promise<Session> {
-  const session: Session = {
-    token: "sess_" + uid().replace(/-/g, "") + "_" + Date.now().toString(36),
-    userId: user.id,
-    issuedAt: new Date().toISOString(),
+export function usuarioDesdeApi(u: UsuarioApi): AuthUser {
+  return {
+    id: String(u.id),
+    name: u.nombre,
+    email: u.email,
+    role: ROL_DESDE_API[u.rol],
+    status: u.estado ? ESTADO_DESDE_API[u.estado] : "Activo",
+    createdAt: u.createdAt ?? "",
   };
-  await writeJSON(SESSION_KEY, session);
-  return session;
+}
+
+export function normalizeEmail(email: string): string {
+  return (email || "").trim().toLowerCase();
+}
+
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
+}
+
+export function assertValidPassword(password: string): void {
+  if (!password || password.length < 8)
+    throw new Error("La contraseña debe tener al menos 8 caracteres.");
 }

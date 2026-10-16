@@ -5,83 +5,77 @@ import {
 } from "react-native";
 import { Text } from "@/components/ui/Text";
 
-import { Radius, Spacing, Type, useColors } from "@/constants/theme";
-import { users as seedUsers, userRoles, type AppUser, type UserRole } from "@/data/mockUsers";
+import { Spacing, Type, useColors } from "@/constants/theme";
+import { useAuth } from "@/context/AuthContext";
+import { useCuentas } from "@/hooks/useCuentas";
+import { rolesDePersonal, type AuthRole, type AuthUser } from "@/lib/auth";
+import { formatDate } from "@/utils/date";
+import { Badge, type Tone } from "@/components/ui/Badge";
+import { Btn } from "@/components/ui/Btn";
+import { Icon } from "@/components/ui/Icon";
+import { KeyValue, KeyValueCard } from "@/components/ui/KeyValue";
+import { Modal } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/ui/Toast";
-import { UserFormModal, type UserForm } from "@/components/admin/UserFormModal";
-import { Btn } from "@/components/ui/Btn";
-import { Input } from "@/components/ui/Fields";
-import { Avatar, EmptyState, Row } from "@/components/ui/Lists";
-import { Screen, PageHeader } from "@/components/ui/Screen";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Avatar } from "@/components/ui/Avatar";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Row } from "@/components/ui/Row";
+import { Screen } from "@/components/ui/Screen";
+import { PageHeader } from "@/components/ui/PageHeader";
+
+const TONO_DEL_ESTADO: Record<string, Tone> = {
+  Activo: "ok",
+  Pendiente: "warn",
+  Rechazado: "bad",
+  Suspendido: "bad",
+};
 
 export default function UserTable() {
   const C = useColors();
   const push = useToast();
+  const { user: yo } = useAuth();
 
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"todos" | UserRole>("todos");
-  const [rows, setRows] = useState<AppUser[]>(seedUsers);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editUser, setEditUser] = useState<AppUser | null>(null);
+  const [roleFilter, setRoleFilter] = useState<"todos" | AuthRole>("todos");
+  const [selected, setSelected] = useState<AuthUser | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const { cuentas, cargando, error, cambiarEstado } = useCuentas();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter(
+    return cuentas.filter(
       (u) =>
         (roleFilter === "todos" || u.role === roleFilter) &&
-        (!q ||
-          u.name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q) ||
-          u.department.toLowerCase().includes(q))
+        (!q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
     );
-  }, [rows, search, roleFilter]);
+  }, [cuentas, search, roleFilter]);
 
-  function closeModal() {
-    setModalOpen(false);
-    setEditUser(null);
-  }
+  const esMiCuenta = selected?.id === yo?.id;
+  const suspendida = selected?.status === "Suspendido";
 
-  function handleSave(form: UserForm) {
-    if (editUser) {
-      setRows((prev) =>
-        prev.map((u) => (u.id === editUser.id ? { ...u, ...form } : u))
-      );
-      push(`Usuario "${form.name}" actualizado.`);
-    } else {
-      const nextId = Math.max(0, ...rows.map((u) => u.id)) + 1;
-      const created: AppUser = {
-        ...form,
-        id: nextId,
-        lastAccess: "—",
-        avatar: null,
-        phone: "",
-        createdAt: new Date().toLocaleDateString("es-AR"),
-      };
-      setRows((prev) => [created, ...prev]);
-      push(`Usuario "${form.name}" creado.`);
+  async function alternarSuspension() {
+    if (!selected) return;
+    setGuardando(true);
+    try {
+      await cambiarEstado(selected.id, suspendida ? "reactivar" : "suspender");
+      push(suspendida ? `"${selected.name}" fue reactivado.` : `"${selected.name}" fue suspendido.`);
+      setSelected(null);
+    } catch (e) {
+      push(e instanceof Error ? e.message : "No se pudo guardar.");
+    } finally {
+      setGuardando(false);
     }
-    closeModal();
   }
 
   return (
     <Screen>
       <PageHeader
         title="Usuarios"
-        description={`${rows.length} personas con acceso al panel.`}
-      >
-        <Btn
-          label="Nuevo usuario"
-          icon="add"
-          onPress={() => {
-            setEditUser(null);
-            setModalOpen(true);
-          }}
-        />
-      </PageHeader>
+        description={`${cuentas.length} cuentas registradas.`}
+      />
 
-      <Input
-        icon="search"
+      <SearchInput
         value={search}
         onChangeText={setSearch}
         placeholder="Buscar por nombre o correo"
@@ -91,11 +85,11 @@ export default function UserTable() {
       <View style={{ marginTop: Spacing[4] }}>
         <Tabs
           items={[
-            { id: "todos" as const, label: "Todos", count: rows.length },
-            ...userRoles.map((r) => ({
+            { id: "todos" as const, label: "Todos", count: cuentas.length },
+            ...rolesDePersonal.map((r) => ({
               id: r,
               label: r,
-              count: rows.filter((u) => u.role === r).length,
+              count: cuentas.filter((u) => u.role === r).length,
             })),
           ]}
           value={roleFilter}
@@ -103,17 +97,19 @@ export default function UserTable() {
         />
       </View>
 
+      {!!error && (
+        <Text style={[Type.meta, { color: C.danger, marginTop: Spacing[3] }]}>{error}</Text>
+      )}
+
       <View>
         {filtered.map((user) => {
-          const active = user.status === "Activo";
+          const estado = user.status ?? "Activo";
+          const active = estado === "Activo";
           return (
             <Row
               key={user.id}
-              onPress={() => {
-                setEditUser(user);
-                setModalOpen(true);
-              }}
-              accessibilityLabel={`Editar ${user.name}`}
+              onPress={() => setSelected(user)}
+              accessibilityLabel={`Ver ${user.name}`}
               style={{ paddingVertical: 14 }}
             >
               <View style={styles.line}>
@@ -128,33 +124,58 @@ export default function UserTable() {
                   <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
                     {user.email}
                   </Text>
-                </View>
-
-                <View style={styles.right}>
-                  <Text style={[Type.label, { color: C.ink }]}>{user.role}</Text>
                   <View style={styles.status}>
-                    <View
-                      style={[styles.statusDot, { backgroundColor: active ? C.ok : C.ink3 }]}
-                    />
-                    <Text style={[Type.metaStrong, { color: active ? C.ok : C.ink3 }]}>
-                      {active ? "Activo" : "Suspendido"}
-                    </Text>
+                    <Badge label={estado} tone={TONO_DEL_ESTADO[estado] ?? "muted"} />
+                    <Text style={[Type.meta, { color: C.ink2 }]}>{user.role}</Text>
                   </View>
                 </View>
+                <Icon name="chevronRight" size={20} color={C.ink2} />
+
               </View>
             </Row>
           );
         })}
 
-        {filtered.length === 0 && <EmptyState title="Sin resultados." />}
+        {!cargando && filtered.length === 0 && <EmptyState title="Sin resultados." />}
       </View>
 
-      <UserFormModal
-        open={modalOpen}
-        onClose={closeModal}
-        onSave={handleSave}
-        editUser={editUser}
-      />
+      <Modal
+        open={selected !== null}
+        title={selected?.name ?? ""}
+        onClose={() => setSelected(null)}
+        footer={
+          <Btn
+            label={suspendida ? "Reactivar cuenta" : "Suspender cuenta"}
+            variant={suspendida ? "primary" : "danger"}
+            onPress={alternarSuspension}
+            loading={guardando}
+            disabled={esMiCuenta}
+          />
+        }
+      >
+        {!!selected && (
+          <>
+            <KeyValueCard>
+              <KeyValue label="Correo" value={selected.email} />
+              <KeyValue label="Rol" value={selected.role} />
+              <KeyValue label="Estado">
+                <Badge
+                  label={selected.status ?? "Activo"}
+                  tone={TONO_DEL_ESTADO[selected.status ?? "Activo"] ?? "muted"}
+                />
+              </KeyValue>
+              <KeyValue label="Alta" value={formatDate(selected.createdAt)} />
+            </KeyValueCard>
+            <Text style={[Type.meta, { color: C.ink2 }]}>
+              {esMiCuenta
+                ? "No podés suspender tu propia cuenta."
+                : suspendida
+                  ? `${selected.name} no puede ingresar hasta que reactives la cuenta.`
+                  : `Si suspendés la cuenta, ${selected.name} no podrá ingresar hasta que la reactives.`}
+            </Text>
+          </>
+        )}
+      </Modal>
     </Screen>
   );
 }
@@ -169,18 +190,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  right: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
   status: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Radius.full,
+    gap: Spacing[2],
+    marginTop: 6,
   },
 });

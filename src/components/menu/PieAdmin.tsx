@@ -1,54 +1,46 @@
-import type { DrawerContentComponentProps } from "@react-navigation/drawer";
+import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import {
-  cerrarMenu,
-  FilaDelMenu,
-  FilaModoOscuro,
-  iniciales,
-} from "./MenuLateral";
+import { cerrarMenu } from "./MenuLateral";
+import { FilaDelMenu } from "./FilaDelMenu";
+import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
 import { Radius, Spacing, Weight, useColors } from "@/constants/theme";
-import { useAdmin } from "@/context/AdminContext";
 import { useAuth } from "@/context/AuthContext";
+import { usePermisos } from "@/hooks/usePermisos";
 
 /**
- * Pie del menú del panel: modo oscuro, volver al asistente y la cuenta con su
- * botón de cerrar sesión.
+ * Pie del menú del panel: volver al asistente y la cuenta con su botón de
+ * cerrar sesión.
  */
 export function PieAdmin({ drawer }: { drawer: DrawerContentComponentProps }) {
   const C = useColors();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { role } = useAdmin();
+  const { role } = usePermisos();
 
   async function cerrarSesion() {
     cerrarMenu(drawer);
-    await logout();
     router.replace("/");
+    await logout();
   }
 
   return (
     <>
-      <FilaModoOscuro />
-
       <FilaDelMenu
         icono="chat"
         texto="Ir al asistente"
         accesibilidad="link"
+        destacada
         onPress={() => cerrarMenu(drawer, () => router.replace("/"))}
-        derecha={<Icon name="chevronRight" size={18} color={C.ink3} />}
+        derecha={<Icon name="chevronRight" size={20} color={C.accentText} />}
       />
 
       {!!user && (
-        <View style={[styles.cuenta, { backgroundColor: C.surface }]}>
-          <View style={[styles.avatar, { backgroundColor: C.surface2 }]}>
-            <Text style={[styles.iniciales, { color: C.ink2 }]}>
-              {iniciales(user.name || user.email)}
-            </Text>
-          </View>
+        <View style={[styles.cuenta, { backgroundColor: C.surface, borderColor: C.border }]}>
+          <Avatar name={user.name || user.email} />
           <View style={styles.texto}>
             <Text style={[styles.nombre, { color: C.ink }]} numberOfLines={1}>
               {user.name}
@@ -63,7 +55,7 @@ export function PieAdmin({ drawer }: { drawer: DrawerContentComponentProps }) {
             accessibilityLabel="Cerrar sesión"
             style={({ pressed }) => [styles.salir, pressed && { backgroundColor: C.surface2 }]}
           >
-            {({ pressed }) => <Icon name="logout" size={20} color={pressed ? C.danger : C.ink2} />}
+            {({ pressed }) => <Icon name="logout" size={22} color={pressed ? C.danger : C.ink} />}
           </Pressable>
         </View>
       )}
@@ -76,40 +68,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[3],
-    marginTop: 6,
-    paddingVertical: Spacing[2],
+    minHeight: 64,
+    paddingVertical: 10,
     paddingLeft: Spacing[3],
     paddingRight: Spacing[2],
-    borderRadius: Radius.xl,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iniciales: {
-    fontSize: 13,
-    fontWeight: Weight.semibold,
+    borderRadius: Radius["2xl"],
+    borderWidth: 1,
   },
   texto: {
     flex: 1,
     minWidth: 0,
   },
   nombre: {
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: Weight.medium,
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: Weight.semibold,
   },
   rol: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 14,
+    lineHeight: 18,
   },
   salir: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.lg,
+    width: 48,
+    height: 48,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 function ToastPill({ message, visible }: { message: string; visible: boolean }) {
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const enter = useRef(new Animated.Value(0)).current;
+  const [enter] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.timing(enter, {

@@ -5,8 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  * Native el equivalente es AsyncStorage y devuelve promesas, así que todo lo
  * que leía el estado inicial de forma directa ahora pasa por un effect.
  *
- * Nunca tira: si el almacenamiento falla (modo privado, cuota llena, un JSON
- * escrito a mano) se devuelve el fallback y la app sigue andando.
+ * Nunca tiran: si el almacenamiento falla (modo privado, cuota llena, un JSON
+ * escrito a mano) `readJSON` devuelve el fallback y `writeJSON` devuelve false.
  */
 export async function readJSON<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -17,10 +17,11 @@ export async function readJSON<T>(key: string, fallback: T): Promise<T> {
   }
 }
 
-export async function writeJSON(key: string, value: unknown): Promise<void> {
+export async function writeJSON(key: string, value: unknown): Promise<boolean> {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
-    /* cuota / almacenamiento no disponible */
+    return false;
   }
 }

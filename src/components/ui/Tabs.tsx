@@ -1,17 +1,17 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "./Text";
-import { Fonts, Spacing, useColors } from "@/constants/theme";
+import { Size, Spacing, Weight, useColors } from "@/constants/theme";
 
-export interface TabItem<T extends string> {
+interface TabItem<T extends string> {
   id: T;
   label: string;
   count?: number;
 }
 
 /**
- * Pestañas v6: subrayado de 2 px en azul ChatAP, contador en Geist Mono, 44 de
- * alto. Corren de borde a borde (anulan los 20 de margen de la pantalla) y se
- * desplazan en horizontal; el margen final evita que la última quede cortada.
+ * Filtros en píldoras de 44: la activa lleva el tinte azul, el borde azul y el
+ * texto azul; las demás, borde fuerte. El contador va en negrita. Corren de
+ * borde a borde (anulan los 20 de margen de la pantalla) y se desplazan.
  */
 export function Tabs<T extends string>({
   items,
@@ -25,29 +25,33 @@ export function Tabs<T extends string>({
   const C = useColors();
 
   return (
-    <View style={[styles.wrap, { borderBottomColor: C.border }]}>
+    <View style={styles.wrap}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        accessibilityRole="tablist"
       >
         {items.map((t) => {
           const on = t.id === value;
+          const color = on ? C.accentText : C.ink;
           return (
             <Pressable
               key={t.id}
               onPress={() => onChange(t.id)}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
-              style={[styles.tab, { borderBottomColor: on ? C.accent : "transparent" }]}
+              style={[
+                styles.tab,
+                {
+                  backgroundColor: on ? C.activeBg : "transparent",
+                  borderColor: on ? C.accent : C.borderStrong,
+                },
+              ]}
             >
-              <Text style={[styles.label, { color: on ? C.accentText : C.ink2 }]}>
-                {t.label}
-              </Text>
+              <Text style={[styles.label, { color }]}>{t.label}</Text>
               {t.count !== undefined && (
-                <Text style={[styles.count, { color: on ? C.accentText : C.ink3 }]}>
-                  {t.count}
-                </Text>
+                <Text style={[styles.label, { color, fontWeight: Weight.bold }]}>{t.count}</Text>
               )}
             </Pressable>
           );
@@ -61,27 +65,25 @@ export function Tabs<T extends string>({
 const styles = StyleSheet.create({
   wrap: {
     marginHorizontal: -Spacing[5],
-    borderBottomWidth: 1,
+    marginVertical: Spacing[2],
   },
   scroll: {
     paddingHorizontal: Spacing[5],
-    gap: Spacing[6],
+    gap: Spacing[2],
   },
   tab: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    height: 44,
-    borderBottomWidth: 2,
-    marginBottom: -1,
+    minHeight: Size.chip,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
   },
   label: {
     fontSize: 15,
-    fontWeight: "500",
-  },
-  count: {
-    fontSize: 12,
-    fontFamily: Fonts.mono,
+    lineHeight: 18,
+    fontWeight: Weight.semibold,
   },
   endPad: {
     width: 4,

@@ -1,25 +1,19 @@
-import type { DrawerContentComponentProps } from "@react-navigation/drawer";
-import { DrawerActions } from "@react-navigation/native";
+import type { DrawerContentComponentProps } from "expo-router/drawer";
+import { DrawerActions } from "expo-router/react-navigation";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChatBotAvatar } from "@/components/avatar/ChatBotAvatar";
+import { Btn } from "@/components/ui/Btn";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
-import { Toggle } from "@/components/ui/Toggle";
-import {
-  Radius,
-  Spacing,
-  Type,
-  Weight,
-  setColorScheme,
-  useColors,
-  useColorScheme,
-} from "@/constants/theme";
+import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
 
 export interface ItemDeMenu {
   /** Nombre de la pantalla del Drawer a la que lleva (el nombre del archivo). */
-  pantalla: string;
+  pantalla?: string;
+  /** Si lo trae, el ítem ejecuta esto en vez de ir a una pantalla. */
+  onPress?: () => void;
   titulo: string;
   icono: IconName;
 }
@@ -33,13 +27,14 @@ export interface SeccionDeMenu {
 /**
  * Contenido del Drawer, el mismo para la app y para el panel: marca arriba,
  * ítems por sección en el medio y, abajo, lo que cada layout ponga como pie.
- * Cada ítem lleva a una pantalla del Drawer; la activa se marca con el tinte azul.
+ * El ítem activo lleva el tinte azul, el borde azul y el texto en negrita.
  */
 export function MenuLateral({
   drawer,
   nombre,
   descripcion,
   secciones,
+  acciones = [],
   lineaSobrePie = false,
   children,
 }: {
@@ -47,6 +42,8 @@ export function MenuLateral({
   nombre: string;
   descripcion: string;
   secciones: SeccionDeMenu[];
+  /** Acciones sueltas bajo la marca: no llevan a una pantalla, ejecutan algo. */
+  acciones?: { titulo: string; icono: IconName; onPress: () => void }[];
   /** Dibuja una línea fina entre los ítems y el pie. */
   lineaSobrePie?: boolean;
   /** Pie del menú: preferencias y cuenta. */
@@ -64,7 +61,7 @@ export function MenuLateral({
       ]}
     >
       <View style={styles.marca}>
-        <ChatBotAvatar size={40} tight static />
+        <ChatBotAvatar size={44} static />
         <View style={styles.marcaTexto}>
           <Text style={[Type.cardTitle, { color: C.ink }]}>{nombre}</Text>
           <Text style={[Type.meta, { color: C.ink2 }]}>{descripcion}</Text>
@@ -72,36 +69,53 @@ export function MenuLateral({
       </View>
 
       <ScrollView style={styles.secciones} showsVerticalScrollIndicator={false}>
+        {acciones.map((accion) => (
+          <View key={accion.titulo} style={styles.accion}>
+            <Btn
+              label={accion.titulo}
+              icon={accion.icono}
+              variant="secondary"
+              size="md"
+              onPress={accion.onPress}
+            />
+          </View>
+        ))}
+
         {secciones.map((seccion, indice) => (
           <View key={seccion.titulo ?? indice}>
             {!!seccion.titulo && (
-              <Text style={[Type.overline, styles.rotulo, { color: C.ink3 }]}>
+              <Text style={[Type.overline, styles.rotulo, { color: C.ink2 }]}>
                 {seccion.titulo}
               </Text>
             )}
 
             <View style={styles.items}>
               {seccion.items.map((item) => {
-                const activo = item.pantalla === pantallaActiva;
+                const activo = !!item.pantalla && item.pantalla === pantallaActiva;
                 return (
                   <Pressable
-                    key={item.pantalla}
-                    onPress={() => drawer.navigation.navigate(item.pantalla)}
+                    key={item.titulo}
+                    onPress={() =>
+                      item.onPress ? item.onPress() : drawer.navigation.navigate(item.pantalla!)
+                    }
                     accessibilityRole="menuitem"
                     accessibilityState={{ selected: activo }}
                     style={({ pressed }) => [
                       styles.fila,
-                      activo
-                        ? { backgroundColor: C.activeBg }
-                        : pressed && { backgroundColor: C.surface },
+                      {
+                        backgroundColor: activo ? C.activeBg : pressed ? C.surface2 : "transparent",
+                        borderColor: activo ? C.accent : "transparent",
+                      },
                     ]}
                   >
-                    <Icon name={item.icono} size={20} color={activo ? C.activeInk : C.ink2} />
+                    <Icon name={item.icono} size={22} color={activo ? C.activeInk : C.ink} />
                     <Text
                       style={[
                         styles.filaTexto,
-                        { color: activo ? C.activeInk : C.ink },
-                        activo && { fontWeight: Weight.semibold },
+                        {
+                          color: activo ? C.activeInk : C.ink,
+                          fontWeight: activo ? Weight.bold : Weight.medium,
+                        },
                       ]}
                       numberOfLines={1}
                     >
@@ -115,9 +129,7 @@ export function MenuLateral({
         ))}
       </ScrollView>
 
-      <View style={[styles.pie, lineaSobrePie && { borderTopWidth: 1, borderTopColor: C.border }]}>
-        {children}
-      </View>
+      <View style={[styles.pie, { borderTopWidth: 1, borderTopColor: C.border }]}>{children}</View>
     </View>
   );
 }
@@ -126,60 +138,6 @@ export function MenuLateral({
 export function cerrarMenu(drawer: DrawerContentComponentProps, despues?: () => void) {
   drawer.navigation.dispatch(DrawerActions.closeDrawer());
   despues?.();
-}
-
-/** Fila del pie: ícono, texto y algo a la derecha. Es un botón si recibe `onPress`. */
-export function FilaDelMenu({
-  icono,
-  texto,
-  derecha,
-  onPress,
-  accesibilidad,
-}: {
-  icono: IconName;
-  texto: string;
-  derecha?: React.ReactNode;
-  onPress: () => void;
-  accesibilidad?: "switch" | "link" | "button";
-}) {
-  const C = useColors();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole={accesibilidad ?? "button"}
-      accessibilityLabel={texto}
-      style={({ pressed }) => [styles.fila, pressed && { backgroundColor: C.surface }]}
-    >
-      <Icon name={icono} size={20} color={C.ink2} />
-      <Text style={[styles.filaTexto, { color: C.ink }]}>{texto}</Text>
-      {derecha}
-    </Pressable>
-  );
-}
-
-/** Interruptor del modo oscuro: la fila entera es el área táctil. */
-export function FilaModoOscuro() {
-  const oscuro = useColorScheme() === "dark";
-  return (
-    <FilaDelMenu
-      icono="moon"
-      texto="Modo oscuro"
-      accesibilidad="switch"
-      onPress={() => setColorScheme(oscuro ? "light" : "dark")}
-      derecha={<Toggle value={oscuro} />}
-    />
-  );
-}
-
-/** Iniciales de dos letras para el círculo de la cuenta. */
-export function iniciales(nombre: string) {
-  return nombre
-    .trim()
-    .split(/[\s@.]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((palabra) => palabra[0].toUpperCase())
-    .join("");
 }
 
 const styles = StyleSheet.create({
@@ -191,20 +149,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[3],
-    paddingHorizontal: Spacing[3],
+    paddingLeft: 8,
+    paddingRight: Spacing[2],
+    paddingTop: Spacing[3],
+    paddingBottom: Spacing[2],
   },
   marcaTexto: {
     flex: 1,
     minWidth: 0,
   },
+  accion: {
+    marginTop: Spacing[3],
+    paddingHorizontal: Spacing[2],
+  },
   secciones: {
     flex: 1,
-    marginTop: Spacing[3],
+    marginTop: Spacing[1],
   },
   rotulo: {
-    marginTop: Spacing[5],
-    marginBottom: Spacing[2],
-    marginHorizontal: Spacing[3],
+    marginTop: 14,
+    marginBottom: 4,
+    marginHorizontal: Spacing[2],
   },
   items: {
     gap: 2,
@@ -213,18 +178,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing[3],
+    minHeight: 52,
     paddingHorizontal: Spacing[3],
-    height: 48,
-    borderRadius: Radius.lg,
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.button,
+    borderWidth: 1,
   },
   filaTexto: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: Weight.medium,
+    fontSize: 17,
+    lineHeight: 21,
   },
   pie: {
-    gap: 2,
+    gap: Spacing[2],
     marginTop: Spacing[2],
-    paddingTop: Spacing[2],
+    paddingTop: Spacing[3],
   },
 });
