@@ -1,131 +1,295 @@
-import { users } from "../../data/mockUsers";
-import { knowledgeBase } from "../../data/mockKnowledge";
-import { sigedRecords } from "../../data/mockSiged";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { apiErrorMessage } from "../../lib/api";
+import { listar as listarTramites } from "../../services/tramites";
+import { porTramite, sinRespuesta } from "../../services/metricas";
+import { listar as listarUsuarios } from "../../services/usuarios";
+import { Kicker, DisplayTitle, Lead } from "../common/editorial";
+import { formatDate } from "../../utils/date";
+import PendingBackend from "./PendingBackend";
 
-export default function Dashboard() {
-  const stats = [
-    {
-      title: "Usuarios Activos",
-      value: users.filter((u) => u.status === "Activo").length,
-      total: users.length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      color: "blue",
-    },
-    {
-      title: "Artículos Base",
-      value: knowledgeBase.filter((k) => k.active).length,
-      total: knowledgeBase.length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      color: "emerald",
-    },
-    {
-      title: "Expedientes SIGED",
-      value: sigedRecords.length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      ),
-      color: "indigo",
-    },
-    {
-      title: "Pendientes",
-      value: sigedRecords.filter((r) => r.status === "En proceso" || r.status === "Ingresado").length,
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      color: "amber",
-    },
-  ];
-
-  const colorMap = {
-    blue: "bg-blue-50 text-blue-700",
-    emerald: "bg-emerald-50 text-emerald-700",
-    indigo: "bg-indigo-50 text-indigo-700",
-    amber: "bg-amber-50 text-amber-700",
-  };
-
+function Metric({ label, value, hint }) {
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-slate-800 m-0 mb-6">Dashboard</h1>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
-          <div key={stat.title} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className={`p-2 rounded-lg ${colorMap[stat.color]}`}>
-                {stat.icon}
-              </div>
-              {stat.total && (
-                <span className="text-xs text-slate-400">
-                  de {stat.total}
-                </span>
-              )}
-            </div>
-            <p className="text-2xl font-bold text-slate-800 m-0">{stat.value}</p>
-            <p className="text-xs text-slate-500 m-0 mt-0.5">{stat.title}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-800 m-0">
-            Últimos movimientos SIGED
-          </h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 text-left text-xs text-slate-500 uppercase">
-                <th className="px-4 py-3 font-medium">Expediente</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Solicitante</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Último movimiento</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {sigedRecords.slice(0, 4).map((rec) => (
-                <tr key={rec.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">{rec.id}</td>
-                  <td className="px-4 py-3 text-slate-700">{rec.type}</td>
-                  <td className="px-4 py-3 text-slate-700">{rec.applicant}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={rec.status} />
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">{rec.lastMovement}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+    <div className="bg-paper p-6 md:p-8">
+      <p className="m-0 text-[11px] font-bold uppercase tracking-[0.22em] text-muted">{label}</p>
+      <p className="mt-4 m-0 text-4xl md:text-5xl font-extrabold tracking-tighter text-ink">
+        {value}
+      </p>
+      {hint ? <p className="mt-2 m-0 text-sm text-faint">{hint}</p> : null}
+      <div className="mt-6 h-[3px] w-10 bg-brand-deep" aria-hidden="true" />
     </div>
   );
 }
 
-function StatusBadge({ status }) {
-  const colors = {
-    Ingresado: "bg-blue-50 text-blue-700",
-    "En proceso": "bg-amber-50 text-amber-700",
-    Observado: "bg-red-50 text-red-700",
-    Finalizado: "bg-emerald-50 text-emerald-700",
-  };
+function SectionEmpty({ children }) {
+  return <p className="px-8 py-10 m-0 text-sm text-faint">{children}</p>;
+}
+
+export default function Dashboard() {
+  const { user, userRole } = useAuth();
+  const userId = user?.id;
+  const esSuper = userRole === "SUPERUSUARIO";
+  const firstName = (user?.name || "").split(" ")[0] || "Admin";
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [tramites, setTramites] = useState([]);
+  const [porTramiteData, setPorTramiteData] = useState([]);
+  const [sinRespuestaData, setSinRespuestaData] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [metricasPendientes, setMetricasPendientes] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const listaTramites = await listarTramites();
+        if (!active) return;
+        setTramites(Array.isArray(listaTramites) ? listaTramites : []);
+      } catch (err) {
+        if (active) setError(apiErrorMessage(err));
+        if (active) setLoading(false);
+        return;
+      }
+      if (esSuper) {
+        try {
+          const [porT, sinResp, us] = await Promise.all([
+            porTramite(),
+            sinRespuesta(),
+            listarUsuarios(),
+          ]);
+          if (!active) return;
+          setPorTramiteData(Array.isArray(porT) ? porT : []);
+          setSinRespuestaData(Array.isArray(sinResp) ? sinResp : []);
+          setUsuarios(Array.isArray(us) ? us : []);
+          setMetricasPendientes(false);
+        } catch {
+          if (active) setMetricasPendientes(true);
+        }
+      }
+      if (active) setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [esSuper]);
+
+  const publicados = useMemo(() => tramites.filter((t) => t.publicado).length, [tramites]);
+  const misTramites = useMemo(
+    () => tramites.filter((t) => t.encargado?.id === userId),
+    [tramites, userId]
+  );
+
+  const totalConsultas = useMemo(
+    () => porTramiteData.reduce((acc, r) => acc + (r._count?._all || 0), 0),
+    [porTramiteData]
+  );
+
+  const usuariosAprobados = useMemo(
+    () => usuarios.filter((u) => u.estado === "APROBADO").length,
+    [usuarios]
+  );
+  const usuariosPendientes = useMemo(
+    () => usuarios.filter((u) => u.estado === "PENDIENTE").length,
+    [usuarios]
+  );
+
+  const topConsultados = useMemo(() => {
+    const nombrePorId = new Map(tramites.map((t) => [t.id, t.nombre]));
+    return [...porTramiteData]
+      .map((r) => ({
+        tramiteId: r.tramiteId,
+        nombre: r.tramiteId != null ? nombrePorId.get(r.tramiteId) : null,
+        count: r._count?._all || 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [porTramiteData, tramites]);
+
+  const maxConsulta = topConsultados[0]?.count || 1;
+
+  const recientes = useMemo(
+    () =>
+      [...tramites]
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        .slice(0, 5),
+    [tramites]
+  );
+
+  const sinRespuestaRecientes = useMemo(() => sinRespuestaData.slice(0, 6), [sinRespuestaData]);
 
   return (
-    <span className={`inline-block px-2 py-0.5 text-xs rounded-md ${colors[status] || "bg-slate-100 text-slate-600"}`}>
-      {status}
-    </span>
+    <div className="max-w-6xl">
+      <div className="border-b border-line/70 pb-12">
+        <Kicker>[ Panel de administración ]</Kicker>
+        <DisplayTitle as={2} className="mt-4">
+          ADMINISTRACIÓN.
+        </DisplayTitle>
+        <Lead className="mt-6 max-w-2xl">
+          {esSuper
+            ? `Hola, ${firstName}. Resumen de trámites, consultas del chat y cuentas de la plataforma.`
+            : `Hola, ${firstName}. Resumen de tus trámites y la actividad del panel.`}
+        </Lead>
+      </div>
+
+      {error && (
+        <div className="mt-8 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">
+          {error}
+        </div>
+      )}
+
+      <div className="mt-12 grid gap-px bg-line border border-line overflow-hidden rounded-2xl grid-cols-2 lg:grid-cols-4">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-paper p-6 md:p-8">
+              <div className="animate-shimmer h-3 w-24 rounded" />
+              <div className="animate-shimmer mt-5 h-10 w-16 rounded" />
+              <div className="animate-shimmer mt-3 h-4 w-20 rounded" />
+            </div>
+          ))
+        ) : esSuper ? (
+          <>
+            <Metric label="Trámites publicados" value={publicados} hint={`de ${tramites.length} en total`} />
+            <Metric label="Consultas respondidas" value={totalConsultas} hint="registradas en el chat" />
+            <Metric label="Consultas sin respuesta" value={sinRespuestaData.length} hint="requieren revisión" />
+            <Metric label="Usuarios aprobados" value={usuariosAprobados} hint={`${usuariosPendientes} pendientes`} />
+          </>
+        ) : (
+          <>
+            <Metric label="Mis trámites" value={misTramites.length} hint={`de ${tramites.length} en el sistema`} />
+            <Metric label="Publicados" value={misTramites.filter((t) => t.publicado).length} hint="visibles en el chat" />
+            <Metric label="Borradores" value={misTramites.filter((t) => !t.publicado).length} hint="aún sin publicar" />
+            <Metric label="Trámites totales" value={tramites.length} hint="en toda la plataforma" />
+          </>
+        )}
+      </div>
+
+      {!esSuper && (
+        <div className="mt-16">
+          <PendingBackend
+            title="Métricas propias y generales — Pendiente de backend"
+            description="El dashboard del administrador tendrá un selector para ver las métricas de su mesa o las generales. Los endpoints de métricas (hoy solo para superusuario) pasarán a aceptar al administrador con un parámetro de alcance."
+            className="mb-0"
+          />
+        </div>
+      )}
+
+      {esSuper && !loading && (
+        <>
+          <div className="card mt-16 overflow-hidden">
+            <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
+              <h2 className="display-3 text-ink m-0 uppercase">Trámites más consultados</h2>
+              <span className="text-xs text-faint font-semibold uppercase tracking-wider">
+                {metricasPendientes ? "No disponible" : "Chat"}
+              </span>
+            </div>
+            {metricasPendientes ? (
+              <SectionEmpty>No se pudieron cargar las métricas del chat.</SectionEmpty>
+            ) : topConsultados.length === 0 ? (
+              <SectionEmpty>Todavía no hay consultas registradas.</SectionEmpty>
+            ) : (
+              <div className="p-8 space-y-4">
+                {topConsultados.map((c) => (
+                  <div key={c.tramiteId ?? "null"} className="flex items-center gap-4">
+                    <span className="w-64 shrink-0 truncate text-sm text-ink">
+                      {c.nombre || (c.tramiteId == null ? "Trámite eliminado" : `Trámite #${c.tramiteId}`)}
+                    </span>
+                    <span className="flex-1 h-2 rounded-full bg-mist overflow-hidden">
+                      <span
+                        className="block h-full bg-brand-deep rounded-full"
+                        style={{ width: `${Math.max(4, (c.count / maxConsulta) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="w-10 text-right text-sm font-bold tabular-nums text-ink">{c.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card mt-16 overflow-hidden">
+            <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
+              <h2 className="display-3 text-ink m-0 uppercase">Consultas sin respuesta</h2>
+              <span className="text-xs text-faint font-semibold uppercase tracking-wider">
+                Últimas {sinRespuestaRecientes.length}
+              </span>
+            </div>
+            {sinRespuestaRecientes.length === 0 ? (
+              <SectionEmpty>No hay consultas sin respuesta.</SectionEmpty>
+            ) : (
+              <ul className="m-0 p-0 divide-y divide-line">
+                {sinRespuestaRecientes.map((c) => (
+                  <li key={c.id} className="px-8 py-5 flex items-start justify-between gap-6">
+                    <p className="m-0 text-sm text-ink">{c.textoConsulta}</p>
+                    <span className="text-xs text-faint shrink-0">{formatDate(c.fecha)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="card mt-16 overflow-hidden">
+        <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
+          <h2 className="display-3 text-ink m-0 uppercase">Trámites recientes</h2>
+          <Link
+            to="/admin/tramites"
+            className="text-xs text-faint font-semibold uppercase tracking-wider no-underline hover:text-brand-deep transition-colors"
+          >
+            Ver todos
+          </Link>
+        </div>
+        {loading ? (
+          <div className="p-8 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="animate-shimmer h-5 rounded" />
+            ))}
+          </div>
+        ) : recientes.length === 0 ? (
+          <SectionEmpty>Todavía no hay trámites cargados.</SectionEmpty>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-[0.18em] text-faint">
+                  <th className="px-8 py-4 font-bold">Trámite</th>
+                  <th className="px-8 py-4 font-bold">Sector</th>
+                  <th className="px-8 py-4 font-bold">Encargado</th>
+                  <th className="px-8 py-4 font-bold">Estado</th>
+                  <th className="px-8 py-4 font-bold">Actualizado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {recientes.map((t) => (
+                  <tr key={t.id} className="hover:bg-mist/60 transition-colors">
+                    <td className="px-8 py-6 text-ink font-semibold">
+                      <Link to={`/admin/tramites/${t.id}`} className="no-underline text-ink hover:text-brand-deep transition-colors">
+                        {t.nombre}
+                      </Link>
+                    </td>
+                    <td className="px-8 py-6 text-muted">{t.sector?.nombre || "—"}</td>
+                    <td className="px-8 py-6 text-muted">{t.encargado?.nombre || "—"}</td>
+                    <td className="px-8 py-6">
+                      <span
+                        className={`inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide rounded-full ${
+                          t.publicado ? "bg-ok/10 text-ok" : "bg-muted/15 text-muted"
+                        }`}
+                      >
+                        {t.publicado ? "Publicado" : "Borrador"}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-muted text-xs">{formatDate(t.updatedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

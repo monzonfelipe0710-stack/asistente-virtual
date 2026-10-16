@@ -1,0 +1,49 @@
+import prisma from '../config/prisma.js';
+import bcrypt from 'bcrypt';
+
+export const registrarSolicitud = async (datos) => {
+  const passwordHash = await bcrypt.hash(datos.password, 10);
+
+  return prisma.usuario.create({
+    data: {
+      nombre: datos.nombre,
+      email: datos.email,
+      cuil: datos.cuil,
+      passwordHash,
+      rol: 'ADMINISTRADOR',
+    },
+  });
+};
+
+export const buscarPorEmail = async (email) => {
+  return prisma.usuario.findUnique({ where: {email} });
+};
+
+export const listarPendientes = async () => {
+  return prisma.usuario.findMany({
+    where: {estado: 'PENDIENTE'},
+    select: { id: true, nombre: true, email: true, cuil: true, estado: true, createdAt: true},
+    orderBy: { createdAt: 'asc'},
+  });
+};
+
+export const cambiarEstado = async (id, nuevoEstado) => {
+  return prisma.usuario.update({
+    where: { id },
+    data: { estado: nuevoEstado },
+    select: { id: true, nombre: true, email: true, cuil: true, estado: true},
+  });
+};
+
+export const obtenerPorId = async (id) => {
+  return prisma.usuario.findUnique({ where: {id} });
+};
+
+// Lista usuarios, opcionalmente filtrados por estado. Nunca devuelve passwordHash.
+export const listarUsuarios = async (estado) => {
+  return prisma.usuario.findMany({
+    where: estado ? { estado } : undefined,
+    select: { id: true, nombre: true, email: true, rol: true, estado: true, createdAt: true },
+    orderBy: [{ estado: 'asc' }, { nombre: 'asc' }],
+  });
+};
