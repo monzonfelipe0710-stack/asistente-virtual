@@ -9,8 +9,8 @@ import documentoRoutes from './documento.routes.js';
 const router = Router();
 
 router.post('/', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(tramiteController.crear));
-router.get('/', autenticar, asyncHandler(tramiteController.listar));
-router.get('/:id', autenticar, asyncHandler(tramiteController.obtener));
+router.get('/', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(tramiteController.listar));
+router.get('/:id', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(tramiteController.obtener));
 router.patch('/:id', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.actualizar));
 router.delete('/:id', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.eliminar));
 router.patch('/:id/publicar', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.publicar));

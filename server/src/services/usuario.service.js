@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 export const registrarSolicitud = async (datos) => {
   const passwordHash = await bcrypt.hash(datos.password, 10);
@@ -105,5 +106,29 @@ export const registrarCiudadano = async (datos) => {
 export const buscarPorDni = async (dni, genero) => {
   return prisma.usuario.findUnique({
     where: { dni_genero: { dni, genero } },
+  });
+};
+
+export const guardarTokenRecuperacion = async (id, tokenHash, expira) => {
+  return prisma.usuario.update({
+    where: { id },
+    data: { resetTokenHash: tokenHash, resetTokenExpira: expira },
+  });
+};
+
+export const buscarPorTokenRecuperacion = async (tokenHash) => {
+  return prisma.usuario.findFirst({
+    where: {
+      resetTokenHash: tokenHash,
+      resetTokenExpira: { gt: new Date() },
+    },
+  });
+};
+
+export const cambiarPassword = async (id, passwordNueva) => {
+  const passwordHash = await bcrypt.hash(passwordNueva, 10);
+  return prisma.usuario.update({
+    where: { id },
+    data: { passwordHash, resetTokenHash: null, resetTokenExpira: null },
   });
 };

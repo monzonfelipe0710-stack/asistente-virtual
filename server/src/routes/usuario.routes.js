@@ -14,6 +14,7 @@ router.post('/registro-ciudadano', registroLimiter, asyncHandler(usuarioControll
 // Solo superusuario: gestión de solicitudes  
 router.get('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listar));
 router.get('/pendientes', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listarPendientes));
+router.get('/me/sectores', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(usuarioController.misSectores));
 router.get('/:id/sectores', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listarSectores));
 router.put('/:id/sectores', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.asignarSectores));
 router.patch('/:id/aprobar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.aprobar));

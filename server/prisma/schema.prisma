@@ -151,6 +151,8 @@ model Usuario {
   updatedAt     DateTime @updatedAt @map("updated_at")
   dni           String?
   genero        Genero?
+  resetTokenHash String?  @map("reset_token_hash")
+  resetTokenExpira DateTime?  @map("reset_token_expira")
 
   sectores      UsuarioSector[]
   tramitesACargo Tramite[]
