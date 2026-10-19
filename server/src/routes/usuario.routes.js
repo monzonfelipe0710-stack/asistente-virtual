@@ -9,10 +9,13 @@ const router = Router();
 
 // Pública: registro de solicitud
 router.post('/registro', registroLimiter, asyncHandler(usuarioController.registrar));
+router.post('/registro-ciudadano', registroLimiter, asyncHandler(usuarioController.registrarCiudadano));
 
 // Solo superusuario: gestión de solicitudes  
 router.get('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listar));
 router.get('/pendientes', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listarPendientes));
+router.get('/:id/sectores', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listarSectores));
+router.put('/:id/sectores', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.asignarSectores));
 router.patch('/:id/aprobar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.aprobar));
 router.patch('/:id/rechazar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.rechazar));
 

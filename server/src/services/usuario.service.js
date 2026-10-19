@@ -46,3 +46,64 @@ export const listarUsuarios = async (estado) => {
     orderBy: [{ estado: 'asc' }, { nombre: 'asc' }],
   });
 };
+
+export const listarSectoresDeUsuario = async (usuarioId) => {
+  const filas = await prisma.usuarioSector.findMany({
+    where: { usuarioId },
+    select: { sector: { select: { id: true, nombre: true, tipo: true } } },
+    orderBy: { sectorId: 'asc' },
+  });
+  return filas.map((f) => f.sector);
+};
+
+export const usuarioTieneSector = async (usuarioId, sectorId) => {
+  const fila = await prisma.usuarioSector.findUnique({
+    where: { usuarioId_sectorId: { usuarioId, sectorId } },
+  });
+  return fila !== null;
+};
+
+export const contarSectoresExistentes = async (ids) => {
+  return prisma.sector.count({ where: { id: { in: ids } } });
+};
+
+export const asignarSectores = async (usuarioId, sectorIds) => {
+  return prisma.$transaction(async (tx) =>{
+    await tx.usuarioSector.deleteMany({ where: { usuarioId} });
+    if (sectorIds.length > 0) {
+      await tx.usuarioSector.createMany({
+        data: sectorIds.map((sectorId) => ({ usuarioId, sectorId })),
+        skipDuplicates: true,
+      });
+    }
+    const filas = await tx.usuarioSector.findMany({
+      where: { usuarioId },
+      select: { sector: { select: { id: true, nombre: true, tipo: true } } },
+      orderBy: { sectorId: 'asc' },
+    });
+    return filas.map((f) => f.sector);
+  });
+};
+
+export const registrarCiudadano = async (datos) => {
+  const passwordHash = await bcrypt.hash(datos.password, 10);
+
+  return prisma.usuario.create({
+    data: {
+      nombre: datos.nombre,
+      email: datos.email,
+      passwordHash,
+      rol: 'CIUDADANO',
+      estado: 'APROBADO',
+      dni: datos.dni,
+      genero: datos.genero,
+    },
+    select: { id: true, nombre: true, email: true, rol: true },
+  });
+};
+
+export const buscarPorDni = async (dni, genero) => {
+  return prisma.usuario.findUnique({
+    where: { dni_genero: { dni, genero } },
+  });
+};

@@ -17,6 +17,7 @@ datasource db {
 enum Rol {
   SUPERUSUARIO
   ADMINISTRADOR
+  CIUDADANO
 }
 
 enum TipoSector {
@@ -31,6 +32,11 @@ enum EstadoUsuario {
   APROBADO
   RECHAZADO
   SUSPENDIDO
+}
+
+enum Genero {
+  M
+  F
 }
 
 model Sector {
@@ -143,10 +149,14 @@ model Usuario {
   estado        EstadoUsuario @default(PENDIENTE)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  dni           String?
+  genero        Genero?
 
-  sectores UsuarioSector[]
+  sectores      UsuarioSector[]
   tramitesACargo Tramite[]
+  consultar     Consulta[]
 
+  @@unique([dni, genero])
   @@map("usuarios")
 }
 
@@ -169,7 +179,10 @@ model Consulta {
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)
+  usuarioId       Int?  @map("usuario_id")
+  usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@index([tramiteId])
+  @@index([usuarioId])
   @@map("consultas")
 }

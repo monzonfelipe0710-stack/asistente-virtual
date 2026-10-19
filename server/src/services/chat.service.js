@@ -1,12 +1,12 @@
-import { openai } from '../config/openai.js';
-import prisma from '../config/prisma.js';
-import { buscarTramites } from './busqueda.service.js';
-import { registrarConsulta } from './metrica.service.js';
+import { openai } from "../config/openai.js";
+import prisma from "../config/prisma.js";
+import { buscarTramites } from "./busqueda.service.js";
+import { registrarConsulta } from "./metrica.service.js";
 
-const MODELO_CHAT = 'gpt-4o-mini';
+const MODELO_CHAT = "gpt-4o-mini";
 
 const MENSAJE_SIN_RESPUESTA =
-  'No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.';
+  "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
 
 const SYSTEM_PROMPT = `
 Sos el asistente virtual de la administración pública de Formosa.
@@ -27,7 +27,7 @@ Formato de salida (obligatorio): devolvés un objeto JSON con estos campos:
 Si ningún trámite del contexto responde la consulta, poné "encontrado": false, "tramitesUsados": [] y en "respuesta" indicá que no encontraste información y sugerí reformular o consultar en una mesa de entrada.`;
 
 const formatearCosto = (costo) =>
-  costo == null || Number(costo) === 0 ? 'sin costo' : `$${costo}`;
+  costo == null || Number(costo) === 0 ? "sin costo" : `$${costo}`;
 
 const formatearTramite = (t) => {
   const lineas = [
@@ -37,35 +37,41 @@ const formatearTramite = (t) => {
   ];
 
   if (t.requisitos.length > 0) {
-    lineas.push('Requisitos:');
+    lineas.push("Requisitos:");
     for (const r of t.requisitos) {
       const extra = [
         r.dondeSeConsigue && `se consigue en ${r.dondeSeConsigue}`,
         r.costo != null && Number(r.costo) > 0 && `costo $${r.costo}`,
-      ].filter(Boolean).join(', ');
-      lineas.push(`- ${r.descripcion}${extra ? ` (${extra})` : ''}`);
+      ]
+        .filter(Boolean)
+        .join(", ");
+      lineas.push(`- ${r.descripcion}${extra ? ` (${extra})` : ""}`);
     }
   }
 
   if (t.mesas.length > 0) {
-    lineas.push('Dónde se presenta:');
+    lineas.push("Dónde se presenta:");
     for (const { mesa } of t.mesas) {
-      lineas.push(`- ${[mesa.nombre, mesa.direccion, mesa.localidad].filter(Boolean).join(', ')}`);
+      lineas.push(
+        `- ${[mesa.nombre, mesa.direccion, mesa.localidad].filter(Boolean).join(", ")}`,
+      );
     }
   }
 
   if (t.documentos.length > 0) {
-    lineas.push(`Formularios descargables: ${t.documentos.map((d) => d.nombre).join(', ')}`);
+    lineas.push(
+      `Formularios descargables: ${t.documentos.map((d) => d.nombre).join(", ")}`,
+    );
   }
 
-  return lineas.join('\n');
+  return lineas.join("\n");
 };
 
 const cargarDetalle = async (ids) => {
   const completos = await prisma.tramite.findMany({
     where: { id: { in: ids } },
     include: {
-      requisitos: { orderBy: { id: 'asc' } },
+      requisitos: { orderBy: { id: "asc" } },
       mesas: { include: { mesa: true } },
       documentos: { select: { nombre: true } },
     },
@@ -75,13 +81,22 @@ const cargarDetalle = async (ids) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-export const responderConsulta = async (pregunta) => {
+export const responderConsulta = async (pregunta, usuarioId = null) => {
   const encontrados = await buscarTramites(pregunta);
-  const tramites = encontrados.length > 0 ? await cargarDetalle(encontrados.map((t) => t.id)) : [];
+  const tramites =
+    encontrados.length > 0
+      ? await cargarDetalle(encontrados.map((t) => t.id))
+      : [];
 
   if (tramites.length === 0) {
-    registrarConsulta({ textoConsulta: pregunta, tramiteId: null, encontrado: false })
-      .catch((err) => console.error('Error al registrar consulta:', err.message));
+    registrarConsulta({
+      textoConsulta: pregunta,
+      tramiteId: null,
+      encontrado: false,
+      usuarioId,
+    }).catch((err) =>
+      console.error("Error al registrar consulta:", err.message),
+    );
 
     return {
       respuesta: MENSAJE_SIN_RESPUESTA,
@@ -90,29 +105,32 @@ export const responderConsulta = async (pregunta) => {
     };
   }
 
-  const contexto = tramites.map(formatearTramite).join('\n\n');
+  const contexto = tramites.map(formatearTramite).join("\n\n");
 
   const completion = await openai.chat.completions.create({
     model: MODELO_CHAT,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `Contexto:\n${contexto}\n\nPregunta del ciudadano: ${pregunta}` },
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: `Contexto:\n${contexto}\n\nPregunta del ciudadano: ${pregunta}`,
+      },
     ],
     temperature: 0.3,
     response_format: {
-      type: 'json_schema',
+      type: "json_schema",
       json_schema: {
-        name: 'respuesta_tramite',
+        name: "respuesta_tramite",
         strict: true,
         schema: {
-          type: 'object',
+          type: "object",
           additionalProperties: false,
           properties: {
-            respuesta: { type: 'string' },
-            encontrado: { type: 'boolean' },
-            tramitesUsados: { type: 'array', items: { type: 'integer' } },
+            respuesta: { type: "string" },
+            encontrado: { type: "boolean" },
+            tramitesUsados: { type: "array", items: { type: "integer" } },
           },
-          required: ['respuesta', 'encontrado', 'tramitesUsados'],
+          required: ["respuesta", "encontrado", "tramitesUsados"],
         },
       },
     },
@@ -121,7 +139,9 @@ export const responderConsulta = async (pregunta) => {
   const salida = JSON.parse(completion.choices[0].message.content);
 
   const idsDelContexto = new Set(tramites.map((t) => t.id));
-  const idsUsados = (salida.tramitesUsados ?? []).filter((id) => idsDelContexto.has(id));
+  const idsUsados = (salida.tramitesUsados ?? []).filter((id) =>
+    idsDelContexto.has(id),
+  );
   const encontrado = salida.encontrado === true && idsUsados.length > 0;
 
   const tramitesEncontrados = encontrado
@@ -135,7 +155,8 @@ export const responderConsulta = async (pregunta) => {
     textoConsulta: pregunta,
     tramiteId: encontrado ? idsUsados[0] : null,
     encontrado,
-  }).catch((err) => console.error('Error al registrar consulta:', err.message));
+    usuarioId,
+  }).catch((err) => console.error("Error al registrar consulta:", err.message));
 
   return {
     respuesta: encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA,

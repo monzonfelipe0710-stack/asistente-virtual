@@ -8,7 +8,7 @@ const consultaSchema = z.object({
 export const consultar = async (req, res) => {
   const { pregunta } = consultaSchema.parse(req.body);
 
-  const resultado = await chatService.responderConsulta(pregunta);
+  const resultado = await chatService.responderConsulta(pregunta, req.usuario?.id ?? null);
 
   res.json(resultado);
 };

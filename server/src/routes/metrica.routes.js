@@ -6,7 +6,7 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 
 const router = Router();
 
-router.get('/por-tramite', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(metricaController.porTramite));
-router.get('/sin-respuesta', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(metricaController.sinRespuesta));
+router.get('/por-tramite', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(metricaController.porTramite));
+router.get('/sin-respuesta', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(metricaController.sinRespuesta));
 
 export default router;

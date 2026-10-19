@@ -2,7 +2,7 @@ import * as documentoService from '../services/documento.service.js';
 
 // Busca el documento :docId y exige que pertenezca al trámite :id de la URL. Sin
 // este chequeo, el dueño de un trámite podía operar sobre documentos de otro
-// trámite con solo cambiar el docId, porque esPropietario valida el :id y nada más.
+// trámite con solo cambiar el docId, porque puedeGestionarTramite valida el :id y nada más.
 const obtenerDocumentoDelTramite = async (req) => {
   const id = Number(req.params.docId);
   const tramiteId = Number(req.params.id);

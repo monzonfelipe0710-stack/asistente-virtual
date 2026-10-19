@@ -9,6 +9,7 @@ import sectorRoutes from './src/routes/sector.routes.js'
 import tramiteRoutes from './src/routes/tramite.routes.js';
 import chatRoutes from './src/routes/chat.routes.js';
 import metricaRoutes from './src/routes/metrica.routes.js';
+import consultaRoutes from './src/routes/consulta.routes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/sectores', sectorRoutes);
 app.use('/api/tramites', tramiteRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/metricas', metricaRoutes);
+app.use('/api/consultas', consultaRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {

@@ -1,5 +1,6 @@
 import * as usuarioService from '../services/usuario.service.js';
-import { filtroUsuariosSchema, registroSchema } from '../validators/usuario.validator.js';
+import { filtroUsuariosSchema, registroSchema, asignarSectoresSchema, registroCiudadanoSchema } from '../validators/usuario.validator.js';
+import * as turnosService from '../services/turnos.service.js';
 
 export const registrar = async (req, res) => {
   const datos = registroSchema.parse(req.body);
@@ -116,4 +117,80 @@ export const reactivar = async (req, res) => {
 
   const actualizado = await usuarioService.cambiarEstado(id, 'APROBADO');
   res.json({ mensaje: 'Usuario reactivado.', usuario: actualizado });
+};
+
+export const listarSectores = async (req, res) => {
+  const id = Number(req.params.id);
+
+  const usuario = await usuarioService.obtenerPorId(id);
+  if (!usuario) {
+    const error = new Error('Usuario no encontrado.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const sectores = await usuarioService.listarSectoresDeUsuario(id);
+  res.json(sectores);
+};
+
+export const asignarSectores = async (req,res) => {
+  const id = Number(req.params.id);
+  const { sectorIds } = asignarSectoresSchema.parse(req.body);
+
+  const usuario = await usuarioService.obtenerPorId(id);
+  if (!usuario) {
+    const error = new Error('Usuario no encontrado.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (usuario. rol !== 'ADMINISTRADOR') {
+    const error = new Error('Los sectores solo pueden ser asignados a adminstradores.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const idsUnicos = [...new Set(sectorIds)];
+  const existentes = await usuarioService.contarSectoresExistentes(idsUnicos);
+  if (existentes !== idsUnicos.length) {
+    const error = new Error('Uno o más sectores no existen.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const sectores = await usuarioService.asignarSectores(id, idsUnicos);
+  res.json({ mensaje: 'Sectores actualizados.', sectores });
+};
+
+export const registrarCiudadano = async (req, res) => {
+  const datos = registroCiudadanoSchema.parse(req.body);
+
+  if (await usuarioService.buscarPorEmail(datos.email)) {
+    const error = new Error('Ya existe una cuenta registrada con ese correo.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (await usuarioService.buscarPorDni(datos.dni, datos.genero)) {
+    const error = new Error('Ya existe una cuenta registrada con ese DNI.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const persona = await turnosService.buscarPersona(datos.dni, datos.genero);
+  if (!persona) {
+    const error = new Error('No pudimos verificar tus datos en el padrón. Revisá el DNI y el sexo.');
+    error.statusCode = 422;
+    throw error;
+  }
+
+  const usuario = await usuarioService.registrarCiudadano({
+    ...datos,
+    nombre: persona.nombreCompleto,
+  });
+
+  res.status(201).json({
+    mensaje: 'Cuenta de ciudadano creada. Ya podés iniciar sesión.',
+    usuario,
+  });
 };
