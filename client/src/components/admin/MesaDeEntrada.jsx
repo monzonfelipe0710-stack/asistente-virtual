@@ -334,8 +334,8 @@ function MesaFormModal({ onClose, onSubmit }) {
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 ${closing ? "animate-fade-out" : "animate-fade-in"}`}>
-      <div className={`card w-full max-w-205 p-0 ${closing ? "animate-scale-out" : "animate-scale-in"} shadow-2xl ${shake ? "animate-shake" : ""}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 bg-ink/50 ${closing ? "animate-fade-out" : "animate-fade-in"}`}>
+      <div className={`card w-full max-w-205 p-0 bg-paper ${closing ? "animate-scale-out" : "animate-scale-in"} shadow-2xl ${shake ? "animate-shake" : ""}`}>
         <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-line">
           <div className="flex items-center gap-2.5">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 text-brand">
@@ -589,7 +589,7 @@ function MesaDetailModal({ entry, onClose, onChangeStatus }) {
       }`}
     >
       <div
-        className={`card w-full max-w-lg p-6 ${
+        className={`card w-full max-w-lg p-6 bg-paper ${
           closing ? "animate-scale-out" : "animate-scale-in"
         }`}
       >
@@ -759,7 +759,7 @@ function DocumentViewerModal({ file, onClose }) {
       }`}
     >
       <div
-        className={`card w-full max-w-4xl p-0 overflow-hidden flex flex-col max-h-[92vh] ${
+        className={`card w-full max-w-4xl p-0 bg-paper overflow-hidden flex flex-col max-h-[92vh] ${
           closing ? "animate-scale-out" : "animate-scale-in"
         }`}
       >
