@@ -1,11 +1,62 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../admin/ui";
 import { Icon, ICONS, SectionHeader, EmptyNote } from "../ui";
+import { useSessionStore } from "../../../store/session";
+import { resumenConsultas } from "../../../services/consultas";
+import { apiErrorMessage } from "../../../lib/api";
+
+const TOPIC_LABELS = {
+  licencias: "Licencias",
+  haberes: "Haberes",
+  expedientes: "Expedientes",
+  legajos: "Legajos",
+  formularios: "Formularios",
+  ubicaciones: "Oficinas y ubicaciones",
+  requisitos: "Requisitos de trámites",
+};
 
 export default function Resumen({ data, role, onGo }) {
   const navigate = useNavigate();
+  const token = useSessionStore((state) => state.token);
+  const [activityState, setActivityState] = useState({
+    token: null,
+    data: null,
+    error: "",
+  });
+  const activity = activityState.token === token ? activityState.data : null;
+  const activityError = activityState.token === token ? activityState.error : "";
+  const activityLoading =
+    Boolean(token && role === "CIUDADANO" && activityState.token !== token);
   const isSuper = data.isSuperadmin;
   const isAdmin = role === "ADMINISTRADOR";
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!token || role !== "CIUDADANO") {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    resumenConsultas()
+      .then((result) => {
+        if (!cancelled) setActivityState({ token, data: result, error: "" });
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setActivityState({
+            token,
+            data: null,
+            error: apiErrorMessage(error),
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, role]);
 
   if (isSuper) {
     const stats = [
@@ -64,6 +115,46 @@ export default function Resumen({ data, role, onGo }) {
         <StatCard label="Conversaciones" value={data.chatSessions.length} tone="ok" hint="con ChatAP" icon={<Icon path={ICONS.chat} />} />
         <StatCard label="Notificaciones" value={data.notificationsUnread} tone="warn" hint={data.notificationsUnread ? "sin leer" : "todo leído"} icon={<Icon path={ICONS.bell} />} />
       </div>
+
+      <section className="card card-border p-5" aria-labelledby="consultas-resumen">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 id="consultas-resumen" className="text-sm font-bold text-ink m-0">
+              Tu actividad de consultas
+            </h3>
+            <p className="text-xs text-muted m-0 mt-1">
+              Temas y consultas acumulados durante el mes actual.
+            </p>
+          </div>
+          {activity && (
+            <p className="text-sm font-semibold text-brand-deep m-0">
+              {activity.ultimoMes} consulta{activity.ultimoMes === 1 ? "" : "s"} este mes
+            </p>
+          )}
+        </div>
+        {activityError ? (
+          <p role="alert" className="mt-4 text-sm text-bad">{activityError}</p>
+        ) : activityLoading ? (
+          <p role="status" className="mt-4 text-sm text-muted">Cargando tu resumen…</p>
+        ) : !token ? (
+          <p className="mt-4 text-sm text-muted">
+            El resumen personal estará disponible cuando uses una cuenta conectada al backend.
+          </p>
+        ) : activity?.topicos?.length ? (
+          <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {activity.topicos.map((topic) => (
+              <li key={topic.topico} className="flex items-center justify-between gap-3 rounded-xl bg-mist px-3 py-2.5">
+                <span className="text-sm text-ink">{TOPIC_LABELS[topic.topico] || topic.topico}</span>
+                <span className="text-sm font-bold text-brand-deep">
+                  {topic.cantidad}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-4 text-sm text-muted">Todavía no registramos consultas este mes.</p>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {data.myTramites.length > 0 ? (

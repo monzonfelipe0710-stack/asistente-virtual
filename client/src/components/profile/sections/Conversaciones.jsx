@@ -23,7 +23,19 @@ export default function Conversaciones() {
         title="Mis conversaciones"
         description="Tu historial de consultas con ChatAP, agrupado por sesión."
       />
-      {sessions.length === 0 ? (
+      {data.chatHistoryError ? (
+        <div className="card card-border" role="alert">
+          <EmptyNote
+            icon={<Icon path={ICONS.alert} className="w-10 h-10 mx-auto" />}
+            title="No se pudo cargar tu historial"
+            description={data.chatHistoryError}
+          />
+        </div>
+      ) : data.chatHistoryLoading ? (
+        <div className="card card-border py-6 text-center text-sm text-muted" role="status">
+          Cargando tus conversaciones…
+        </div>
+      ) : sessions.length === 0 ? (
         <div className="card card-border">
           <EmptyNote
             icon={<Icon path={ICONS.chat} className="w-10 h-10 mx-auto" />}

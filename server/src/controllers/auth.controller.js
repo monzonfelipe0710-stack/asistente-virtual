@@ -13,16 +13,25 @@ const MENSAJES_ESTADO = {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = loginSchema.parse(req.body);
+  const { email, dni, password } = loginSchema.parse(req.body);
+  const candidatos = email
+    ? [await prisma.usuario.findUnique({ where: { email } })].filter(Boolean)
+    : await prisma.usuario.findMany({ where: { dni } });
+  const coincidentes = [];
+  for (const candidato of candidatos) {
+    if (await bcrypt.compare(password, candidato.passwordHash)) {
+      coincidentes.push(candidato);
+    }
+  }
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
-
-  // 1. Identidad: email existe + contraseña correcta (mensaje genérico a propósito)
-  if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
+  // El DNI puede estar asociado a dos cuentas (una por género); solo se acepta
+  // cuando la contraseña identifica exactamente una de ellas.
+  if (coincidentes.length !== 1) {
     const error = new Error('Credenciales inválidas');
     error.statusCode = 401;
     throw error;
   }
+  const usuario = coincidentes[0];
 
   // 2. Recién con identidad confirmada, informamos el estado
   if (usuario.estado !== 'APROBADO') {
@@ -39,7 +48,14 @@ export const login = async (req, res) => {
 
   res.json({
     token,
-    usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol },
+    usuario: {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+      dni: usuario.dni,
+      genero: usuario.genero,
+    },
   });
 };
 

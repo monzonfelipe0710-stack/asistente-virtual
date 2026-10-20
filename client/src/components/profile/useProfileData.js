@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { loadUsers } from "../../lib/auth";
-import { readJSON } from "../../lib/auth";
 import { loadEmployeeRequests } from "../../lib/employeeRequests";
 import { sigedRecords } from "../../data/mockSiged";
 import { loadNotifications } from "../../lib/notifications";
 import { loadSessionsFor, currentSession } from "../../lib/sessions";
 import { loadPreferences } from "../../lib/preferences";
 import { personalActivity, activityFeed } from "../../lib/activity";
+import { useChat } from "../../context/ChatContext";
 
 const SIGED_LIVE = ["Ingresado", "En proceso"];
 
@@ -18,7 +18,7 @@ export function groupChatSessions(messages = []) {
   let current = null;
   for (const msg of messages) {
     const t = msg.timestamp ? new Date(msg.timestamp).getTime() : 0;
-    if (!current || current.lastAt - t > 40 * 60 * 1000) {
+    if (!current || t - current.lastAt > 40 * 60 * 1000) {
       current = { messages: [], startedAt: t, lastAt: t };
       sessions.push(current);
     }
@@ -30,6 +30,11 @@ export function groupChatSessions(messages = []) {
 
 export function useProfileData() {
   const { user, userRole, isSuperadmin } = useAuth();
+  const {
+    messages: chatMessages,
+    historyError: chatHistoryError,
+    historyLoading: chatHistoryLoading,
+  } = useChat();
 
   return useMemo(() => {
     if (!user) return null;
@@ -51,7 +56,6 @@ export function useProfileData() {
     const sessions = loadSessionsFor(user.id);
     const session = currentSession();
     const prefs = loadPreferences(user.id);
-    const chatMessages = readJSON(`chatap.history.${user.id}`, []);
     const chatSessions = groupChatSessions(chatMessages);
 
     const requestsByStatus = (s) => allRequests.filter((r) => r.status === s).length;
@@ -98,6 +102,8 @@ export function useProfileData() {
       // Conversaciones
       chatMessages,
       chatSessions,
+      chatHistoryError,
+      chatHistoryLoading,
 
       // Sesiones
       sessions,
@@ -107,7 +113,7 @@ export function useProfileData() {
       myActivity: personalActivity(user.id, 50),
       systemActivity: isSuperadmin ? activityFeed(60) : [],
     };
-  }, [user, userRole, isSuperadmin]);
+  }, [user, userRole, isSuperadmin, chatMessages, chatHistoryError, chatHistoryLoading]);
 }
 
 // Estado legible para la UI de cada solicitud de empleado.

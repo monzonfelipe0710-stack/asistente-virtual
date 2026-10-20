@@ -176,7 +176,10 @@ model UsuarioSector {
 model Consulta {
   id              Int @id @default(autoincrement())
   textoConsulta   String @map("texto_consulta")
+  respuesta       String?
   encontrado      Boolean @default(false)
+  calificacion    Int?
+  topico          String?
   fecha           DateTime @default(now())
 
   tramiteId Int? @map("tramite_id")

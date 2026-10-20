@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "./AuthContext";
 import { readJSON, writeJSON } from "../lib/auth";
+import { useSessionStore } from "../store/session";
+import { misConsultas } from "../services/consultas";
+import { apiErrorMessage } from "../lib/api";
 
 const ChatContext = createContext(null);
 
@@ -30,47 +33,145 @@ function saveHistory(userId, messages) {
 
 export function ChatProvider({ children }) {
   const { user } = useAuth();
+  const token = useSessionStore((state) => state.token);
+  const ownerId = user?.id || null;
   const [messages, setMessages] = useState([]);
+  const [consultas, setConsultas] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
   const ownerRef = useRef(null);
 
-  // Cuando el usuario autenticado cambia, hidratamos su historial desde
-  // localStorage. Para invitados la conversación es efímera (sin persistir).
+  // Las cuentas del backend hidratan el historial desde Consulta. La memoria
+  // local queda solo como compatibilidad para las cuentas demo ya existentes.
   useEffect(() => {
     const ownerId = user?.id || null;
     ownerRef.current = ownerId;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMessages(ownerId ? loadHistory(ownerId) : []);
-  }, [user?.id]);
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setConsultas([]);
+      setHistoryError("");
+      setHistoryLoading(Boolean(ownerId && token));
+      setMessages(ownerId && !token ? loadHistory(ownerId) : []);
+    });
+
+    if (ownerId && token) {
+      misConsultas()
+        .then((rows) => {
+          if (cancelled) return;
+          const ordered = [...rows].sort(
+            (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+          );
+          const loadedIds = new Set(ordered.map((consulta) => consulta.id));
+          const newestFirst = [...rows].sort(
+            (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+          );
+          setConsultas((previous) => [
+            ...previous.filter((consulta) => !loadedIds.has(consulta.id)),
+            ...newestFirst,
+          ]);
+          const loadedMessages = ordered.flatMap((consulta) => {
+              const timestamp = new Date(consulta.fecha).toISOString();
+              const pair = [{
+                id: `consulta-${consulta.id}-pregunta`,
+                type: "user",
+                text: consulta.textoConsulta,
+                timestamp,
+                consultaId: consulta.id,
+              }];
+              if (consulta.respuesta) {
+                pair.push({
+                  id: `consulta-${consulta.id}-respuesta`,
+                  type: "bot",
+                  text: consulta.respuesta,
+                  action: consulta.tramite
+                    ? {
+                        type: "checklist",
+                        tramiteId: consulta.tramite.id,
+                        tramiteNombre: consulta.tramite.nombre,
+                        label: `Descargar checklist · ${consulta.tramite.nombre}`,
+                      }
+                    : null,
+                  timestamp,
+                  consultaId: consulta.id,
+                  calificacion: consulta.calificacion,
+                  canRate: true,
+                });
+              }
+              return pair;
+            });
+          setMessages((previous) => [
+            ...loadedMessages,
+            ...previous.filter(
+              (message) => !message.consultaId || !loadedIds.has(message.consultaId)
+            ),
+          ]);
+        })
+        .catch((error) => {
+          if (!cancelled) setHistoryError(apiErrorMessage(error));
+        })
+        .finally(() => {
+          if (!cancelled) setHistoryLoading(false);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, token]);
 
   const addMessage = useCallback(
-    (type, text, action = null) => {
+    (type, text, action = null, metadata = null) => {
+      if (token && ownerRef.current !== ownerId) return null;
       const msg = {
         id: Date.now() + Math.random().toString(36).slice(2, 8),
         type,
         text,
         action,
         timestamp: new Date().toISOString(),
+        ...metadata,
       };
       setMessages((prev) => {
         const next = [...prev, msg];
-        if (ownerRef.current) saveHistory(ownerRef.current, next);
+        if (ownerRef.current && !token) saveHistory(ownerRef.current, next);
         return next;
       });
       return msg.id;
     },
-    []
+    [ownerId, token]
   );
+
+  const updateMessage = useCallback((messageId, updates) => {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId ? { ...message, ...updates } : message
+      )
+    );
+  }, []);
+
+  const recordConsulta = useCallback((consulta, expectedOwnerId) => {
+    if (!token || ownerRef.current !== expectedOwnerId || !consulta?.id) return;
+    setConsultas((prev) => [
+      consulta,
+      ...prev.filter((row) => row.id !== consulta.id),
+    ]);
+  }, [token]);
 
   const clearHistory = useCallback(() => {
     setMessages([]);
-    if (ownerRef.current) writeJSON(historyKey(ownerRef.current), []);
-  }, []);
+    if (ownerRef.current && !token) writeJSON(historyKey(ownerRef.current), []);
+  }, [token]);
 
   return (
     <ChatContext.Provider
       value={{
         messages,
+        consultas,
+        historyLoading,
+        historyError,
         addMessage,
+        updateMessage,
+        recordConsulta,
         clearHistory,
         hasHistory: messages.length > 0,
       }}

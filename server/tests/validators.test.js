@@ -11,10 +11,15 @@ const mensaje = (schema, valor) => schema.safeParse(valor).error?.issues[0].mess
 describe('loginSchema', () => {
   it('acepta credenciales válidas', () => {
     assert.equal(loginSchema.safeParse({ email: 'a@b.com', password: 'x' }).success, true);
+    assert.equal(loginSchema.safeParse({ dni: '12345678', password: 'x' }).success, true);
   });
 
   it('rechaza un email mal formado', () => {
     assert.equal(mensaje(loginSchema, { email: 'no-es-email', password: 'x' }), 'El email no es válido.');
+  });
+
+  it('rechaza un DNI con formato inválido', () => {
+    assert.equal(loginSchema.safeParse({ dni: '123', password: 'x' }).success, false);
   });
 
   it('rechaza una contraseña vacía', () => {

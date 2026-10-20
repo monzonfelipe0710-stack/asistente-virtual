@@ -29,6 +29,24 @@ Si ningún trámite del contexto responde la consulta, poné "encontrado": false
 const formatearCosto = (costo) =>
   costo == null || Number(costo) === 0 ? "sin costo" : `$${costo}`;
 
+const TOPICOS = [
+  { id: "licencias", keywords: ["licencia", "vacaciones", "permiso"] },
+  { id: "haberes", keywords: ["recibo", "sueldo", "haberes", "miportal", "mi portal"] },
+  { id: "expedientes", keywords: ["expediente", "siged", "seguimiento"] },
+  { id: "legajos", keywords: ["legajo", "legajos"] },
+  { id: "formularios", keywords: ["formulario", "plantilla", "descarga", "formato"] },
+  { id: "ubicaciones", keywords: ["ubicación", "ubicacion", "dirección", "dónde", "donde", "oficina", "horario"] },
+  { id: "requisitos", keywords: ["requisito", "qué necesito", "que necesito", "documentación", "documentacion"] },
+];
+
+const detectarTopico = (texto) => {
+  const t = String(texto || "").toLowerCase();
+  for (const topico of TOPICOS) {
+    if (topico.keywords.some((k) => t.includes(k))) return topico.id;
+  }
+  return null;
+};
+
 const formatearTramite = (t) => {
   const lineas = [
     `Trámite (id ${t.id}): ${t.nombre}`,
@@ -89,16 +107,18 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
       : [];
 
   if (tramites.length === 0) {
-    registrarConsulta({
+    const consulta = await registrarConsulta({
       textoConsulta: pregunta,
+      respuesta: MENSAJE_SIN_RESPUESTA,
       tramiteId: null,
       encontrado: false,
       usuarioId,
-    }).catch((err) =>
-      console.error("Error al registrar consulta:", err.message),
-    );
+      topico: detectarTopico(pregunta),
+    });
 
     return {
+      consultaId: consulta.id,
+      consultaFecha: consulta.fecha,
       respuesta: MENSAJE_SIN_RESPUESTA,
       tramitesEncontrados: [],
       encontrado: false,
@@ -151,15 +171,21 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
       })
     : [];
 
-  registrarConsulta({
+  const respuestaFinal = encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA;
+
+  const consulta = await registrarConsulta({
     textoConsulta: pregunta,
+    respuesta: respuestaFinal,
     tramiteId: encontrado ? idsUsados[0] : null,
     encontrado,
     usuarioId,
-  }).catch((err) => console.error("Error al registrar consulta:", err.message));
+    topico: detectarTopico(pregunta),
+  });
 
   return {
-    respuesta: encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA,
+    consultaId: consulta.id,
+    consultaFecha: consulta.fecha,
+    respuesta: respuestaFinal,
     tramitesEncontrados,
     encontrado,
   };

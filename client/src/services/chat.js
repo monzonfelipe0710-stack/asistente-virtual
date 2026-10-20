@@ -19,3 +19,9 @@ export async function preguntar(pregunta, imagen = null) {
   );
   return data;
 }
+
+/** GET /api/chat/checklist/:tramiteId — requisitos y datos para preparar la presentación. */
+export async function obtenerChecklist(tramiteId) {
+  const { data } = await api.get(`/api/chat/checklist/${tramiteId}`);
+  return data;
+}

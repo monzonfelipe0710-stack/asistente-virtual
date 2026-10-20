@@ -23,6 +23,8 @@ export default function ChatHistoryPanel({
   onNewChat,
   onDelete,
   onClearAll,
+  loading = false,
+  error = "",
   className = "",
 }) {
   const visible = queries.slice(0, HISTORY_LIMIT);
@@ -47,7 +49,7 @@ export default function ChatHistoryPanel({
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted m-0">
             Historial de consultas
           </h2>
-          {visible.length > 0 && (
+          {visible.length > 0 && onClearAll && (
             <button
               type="button"
               onClick={() => onClearAll?.()}
@@ -58,7 +60,15 @@ export default function ChatHistoryPanel({
           )}
         </div>
 
-        {visible.length === 0 ? (
+        {error ? (
+          <p role="alert" className="text-sm text-bad m-0 px-1 leading-relaxed">
+            No se pudo cargar el historial: {error}
+          </p>
+        ) : loading ? (
+          <p role="status" className="text-sm text-muted m-0 px-1 leading-relaxed">
+            Cargando historial…
+          </p>
+        ) : visible.length === 0 ? (
           <p className="text-sm text-muted m-0 px-1 leading-relaxed">
             Todavía no hiciste consultas. Cuando le preguntes algo a ChatAP, vas a poder
             retomarlo desde acá.
@@ -66,8 +76,8 @@ export default function ChatHistoryPanel({
         ) : (
           <ul className="list-none m-0 p-0 flex flex-col gap-1">
             {visible.map((query) => (
-              <li key={`${query.at || ""}-${query.text}`} className="flex items-stretch gap-1">
-                <button
+              <li key={query.id ?? `${query.at || ""}-${query.text}`} className="flex items-stretch gap-1">
+                {onDelete && <button
                   type="button"
                   onClick={() => onSelect?.(query.text)}
                   className="flex-1 min-w-0 text-left rounded-xl border border-transparent hover:border-line hover:bg-mist px-3 py-2.5 transition-colors cursor-pointer"
@@ -76,7 +86,7 @@ export default function ChatHistoryPanel({
                   {query.at && (
                     <span className="block text-[11px] text-muted mt-0.5">{formatWhen(query.at)}</span>
                   )}
-                </button>
+                </button>}
                 <button
                   type="button"
                   onClick={() => onDelete?.(query.at)}

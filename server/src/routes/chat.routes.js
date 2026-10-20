@@ -13,5 +13,6 @@ const chatLimiter = rateLimit({
 });
 
 router.post('/', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultar));
+router.get('/checklist/:tramiteId', asyncHandler(chatController.checklist));
 
 export default router;
