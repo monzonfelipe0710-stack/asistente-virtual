@@ -53,3 +53,18 @@ export const eliminarDocumento = async (documento) => {
 
   return prisma.documento.delete({ where: { id: documento.id } });
 };
+
+// Borra de R2 los archivos de documentos cuyos registros ya se eliminaron (por
+// ejemplo, en cascada al borrar un trámite). Un fallo solo se loguea: el registro
+// ya no existe y no tiene sentido revertir la operación por un archivo huérfano.
+export const eliminarArchivos = async (keys) => {
+  const resultados = await Promise.allSettled(
+    keys.map((key) => r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key })))
+  );
+
+  resultados.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(`Error al borrar de R2 el archivo ${keys[i]}`, r.reason?.message);
+    }
+  });
+};

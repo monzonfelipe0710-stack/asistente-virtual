@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { loginSchema } from '../src/validators/auth.validators.js';
 import { registroSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
 import { crearSectorSchema, actualizarSectorSchema } from '../src/validators/sector.validator.js';
+import { crearTramiteSchema, actualizarTramiteSchema } from '../src/validators/tramite.validator.js';
 
 const mensaje = (schema, valor) => schema.safeParse(valor).error?.issues[0].message;
 
@@ -28,23 +29,8 @@ describe('registroSchema', () => {
   });
 
   it('acepta un registro completo', () => {
-    const r = registroSchema.safeParse({
-      nombre: 'Ana',
-      email: 'a@b.com',
-      password: '12345678',
-      cuil: '20-12345678-6',
-    });
+    const r = registroSchema.safeParse({ nombre: 'Ana', email: 'a@b.com', password: '12345678' });
     assert.equal(r.success, true);
-  });
-
-  it('rechaza un CUIL con dígito verificador inválido', () => {
-    const r = registroSchema.safeParse({
-      nombre: 'Ana',
-      email: 'a@b.com',
-      password: '12345678',
-      cuil: '20-12345678-0',
-    });
-    assert.equal(r.success, false);
   });
 });
 
@@ -79,6 +65,34 @@ describe('crearSectorSchema', () => {
 
   it('el schema de actualización deja todos los campos opcionales', () => {
     assert.equal(actualizarSectorSchema.safeParse({}).success, true);
+  });
+});
+
+describe('crearTramiteSchema', () => {
+  const base = { nombre: 'Licencia', descripcion: 'Desc', sectorId: 1 };
+
+  it('completa requisitos y mesaIds vacíos si no vienen', () => {
+    const t = crearTramiteSchema.parse(base);
+    assert.deepEqual([t.requisitos, t.mesaIds], [[], []]);
+  });
+
+  it('acepta mesaIds con el nombre que espera el service', () => {
+    // Regresión: el validator usaba `mesaId` y el service `mesaIds`, y crear fallaba siempre.
+    assert.deepEqual(crearTramiteSchema.parse({ ...base, mesaIds: [1, 2] }).mesaIds, [1, 2]);
+  });
+});
+
+describe('actualizarTramiteSchema', () => {
+  it('no agrega requisitos ni mesas que no vinieron en el body', () => {
+    // Regresión: en Zod 4 los .default([]) se aplicaban dentro de .partial(), y un
+    // PATCH que solo cambiaba el nombre borraba todos los requisitos y mesas.
+    const t = actualizarTramiteSchema.parse({ nombre: 'Otro' });
+    assert.equal('requisitos' in t, false);
+    assert.equal('mesaIds' in t, false);
+  });
+
+  it('respeta un array vacío explícito para vaciar los requisitos', () => {
+    assert.deepEqual(actualizarTramiteSchema.parse({ requisitos: [] }).requisitos, []);
   });
 });
 

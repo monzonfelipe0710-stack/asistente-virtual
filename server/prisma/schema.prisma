@@ -24,6 +24,7 @@ enum TipoSector {
   MINISTERIO
   SUBSECRETARIA
   DEPARTAMENTO
+  ORGANISMO
 }
 
 enum EstadoUsuario {
@@ -31,6 +32,11 @@ enum EstadoUsuario {
   APROBADO
   RECHAZADO
   SUSPENDIDO
+}
+
+enum Genero {
+  M
+  F
 }
 
 model Sector {
@@ -73,6 +79,8 @@ model Tramite {
   documentos  Documento[]
   mesas       TramiteMesa[]
   consultas   Consulta[]
+
+  fuenteUrl   String?  @unique @map("fuente_url")
 
   @@index([sectorId])
   @@map("tramites")
@@ -136,16 +144,21 @@ model Usuario {
   id            Int @id @default(autoincrement())
   nombre        String
   email         String @unique
-  cuil          String? @unique @db.VarChar(11)
   passwordHash  String @map("password_hash")
   rol           Rol @default(ADMINISTRADOR)
   estado        EstadoUsuario @default(PENDIENTE)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
+  dni           String?
+  genero        Genero?
+  resetTokenHash String?  @map("reset_token_hash")
+  resetTokenExpira DateTime?  @map("reset_token_expira")
 
-  sectores UsuarioSector[]
+  sectores      UsuarioSector[]
   tramitesACargo Tramite[]
+  consultar     Consulta[]
 
+  @@unique([dni, genero])
   @@map("usuarios")
 }
 
@@ -168,7 +181,10 @@ model Consulta {
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)
+  usuarioId       Int?  @map("usuario_id")
+  usuario         Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
   @@index([tramiteId])
+  @@index([usuarioId])
   @@map("consultas")
 }

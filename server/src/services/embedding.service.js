@@ -14,7 +14,7 @@ export const generarEmbedding = async (texto) => {
 
 export const textoDeTramite = (tramite) => {
   const partes = [
-    `Tramite: ${tramite.nombre}.`,
+    `Trámite: ${tramite.nombre}.`,
     `Descripción: ${tramite.descripcion}.`,
   ];
 

@@ -26,3 +26,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Carpetas de prueba
+cliente-prueba
+BACKEND_CONTEXTO.md
+test-frontend
+
+# Vite cache
+.vite

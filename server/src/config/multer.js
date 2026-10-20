@@ -11,7 +11,7 @@ export const upload = multer({
     fileSize: 10 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
-    if (TIPOS_PERMITIDOS.incldues(file.mimetype)) {
+    if (TIPOS_PERMITIDOS.includes(file.mimetype)) {
       cb(null, true);
     } else {
       const error = new Error('Solo se permiten archivos PDF o DOCX.');

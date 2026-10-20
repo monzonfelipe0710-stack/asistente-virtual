@@ -7,8 +7,8 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 const router = Router();
 
 router.post('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(sectorController.crear));
-router.get('/', autenticar, asyncHandler(sectorController.listar));
-router.get('/:id', autenticar, asyncHandler(sectorController.obtener));
+router.get('/', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(sectorController.listar));
+router.get('/:id', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(sectorController.obtener));
 router.patch('/:id', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(sectorController.actualizar));
 router.delete('/:id', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(sectorController.eliminar));
 
