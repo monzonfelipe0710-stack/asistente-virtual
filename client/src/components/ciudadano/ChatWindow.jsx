@@ -6,9 +6,12 @@ import ChatHistoryPanel from "./ChatHistoryPanel";
 import Modal from "../common/Modal";
 import { BotReactionController } from "./BotReactionController";
 import { wizards, wizardLabels } from "../../data/wizard";
-import { preguntar } from "../../services/chat";
+import { obtenerChecklist, preguntar } from "../../services/chat";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
+import { useSessionStore } from "../../store/session";
+import { apiErrorMessage } from "../../lib/api";
+import { useToast } from "../common/Toast";
 import useA11y from "../../hooks/useA11y";
 import {
   rememberMessage,
@@ -90,8 +93,19 @@ const CHATAP_PILLS = [
 ];
 
 export default function ChatWindow({ initialQuery = null }) {
-  const { messages, addMessage, clearHistory } = useChat();
+  const {
+    messages,
+    consultas,
+    historyLoading,
+    historyError,
+    addMessage,
+    updateMessage,
+    recordConsulta,
+    clearHistory,
+  } = useChat();
   const { user, isAuthenticated } = useAuth();
+  const token = useSessionStore((state) => state.token);
+  const toast = useToast();
   const [input, setInput] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -247,19 +261,46 @@ export default function ChatWindow({ initialQuery = null }) {
   // Memoria: cargamos el contexto del usuario para personalizar la bienvenida.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setWelcomeMem(userId ? loadMemory(userId) : null);
-  }, [userId]);
+    setWelcomeMem(
+      !userId
+        ? null
+        : token
+          ? {
+              count: consultas.length,
+              lastTopic: consultas[0]?.topico === "haberes"
+                ? "recibos"
+                : consultas[0]?.topico === "requisitos"
+                  ? "tramites"
+                  : consultas[0]?.topico,
+              topics: consultas.reduce((counts, consulta) => {
+                const topic = consulta.topico === "haberes"
+                  ? "recibos"
+                  : consulta.topico === "requisitos"
+                    ? "tramites"
+                    : consulta.topico;
+                if (topic) counts[topic] = (counts[topic] || 0) + 1;
+                return counts;
+              }, {}),
+              preferredOffice: null,
+            }
+          : loadMemory(userId)
+    );
+  }, [userId, token, consultas]);
 
-  // Historial de consultas del usuario con cuenta (hasta 4, más nuevas
-  // primero). Se recalcula cuando cambia la conversación o al borrar entradas.
+  // Las cuentas backend usan Consulta; las cuentas demo conservan su memoria local.
   const historyQueries = useMemo(() => {
     if (!userId) return [];
+    if (token) {
+      return consultas.slice(0, 4).map((consulta) => ({
+        id: consulta.id,
+        text: consulta.textoConsulta,
+        at: consulta.fecha,
+      }));
+    }
     const mem = loadMemory(userId);
     return (mem?.messages ?? []).slice().reverse();
-    // La memoria vive en localStorage y se actualiza fuera de React: recalculamos
-    // cuando cambia la conversación o el historial (dependencias intencionales).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, messages, historyVersion]);
+  }, [userId, token, consultas, messages, historyVersion]);
 
   // Modo lector de pantalla: al terminar de responder, el foco pasa a la
   // última respuesta para que el lector externo (NVDA, JAWS, VoiceOver) la
@@ -307,11 +348,19 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   /** Añade el mensaje del bot con efecto de tipeo y reacciones del avatar. */
-  function presentBotMessage(finalText, finalActions, { error = false } = {}) {
+  function presentBotMessage(
+    finalText,
+    finalActions,
+    { error = false, consultaId = null, canRate = false, calificacion = null } = {}
+  ) {
     setIsTyping(false);
     clearInterval(typingTimerRef.current);
 
-    const id = addMessage("bot", finalText, finalActions || undefined);
+    const id = addMessage("bot", finalText, finalActions || undefined, {
+      consultaId,
+      canRate,
+      calificacion,
+    });
 
     // La invitación a iniciar sesión aparece de forma fluida tras la primera respuesta.
     setPromoReady(true);
@@ -368,22 +417,24 @@ export default function ChatWindow({ initialQuery = null }) {
     }, charDelay);
   }
 
-  async function respondTo(userText, image = null) {
+  async function respondTo(userText, image = null, userMessageId = null) {
     setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
 
     let finalText;
     let finalActions = null;
+    let consultationData = null;
     let error = false;
 
     try {
       const data = await preguntar(userText.slice(0, MAX_PREGUNTA), image);
+      consultationData = data;
       finalText =
         String(data?.respuesta || "").trim() ||
         "No pude generar una respuesta. Probá reformulando la consulta.";
 
       const tramites = Array.isArray(data?.tramitesEncontrados)
-        ? data.tramitesEncontrados.filter((t) => t?.nombre)
+        ? data.tramitesEncontrados.filter((t) => t?.nombre && Number.isInteger(t?.id))
         : [];
       if (tramites.length) {
         finalActions = [
@@ -392,6 +443,12 @@ export default function ChatWindow({ initialQuery = null }) {
             title: "Trámites relacionados:",
             options: tramites.map((t) => ({ label: t.nombre, value: t.nombre })),
           },
+          ...tramites.map((tramite) => ({
+            type: "checklist",
+            tramiteId: tramite.id,
+            tramiteNombre: tramite.nombre,
+            label: `Descargar checklist · ${tramite.nombre}`,
+          })),
         ];
       }
     } catch (err) {
@@ -417,7 +474,7 @@ export default function ChatWindow({ initialQuery = null }) {
     // y/o le recuerda lo que venía consultando.
     if (!error && isAuthenticated && user?.name && !greetedRef.current) {
       greetedRef.current = true;
-      const mem = userId ? loadMemory(userId) : null;
+      const mem = userId ? (token ? welcomeMem : loadMemory(userId)) : null;
       const firstName = user.name.split(" ")[0];
       const reminder = mem && mem.count > 0 ? buildReminder(mem, user.name) : null;
       if (reminder) {
@@ -427,7 +484,7 @@ export default function ChatWindow({ initialQuery = null }) {
       }
     }
 
-    if (userId) {
+    if (userId && !token) {
       rememberAnswer(userId, {
         label: userText,
         topic: detectTopic(userText),
@@ -435,27 +492,115 @@ export default function ChatWindow({ initialQuery = null }) {
       });
     }
 
-    presentBotMessage(finalText, finalActions, { error });
+    if (consultationData?.consultaId && token) {
+      if (userMessageId) {
+        updateMessage(userMessageId, { consultaId: consultationData.consultaId });
+      }
+      recordConsulta({
+        id: consultationData.consultaId,
+        textoConsulta: userText,
+        respuesta: consultationData.respuesta || finalText,
+        encontrado: consultationData.encontrado,
+        calificacion: null,
+        topico: detectTopic(userText),
+        fecha: consultationData.consultaFecha || new Date().toISOString(),
+        tramite: null,
+      }, userId);
+    }
+
+    presentBotMessage(finalText, finalActions, {
+      error,
+      consultaId: consultationData?.consultaId,
+      canRate: Boolean(consultationData?.consultaId && token),
+      calificacion: null,
+    });
   }
 
   function sendText(text, image = null, preview = "") {
     const t = (text ?? "").trim();
     if (!t) return;
     beginChat();
-    addMessage("user", t, image ? {
+    const userMessageId = addMessage("user", t, image ? {
       type: "image",
       dataUrl: preview,
       fileName: image.name,
     } : undefined);
     if (wizardRef.current && !image) {
+      wizardRef.current.lastMessageId = userMessageId;
       runWizardStep(t);
       return;
     }
     if (image) wizardRef.current = null;
-    if (userId) rememberMessage(userId, t);
+    if (userId && !token) rememberMessage(userId, t);
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
-    respondTo(t, image);
+    respondTo(t, image, userMessageId);
+  }
+
+  async function handleChecklist(action) {
+    try {
+      const tramite = await obtenerChecklist(action.tramiteId);
+      const requisitos = tramite.requisitos?.length
+        ? tramite.requisitos.map((requisito) => {
+            const detalles = [
+              requisito.dondeSeConsigue && `Dónde conseguirlo: ${requisito.dondeSeConsigue}`,
+              requisito.costo != null && Number(requisito.costo) > 0
+                ? `Costo: $${requisito.costo}`
+                : null,
+            ].filter(Boolean);
+            return `[ ] ${requisito.descripcion}${detalles.length ? ` (${detalles.join(" · ")})` : ""}`;
+          })
+        : ["[ ] Consultar los requisitos directamente con la oficina correspondiente."];
+      const oficinas = tramite.mesas?.length
+        ? tramite.mesas.map((mesa) =>
+            `- ${[mesa.nombre, mesa.direccion, mesa.localidad].filter(Boolean).join(", ")}`
+          )
+        : ["- Consultar dónde presentar el trámite con la oficina correspondiente."];
+      const documentos = tramite.documentos?.length
+        ? tramite.documentos.map((documento) => `[ ] ${documento.nombre}`)
+        : ["- No hay formularios descargables registrados."];
+      const costo = tramite.costo == null || Number(tramite.costo) === 0
+        ? "Sin costo informado"
+        : `$${tramite.costo}`;
+      const contenido = [
+        `CHECKLIST: ${tramite.nombre}`,
+        "",
+        `Costo del trámite: ${costo}`,
+        "",
+        "DOCUMENTACIÓN",
+        ...requisitos,
+        "",
+        "FORMULARIOS",
+        ...documentos,
+        "",
+        "DÓNDE PRESENTARLO",
+        ...oficinas,
+        "",
+        "Preparado con información de ChatAP. Confirmá los requisitos vigentes antes de iniciar el trámite.",
+      ].join("\n");
+      const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const nombreSeguro = tramite.nombre
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase();
+      link.href = url;
+      link.download = `checklist-${nombreSeguro || tramite.id}.txt`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast?.(apiErrorMessage(error, "No se pudo generar el checklist."), "error");
+    }
+  }
+
+  function handleRate(messageId, calificacion) {
+    updateMessage(messageId, { calificacion });
+    const message = messages.find((item) => item.id === messageId);
+    const consulta = consultas.find((item) => item.id === message?.consultaId);
+    if (consulta) recordConsulta({ ...consulta, calificacion }, userId);
   }
 
   function handleSend(e) {
@@ -617,7 +762,7 @@ export default function ChatWindow({ initialQuery = null }) {
     const flow = wizards[w.id];
     // La asistencia guiada arma la consulta y la envía al backend.
     const pregunta = [flow.title, ...Object.values(w.data).filter(Boolean)].join(". ");
-    respondTo(pregunta);
+    respondTo(pregunta, null, w.lastMessageId);
   }
 
   function resetConversation() {
@@ -745,8 +890,10 @@ export default function ChatWindow({ initialQuery = null }) {
               queries={historyQueries}
               onSelect={handleHistorySelect}
               onNewChat={handleResetRequest}
-              onDelete={handleDeleteQuery}
-              onClearAll={handleClearHistory}
+              onDelete={!token ? handleDeleteQuery : undefined}
+              onClearAll={!token ? handleClearHistory : undefined}
+              loading={Boolean(token && historyLoading)}
+              error={token ? historyError : ""}
             />
           </div>
         </aside>
@@ -915,6 +1062,8 @@ export default function ChatWindow({ initialQuery = null }) {
                   typedText={msg.id === speakingId ? typedText : ""}
                   reaction={reaction}
                   onFollowUp={handleFollowUp}
+                  onChecklist={handleChecklist}
+                  onRate={handleRate}
                 />
               </div>
             ))}
@@ -1085,8 +1234,10 @@ export default function ChatWindow({ initialQuery = null }) {
           <ChatHistoryPanel
             queries={historyQueries}
             onSelect={handleHistorySelect}
-            onDelete={handleDeleteQuery}
-            onClearAll={handleClearHistory}
+            onDelete={!token ? handleDeleteQuery : undefined}
+            onClearAll={!token ? handleClearHistory : undefined}
+            loading={Boolean(token && historyLoading)}
+            error={token ? historyError : ""}
             onNewChat={() => {
               setHistoryOpen(false);
               handleResetRequest();

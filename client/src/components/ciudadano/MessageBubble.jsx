@@ -1,4 +1,7 @@
 import ChatBotAvatar from "../ChatBotAvatar";
+import { useState } from "react";
+import { calificarConsulta } from "../../services/consultas";
+import { apiErrorMessage } from "../../lib/api";
 
 function DownloadButton({ action }) {
   function downloadTemplate() {
@@ -70,7 +73,32 @@ function WizardStart({ action, onFollowUp }) {
   );
 }
 
-export default function MessageBubble({ message, speaking = false, typedText = "", reaction = "idle", onFollowUp }) {
+function ChecklistButton({ action, onChecklist }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChecklist?.(action)}
+      className="mt-2 inline-flex items-center gap-2 rounded-xl border border-line bg-paper px-4 py-2.5 min-h-11 text-sm font-semibold text-brand-deep transition-colors hover:bg-mist"
+    >
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 5h11M8 10h11M8 15h6M4 5h.01M4 10h.01M4 15h.01M5 21h14a1 1 0 001-1V4a1 1 0 00-1-1H5a1 1 0 00-1 1v16a1 1 0 001 1z" />
+      </svg>
+      {action.label}
+    </button>
+  );
+}
+
+export default function MessageBubble({
+  message,
+  speaking = false,
+  typedText = "",
+  reaction = "idle",
+  onFollowUp,
+  onChecklist,
+  onRate,
+}) {
+  const [ratingBusy, setRatingBusy] = useState(false);
+  const [ratingError, setRatingError] = useState("");
   const isBot = message.type === "bot";
   const shown = speaking ? typedText || message.text : message.text;
   const typing = speaking && typedText.length < message.text.length;
@@ -80,6 +108,20 @@ export default function MessageBubble({ message, speaking = false, typedText = "
     : message.action
       ? [message.action]
       : [];
+
+  async function rateResponse(value) {
+    if (!message.consultaId || ratingBusy) return;
+    setRatingBusy(true);
+    setRatingError("");
+    try {
+      const result = await calificarConsulta(message.consultaId, value);
+      onRate?.(message.id, result.calificacion);
+    } catch (error) {
+      setRatingError(apiErrorMessage(error, "No se pudo guardar tu opinión."));
+    } finally {
+      setRatingBusy(false);
+    }
+  }
 
   return (
     <article
@@ -119,12 +161,44 @@ export default function MessageBubble({ message, speaking = false, typedText = "
             if (action.type === "download") {
               return <DownloadButton key={index} action={action} />;
             }
+            if (action.type === "checklist") {
+              return <ChecklistButton key={index} action={action} onChecklist={onChecklist} />;
+            }
             if (action.type === "location") {
               return <LocationCard key={index} action={action} />;
             }
             return null;
           })}
-        <span className={`chat-msg__meta ${isBot ? "" : "chat-msg__meta--end"}`}>
+          {!typing && isBot && message.canRate && (
+            <div className="mt-3 border-t border-line/70 pt-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted">¿Te sirvió esta respuesta?</span>
+                {[1, 0].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={ratingBusy}
+                    aria-pressed={message.calificacion === value}
+                    aria-label={value ? "Sí, me sirvió" : "No me sirvió"}
+                    onClick={() => rateResponse(value)}
+                    className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      message.calificacion === value
+                        ? "border-brand-deep bg-brand-deep text-white"
+                        : "border-line text-muted hover:bg-mist hover:text-ink"
+                    }`}
+                  >
+                    <span aria-hidden="true">{value ? "👍" : "👎"}</span>
+                    {value ? "Sí" : "No"}
+                  </button>
+                ))}
+                {message.calificacion !== null && message.calificacion !== undefined && (
+                  <span className="text-xs text-ok" role="status">Gracias por tu opinión.</span>
+                )}
+              </div>
+              {ratingError && <p role="alert" className="mt-1 text-xs text-bad">{ratingError}</p>}
+            </div>
+          )}
+          <span className={`chat-msg__meta ${isBot ? "" : "chat-msg__meta--end"}`}>
           {isBot && <span className="ui-dot" style={{ background: "var(--color-brand)" }} aria-hidden="true" />}
           {isBot ? "Asistente" : "Vos"} ·{" "}
           <time dateTime={new Date(message.timestamp).toISOString()}>

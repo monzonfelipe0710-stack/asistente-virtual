@@ -14,6 +14,16 @@ export async function registro({ nombre, dni, genero, email, password, cuil }) {
   return data;
 }
 
+/** POST /api/usuarios/registro-ciudadano — público, con verificación de padrón. */
+export async function registroCiudadano({ dni, genero, email, password }) {
+  const { data } = await api.post(
+    "/api/usuarios/registro-ciudadano",
+    { dni, genero, email, password },
+    { skipAuthHandler: true }
+  );
+  return data;
+}
+
 /** GET /api/usuarios — SUPERUSUARIO. Filtro opcional ?estado=. */
 export async function listar({ estado } = {}) {
   const { data } = await api.get("/api/usuarios", { params: estado ? { estado } : {} });
