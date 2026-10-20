@@ -20,7 +20,7 @@ import {
   removeMemoryMessage,
   clearMemoryMessages,
 } from "../../lib/chatMemory";
-import { speak, stopSpeaking, canSpeak } from "../../lib/speech";
+
 
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
@@ -128,10 +128,6 @@ export default function ChatWindow({ initialQuery = null }) {
   const [historyVersion, setHistoryVersion] = useState(0);
   const a11y = useA11y();
   const screenReader = !!a11y.screenReader;
-  // Lectura por voz disponible: es el canal principal del modo lector de
-  // pantalla para que la persona escuche las respuestas sin depender de un
-  // lector externo. Si el navegador no soporta voz, caemos en la región viva.
-  const voiceReading = screenReader && canSpeak();
 
   const [speechSupported] = useState(
     () =>
@@ -265,22 +261,11 @@ export default function ChatWindow({ initialQuery = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, messages, historyVersion]);
 
-  // Lectura por voz: al activar el modo se avisa en voz alta y al desactivarlo
-  // se corta cualquier lectura en curso.
-  // Lectura por voz: cuando el modo está activo, el anuncio de activación lo
-  // hace el menú de accesibilidad (está en todas las páginas). Acá solo
-  // paramos cualquier lectura en curso al desactivar y al salir del chat.
+  // Modo lector de pantalla: al terminar de responder, el foco pasa a la
+  // última respuesta para que el lector externo (NVDA, JAWS, VoiceOver) la
+  // lea. No le quitamos el foco al ciudadano si está escribiendo otra consulta.
   useEffect(() => {
-    if (!screenReader) stopSpeaking();
-  }, [screenReader]);
-
-  useEffect(() => () => stopSpeaking(), []);
-
-  // Modo lector de pantalla sin voz disponible: al terminar de responder, el
-  // foco pasa a la última respuesta para que el lector externo la lea. No le
-  // quitamos el foco al ciudadano si está escribiendo otra consulta.
-  useEffect(() => {
-    if (!screenReader || voiceReading) return;
+    if (!screenReader) return;
     if (phase !== "chat" || speakingId) return;
     if (!answeredRef.current) return;
     const active = typeof document !== "undefined" ? document.activeElement : null;
@@ -289,7 +274,7 @@ export default function ChatWindow({ initialQuery = null }) {
     if (!last || last.type !== "bot") return;
     const el = messagesRef.current?.querySelector("[data-bot-message]:last-of-type");
     el?.focus?.();
-  }, [screenReader, voiceReading, phase, speakingId, messages]);
+  }, [screenReader, phase, speakingId, messages]);
 
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
@@ -333,16 +318,8 @@ export default function ChatWindow({ initialQuery = null }) {
 
     // Anuncio para tecnologías de asistencia: texto completo, una sola vez.
     // En modo lector de pantalla aclaramos de quién es la respuesta.
-    // Anuncio para tecnologías de asistencia. Si el modo lector de pantalla
-    // está activo y hay voz disponible, la respuesta se lee en voz alta y no
-    // duplicamos con la región viva; si no, usamos la región viva.
     answeredRef.current = true;
-    if (voiceReading) {
-      speak(finalText);
-      setAnnounce("");
-    } else {
-      setAnnounce(screenReader ? `Respuesta del asistente: ${finalText}` : finalText);
-    }
+    setAnnounce(screenReader ? `Respuesta del asistente: ${finalText}` : finalText);
 
     // Con movimiento reducido se muestra el texto completo de inmediato.
     const reduceMotion =
@@ -464,7 +441,6 @@ export default function ChatWindow({ initialQuery = null }) {
   function sendText(text, image = null, preview = "") {
     const t = (text ?? "").trim();
     if (!t) return;
-    if (screenReader) stopSpeaking();
     beginChat();
     addMessage("user", t, image ? {
       type: "image",
@@ -668,12 +644,7 @@ export default function ChatWindow({ initialQuery = null }) {
     answeredRef.current = false;
     nearBottomRef.current = true;
     const resetMsg = "Se inició un chat nuevo. Escribí tu consulta cuando quieras.";
-    if (voiceReading) {
-      speak(resetMsg);
-      setAnnounce("");
-    } else {
-      setAnnounce(screenReader ? resetMsg : "");
-    }
+    setAnnounce(screenReader ? resetMsg : "");
   }
 
   // El botón de "nuevo chat" solo reinicia directo si no hay nada que perder.
@@ -697,7 +668,7 @@ export default function ChatWindow({ initialQuery = null }) {
     if (!userId) return;
     removeMemoryMessage(userId, at);
     setHistoryVersion((v) => v + 1);
-    if (voiceReading) speak("Consulta borrada del historial.");
+    if (screenReader) setAnnounce("Consulta borrada del historial.");
   }
 
   // Vaciar todo el historial guardado.
@@ -705,7 +676,7 @@ export default function ChatWindow({ initialQuery = null }) {
     if (!userId) return;
     clearMemoryMessages(userId);
     setHistoryVersion((v) => v + 1);
-    if (voiceReading) speak("Historial borrado.");
+    if (screenReader) setAnnounce("Historial borrado.");
   }
 
   // Volver a leer en voz alta la última respuesta del asistente.

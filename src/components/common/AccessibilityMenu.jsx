@@ -1,7 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { readA11y, saveA11y } from "../../lib/accessibility";
-import { speak, stopSpeaking } from "../../lib/speech";
 import useTheme from "../../hooks/useTheme";
 
 const TEXT_OPTIONS = [
@@ -141,22 +140,11 @@ export default function AccessibilityMenu() {
     setPrefs((p) => ({ ...p, ...patch }));
   }
 
-  // El modo lector de pantalla da feedback hablado al instante, en cualquier
-  // página, para que la persona sepa que quedó activado o desactivado.
   function toggleScreenReader() {
-    const next = !prefs.screenReader;
-    update({ screenReader: next });
-    if (next) {
-      speak(
-        "Modo lector de pantalla activado. Usá la tecla TAB para recorrer la página: te voy a decir en qué elemento estás y leo las respuestas del asistente en voz alta."
-      );
-    } else {
-      stopSpeaking();
-    }
+    update({ screenReader: !prefs.screenReader });
   }
 
   function reset() {
-    if (prefs.screenReader) stopSpeaking();
     setPrefs({ text: "normal", contrast: false, readable: false, screenReader: false });
   }
 
@@ -245,7 +233,7 @@ export default function AccessibilityMenu() {
             <Switch
               checked={prefs.screenReader}
               label="Modo lector de pantalla"
-              hint="Pensado para personas ciegas: lee en voz alta las respuestas y refuerza los avisos para NVDA, JAWS o VoiceOver."
+              hint="Refuerza avisos y foco para NVDA, JAWS o VoiceOver."
               onToggle={toggleScreenReader}
             />
             <Switch

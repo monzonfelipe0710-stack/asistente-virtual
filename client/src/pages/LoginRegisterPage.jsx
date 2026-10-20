@@ -197,7 +197,11 @@ export default function LoginRegisterPage() {
         </div>
 
         {/* 2. Columna Derecha: Formulario */}
-        <div className="flex flex-col px-6 sm:px-12 xl:px-20 py-6 lg:min-h-[100svh] lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100">
+        <main
+          id="contenido"
+          aria-label="Inicio de sesión o registro"
+          className="flex flex-col px-6 sm:px-12 xl:px-20 py-6 lg:min-h-[100svh] lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100"
+        >
           {/* Barra superior con navegación de retorno y toggle de modo */}
           <div className="flex items-center justify-between w-full max-w-md mx-auto shrink-0">
             <Link
@@ -642,7 +646,7 @@ export default function LoginRegisterPage() {
           <div className="w-full max-w-md mx-auto text-center text-[11px] text-muted pt-4 pb-4 mt-auto">
             ChatAP Formosa © 2026 · Subsecretaría de Recursos Humanos
           </div>
-        </div>
+        </main>
       </div>
 
     </div>

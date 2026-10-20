@@ -18,7 +18,7 @@ export default function DocumentCard({ document }) {
   };
 
   return (
-    <div className="flex items-center gap-4 p-4 bg-paper border border-line hover:border-brand transition duration-200 hover:-translate-y-0.5">
+    <article className="flex items-center gap-4 p-4 bg-paper border border-line hover:border-brand transition duration-200 hover:-translate-y-0.5">
       {formatIcons[document.format] || formatIcons.PDF}
 
       <div className="flex-1 min-w-0">
@@ -43,6 +43,6 @@ export default function DocumentCard({ document }) {
       >
         Descargar
       </button>
-    </div>
+    </article>
   );
 }

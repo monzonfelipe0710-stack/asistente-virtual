@@ -2,7 +2,7 @@ import axios from "axios";
 
 /**
  * Instancia única de Axios para toda la app.
- * - Base URL desde `VITE_API_URL` (desarrollo: http://localhost:3000).
+ * - Base URL desde `VITE_API_URL` (desarrollo: http://localhost:3001).
  * - El token de sesión lo aporta el store vía `setAuthTokenGetter`.
  * - 401 global: el store de sesión registra su handler con
  *   `setUnauthorizedHandler` (cerrar sesión + redirigir al login).
@@ -10,7 +10,7 @@ import axios from "axios";
  *   llegar en cualquier momento (p. ej. cuenta suspendida).
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3001",
   timeout: 20000,
 });
 

@@ -1,564 +1,486 @@
-import { lazy, Suspense, useLayoutEffect, useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Link } from "react-router-dom";
 import "./HomePage.css";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import LogoLoop from "../components/common/LogoLoop";
-import ScrollFloat from "../components/common/ScrollFloat";
-import { Kicker, DisplayTitle, Lead, MetricStrip } from "../components/common/editorial";
+import InteractiveChatMockup from "../components/common/InteractiveChatMockup";
 import ChatBotAvatar from "../components/ChatBotAvatar";
-import { Icon, ICONS } from "../components/profile/ui";
+import HeroCinematicBackground from "../components/common/HeroCinematicBackground";
+import ScrollFloat from "../components/common/ScrollFloat";
 import useTheme from "../hooks/useTheme";
 
-const CRTWarp = lazy(() => import("../components/common/CRTWarp"));
-
-gsap.registerPlugin(ScrollTrigger);
+const Particles = lazy(() => import("../components/common/Particles"));
 
 /* ------------------------------------------------------------------
-   Datos del Home · editá acá los textos (no en el JSX).
+   Contenidos Esenciales de HomePage Minimalista
    ------------------------------------------------------------------ */
 
-const HERO = {
-  kicker: "ChatAP · Asistente virtual de la Administración Pública",
-  title: "La administración pública más fácil de consultar.",
-  description:
-    "ChatAP te orienta sobre trámites, documentación y servicios de la provincia. Escribí tu consulta y obtené una respuesta clara, al momento y en lenguaje cotidiano.",
-  primary: { label: "Comenzar una consulta", to: "/chat" },
-  secondary: { label: "Conocer ChatAP", to: "#que-es" },
-};
-
-const ABOUT = {
-  kicker: "Qué es ChatAP",
-  title: "Un asistente que acerca la Administración al ciudadano",
-  paragraphs: [
-    "ChatAP es un asistente inteligente que facilita la interacción entre las personas y la Administración Pública de la Provincia de Formosa.",
-    "Está pensado para quienes necesitan consultar trámites, presentar documentación o encontrar el camino correcto dentro de organismos gubernamentales, sin esperar en filas ni depender de horarios.",
-  ],
-  numbers: [
-    { label: "Temas de conocimiento", value: "16" },
-    { label: "Documentos y plantillas", value: "15" },
-    { label: "Oficinas orientadas", value: "4" },
-  ],
-};
-
-const ACTION = {
-  kicker: "ChatAP en acción",
-  title: "Una consulta, una respuesta, un siguiente paso",
-  lead: "Así se ve una conversación real: el asistente entiende qué necesitás, te orienta y te deja listo para continuar el trámite.",
-  steps: [
-    {
-      id: "consulta",
-      label: "Consultás",
-      text: "Escribís tu pregunta con tus palabras, como se la harías a una persona.",
-    },
-    {
-      id: "respuesta",
-      label: "ChatAP responde",
-      text: "El asistente te orienta con información clara y verificada del organismo.",
-    },
-    {
-      id: "siguiente",
-      label: "Siguiente paso",
-      text: "Descargás, derivás o seguís el trámite por el canal correspondiente.",
-    },
-  ],
-};
-
-const CHATAP_CAPABILITIES = [
+const FEATURES = [
   {
-    id: "informacion",
-    icon: ICONS.chat,
-    title: "Consultar información",
-    text: "Responde dudas sobre haberes, licencias, trámites, legajos y más, con la base de conocimiento actualizada de la Administración.",
+    id: "siged",
+    icon: (
+      <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+    title: "Seguimiento SIGED en vivo",
+    description: "Ingresá el número de tu trámite y conocé al instante en qué despacho se encuentra, quién lo tiene y qué resolución espera.",
+    badge: "Transparencia oficial",
+  },
+  {
+    id: "docs",
+    icon: (
+      <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+    title: "Formularios y modelos en PDF",
+    description: "Descargá directamente el Formulario F-04, modelos de notas de elevación y solicitudes validadas listas para presentar.",
+    badge: "Validez provincial",
+  },
+  {
+    id: "tiempo",
+    icon: (
+      <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    title: "Atención 24/7 sin intermediarios",
+    description: "Consultá en lenguaje cotidiano las 24 horas del día, los 365 días del año. Respuestas verificadas en menos de 3 segundos.",
+    badge: "100% Gratuito",
+  },
+];
+
+const SOLUTIONS = [
+  {
+    id: "orientacion",
+    title: "Orientación y guía de trámites",
+    description: "Guía interactiva de trámites administrativos y respuestas automáticas a las preguntas frecuentes de ciudadanos y empleados.",
+  },
+  {
+    id: "documentos",
+    title: "Documentos y plantillas al instante",
+    description: "Acceso y descarga directa de documentos administrativos, modelos y plantillas oficiales listos para presentar.",
+  },
+  {
+    id: "siged",
+    title: "Integración con el SIGED",
+    description: "Consultas vía API al Sistema de Gestión Documental existente para conocer el estado real de cada expediente en tiempo real.",
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    id: "alcance",
+    question: "¿Qué puedo resolver exactamente con ChatAP?",
+    answer: "ChatAP te orienta en trámites administrativos, responde preguntas frecuentes, te entrega documentos, modelos y plantillas, y consulta el SIGED para informarte sobre tus expedientes. Además acompaña la atención de mesa de entradas.",
   },
   {
     id: "tramites",
-    icon: ICONS.tramite,
-    title: "Orientar sobre trámites",
-    text: "Guía paso a paso en trámites como licencias y expedientes, indicando requisitos y documentación.",
+    question: "¿Cómo me guía paso a paso en un trámite?",
+    answer: "Escribí en lenguaje cotidiano qué necesitás resolver. ChatAP identifica el trámite y te indica requisitos, plazos y el organismo o mesa de entradas donde presentarlo, uno por uno.",
   },
   {
-    id: "consultas-frecuentes",
-    icon: ICONS.activity,
-    title: "Resolver consultas frecuentes",
-    text: "Atiende las preguntas más comunes: recibos de sueldo, expedientes, permisos y descargas de formularios.",
+    id: "documentos",
+    question: "¿Qué documentos, modelos y plantillas puedo descargar?",
+    answer: "Formularios oficiales como el F-04 para justificación de licencias médicas, notas de elevación, declaraciones juradas y constancias oficiales: todos aprobados por la Subsecretaría y listos para presentar.",
   },
   {
-    id: "camino",
-    icon: ICONS.bell,
-    title: "Encontrar el camino correcto",
-    text: "Cuando la consulta lo requiere, deriva a la oficina correspondiente o al canal de soporte adecuado.",
+    id: "siged",
+    question: "¿Cómo funciona la integración con el SIGED?",
+    answer: "Mediante una API, ChatAP consulta el Sistema de Gestión Documental existente. Con el número de tu expediente te informa su ubicación actual y último movimiento, sin trámites adicionales ni llamados.",
+  },
+  {
+    id: "registro",
+    question: "¿Necesito registrarme o iniciar sesión para consultar?",
+    answer: "No es obligatorio: podés consultar de forma libre y anónima en cualquier momento. Si iniciás sesión, guardás el historial de tus conversaciones y el seguimiento de tus trámites.",
+  },
+  {
+    id: "usuarios",
+    question: "¿Qué incluyen el panel de usuarios y el de conocimiento?",
+    answer: "El panel de usuarios permite gestionar cuentas, altas y permisos de ciudadanos y usuarios internos. El panel de conocimiento administra dinámicamente el dominio de conocimiento del chatbot, para que sus respuestas siempre estén actualizadas.",
+  },
+  {
+    id: "integracion",
+    question: "¿Qué hay de MiPortal, WhatsApp y la mesa de entradas?",
+    answer: "La vinculación a MiPortal y eventuales funcionalidades por WhatsApp están contempladas como funcionalidades futuras del proyecto. El trabajo con las mesas de entrada se articula para formalizar correctamente cada circuito administrativo.",
+  },
+  {
+    id: "costo",
+    question: "¿Tiene algún costo utilizar ChatAP?",
+    answer: "No. Es un servicio 100% gratuito, público y de libre acceso desarrollado por el Gobierno de la Provincia de Formosa a través de la Subsecretaría de Recursos Humanos, dependiente del Ministerio Jefatura de Gabinete.",
   },
 ];
 
-const QUICK_QUERIES = [
-  {
-    id: "expediente",
-    icon: ICONS.tramite,
-    title: "Estado de expediente",
-    text: "Consultá en qué oficina y etapa se encuentra tu expediente.",
-    query: "¿Cuál es el estado de mi expediente?",
-  },
-  {
-    id: "recibo",
-    icon: ICONS.solicitud,
-    title: "Recibo de sueldo",
-    text: "Resolvé dudas sobre tus recibos de haberes y liquidaciones.",
-    query: "¿Cómo veo mi recibo de sueldo?",
-  },
-  {
-    id: "licencia",
-    icon: ICONS.check,
-    title: "Licencia médica",
-    text: "Informate sobre requisitos y plazos para presentar licencias.",
-    query: "¿Cómo solicito una licencia médica?",
-  },
-];
-
-const TOPICS = [
-  {
-    id: "tramites-requisitos",
-    index: "01",
-    title: "Trámites y requisitos",
-    text: "Qué documentación y pasos necesitás para cada gestión.",
-  },
-  {
-    id: "documentacion",
-    index: "02",
-    title: "Documentación",
-    text: "Formularios, descargas y documentación de respaldo solicitada.",
-  },
-  {
-    id: "consultas-administrativas",
-    index: "03",
-    title: "Consultas administrativas",
-    text: "Respuestas claras sobre procedimientos internos y gestiones.",
-  },
-  {
-    id: "informacion-institucional",
-    index: "04",
-    title: "Información institucional",
-    text: "Datos generales, horarios, sedes y canales de atención.",
-  },
-];
-
-const FINAL_CTA = {
-  kicker: "Probá el asistente",
-  title: "¿Tenés una consulta? Hablá con ChatAP.",
-  lead: "No hace falta esperar ni hacer fila. Escribí tu consulta y el asistente te orienta al momento.",
-  primary: { label: "Comenzar una consulta", to: "/chat" },
-};
-
-const INSTITUTIONAL_LOGOS = [
-  {
-    id: "chatap",
-    title: "ChatAP",
-    node: (
-      <span className="institutional-mark institutional-mark--chatap" aria-hidden="true">
-        <span className="institutional-mark__monogram">AP</span>
-        <span>ChatAP<span className="text-brand">.</span></span>
-      </span>
-    ),
-  },
-  {
-    id: "todos-unidos",
-    title: "Todos Unidos",
-    node: (
-      <span className="institutional-mark institutional-mark--unidos" aria-hidden="true">
-        <span className="institutional-mark__star">✦</span>
-        <span>Todos Unidos</span>
-      </span>
-    ),
-  },
-  {
-    id: "gobierno-formosa",
-    title: "Gobierno de la Provincia de Formosa",
-    node: (
-      <span className="institutional-mark institutional-mark--gobierno" aria-hidden="true">
-        <span className="institutional-mark__seal">F</span>
-        <span>Gobierno de<br />Formosa</span>
-      </span>
-    ),
-  },
-];
-
-function ActionMockup() {
-  return (
-    <div
-      className="w-full rounded-3xl border border-line bg-mist/60 p-4 sm:p-6 shadow-sm"
-      aria-label="Ejemplo de conversación con ChatAP"
-      role="img"
-    >
-      <div className="mx-auto max-w-sm flex flex-col gap-3">
-        <div className="chat-msg chat-msg--user">
-          <div className="chat-msg__body">¿Cómo solicito una licencia médica?</div>
-          <span className="chat-msg__meta">Vos</span>
-        </div>
-
-        <div className="chat-msg">
-          <div className="chat-msg__body">
-            Las licencias por enfermedad se gestionan con el formulario oficial y el certificado médico presentado dentro de las 48 hs hábiles.
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="bubble-chip">Descargar formulario de licencia</span>
-            <span className="bubble-chip">Presentar en Mesa de Entradas</span>
-          </div>
-          <span className="chat-msg__meta mt-2">Asistente</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------
-   Componentes de sección
-   ------------------------------------------------------------------ */
-
-function SectionHeader({ kicker, title, lead, center = false, float = false }) {
-  return (
-    <header className={`flex flex-col gap-4 ${center ? "items-center text-center" : "items-start"} max-w-3xl`}>
-      <Kicker>{kicker}</Kicker>
-      {float ? (
-        <ScrollFloat
-          as="h2"
-          containerClassName="display-2 text-ink m-0 font-neue"
-          animationDuration={0.9}
-          ease="back.inOut(1.7)"
-          scrollStart="center bottom+=30%"
-          scrollEnd="bottom bottom-=25%"
-          stagger={0.025}
-        >
-          {title}
-        </ScrollFloat>
-      ) : (
-        <DisplayTitle as={2}>{title}</DisplayTitle>
-      )}
-      {lead ? <Lead className="mt-1">{lead}</Lead> : null}
-    </header>
-  );
+function getInstitutionalLogos(isDark) {
+  return [
+    {
+      id: "todos-unidos",
+      title: "Todos Unidos",
+      node: (
+        <span className="institutional-mark institutional-mark--official" aria-hidden="true">
+          <img
+            src={isDark ? "/assets/logos/todos-unidos-dark.png" : "/assets/logos/todos-unidos-light.png"}
+            alt="Todos Unidos"
+            className="institutional-mark__image"
+            draggable={false}
+          />
+        </span>
+      ),
+    },
+    {
+      id: "gobierno-formosa",
+      title: "Gobierno de la Provincia de Formosa",
+      node: (
+        <span className="institutional-mark institutional-mark--official" aria-hidden="true">
+          <img
+            src={isDark ? "/assets/logos/gobierno-formosa-dark.png" : "/assets/logos/gobierno-formosa-light.png"}
+            alt="Gobierno de Formosa"
+            className="institutional-mark__image"
+            draggable={false}
+          />
+        </span>
+      ),
+    },
+    {
+      id: "chatap",
+      title: "ChatAP",
+      node: (
+        <span className="institutional-mark institutional-mark--chatap" aria-hidden="true">
+          <span className="institutional-mark__monogram">AP</span>
+          <span>ChatAP<span className="text-brand">.</span></span>
+        </span>
+      ),
+    },
+  ];
 }
 
 export default function HomePage() {
-  const heroRef = useRef(null);
   const theme = useTheme();
 
-  const isLowEnd = useMemo(() => {
-    if (typeof navigator === "undefined") return false;
-    const cores = navigator.hardwareConcurrency ?? 4;
-    const memory = navigator.deviceMemory ?? 4;
-    const isMobile = navigator.maxTouchPoints > 0 && window.innerWidth < 768;
-    return isMobile || cores < 4 || memory < 4;
+  const isMobile = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768;
   }, []);
 
-  useLayoutEffect(() => {
-    const hero = heroRef.current;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!hero || reducedMotion) return undefined;
+  const particleColors = useMemo(() => (
+    theme === "light"
+      ? ["#1E40AF", "#2563EB", "#0284C7", "#3B82F6", "#1D4ED8", "#0369A1"]
+      : ["#FFFFFF", "#FFFFFF", "#93C5FD", "#60A5FA", "#38BDF8", "#BFDBFE"]
+  ), [theme]);
 
-    const context = gsap.context(() => {
-      /* Kicker entrance */
-      gsap.fromTo(
-        ".hero-cinematic__kicker",
-        { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.7, ease: "power2.out", delay: 0.45 },
-      );
+  const institutionalLogos = useMemo(
+    () => getInstitutionalLogos(theme === "dark"),
+    [theme]
+  );
 
-      /* Logo loop entrance */
-      gsap.fromTo(
-        ".hero-cinematic .hero-logo-loop",
-        { opacity: 0, y: 22 },
-        { opacity: 1, y: 0, duration: 0.8, ease: "power2.out", delay: 1 },
-      );
-    }, hero);
-
-    return () => {
-      context.revert();
-    };
-  }, []);
-
-  /* Ambientación general: los bloques de contenido reaccionan al scroll
-     en AMBOS sentidos (scrub reversible: subís → vuelve a ocultarse). */
-  useLayoutEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) return undefined;
-
-    const blocks = gsap.utils.toArray("[data-reveal]");
-    if (!blocks.length) return undefined;
-
-    const context = gsap.context(() => {
-      blocks.forEach((block) => {
-        gsap.fromTo(
-          block,
-          { autoAlpha: 0, y: 34 },
-          {
-            autoAlpha: 1,
-            y: 0,
-            duration: 1,
-            ease: "none",
-            scrollTrigger: {
-              trigger: block,
-              start: "top bottom+=18%",
-              end: "top center",
-              scrub: true,
-            },
-          },
-        );
-      });
-    });
-
-    return () => context.revert();
-  }, []);
+  const prefetchChat = () => {
+    import("./CiudadanoPage").catch(() => {});
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper text-ink">
+    <div className="min-h-screen flex flex-col bg-paper text-ink font-sans relative selection:bg-brand selection:text-white">
+      {/* Fondo de Partículas WebGL sutil */}
+      <Suspense fallback={null}>
+        <div className="home-particles-bg" aria-hidden="true">
+          <Particles
+            className="w-full h-full"
+            particleColors={particleColors}
+            particleCount={isMobile ? 180 : 320}
+            speed={0.05}
+            particleBaseSize={16}
+            moveParticlesOnHover
+          />
+        </div>
+      </Suspense>
+
       <Navbar />
 
-      <main id="contenido" className="flex-1 w-full">
+      <main id="contenido" aria-label="Página principal de ChatAP" className="flex-1 w-full relative z-10">
+        {/* 1 · Hero Principal Minimalista y Directo */}
+        {/* 1 · Hero Principal Cinematográfico y Editorial */}
+        <section
+          id="inicio"
+          aria-label="Inicio ChatAP"
+          className="hero-cinematic section-bleed relative flex flex-col justify-between"
+        >
+          {/* Layer 1 & 2: Fondo Cinematográfico con Ken Burns, Crossfade y Overlays */}
+          <HeroCinematicBackground />
 
-        {/* 1 · Hero */}
-        <section ref={heroRef} className="section-bleed hero-cinematic">
-          {!isLowEnd && (
-            <Suspense fallback={null}>
-              <CRTWarp
-                className="hero-cinematic__crtwarp"
-                color={theme === "dark" ? "#ffffff" : "#ff9100"}
-                backgroundColor={theme === "dark" ? "#171717" : "#f1eee7"}
-                speed={0.10}
-                curvature={0.16}
-                scanlineStrength={0.035}
-                scanlineFrequency={180}
-                waveAmplitude={0.18}
-                waveFrequency={2.0}
-                bloom={0.35}
-                bloomRadius={0.8}
-                noise={0.012}
-                vignette={0.35}
-                brightness={theme === "dark" ? 0.38 : 0.55}
-                pixelation={1}
-                rgbShift={0.001}
-                mouseReact
-                mouseStrength={0.18}
-                dpr={1}
-                fps={isLowEnd ? 18 : 24}
-              />
-            </Suspense>
-          )}
-          <div className="hero-cinematic__overlay" aria-hidden="true" />
-          <div className="ed-max hero-cinematic__inner pt-16 pb-20 md:pt-24 md:pb-28">
-            <div className="flex max-w-6xl flex-col items-start gap-6">
-              <Kicker className="hero-cinematic__kicker">{HERO.kicker}</Kicker>
+          <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4">
+            {/* Gran Titular Editorial con ScrollFloat */}
+            <div className="hero-anim-title max-w-4xl mx-auto">
               <ScrollFloat
                 as="h1"
                 mode="once"
-                delay={0.3}
-                containerClassName="hero-cinematic__title"
-                textClassName="hero-cinematic__text"
-                animationDuration={1.05}
-                ease="back.out(1.7)"
+                animationDuration={0.85}
+                ease="power3.out"
                 stagger={0.012}
+                containerClassName="hero-cinematic__title-container"
+                textClassName="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0 block"
               >
-                {HERO.title}
+                El Estado te responde a la primera.
               </ScrollFloat>
             </div>
 
-            <div className="hero-logo-loop hero-logo-loop--full">
-              <p>Un proyecto hecho en Formosa</p>
+            {/* Subtítulo limpio y de alto contraste */}
+            <p className="hero-anim-sub mt-6 text-base sm:text-lg lg:text-xl text-muted max-w-2xl mx-auto leading-relaxed m-0 font-normal">
+              ChatAP es el asistente inteligente de la Subsecretaría de Recursos Humanos de Formosa: te orienta en tus trámites, responde tus preguntas frecuentes, te entrega documentos y consulta tus expedientes en el SIGED. Las 24 horas, sin filas ni traslados.
+            </p>
+
+            {/* Sellos de Confianza Institucionales */}
+            <div className="hero-anim-trust flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5 mt-10 text-xs text-muted font-medium select-none">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-mist/60 border border-line/40 backdrop-blur-sm shadow-xs">
+                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                100% Gratuito y de libre acceso
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-mist/60 border border-line/40 backdrop-blur-sm shadow-xs">
+                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Atención continua 24 horas
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-mist/60 border border-line/40 backdrop-blur-sm shadow-xs">
+                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Subsecretaría de Recursos Humanos
+              </span>
+            </div>
+
+          </div>
+          <div className="hero-anim-footer hero-cinematic__footer relative z-10 w-full bg-transparent">
+            <div className="ed-max flex flex-col items-center gap-2">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted/70 font-semibold m-0 select-none">
+                Un proyecto del Gobierno de la Provincia de Formosa
+              </p>
               <LogoLoop
-                logos={INSTITUTIONAL_LOGOS}
-                speed={34}
+                logos={institutionalLogos}
+                speed={26}
                 direction="left"
-                logoHeight={40}
-                gap={48}
+                logoHeight={28}
+                gap={56}
                 fadeOut
-                fadeOutColor={theme === "dark" ? "#171717" : "#f1eee7"}
                 pauseOnHover
                 scaleOnHover
-                ariaLabel="ChatAP, Todos Unidos y Gobierno de Formosa"
+                ariaLabel="Todos Unidos, Gobierno de Formosa y ChatAP"
               />
             </div>
           </div>
         </section>
 
-
-        {/* 2 · Qué es ChatAP */}
-        <section id="que-es" className="section-bleed bg-mist/40">
-          <div className="ed-max py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
-            <div data-reveal className="flex flex-col gap-5 max-w-xl">
-              <Kicker>{ABOUT.kicker}</Kicker>
-              <ScrollFloat
-                as="h2"
-                containerClassName="display-2 text-ink m-0 font-neue"
-                animationDuration={0.9}
-                ease="back.inOut(1.7)"
-                scrollStart="center bottom+=30%"
-                scrollEnd="bottom bottom-=25%"
-                stagger={0.025}
-              >
-                {ABOUT.title}
-              </ScrollFloat>
-              {ABOUT.paragraphs.map((p) => (
-                <p key={p} className="text-base leading-relaxed text-muted m-0">
-                  {p}
-                </p>
-              ))}
-            </div>
-
-            <div data-reveal className="flex flex-col gap-4">
-              <MetricStrip items={ABOUT.numbers} cols="grid-cols-1 sm:grid-cols-3" />
-              <p className="text-xs text-faint m-0 px-1">
-                Conocimiento activo del asistente, según la base documental actual del sistema.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* 3 · ChatAP en acción */}
-        <section id="en-accion" className="section-bleed bg-paper">
-          <div className="ed-max py-20 md:py-28 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <ActionMockup />
-
-            <div data-reveal className="flex flex-col gap-10 lg:pl-6">
-              <SectionHeader float kicker={ACTION.kicker} title={ACTION.title} lead={ACTION.lead} />
-              <ol className="m-0 p-0 list-none flex flex-col gap-7">
-                {ACTION.steps.map((s, i) => (
-                  <li key={s.id} className="flex gap-5">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line text-sm font-bold text-brand-deep" aria-hidden="true">
-                      {i + 1}
-                    </span>
-                    <div className="flex flex-col gap-1.5">
-                      <p className="m-0 text-sm font-bold text-ink uppercase tracking-wider">{s.label}</p>
-                      <p className="m-0 text-sm leading-relaxed text-muted">{s.text}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        </section>
-
-        {/* 4 · Qué puede hacer */}
-        <section id="capacidades" className="section-bleed bg-mist/40">
-          <div className="ed-max py-20 md:py-28">
-            <SectionHeader
-              float
-              kicker="Qué puede hacer"
-              title="Te acompaña en cada consulta"
-              lead="Estas son algunas de las cosas que ChatAP puede hacer por vos hoy."
-            />
-
-            <div data-reveal className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* Capacidad destacada */}
-              <article className="card p-7 md:col-span-2 flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-                <div className="flex flex-col gap-4 max-w-xl">
-                  <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand-deep/10 text-brand-deep">
-                    <Icon path={CHATAP_CAPABILITIES[0].icon} className="h-6 w-6" />
-                  </span>
-                  <h3 className="text-xl font-bold text-ink m-0">{CHATAP_CAPABILITIES[0].title}</h3>
-                  <p className="text-base leading-relaxed text-muted m-0">{CHATAP_CAPABILITIES[0].text}</p>
-                </div>
-                <div className="self-center md:self-start shrink-0">
-                  <ChatBotAvatar static size={120} reaction="idle" />
-                </div>
-              </article>
-
-              {CHATAP_CAPABILITIES.slice(1).map((cap) => (
-                <article key={cap.id} className="card p-6 flex flex-col gap-4">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-deep/10 text-brand-deep">
-                    <Icon path={cap.icon} className="h-5 w-5" />
-                  </span>
-                  <h3 className="text-base font-bold text-ink m-0">{cap.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted m-0">{cap.text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 5 · Consultas frecuentes */}
-        <section id="consultas-frecuentes" className="section-bleed bg-paper">
-          <div className="ed-max py-20 md:py-28">
-            <SectionHeader
-              float
-              kicker="Consultas frecuentes"
-              title="Entrá directo a lo que buscás"
-              lead="Preguntas de ejemplo para que veas cómo responde el asistente. Elegí una y te lleva al chat preparada."
-            />
-
-            <div data-reveal className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {QUICK_QUERIES.map((q) => (
-                <Link
-                  key={q.id}
-                  to="/chat"
-                  state={{ initialQuery: q.query }}
-                  className="quick-reply-card no-underline"
+        {/* 2 · La problemática, resumida y directa */}
+        <section id="problema" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col items-center gap-7 text-center">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+              El punto de partida
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight m-0 leading-[1.1] max-w-3xl">
+              Cada consulta administrativa te cuesta <span className="text-brand">tiempo que no recuperás.</span>
+            </h2>
+            <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed m-0">
+              Los ciudadanos y los usuarios internos que necesitan una respuesta sobre trámites administrativos o documentos del gobierno siguen dependiendo de llamados, traslados y esperas. Cada gestión, lejos de un acceso rápido y eficiente.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+              {["Horas de espera", "Traslados innecesarios", "Formularios que no encontrás", "Expedientes sin novedades", "Consultas repetidas sin respuesta"].map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-mist/70 dark:bg-neutral-800/70 border border-line/60 text-xs font-semibold text-muted"
                 >
-                  <span className="quick-reply-icon" aria-hidden="true">
-                    <Icon path={q.icon} />
-                  </span>
-                  <span className="quick-reply-copy">
-                    <span className="quick-reply-label">{q.title}</span>
-                    <span className="quick-reply-description">{q.text}</span>
-                  </span>
-                  <svg className="quick-reply-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5l7 7-7 7" />
+                  <svg className="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </Link>
+                  {item}
+                </span>
               ))}
             </div>
           </div>
         </section>
 
-        {/* 6 · Temas y trámites */}
-        <section id="temas-tramites" className="section-bleed bg-mist/40">
-          <div className="ed-max py-20 md:py-28">
-            <SectionHeader
-              float
-              kicker="Temas y trámites"
-              title="¿Sobre qué podés consultar?"
-              lead="El contenido del asistente se organiza en áreas que cubren las gestiones más habituales."
-            />
+        {/* 3 · Qué queremos resolver */}
+        <section id="solucion" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col gap-12">
+            <div className="max-w-2xl space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Nuestro objetivo
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Acceso rápido y eficiente a información, trámites y documentos.
+              </h2>
+              <p className="text-base text-muted m-0 leading-relaxed">
+                ChatAP es una plataforma conversacional inteligente que mejora la calidad de
+                atención al ciudadano y a los usuarios internos, con respuestas automatizadas
+                y conocimiento institucional de la Subsecretaría de Recursos Humanos.
+              </p>
+            </div>
 
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-px border border-line bg-line overflow-hidden rounded-3xl">
-              {TOPICS.map((topic) => (
-                <article key={topic.id} className="bg-paper p-7 md:p-9 flex flex-col gap-3">
-                  <span className="font-mono text-xs font-bold tracking-widest text-brand-deep" aria-hidden="true">
-                    {topic.index}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {SOLUTIONS.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-line bg-card/70 p-6 flex flex-col gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400">
+                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M5 13l4 4L19 7" />
+                    </svg>
                   </span>
-                  <h3 className="text-lg font-bold text-ink m-0">{topic.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted m-0 max-w-md">{topic.text}</p>
-                </article>
+                  <h3 className="text-lg font-bold text-ink tracking-tight m-0">{item.title}</h3>
+                  <p className="text-sm text-muted leading-relaxed m-0">{item.description}</p>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* 7 · CTA final */}
-        <section id="cta" className="section-bleed bg-paper">
-          <div className="ed-max py-20 md:py-28">
-            <div className="cta-cinematic rounded-3xl text-paper p-8 md:p-16 flex flex-col items-start gap-5 md:items-center md:text-center">
-              <p className="m-0 font-neue tracking-[0.22em] text-xs font-semibold uppercase text-paper/60">
-                {FINAL_CTA.kicker}
+        {/* 4 · Presentación del asistente (Showcase Real y Directo) */}
+        <section id="en-accion" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
+          <div className="ed-max flex flex-col items-center gap-12">
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Presentamos a ChatAP
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Una conversación, una respuesta oficial.
+              </h2>
+              <p className="text-base text-muted m-0 leading-relaxed">
+                El asistente inteligente de la Administración Pública de Formosa: orienta sobre
+                trámites, responde preguntas frecuentes, entrega documentos y consulta el SIGED
+                en tiempo real, todo en una misma conversación.
               </p>
-              <ScrollFloat
-                as="h2"
-                mode="once"
-                containerClassName="m-0 text-3xl font-bold tracking-tight text-paper md:text-4xl font-neue"
-                animationDuration={0.9}
-                ease="back.inOut(1.7)"
-                stagger={0.035}
-                scrollStart="center bottom+=30%"
-                scrollEnd="bottom bottom-=25%"
+            </div>
+
+            {/* Maqueta Interactiva Limpia y Enmarcada */}
+            <div className="w-full max-w-4xl mx-auto">
+              <InteractiveChatMockup />
+            </div>
+
+            <div className="text-center pt-2">
+              <Link
+                to="/chat"
+                onPointerEnter={prefetchChat}
+                className="btn-primary no-underline text-sm sm:text-base font-bold px-8 py-3.5 rounded-full inline-flex items-center gap-2 shadow-lg shadow-brand/20 transition-all"
               >
-                {FINAL_CTA.title}
-              </ScrollFloat>
-              <p className="m-0 max-w-2xl text-base leading-relaxed text-paper/70 md:text-lg">
-                {FINAL_CTA.lead}
-              </p>
-              <Link to={FINAL_CTA.primary.to} className="btn-primary no-underline mt-2">
-                {FINAL_CTA.primary.label}
+                <span>Abrir el asistente completo</span>
+                <span>→</span>
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 5 · Funciones Clave */}
+        <section id="capacidades" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col gap-12">
+            <div className="max-w-2xl space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Funciones clave
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Todo lo que ChatAP resuelve por vos.
+              </h2>
+              <p className="text-base text-muted m-0 leading-relaxed">
+                Orientación, respuestas, documentos y consultas al SIGED, más el panel de usuarios y la gestión del conocimiento de la Subsecretaría de Recursos Humanos.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {FEATURES.map((item) => (
+                <div key={item.id} className="minimal-feature-card group">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="grid h-10 w-10 place-items-center rounded-xl bg-mist dark:bg-neutral-800 border border-line">
+                        {item.icon}
+                      </span>
+                      <span className="text-[11px] font-mono text-muted uppercase tracking-wider font-semibold">
+                        {item.badge}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-bold text-ink tracking-tight m-0 group-hover:text-brand transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm text-muted leading-relaxed m-0">
+                      {item.description}
+                    </p>
+                  </div>
+                  <div className="pt-4 border-t border-line/60">
+                    <Link
+                      to="/chat"
+                      onPointerEnter={prefetchChat}
+                      className="text-xs font-bold text-brand hover:underline inline-flex items-center gap-1 no-underline"
+                    >
+                      <span>Consultar ahora</span>
+                      <span>→</span>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 6 · Preguntas Frecuentes Concisas (FAQ) */}
+        <section id="preguntas" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col gap-10 max-w-3xl mx-auto">
+            <div className="text-center space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Preguntas frecuentes
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Dudas comunes sobre el servicio
+              </h2>
+              <p className="text-base text-muted m-0">
+                Todo lo que necesitás saber para utilizar ChatAP con total tranquilidad.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 w-full">
+              {FAQ_ITEMS.map((item, idx) => (
+                <details key={item.id} className="faq-item group" open={idx === 0}>
+                  <summary className="faq-summary">
+                    <span className="text-base sm:text-lg font-bold text-ink">{item.question}</span>
+                    <svg className="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="faq-content text-sm sm:text-base leading-relaxed text-muted">
+                    <p className="m-0">{item.answer}</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 7 · Cierre Tipográfico Minimalista */}
+        <section id="cierre" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
+          <div className="ed-max">
+            <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
+              <div className="p-2 rounded-2xl bg-brand/10 border border-brand/20">
+                <ChatBotAvatar size={56} reaction="happy" followMouse={false} />
+              </div>
+
+              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-ink m-0">
+                ¿Tenés una consulta administrativa?
+              </h2>
+
+              <p className="text-base sm:text-lg text-muted max-w-xl leading-relaxed m-0">
+                Comenzá en lenguaje cotidiano y obtené tu respuesta oficial de la provincia al instante.
+              </p>
+
+              <div className="pt-2">
+                <Link
+                  to="/chat"
+                  onPointerEnter={prefetchChat}
+                  className="btn-primary no-underline text-base font-bold px-9 py-4 rounded-full inline-flex items-center gap-2 shadow-xl shadow-brand/25 transition-all transform hover:-translate-y-0.5"
+                >
+                  <span>Iniciar consulta con ChatAP</span>
+                  <span>→</span>
+                </Link>
+              </div>
+
+              <p className="text-xs text-muted/70 font-mono m-0">
+                Servicio público oficial · Subsecretaría de Recursos Humanos · Ministerio Jefatura de Gabinete
+              </p>
             </div>
           </div>
         </section>

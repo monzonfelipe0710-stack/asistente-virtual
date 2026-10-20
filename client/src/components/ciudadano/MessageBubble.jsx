@@ -82,8 +82,9 @@ export default function MessageBubble({ message, speaking = false, typedText = "
       : [];
 
   return (
-    <div
+    <article
       className={`flex gap-3 ${isBot ? "justify-start" : "justify-end"} animate-fade-up`}
+      aria-label={isBot ? "Respuesta del asistente" : "Tu mensaje"}
       {...(isBot ? { "data-bot-message": "", tabIndex: -1 } : {})}
     >
       {isBot && (
@@ -126,12 +127,14 @@ export default function MessageBubble({ message, speaking = false, typedText = "
         <span className={`chat-msg__meta ${isBot ? "" : "chat-msg__meta--end"}`}>
           {isBot && <span className="ui-dot" style={{ background: "var(--color-brand)" }} aria-hidden="true" />}
           {isBot ? "Asistente" : "Vos"} ·{" "}
-          {new Date(message.timestamp).toLocaleTimeString("es-AR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          <time dateTime={new Date(message.timestamp).toISOString()}>
+            {new Date(message.timestamp).toLocaleTimeString("es-AR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
         </span>
       </div>
-    </div>
+    </article>
   );
 }

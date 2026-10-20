@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, useLocation } from "react-router-dom";
 import BotOnboardingModal from "../components/common/BotOnboardingModal";
 import AccessibilityMenu from "../components/common/AccessibilityMenu";
-import ScreenReaderHelper from "../components/common/ScreenReaderHelper";
 import AppRoutes from "./routes";
 
 const EXIT_MS = 180;
@@ -62,7 +61,6 @@ export default function AppRouter() {
     <BrowserRouter>
       <BotOnboardingModal />
       <AccessibilityMenu />
-      <ScreenReaderHelper />
       <RouteTransition />
     </BrowserRouter>
   );

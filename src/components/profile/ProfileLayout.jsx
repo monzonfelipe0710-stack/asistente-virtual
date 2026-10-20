@@ -76,7 +76,7 @@ export default function ProfileLayout() {
 
   return (
     <div className="min-h-full flex flex-col bg-paper">
-      <main className="flex-1 w-full ed-max section-bleed py-12 lg:py-16" key={normalized}>
+      <main id="contenido" aria-label="Secciones del perfil" className="flex-1 w-full ed-max section-bleed py-12 lg:py-16" key={normalized}>
         <ProfileHeader />
 
         {/* Pestañas */}
