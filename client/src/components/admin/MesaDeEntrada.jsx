@@ -221,7 +221,9 @@ export default function MesaDeEntrada() {
                     <td className="px-5 py-3">
                       <StatusPill status={it.estado} />
                     </td>
-                    <td className="px-5 py-3 text-muted whitespace-nowrap">{formatDate(it.fecha)}</td>
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">
+                      <time dateTime={it.fecha || undefined}>{formatDate(it.fecha)}</time>
+                    </td>
                     <td className="px-5 py-3 text-right">
                       <button
                         className="text-xs font-semibold text-brand hover:underline"

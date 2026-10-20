@@ -197,7 +197,7 @@ export default function HomePage() {
 
       <Navbar />
 
-      <main id="contenido" className="flex-1 w-full relative z-10">
+      <main id="contenido" aria-label="Página principal de ChatAP" className="flex-1 w-full relative z-10">
         {/* 1 · Hero Principal Minimalista y Directo */}
         {/* 1 · Hero Principal Cinematográfico y Editorial */}
         <section

@@ -171,7 +171,7 @@ export default function ContactoPage() {
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-brand-deep/10 selection:text-brand-deep">
       <Navbar />
 
-      <main className="flex-1 w-full">
+      <main id="contenido" aria-label="Contacto y soporte" className="flex-1 w-full">
         {/* Encabezado simple y claro */}
         <section className="border-b border-line/70 bg-mist/35 py-10 sm:py-14">
           <div className="ed-max section-bleed">

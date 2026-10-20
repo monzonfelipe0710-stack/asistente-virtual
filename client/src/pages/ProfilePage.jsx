@@ -12,7 +12,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex flex-col bg-paper">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center px-4 py-16">
+        <main id="contenido" aria-label="Mi perfil" className="flex-1 flex items-center justify-center px-4 py-16">
           <div className="max-w-md w-full text-center animate-scale-in">
             <div className="w-14 h-14 mx-auto rounded-2xl grid place-items-center bg-brand-deep/10 text-brand-deep mb-6">
               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,7 +20,7 @@ export default function ProfilePage() {
               </svg>
             </div>
             <p className="kicker m-0">[ Mi perfil ]</p>
-            <h2 className="display-3 text-ink m-0 mt-4">SESIÓN REQUERIDA.</h2>
+            <h1 className="display-3 text-ink m-0 mt-4">SESIÓN REQUERIDA.</h1>
             <p className="text-sm text-muted font-medium mt-4 mb-8">
               Iniciá sesión para ver tu perfil, tus trámites y tus conversaciones.
             </p>

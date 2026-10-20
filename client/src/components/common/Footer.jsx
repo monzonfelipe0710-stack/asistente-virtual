@@ -186,7 +186,7 @@ export default function Footer() {
             </div>
 
             {/* Columna 3 · Soporte */}
-            <div>
+            <address className="not-italic">
               <h4 className="text-xs font-bold font-mono uppercase tracking-[0.2em] text-ink m-0 mb-4">
                 Soporte
               </h4>
@@ -213,7 +213,7 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </address>
           </div>
 
         </div>

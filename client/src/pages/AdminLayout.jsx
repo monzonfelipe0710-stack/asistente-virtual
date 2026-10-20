@@ -144,7 +144,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} aria-label="Panel de administración" className="flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>

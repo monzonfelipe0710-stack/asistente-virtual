@@ -362,6 +362,12 @@ export default function Navbar() {
 
   return (
     <header className={`nav-shell${hidden && !menuOpen ? " nav-shell--hidden" : ""}`} ref={navRef}>
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-xl focus:bg-brand-deep focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+      >
+        Saltar al contenido principal
+      </a>
       <div className={`nav-pill${scrolled ? " nav-pill--scrolled" : ""}`}>
         {/* ── Izquierda: Identidad ChatAP ── */}
         <Link to="/" aria-label="ChatAP inicio" className="nav-brand no-underline">

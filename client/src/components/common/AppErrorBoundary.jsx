@@ -28,7 +28,7 @@ export default class AppErrorBoundary extends Component {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <main className="min-h-screen grid place-items-center bg-paper px-6 py-12 text-ink">
+      <main aria-label="Error de la aplicación" className="min-h-screen grid place-items-center bg-paper px-6 py-12 text-ink">
         <section className="w-full max-w-lg rounded-3xl border border-line bg-paper p-8 text-center shadow-lg">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-bad/10 text-bad" aria-hidden="true">
             <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor">
