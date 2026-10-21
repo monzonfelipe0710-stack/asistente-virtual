@@ -8,6 +8,8 @@ export default function EditProfileModal({ open, onClose, saved }) {
   const { user, updateProfile } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState(() => ({
+    firstName: user?.firstName || user?.nombre || "",
+    lastName: user?.lastName || user?.apellido || "",
     name: user?.name || "",
     phone: user?.phone || "",
     department: user?.department || "",
@@ -24,7 +26,11 @@ export default function EditProfileModal({ open, onClose, saved }) {
     e.preventDefault();
     setError("");
     setSaving(true);
-    updateProfile(form)
+    const fullName = `${form.firstName || ""} ${form.lastName || ""}`.trim() || form.name;
+    updateProfile({
+      ...form,
+      name: fullName,
+    })
       .then(() => {
         toast("Perfil actualizado correctamente.", "success");
         onClose();
@@ -56,14 +62,39 @@ export default function EditProfileModal({ open, onClose, saved }) {
       </div>
 
       <form onSubmit={handleSave} className="px-5 py-4 overflow-y-auto space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-muted mb-1">Nombre completo *</label>
-          <input
-            className="input-field"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1">Nombre *</label>
+            <input
+              className="input-field"
+              value={form.firstName}
+              onChange={(e) => {
+                const nextFirst = e.target.value;
+                setForm({
+                  ...form,
+                  firstName: nextFirst,
+                  name: `${nextFirst} ${form.lastName}`.trim(),
+                });
+              }}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1">Apellido *</label>
+            <input
+              className="input-field"
+              value={form.lastName}
+              onChange={(e) => {
+                const nextLast = e.target.value;
+                setForm({
+                  ...form,
+                  lastName: nextLast,
+                  name: `${form.firstName} ${nextLast}`.trim(),
+                });
+              }}
+              required
+            />
+          </div>
         </div>
         <div>
           <label className="block text-xs font-medium text-muted mb-1">Teléfono</label>

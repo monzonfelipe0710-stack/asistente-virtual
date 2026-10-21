@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { generoLabel } from "../../lib/genero";
+import { getInitials } from "../../lib/profileMeta";
 import { Icon, ICONS } from "./ui";
 import EditProfileModal from "./EditProfileModal";
-
-function initials(name) {
-  return (name || "?")
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
-}
 
 const STATUS_TONE = {
   Activo: "bg-ok/10 text-ok border border-ok/20",
@@ -63,15 +55,20 @@ export default function ProfileHeader({ onSaved }) {
           <h1 className="display-2 text-ink mt-4 mb-0">
             MI PERFIL.
           </h1>
+          {user.firstName && (
+            <p className="text-sm text-muted font-medium mt-2 mb-0">
+              Bienvenido/a, <span className="font-bold text-ink">{user.firstName} {user.lastName}</span>
+            </p>
+          )}
 
           <div className="relative mt-10 flex flex-wrap items-start justify-between gap-6">
             <div className="flex items-center gap-5 min-w-0">
               <span className="w-20 h-20 rounded-full bg-brand-deep text-paper grid place-items-center text-2xl font-bold uppercase ring-4 ring-brand-deep/10 shrink-0">
-                {initials(user.name || user.email)}
+                {getInitials(user.firstName, user.lastName, user.name || user.email)}
               </span>
               <div className="min-w-0">
                 <p className="text-2xl font-extrabold tracking-tight text-ink m-0 truncate leading-tight">
-                  {user.name || user.email}
+                  {user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email}
                 </p>
                 <p className="text-sm text-muted m-0 mt-1 font-medium break-all">{user.email}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -102,7 +99,9 @@ export default function ProfileHeader({ onSaved }) {
         </div>
 
         <div className="border-t border-line px-6 sm:px-10 py-8 grid grid-cols-2 md:grid-cols-3 gap-x-10 gap-y-6">
-          <InfoItem label="Nombre completo" value={user.name} />
+          <InfoItem label="Nombre" value={user.firstName || user.nombre || "—"} />
+          <InfoItem label="Apellido" value={user.lastName || user.apellido || "—"} />
+          <InfoItem label="Nombre completo" value={user.name || "—"} />
           <InfoItem label="Correo electrónico" value={user.email} mono />
           <InfoItem label="DNI" value={user.dni || "—"} mono />
           <InfoItem label="Género" value={generoLabel(user.genero) || "—"} />

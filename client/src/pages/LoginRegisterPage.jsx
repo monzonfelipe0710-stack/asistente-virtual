@@ -5,6 +5,7 @@ import { useToast } from "../components/common/Toast";
 import ChatBotAvatar from "../components/ChatBotAvatar";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
 import { triggerOnboardingForUser } from "../components/common/BotOnboardingModal";
+import { promptSaveCredentials } from "../lib/credentialManager";
 
 function formatDni(value) {
   return value.replace(/\D/g, "").slice(0, 8);
@@ -80,6 +81,8 @@ export default function LoginRegisterPage() {
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [dni, setDni] = useState("");
   const [gender, setGender] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -92,6 +95,7 @@ export default function LoginRegisterPage() {
 
   const from = location.state?.from?.pathname || "/";
   const isLogin = mode === "login";
+  const requiresNameAndLastName = gender === "Otro" || gender === "Prefiero no decirlo";
 
   // Envío de formulario estándar (Email + Contraseña)
   async function handleSubmit(e) {
@@ -100,9 +104,20 @@ export default function LoginRegisterPage() {
     try {
       if (mode === "login") {
         await login(email, password);
+        await promptSaveCredentials({
+          username: email,
+          password,
+        });
         toast("¡Bienvenido/a de nuevo!", "success");
         navigate(from, { replace: true });
       } else {
+        if (requiresNameAndLastName) {
+          if (!nombre.trim() || !apellido.trim()) {
+            toast("Ingresá tu nombre y apellido para continuar.", "error");
+            setSubmitting(false);
+            return;
+          }
+        }
         // Registro común de ciudadano: el backend valida los datos contra el
         // padrón y la cuenta queda habilitada al instante.
         const result = await register({
@@ -110,6 +125,13 @@ export default function LoginRegisterPage() {
           gender,
           email,
           password,
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+        });
+        await promptSaveCredentials({
+          username: email,
+          password,
+          name: result?.user?.name || `${nombre.trim()} ${apellido.trim()}`.trim(),
         });
         toast(result?.mensaje || "Cuenta creada. ¡Ya iniciaste sesión!", "success");
         if (result?.autoLogin) {
@@ -352,7 +374,15 @@ export default function LoginRegisterPage() {
             ) : (
               <>
                 {/* Formulario Principal de Login o Solicitud de cuenta */}
-                <form onSubmit={handleSubmit} className="flex flex-col">
+                <form
+                  id="auth-form"
+                  name="authForm"
+                  method="POST"
+                  action="/api/auth/login"
+                  onSubmit={handleSubmit}
+                  className="flex flex-col"
+                  autoComplete="on"
+                >
                   {/* DNI: sólo en registro. Se despliega con altura animada. */}
                   <Collapse open={!isLogin}>
                     <div>
@@ -361,6 +391,7 @@ export default function LoginRegisterPage() {
                       </label>
                       <input
                         id="register-dni"
+                        name="dni"
                         type="text"
                         inputMode="numeric"
                         required={!isLogin}
@@ -409,7 +440,52 @@ export default function LoginRegisterPage() {
                         ))}
                       </div>
                       <p id="register-gender-hint" className="mt-1 text-[11px] text-muted">
-                        Campo obligatorio. Tus datos se validan contra el padrón de turnos.
+                        {requiresNameAndLastName
+                          ? "Al seleccionar esta opción, podés indicar tu nombre y apellido a continuación."
+                          : "Campo obligatorio. Tus datos se validan contra el padrón de turnos."}
+                      </p>
+                    </div>
+                  </Collapse>
+
+                  {/* Nombre y Apellido: se despliega sólo si elige "Otro" o "Prefiero no decirlo" */}
+                  <Collapse open={!isLogin && requiresNameAndLastName}>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="register-nombre" className="block text-sm font-medium text-muted mb-1.5">
+                            Nombre
+                          </label>
+                          <input
+                            id="register-nombre"
+                            name="given-name"
+                            type="text"
+                            required={!isLogin && requiresNameAndLastName}
+                            value={nombre}
+                            onChange={(e) => setNombre(e.target.value)}
+                            placeholder="Ej: Alex"
+                            autoComplete="given-name"
+                            className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="register-apellido" className="block text-sm font-medium text-muted mb-1.5">
+                            Apellido
+                          </label>
+                          <input
+                            id="register-apellido"
+                            name="family-name"
+                            type="text"
+                            required={!isLogin && requiresNameAndLastName}
+                            value={apellido}
+                            onChange={(e) => setApellido(e.target.value)}
+                            placeholder="Ej: Gómez"
+                            autoComplete="family-name"
+                            className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted m-0">
+                        Completá tu nombre y apellido para personalizar tu perfil y tus trámites en ChatAP.
                       </p>
                     </div>
                   </Collapse>
@@ -420,22 +496,25 @@ export default function LoginRegisterPage() {
                     </label>
                     <input
                       id="auth-email"
+                      name="username"
                       type={isLogin ? "text" : "email"}
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={isLogin ? "30123456 o tucorreo@gmail.com" : "tucorreo@gmail.com"}
-                      autoComplete={isLogin ? "username" : "email"}
+                      autoComplete={isLogin ? "username" : "email username"}
                       className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-medium text-muted mb-1.5">
+                    <label htmlFor="auth-password" className="block text-sm font-medium text-muted mb-1.5">
                       Contraseña
                     </label>
                     <div className="relative">
                       <input
+                        id="auth-password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
                         required
                         value={password}
