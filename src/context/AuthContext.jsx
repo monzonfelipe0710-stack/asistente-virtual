@@ -1,10 +1,7 @@
 import { createContext, useContext, useCallback, useMemo } from "react";
 import { useSessionStore } from "../store/session";
 import { login as loginRequest } from "../services/auth";
-import {
-  registro as registroRequest,
-  registroCiudadano as registroCiudadanoRequest,
-} from "../services/usuarios";
+import { registroCiudadano as registroCiudadanoRequest } from "../services/usuarios";
 import {
   findLocalCitizen,
   verifyLocalCitizen,
@@ -12,6 +9,7 @@ import {
   isValidDni,
 } from "../lib/auth";
 import { apiErrorMessage } from "../lib/api";
+import { generoCode } from "../lib/genero";
 
 const AuthContext = createContext(null);
 
@@ -105,14 +103,10 @@ export function AuthProvider({ children }) {
     [setSession]
   );
 
-  const register = useCallback(async ({ name, dni, gender, genero, email, password, rol = "CIUDADANO", cuil }) => {
-    const cleanName = (name || "").trim();
+  const register = useCallback(async ({ dni, gender, genero, email, password }) => {
     const cleanDni = normalizeDni(dni);
     const selectedGender = (gender || genero || "").trim();
-    const cleanGender = {
-      Masculino: "M",
-      Femenino: "F",
-    }[selectedGender] || selectedGender;
+    const cleanGender = generoCode(selectedGender);
     const cleanEmail = (email || "").trim().toLowerCase();
     if (!isValidDni(cleanDni)) throw new Error("Ingresá tu DNI (7 u 8 números).");
     if (!cleanGender) throw new Error("Seleccioná tu género.");
@@ -120,42 +114,26 @@ export function AuthProvider({ children }) {
     if (!password || password.length < 8)
       throw new Error("La contraseña debe tener al menos 8 caracteres.");
 
-    // Cuenta ciudadana real: el backend valida los datos del padrón.
-    if (rol === "CIUDADANO") {
-      try {
-        const registro = await registroCiudadanoRequest({
-          dni: cleanDni,
-          genero: cleanGender,
-          email: cleanEmail,
-          password,
-        });
-        const data = await loginRequest({ email: cleanEmail, password });
-        setSession({
-          token: data.token,
-          usuario: { ...data.usuario, dni: cleanDni, genero: cleanGender },
-        });
-        return {
-          mensaje: registro.mensaje || "¡Cuenta creada! Ya iniciaste sesión.",
-          autoLogin: true,
-          user: toFrontUser({ ...data.usuario, dni: cleanDni, genero: cleanGender }),
-        };
-      } catch (err) {
-        throw new Error(apiErrorMessage(err, err.message || "No se pudo crear la cuenta."), { cause: err });
-      }
-    }
-
-    // Empleado → solicitud al backend; la cuenta queda PENDIENTE de aprobación.
+    // Cuenta ciudadana: el backend valida los datos contra el padrón.
     try {
-      return await registroRequest({
-        nombre: cleanName || `DNI ${cleanDni}`,
+      const registro = await registroCiudadanoRequest({
         dni: cleanDni,
         genero: cleanGender,
         email: cleanEmail,
         password,
-        cuil: String(cuil || "").replace(/\D/g, ""),
       });
+      const data = await loginRequest({ email: cleanEmail, password });
+      setSession({
+        token: data.token,
+        usuario: { ...data.usuario, dni: cleanDni, genero: cleanGender },
+      });
+      return {
+        mensaje: registro.mensaje || "¡Cuenta creada! Ya iniciaste sesión.",
+        autoLogin: true,
+        user: toFrontUser({ ...data.usuario, dni: cleanDni, genero: cleanGender }),
+      };
     } catch (err) {
-      throw new Error(apiErrorMessage(err, "No se pudo completar el registro."), { cause: err });
+      throw new Error(apiErrorMessage(err, err.message || "No se pudo crear la cuenta."), { cause: err });
     }
   }, [setSession]);
 

@@ -40,6 +40,7 @@ export function ChatProvider({ children }) {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const ownerRef = useRef(null);
+  const localHistoryRef = useRef([]);
 
   // Las cuentas del backend hidratan el historial desde Consulta. La memoria
   // local queda solo como compatibilidad para las cuentas demo ya existentes.
@@ -52,7 +53,9 @@ export function ChatProvider({ children }) {
       setConsultas([]);
       setHistoryError("");
       setHistoryLoading(Boolean(ownerId && token));
-      setMessages(ownerId && !token ? loadHistory(ownerId) : []);
+      const localHistory = ownerId && !token ? loadHistory(ownerId) : [];
+      localHistoryRef.current = localHistory;
+      setMessages([]);
     });
 
     if (ownerId && token) {
@@ -70,42 +73,11 @@ export function ChatProvider({ children }) {
             ...previous.filter((consulta) => !loadedIds.has(consulta.id)),
             ...newestFirst,
           ]);
-          const loadedMessages = ordered.flatMap((consulta) => {
-              const timestamp = new Date(consulta.fecha).toISOString();
-              const pair = [{
-                id: `consulta-${consulta.id}-pregunta`,
-                type: "user",
-                text: consulta.textoConsulta,
-                timestamp,
-                consultaId: consulta.id,
-              }];
-              if (consulta.respuesta) {
-                pair.push({
-                  id: `consulta-${consulta.id}-respuesta`,
-                  type: "bot",
-                  text: consulta.respuesta,
-                  action: consulta.tramite
-                    ? {
-                        type: "checklist",
-                        tramiteId: consulta.tramite.id,
-                        tramiteNombre: consulta.tramite.nombre,
-                        label: `Descargar checklist · ${consulta.tramite.nombre}`,
-                      }
-                    : null,
-                  timestamp,
-                  consultaId: consulta.id,
-                  calificacion: consulta.calificacion,
-                  canRate: true,
-                });
-              }
-              return pair;
-            });
-          setMessages((previous) => [
-            ...loadedMessages,
-            ...previous.filter(
+          setMessages((previous) =>
+            previous.filter(
               (message) => !message.consultaId || !loadedIds.has(message.consultaId)
-            ),
-          ]);
+            )
+          );
         })
         .catch((error) => {
           if (!cancelled) setHistoryError(apiErrorMessage(error));
@@ -131,10 +103,12 @@ export function ChatProvider({ children }) {
         timestamp: new Date().toISOString(),
         ...metadata,
       };
+      if (ownerRef.current && !token) {
+        localHistoryRef.current = [...localHistoryRef.current, msg].slice(-400);
+        saveHistory(ownerRef.current, localHistoryRef.current);
+      }
       setMessages((prev) => {
-        const next = [...prev, msg];
-        if (ownerRef.current && !token) saveHistory(ownerRef.current, next);
-        return next;
+        return [...prev, msg];
       });
       return msg.id;
     },
@@ -157,10 +131,78 @@ export function ChatProvider({ children }) {
     ]);
   }, [token]);
 
+  const openConversation = useCallback((conversationMessages) => {
+    setMessages(conversationMessages);
+  }, []);
+
+  const openLocalConversation = useCallback((query) => {
+    const matchesQuery = (message) => {
+      if (query.id) return message.id === query.id;
+      return (
+        message.type === "user" &&
+        message.text === query.text &&
+        (!query.at ||
+          Math.abs(new Date(message.timestamp).getTime() - new Date(query.at).getTime()) < 5000)
+      );
+    };
+    const start = localHistoryRef.current.findIndex(matchesQuery);
+    if (start < 0) {
+      setMessages([{
+        id: query.id || `historial-${query.at}`,
+        type: "user",
+        text: query.text,
+        timestamp: query.at || new Date().toISOString(),
+      }]);
+      return;
+    }
+    const nextUser = localHistoryRef.current.findIndex(
+      (message, index) => index > start && message.type === "user"
+    );
+    setMessages(
+      localHistoryRef.current.slice(start, nextUser < 0 ? undefined : nextUser)
+    );
+  }, []);
+
+  const removeConsulta = useCallback((consultaId) => {
+    setConsultas((previous) => previous.filter((consulta) => consulta.id !== consultaId));
+    setMessages((previous) =>
+      previous.filter((message) => message.consultaId !== consultaId)
+    );
+  }, []);
+
+  const removeLocalConversation = useCallback((query) => {
+    const matchesQuery = (message) => {
+      if (query.id) return message.id === query.id;
+      return (
+        message.type === "user" &&
+        message.text === query.text &&
+        (!query.at ||
+          Math.abs(new Date(message.timestamp).getTime() - new Date(query.at).getTime()) < 5000)
+      );
+    };
+    const removeConversation = (history) => {
+      const start = history.findIndex(matchesQuery);
+      if (start < 0) return history;
+      const nextUser = history.findIndex(
+        (message, index) => index > start && message.type === "user"
+      );
+      return history.filter((_, index) => index < start || (nextUser >= 0 && index >= nextUser));
+    };
+
+    localHistoryRef.current = removeConversation(localHistoryRef.current);
+    if (ownerRef.current) saveHistory(ownerRef.current, localHistoryRef.current);
+    setMessages((previous) => removeConversation(previous));
+  }, []);
+
   const clearHistory = useCallback(() => {
     setMessages([]);
-    if (ownerRef.current && !token) writeJSON(historyKey(ownerRef.current), []);
-  }, [token]);
+  }, []);
+
+  const clearLocalHistory = useCallback(() => {
+    localHistoryRef.current = [];
+    if (ownerRef.current) saveHistory(ownerRef.current, []);
+    setMessages([]);
+  }, []);
 
   return (
     <ChatContext.Provider
@@ -172,7 +214,12 @@ export function ChatProvider({ children }) {
         addMessage,
         updateMessage,
         recordConsulta,
+        openConversation,
+        openLocalConversation,
+        removeConsulta,
+        removeLocalConversation,
         clearHistory,
+        clearLocalHistory,
         hasHistory: messages.length > 0,
       }}
     >

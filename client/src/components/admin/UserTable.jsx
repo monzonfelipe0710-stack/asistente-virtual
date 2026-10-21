@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { listar, suspender, reactivar } from "../../services/usuarios";
 import { apiErrorMessage } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../common/Toast";
 import Modal from "../common/Modal";
+import NuevoUsuarioModal from "./NuevoUsuarioModal";
 import Pagination, { usePagination } from "../common/Pagination";
 import { PageHeader, EmptyState } from "./ui";
 import { TableSkeleton } from "./Skeleton";
 import { formatDate } from "../../utils/date";
 import { roleLabel } from "../../lib/roles";
+import { downloadCsv } from "../../lib/adminCsv";
+import useLocalStorage from "../../hooks/useLocalStorage";
 
 const ESTADOS = ["Todos", "PENDIENTE", "APROBADO", "SUSPENDIDO", "RECHAZADO"];
 
@@ -50,10 +52,12 @@ export default function UserTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [usuarios, setUsuarios] = useState([]);
-  const [estado, setEstado] = useState("Todos");
-  const [query, setQuery] = useState("");
+  const preferenceKey = user?.id ?? "anon";
+  const [estado, setEstado] = useLocalStorage(`chatap.admin.usuarios.status.${preferenceKey}`, "Todos");
+  const [query, setQuery] = useLocalStorage(`chatap.admin.usuarios.query.${preferenceKey}`, "");
   const [confirm, setConfirm] = useState(null);
   const [working, setWorking] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
 
   async function cargar() {
     setLoading(true);
@@ -130,8 +134,35 @@ export default function UserTable() {
     <div className="animate-fade-in">
       <PageHeader
         title="Usuarios"
-        description="Empleados registrados. Las altas pendientes se gestionan desde Solicitudes."
-      />
+        description="Cuentas del sistema. El alta de personal la realiza la administración."
+      >
+        <button
+          type="button"
+          onClick={() => setFormOpen(true)}
+          className="btn-primary text-xs"
+        >
+          Nuevo usuario
+        </button>
+        <button
+          type="button"
+          onClick={() => downloadCsv(
+            "usuarios.csv",
+            ["Nombre", "Correo", "CUIL/DNI", "Rol", "Estado", "Registrado"],
+            filtrados.map((usuario) => [
+              usuario.nombre,
+              usuario.email,
+              usuario.cuil || usuario.dni || "",
+              roleLabel(usuario.rol),
+              usuario.estado,
+              formatDate(usuario.createdAt),
+            ])
+          )}
+          disabled={loading || filtrados.length === 0}
+          className="btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Exportar CSV
+        </button>
+      </PageHeader>
 
       {error && (
         <div className="mb-4 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">
@@ -206,6 +237,11 @@ export default function UserTable() {
                       <td className="px-4 py-3">
                         <p className="text-xs font-medium text-ink m-0">{u.nombre}</p>
                         <p className="text-[11px] text-muted m-0 mt-0.5">{u.email}</p>
+                        {(u.cuil || u.dni) && (
+                          <p className="text-[11px] text-faint m-0 mt-0.5 font-mono">
+                            {u.cuil ? `CUIL ${u.cuil}` : `DNI ${u.dni}`}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <RoleBadge role={u.rol} />
@@ -216,14 +252,6 @@ export default function UserTable() {
                       <td className="px-4 py-3 text-xs text-muted">{formatDate(u.createdAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end items-center gap-2">
-                          {u.estado === "PENDIENTE" && (
-                            <Link
-                              to="/admin/solicitudes"
-                              className="text-[10px] font-medium text-brand-deep hover:underline no-underline"
-                            >
-                              Gestionar en Solicitudes
-                            </Link>
-                          )}
                           {u.estado === "APROBADO" && (
                             <button
                               onClick={() => setConfirm({ usuario: u, accion: "suspender" })}
@@ -282,6 +310,13 @@ export default function UserTable() {
           </p>
         )}
       </Modal>
+
+      {formOpen && (
+        <NuevoUsuarioModal
+          onClose={() => setFormOpen(false)}
+          onSaved={cargar}
+        />
+      )}
     </div>
   );
 }

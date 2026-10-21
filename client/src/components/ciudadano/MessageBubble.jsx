@@ -99,6 +99,8 @@ export default function MessageBubble({
 }) {
   const [ratingBusy, setRatingBusy] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const hasRating = message.calificacion !== null && message.calificacion !== undefined;
   const isBot = message.type === "bot";
   const shown = speaking ? typedText || message.text : message.text;
   const typing = speaking && typedText.length < message.text.length;
@@ -115,7 +117,8 @@ export default function MessageBubble({
     setRatingError("");
     try {
       const result = await calificarConsulta(message.consultaId, value);
-      onRate?.(message.id, result.calificacion);
+      setRatingSubmitted(true);
+      onRate?.(message.id, result?.calificacion ?? value);
     } catch (error) {
       setRatingError(apiErrorMessage(error, "No se pudo guardar tu opinión."));
     } finally {
@@ -177,7 +180,7 @@ export default function MessageBubble({
                   <button
                     key={value}
                     type="button"
-                    disabled={ratingBusy}
+                    disabled={ratingBusy || hasRating}
                     aria-pressed={message.calificacion === value}
                     aria-label={value ? "Sí, me sirvió" : "No me sirvió"}
                     onClick={() => rateResponse(value)}
@@ -191,8 +194,10 @@ export default function MessageBubble({
                     {value ? "Sí" : "No"}
                   </button>
                 ))}
-                {message.calificacion !== null && message.calificacion !== undefined && (
-                  <span className="text-xs text-ok" role="status">Gracias por tu opinión.</span>
+                {(hasRating || ratingSubmitted) && (
+                  <span className="text-xs text-ok" role="status">
+                    ¡Gracias por tu opinión! Nos ayuda a mejorar.
+                  </span>
                 )}
               </div>
               {ratingError && <p role="alert" className="mt-1 text-xs text-bad">{ratingError}</p>}

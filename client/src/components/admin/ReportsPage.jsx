@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { users } from "../../data/mockUsers";
 import { knowledgeBase } from "../../data/mockKnowledge";
 import { sigedRecords } from "../../data/mockSiged";
@@ -116,6 +116,8 @@ const INITIAL_REQUESTS = [
 ];
 
 export default function ReportsPage() {
+  const reportRef = useRef(null);
+  const originalTitle = useRef("");
   const [period, setPeriod] = useState("30d");
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [newTaskInput, setNewTaskInput] = useState("");
@@ -127,6 +129,7 @@ export default function ReportsPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard"); // "dashboard" | "knowledge"
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Cálculos dinámicos de los datos del sistema
   const totalViews = useMemo(() => knowledgeBase.reduce((s, a) => s + a.views, 0), []);
@@ -147,6 +150,37 @@ export default function ReportsPage() {
     []
   );
   const maxRole = useMemo(() => Math.max(...usersByRole.map((r) => r.count), 1), [usersByRole]);
+
+  useEffect(() => {
+    function restorePrintEnvironment() {
+      document.documentElement.classList.remove("report-printing");
+      if (originalTitle.current) {
+        document.title = originalTitle.current;
+        originalTitle.current = "";
+      }
+    }
+
+    function finishPrint() {
+      restorePrintEnvironment();
+      setIsPrinting(false);
+    }
+    window.addEventListener("afterprint", finishPrint);
+    return () => {
+      window.removeEventListener("afterprint", finishPrint);
+      restorePrintEnvironment();
+    };
+  }, []);
+
+  function downloadPdf() {
+    if (!reportRef.current) {
+      throw new Error("No se encontró el contenido del informe para exportar.");
+    }
+    originalTitle.current = document.title;
+    document.title = `Informe-ChatAP-SIGED-${new Date().toISOString().slice(0, 10)}`;
+    document.documentElement.classList.add("report-printing");
+    setIsPrinting(true);
+    requestAnimationFrame(() => window.print());
+  }
 
   // Manejador de tareas
   const handleToggleTask = (id) => {
@@ -231,7 +265,7 @@ export default function ReportsPage() {
   let accumulatedOffset = 0;
 
   return (
-    <div className="space-y-6 animate-fade-in text-slate-800 dark:text-slate-100 font-sans pb-10">
+    <div ref={reportRef} className="reports-print-root space-y-6 animate-fade-in text-slate-800 dark:text-slate-100 font-sans pb-10">
       {/* 1. Header Superior */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -248,7 +282,7 @@ export default function ReportsPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" data-print-hide>
           {/* Selector de periodo interactivo */}
           <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium">
             <button
@@ -303,13 +337,13 @@ export default function ReportsPage() {
           {/* Botón de Descarga / Exportación estilo Shadcn */}
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={downloadPdf}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 rounded-lg shadow-sm transition-all cursor-pointer active:scale-95"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            <span>Descargar Informe</span>
+            <span>Guardar como PDF</span>
           </button>
         </div>
       </div>
@@ -317,7 +351,7 @@ export default function ReportsPage() {
       <PendingBackend description="Los reportes combinan datos de demostración (SIGED, expedientes). Todavía no hay endpoints de reportes en el backend; para métricas reales usá el Dashboard." />
 
       {/* Tabs de vista: Dashboard General vs Base de Conocimiento */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1" data-print-hide>
         <button
           type="button"
           onClick={() => setActiveTab("dashboard")}
@@ -492,7 +526,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {activeTab === "dashboard" ? (
+      {activeTab === "dashboard" || isPrinting ? (
         <>
           {/* 3. Fila 2: Tres Widgets Analíticos (Donut, Tareas, Pipeline) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

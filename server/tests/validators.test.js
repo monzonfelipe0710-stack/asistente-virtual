@@ -2,8 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loginSchema } from '../src/validators/auth.validators.js';
-import { registroSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
+import { filtroUsuariosSchema, registroCiudadanoSchema } from '../src/validators/usuario.validator.js';
 import { crearSectorSchema, actualizarSectorSchema } from '../src/validators/sector.validator.js';
+import { crearTramiteSchema, actualizarTramiteSchema } from '../src/validators/tramite.validator.js';
 
 const mensaje = (schema, valor) => schema.safeParse(valor).error?.issues[0].message;
 
@@ -23,33 +24,6 @@ describe('loginSchema', () => {
 
   it('rechaza una contraseña vacía', () => {
     assert.equal(mensaje(loginSchema, { email: 'a@b.com', password: '' }), 'La contraseña es obligatoria.');
-  });
-});
-
-describe('registroSchema', () => {
-  it('exige al menos 8 caracteres de contraseña', () => {
-    const m = mensaje(registroSchema, { nombre: 'Ana', email: 'a@b.com', password: 'corta' });
-    assert.equal(m, 'La contraseña debe tener al menos 8 caracteres.');
-  });
-
-  it('acepta un registro completo', () => {
-    const r = registroSchema.safeParse({
-      nombre: 'Ana',
-      email: 'a@b.com',
-      password: '12345678',
-      cuil: '20-12345678-6',
-    });
-    assert.equal(r.success, true);
-  });
-
-  it('rechaza un CUIL con dígito verificador inválido', () => {
-    const r = registroSchema.safeParse({
-      nombre: 'Ana',
-      email: 'a@b.com',
-      password: '12345678',
-      cuil: '20-12345678-0',
-    });
-    assert.equal(r.success, false);
   });
 });
 
@@ -87,6 +61,34 @@ describe('crearSectorSchema', () => {
   });
 });
 
+describe('crearTramiteSchema', () => {
+  const base = { nombre: 'Licencia', descripcion: 'Desc', sectorId: 1 };
+
+  it('completa requisitos y mesaIds vacíos si no vienen', () => {
+    const t = crearTramiteSchema.parse(base);
+    assert.deepEqual([t.requisitos, t.mesaIds], [[], []]);
+  });
+
+  it('acepta mesaIds con el nombre que espera el service', () => {
+    // Regresión: el validator usaba `mesaId` y el service `mesaIds`, y crear fallaba siempre.
+    assert.deepEqual(crearTramiteSchema.parse({ ...base, mesaIds: [1, 2] }).mesaIds, [1, 2]);
+  });
+});
+
+describe('actualizarTramiteSchema', () => {
+  it('no agrega requisitos ni mesas que no vinieron en el body', () => {
+    // Regresión: en Zod 4 los .default([]) se aplicaban dentro de .partial(), y un
+    // PATCH que solo cambiaba el nombre borraba todos los requisitos y mesas.
+    const t = actualizarTramiteSchema.parse({ nombre: 'Otro' });
+    assert.equal('requisitos' in t, false);
+    assert.equal('mesaIds' in t, false);
+  });
+
+  it('respeta un array vacío explícito para vaciar los requisitos', () => {
+    assert.deepEqual(actualizarTramiteSchema.parse({ requisitos: [] }).requisitos, []);
+  });
+});
+
 describe('filtroUsuariosSchema', () => {
   it('acepta los cuatro estados y la ausencia de filtro', () => {
     assert.equal(filtroUsuariosSchema.safeParse({}).success, true);
@@ -98,5 +100,21 @@ describe('filtroUsuariosSchema', () => {
   it('rechaza un estado desconocido con mensaje propio', () => {
     const m = mensaje(filtroUsuariosSchema, { estado: 'CUALQUIERA' });
     assert.match(m, /El estado debe ser/);
+  });
+});
+
+describe('registroCiudadanoSchema', () => {
+  const base = { dni: '30123456', email: 'a@b.com', password: '12345678' };
+
+  it('acepta los cuatro géneros', () => {
+    // M = Masculino, F = Femenino, O = Otro, X = Prefiero no decirlo.
+    for (const genero of ['M', 'F', 'O', 'X']) {
+      assert.equal(registroCiudadanoSchema.safeParse({ ...base, genero }).success, true, genero);
+    }
+  });
+
+  it('rechaza un género desconocido con mensaje propio', () => {
+    const m = mensaje(registroCiudadanoSchema, { ...base, genero: 'Z' });
+    assert.match(m, /El género debe ser M, F, O o X/);
   });
 });

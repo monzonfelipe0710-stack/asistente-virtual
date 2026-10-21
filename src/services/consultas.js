@@ -19,3 +19,9 @@ export async function calificarConsulta(id, calificacion) {
   });
   return data;
 }
+
+/** DELETE /api/consultas/:id — elimina una consulta propia del historial. */
+export async function eliminarConsulta(id) {
+  const { data } = await api.delete(`/api/consultas/${id}`);
+  return data;
+}

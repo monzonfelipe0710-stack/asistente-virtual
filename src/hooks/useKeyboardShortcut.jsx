@@ -28,7 +28,6 @@ export function KeyboardShortcutHelp({ open, onClose }) {
   if (!open) return null;
 
   const items = [
-    { keys: "Ctrl + K", desc: "Abrir búsqueda global" },
     { keys: "Ctrl + N", desc: "Nuevo elemento (usuario/artículo)" },
     { keys: "Escape", desc: "Cerrar modal / menú" },
     { keys: "?", desc: "Ayuda de teclado" },

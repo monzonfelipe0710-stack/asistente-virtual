@@ -2,8 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useAdmin } from "../../context/AdminContext";
+import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../common/Toast";
 import { roleLabel } from "../../lib/roles";
+import useLocalStorage from "../../hooks/useLocalStorage";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 import {
@@ -23,6 +25,7 @@ import {
 } from "./ui";
 import { formatDate } from "../../utils/date";
 import PendingBackend from "./PendingBackend";
+import { downloadCsv } from "../../lib/adminCsv";
 
 function Icon({ path }) {
   return (
@@ -34,10 +37,12 @@ function Icon({ path }) {
 
 export default function MesaDeEntrada() {
   const { can, role } = useAdmin();
+  const { user } = useAuth();
   const push = useToast();
   const [items, setItems] = useState(initialMesaEntradas);
-  const [query, setQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("todos");
+  const preferenceKey = user?.id ?? role;
+  const [query, setQuery] = useLocalStorage(`chatap.admin.mesa.query.${preferenceKey}`, "");
+  const [filterStatus, setFilterStatus] = useLocalStorage(`chatap.admin.mesa.status.${preferenceKey}`, "todos");
   const [formOpen, setFormOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   const [justAdded, setJustAdded] = useState(null);
@@ -102,6 +107,28 @@ export default function MesaDeEntrada() {
         title="Mesa de Entradas"
         description="Registrá y dale seguimiento a los ingresos de trámites y expedientes."
       >
+        <button
+          type="button"
+          onClick={() => downloadCsv(
+            "mesa-de-entradas.csv",
+            ["Expediente", "Trámite", "Descripción", "Encargado", "Sector", "Mesa", "Estado", "Prioridad", "Fecha"],
+            filtered.map((item) => [
+              item.id,
+              item.nombre,
+              item.descripcion,
+              item.encargado,
+              item.sector,
+              item.mesa,
+              item.estado,
+              item.prioridad,
+              formatDate(item.fecha),
+            ])
+          )}
+          disabled={filtered.length === 0}
+          className="btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Exportar CSV
+        </button>
         <button className="btn-primary" onClick={() => setFormOpen(true)}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

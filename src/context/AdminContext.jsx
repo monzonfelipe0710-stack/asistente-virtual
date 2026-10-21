@@ -12,7 +12,7 @@ export const PERMISSION_LABELS = {
   dashboard: { label: "Ver panel general", desc: "Resumen de la actividad del sistema." },
   tramites: { label: "Gestionar trámites", desc: "Crear, editar, publicar y despublicar tus trámites, y cargar sus documentos." },
   solicitudes: { label: "Gestionar solicitudes", desc: "Aprobar, rechazar, suspender y reactivar cuentas." },
-  usuarios: { label: "Gestionar usuarios", desc: "Listar, suspender y reactivar administradores." },
+  usuarios: { label: "Gestionar usuarios", desc: "Listar, suspender y reactivar empleados." },
   sectores: { label: "Gestionar sectores", desc: "Crear y editar el organigrama (ministerios, subsecretarías, departamentos)." },
   reportes: { label: "Métricas y reportes", desc: "Consultas por trámite y consultas sin respuesta." },
   mesa_entrada: { label: "Mesa de Entradas", desc: "Ingreso y seguimiento de trámites y expedientes." },
