@@ -1,15 +1,16 @@
 import { XMLParser } from "fast-xml-parser";
 
-const TURNOS_URL = process.env.TURNOS_URL;
+const DEFAULT_TURNOS_URL = "https://www.formosa.gob.ar/modulos/mi_portal/php/getDataSIP.php";
 const parser = new XMLParser();
 
 // El padrón de turnos sólo indexa por sexo (M / F).
 const SEXOS_PADRON = ['M', 'F'];
 
 export const buscarPersona = async (dni, sexo) => {
+  const url = process.env.TURNOS_URL || DEFAULT_TURNOS_URL;
   let resp;
   try {
-    resp = await fetch(TURNOS_URL, {
+    resp = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -19,6 +20,7 @@ export const buscarPersona = async (dni, sexo) => {
         'Origin': 'https://www.formosa.gob.ar',
       },
       body: new URLSearchParams({ dni: String(dni), sexo }),
+      signal: AbortSignal.timeout(8000),
     });
   } catch (err) {
     throw new Error(`No se pudo consultar el padrón de turnos: ${err.message}`);

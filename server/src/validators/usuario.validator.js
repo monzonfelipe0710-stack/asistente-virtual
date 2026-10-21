@@ -16,5 +16,7 @@ export const registroCiudadanoSchema = z.object({
   dni: z.string().regex(/^\d{7,8}$/, 'El DNI debe tener 7 u 8 dígitos.'),
   genero: z.enum(['M', 'F', 'O', 'X'], { error: () => 'El género debe ser M, F, O o X.' }),
   email: z.email('El email no es válido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.')
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  nombre: z.string().optional(),
+  apellido: z.string().optional(),
 });

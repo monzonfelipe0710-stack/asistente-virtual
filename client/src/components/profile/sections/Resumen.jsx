@@ -105,7 +105,7 @@ export default function Resumen({ data, role, onGo }) {
   return (
     <div className="space-y-6">
       <SectionHeader
-        title="Tu espacio"
+        title={data?.user?.firstName ? `Tu espacio, ${data.user.firstName}` : "Tu espacio"}
         description="Un resumen de tus trámites, solicitudes y actividad en ChatAP."
       />
 

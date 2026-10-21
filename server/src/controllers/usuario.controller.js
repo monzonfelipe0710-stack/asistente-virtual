@@ -165,18 +165,25 @@ export const registrarCiudadano = async (req, res) => {
     throw error;
   }
 
-  let persona;
+  const esGeneroEspecial = datos.genero === "O" || datos.genero === "X";
+  const nombreCustom = [datos.nombre, datos.apellido].filter(Boolean).join(" ").trim();
+
+  let persona = null;
   try {
     persona = await turnosService.buscarPersonaPorGenero(datos.dni, datos.genero);
   } catch {
-    const error = new Error(
-      "No pudimos verificar tu identidad ahora mismo porque el servicio de padrón no está disponible. Probá de nuevo en unos minutos.",
-    );
-    error.statusCode = 503;
-    throw error;
+    // Si la persona eligió "Otro" o "Prefiero no decirlo" y completó su nombre y apellido,
+    // no bloqueamos su registro ante una caída o inaccesibilidad del padrón externo.
+    if (!esGeneroEspecial || !nombreCustom) {
+      const error = new Error(
+        "No pudimos verificar tu identidad ahora mismo porque el servicio de padrón no está disponible. Probá de nuevo en unos minutos.",
+      );
+      error.statusCode = 503;
+      throw error;
+    }
   }
 
-  if (!persona) {
+  if (!persona && (!esGeneroEspecial || !nombreCustom)) {
     const error = new Error(
       "No pudimos verificar tus datos en el padrón. Revisá el DNI y el género.",
     );
@@ -184,9 +191,16 @@ export const registrarCiudadano = async (req, res) => {
     throw error;
   }
 
+  const nombreFinal = (esGeneroEspecial && nombreCustom)
+    ? nombreCustom
+    : (persona?.nombreCompleto || nombreCustom || "Ciudadano");
+
   const usuario = await usuarioService.registrarCiudadano({
-    ...datos,
-    nombre: persona.nombreCompleto,
+    dni: datos.dni,
+    genero: datos.genero,
+    email: datos.email,
+    password: datos.password,
+    nombre: nombreFinal,
   });
 
   res.status(201).json({

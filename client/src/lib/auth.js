@@ -92,7 +92,7 @@ export function findLocalCitizen(identifier) {
 }
 
 /** Crea una cuenta de ciudadano local. Devuelve el usuario guardado. */
-export async function registerLocalCitizen({ dni, nombre = "", genero = "", email, password }) {
+export async function registerLocalCitizen({ dni, nombre = "", apellido = "", genero = "", email, password }) {
   const cleanEmail = (email || "").trim().toLowerCase();
   const cleanDni = normalizeDni(dni);
   const users = loadUsers();
@@ -102,10 +102,16 @@ export async function registerLocalCitizen({ dni, nombre = "", genero = "", emai
   if (cleanDni && users.some((u) => u.rol === CIUDADANO && normalizeDni(u.dni) === cleanDni)) {
     throw new Error("Ya existe una cuenta con ese DNI.");
   }
+  const cleanNombre = (nombre || "").trim();
+  const cleanApellido = (apellido || "").trim();
+  const fullName = cleanNombre && cleanApellido ? `${cleanNombre} ${cleanApellido}` : cleanNombre;
   const user = {
     id: uid(),
     dni: cleanDni,
-    nombre: (nombre || "").trim(),
+    nombre: fullName,
+    firstName: cleanNombre,
+    lastName: cleanApellido,
+    apellido: cleanApellido,
     genero: (genero || "").trim(),
     email: cleanEmail,
     passwordHash: await hashPassword(password),

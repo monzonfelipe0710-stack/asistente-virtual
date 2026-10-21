@@ -1,10 +1,10 @@
 import { api } from "../lib/api";
 
 /** POST /api/usuarios/registro-ciudadano — público, con verificación de padrón. */
-export async function registroCiudadano({ dni, genero, email, password }) {
+export async function registroCiudadano({ dni, genero, email, password, nombre, apellido }) {
   const { data } = await api.post(
     "/api/usuarios/registro-ciudadano",
-    { dni, genero, email, password },
+    { dni, genero, email, password, nombre, apellido },
     { skipAuthHandler: true }
   );
   return data;
@@ -13,6 +13,24 @@ export async function registroCiudadano({ dni, genero, email, password }) {
 /** GET /api/usuarios — SUPERUSUARIO. Filtro opcional ?estado=. */
 export async function listar({ estado } = {}) {
   const { data } = await api.get("/api/usuarios", { params: estado ? { estado } : {} });
+  return data;
+}
+
+/** GET /api/usuarios/pendientes — SUPERUSUARIO. */
+export async function pendientes() {
+  const { data } = await api.get("/api/usuarios/pendientes");
+  return data;
+}
+
+/** PATCH /api/usuarios/:id/aprobar — SUPERUSUARIO, solo PENDIENTE. */
+export async function aprobar(id) {
+  const { data } = await api.patch(`/api/usuarios/${id}/aprobar`);
+  return data;
+}
+
+/** PATCH /api/usuarios/:id/rechazar — SUPERUSUARIO, solo PENDIENTE. */
+export async function rechazar(id) {
+  const { data } = await api.patch(`/api/usuarios/${id}/rechazar`);
   return data;
 }
 
