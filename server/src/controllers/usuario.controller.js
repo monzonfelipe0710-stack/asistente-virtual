@@ -1,36 +1,10 @@
 import * as usuarioService from "../services/usuario.service.js";
 import {
   filtroUsuariosSchema,
-  registroSchema,
   asignarSectoresSchema,
   registroCiudadanoSchema,
 } from "../validators/usuario.validator.js";
 import * as turnosService from "../services/turnos.service.js";
-
-export const registrar = async (req, res) => {
-  const datos = registroSchema.parse(req.body);
-
-  const existente = await usuarioService.buscarPorEmail(datos.email);
-  if (existente) {
-    const error = new Error(
-      "Ya existe una cuenta registrada con esa dirección de correo electrónico.",
-    );
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const usuario = await usuarioService.registrarSolicitud(datos);
-
-  res.status(201).json({
-    mensaje: "Solicitud registrada. Queda pendiente de aprobación.",
-    usuario: {
-      id: usuario.id,
-      nombre: usuario.nombre,
-      email: usuario.email,
-      estado: usuario.estado,
-    },
-  });
-};
 
 export const listar = async (req, res) => {
   const { estado } = filtroUsuariosSchema.parse(req.query);
@@ -193,7 +167,7 @@ export const registrarCiudadano = async (req, res) => {
 
   let persona;
   try {
-    persona = await turnosService.buscarPersona(datos.dni, datos.genero);
+    persona = await turnosService.buscarPersonaPorGenero(datos.dni, datos.genero);
   } catch {
     const error = new Error(
       "No pudimos verificar tu identidad ahora mismo porque el servicio de padrón no está disponible. Probá de nuevo en unos minutos.",
@@ -204,7 +178,7 @@ export const registrarCiudadano = async (req, res) => {
 
   if (!persona) {
     const error = new Error(
-      "No pudimos verificar tus datos en el padrón. Revisá el DNI y el sexo.",
+      "No pudimos verificar tus datos en el padrón. Revisá el DNI y el género.",
     );
     error.statusCode = 422;
     throw error;

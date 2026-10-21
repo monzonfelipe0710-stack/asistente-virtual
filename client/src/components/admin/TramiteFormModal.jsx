@@ -1,10 +1,13 @@
-import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { crear, actualizar } from "../../services/tramites";
 import { apiErrorMessage } from "../../lib/api";
 import { useToast } from "../common/Toast";
+import { useAuth } from "../../context/AuthContext";
+
+const DRAFT_PREFIX = "chatap.admin.tramite-draft.";
 
 const numeroValido = (v) =>
   v === "" || v == null || (Number.isFinite(Number(v)) && Number(v) >= 0);
@@ -64,20 +67,103 @@ function toFormValues(tramite) {
   };
 }
 
+function getDraftKey(userId) {
+  return userId == null ? null : `${DRAFT_PREFIX}${userId}`;
+}
+
+function readDraft(key) {
+  if (!key) return { values: null, status: "idle" };
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return { values: null, status: "idle" };
+    const draft = JSON.parse(raw);
+    if (!draft || typeof draft !== "object") return { values: null, status: "error" };
+    return {
+      status: "saved",
+      values: {
+        nombre: typeof draft.nombre === "string" ? draft.nombre : "",
+        descripcion: typeof draft.descripcion === "string" ? draft.descripcion : "",
+        costo: typeof draft.costo === "string" ? draft.costo : "",
+        sectorId: typeof draft.sectorId === "string" ? draft.sectorId : "",
+        requisitos: Array.isArray(draft.requisitos)
+          ? draft.requisitos.slice(0, 30).filter((item) => item && typeof item === "object").map((item) => ({
+            descripcion: typeof item.descripcion === "string" ? item.descripcion : "",
+            dondeSeConsigue: typeof item.dondeSeConsigue === "string" ? item.dondeSeConsigue : "",
+            costo: typeof item.costo === "string" ? item.costo : "",
+          }))
+          : [],
+      },
+    };
+  } catch {
+    return { values: null, status: "error" };
+  }
+}
+
+function hasDraftContent(values) {
+  return Boolean(
+    values.nombre?.trim() ||
+    values.descripcion?.trim() ||
+    values.costo?.trim() ||
+    values.sectorId ||
+    values.requisitos?.some((item) => item.descripcion?.trim() || item.dondeSeConsigue?.trim() || item.costo?.trim())
+  );
+}
+
 export default function TramiteFormModal({ tramite = null, sectores = [], onClose, onSaved }) {
   const esEdicion = Boolean(tramite?.id);
   const addToast = useToast();
+  const { user } = useAuth();
+  const draftKey = getDraftKey(user?.id);
+  const [draftState] = useState(() => (!esEdicion ? readDraft(draftKey) : { values: null, status: "idle" }));
+  const initialDraft = draftState.values;
+  const [draftStatus, setDraftStatus] = useState(draftState.status);
   const [saving, setSaving] = useState(false);
   const {
     register,
     handleSubmit,
     control,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: toFormValues(tramite),
+    defaultValues: initialDraft || toFormValues(tramite),
   });
   const { fields, append, remove } = useFieldArray({ control, name: "requisitos" });
+  const watchedValues = useWatch({ control });
+  const draftSnapshot = JSON.stringify(watchedValues || {});
+
+  useEffect(() => {
+    if (esEdicion || !draftKey) return undefined;
+    const currentValues = JSON.parse(draftSnapshot);
+    const hasContent = hasDraftContent(currentValues);
+    const timeoutId = window.setTimeout(() => {
+      try {
+        if (hasContent) {
+          setDraftStatus("saving");
+          window.localStorage.setItem(draftKey, draftSnapshot);
+          setDraftStatus("saved");
+        } else {
+          window.localStorage.removeItem(draftKey);
+          setDraftStatus("idle");
+        }
+      } catch {
+        setDraftStatus("error");
+      }
+    }, hasContent ? 500 : 0);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [draftKey, draftSnapshot, esEdicion]);
+
+  function discardDraft() {
+    try {
+      if (draftKey) window.localStorage.removeItem(draftKey);
+      reset(toFormValues(null));
+      setDraftStatus("idle");
+    } catch {
+      setDraftStatus("error");
+    }
+  }
 
   async function onSubmit(values) {
     setSaving(true);
@@ -97,6 +183,13 @@ export default function TramiteFormModal({ tramite = null, sectores = [], onClos
       const guardado = esEdicion
         ? await actualizar(tramite.id, payload)
         : await crear(payload);
+      if (!esEdicion && draftKey) {
+        try {
+          window.localStorage.removeItem(draftKey);
+        } catch {
+          addToast("El trámite se guardó, pero no se pudo borrar el borrador local.", "error");
+        }
+      }
       addToast(esEdicion ? "Trámite actualizado" : "Trámite creado", "success");
       onSaved?.(guardado);
     } catch (err) {
@@ -120,6 +213,14 @@ export default function TramiteFormModal({ tramite = null, sectores = [], onClos
             <p className="text-[11px] text-muted m-0 mt-0.5">
               El trámite se crea sin publicar. El encargado se toma de tu cuenta.
             </p>
+            {!esEdicion && (
+              <p aria-live="polite" className={`text-[10px] m-0 mt-1 ${draftStatus === "error" ? "text-bad" : "text-faint"}`}>
+                {draftStatus === "saved" && "Borrador guardado en este dispositivo."}
+                {draftStatus === "saving" && "Guardando borrador…"}
+                {draftStatus === "error" && "No se pudo guardar el borrador en este dispositivo."}
+                {draftStatus === "idle" && initialDraft && "Borrador descartado."}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -237,13 +338,22 @@ export default function TramiteFormModal({ tramite = null, sectores = [], onClos
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-line">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-line">
+            <div>
+              {!esEdicion && initialDraft && (
+                <button type="button" onClick={discardDraft} className="btn-ghost text-xs" disabled={saving || !hasDraftContent(watchedValues || {})}>
+                  Descartar borrador
+                </button>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="btn-ghost text-xs" disabled={saving}>
               Cancelar
             </button>
             <button type="submit" className="btn-primary text-xs" disabled={saving}>
               {saving ? "Guardando…" : esEdicion ? "Guardar cambios" : "Crear trámite"}
             </button>
+            </div>
           </div>
         </form>
       </div>

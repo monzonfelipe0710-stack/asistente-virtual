@@ -3,10 +3,12 @@ import { Link } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import ChatBotAvatar from "../ChatBotAvatar";
 import ChatHistoryPanel from "./ChatHistoryPanel";
+import Navbar from "../common/Navbar";
 import Modal from "../common/Modal";
 import { BotReactionController } from "./BotReactionController";
 import { wizards, wizardLabels } from "../../data/wizard";
 import { obtenerChecklist, preguntar } from "../../services/chat";
+import { eliminarConsulta } from "../../services/consultas";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSessionStore } from "../../store/session";
@@ -16,6 +18,7 @@ import useA11y from "../../hooks/useA11y";
 import {
   rememberMessage,
   rememberAnswer,
+  HISTORY_LIMIT,
   loadMemory,
   buildReminder,
   suggestedTopics,
@@ -101,7 +104,12 @@ export default function ChatWindow({ initialQuery = null }) {
     addMessage,
     updateMessage,
     recordConsulta,
+    openConversation,
+    openLocalConversation,
+    removeConsulta,
+    removeLocalConversation,
     clearHistory,
+    clearLocalHistory,
   } = useChat();
   const { user, isAuthenticated } = useAuth();
   const token = useSessionStore((state) => state.token);
@@ -291,10 +299,13 @@ export default function ChatWindow({ initialQuery = null }) {
   const historyQueries = useMemo(() => {
     if (!userId) return [];
     if (token) {
-      return consultas.slice(0, 4).map((consulta) => ({
+      return consultas.slice(0, HISTORY_LIMIT).map((consulta) => ({
         id: consulta.id,
         text: consulta.textoConsulta,
         at: consulta.fecha,
+        answer: consulta.respuesta,
+        calificacion: consulta.calificacion,
+        tramite: consulta.tramite,
       }));
     }
     const mem = loadMemory(userId);
@@ -531,7 +542,7 @@ export default function ChatWindow({ initialQuery = null }) {
       return;
     }
     if (image) wizardRef.current = null;
-    if (userId && !token) rememberMessage(userId, t);
+    if (userId && !token) rememberMessage(userId, t, userMessageId);
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
     respondTo(t, image, userMessageId);
@@ -802,24 +813,80 @@ export default function ChatWindow({ initialQuery = null }) {
     resetConversation();
   }
 
-  // Retomar una consulta del historial: la escribimos como si la tipeara el usuario.
-  function handleHistorySelect(text) {
+  // Abrir una consulta guardada sin volver a enviarla al asistente.
+  function handleHistorySelect(query) {
     setHistoryOpen(false);
-    sendText(text);
+    if (token) {
+      const timestamp = new Date(query.at).toISOString();
+      const conversation = [{
+        id: `consulta-${query.id}-pregunta`,
+        type: "user",
+        text: query.text,
+        timestamp,
+        consultaId: query.id,
+      }];
+      if (query.answer) {
+        conversation.push({
+          id: `consulta-${query.id}-respuesta`,
+          type: "bot",
+          text: query.answer,
+          action: query.tramite
+            ? {
+                type: "checklist",
+                tramiteId: query.tramite.id,
+                tramiteNombre: query.tramite.nombre,
+                label: `Descargar checklist · ${query.tramite.nombre}`,
+              }
+            : null,
+          timestamp,
+          consultaId: query.id,
+          calificacion: query.calificacion,
+          canRate: true,
+        });
+      }
+      openConversation(conversation);
+    } else {
+      openLocalConversation(query);
+    }
+    startedRef.current = true;
+    setPhase("chat");
   }
 
   // Borrar una consulta puntual del historial guardado.
-  function handleDeleteQuery(at) {
+  async function handleDeleteQuery(query) {
     if (!userId) return;
-    removeMemoryMessage(userId, at);
+    const isActiveConversation = messages.some((message) =>
+      token
+        ? message.consultaId === query.id
+        : query.id
+          ? message.id === query.id
+          : message.type === "user" &&
+            message.text === query.text &&
+            (!query.at ||
+              Math.abs(new Date(message.timestamp).getTime() - new Date(query.at).getTime()) < 5000)
+    );
+    if (token) {
+      try {
+        await eliminarConsulta(query.id);
+        removeConsulta(query.id);
+      } catch (error) {
+        toast?.(apiErrorMessage(error, "No se pudo borrar esta conversación."), "error");
+        return;
+      }
+    } else {
+      removeMemoryMessage(userId, query.at);
+      removeLocalConversation(query);
+    }
+    if (isActiveConversation) resetConversation();
     setHistoryVersion((v) => v + 1);
-    if (screenReader) setAnnounce("Consulta borrada del historial.");
+    if (screenReader) setAnnounce("Conversación borrada del historial.");
   }
 
   // Vaciar todo el historial guardado.
   function handleClearHistory() {
     if (!userId) return;
     clearMemoryMessages(userId);
+    clearLocalHistory();
     setHistoryVersion((v) => v + 1);
     if (screenReader) setAnnounce("Historial borrado.");
   }
@@ -873,7 +940,7 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   return (
-    <div className="flex h-full bg-paper relative">
+    <div className="chat-window-shell relative flex h-full bg-paper">
       {/* Apartado lateral solo para usuarios con cuenta (pantallas grandes).
           Se puede ocultar y mostrar con el botón "Ocultar/Mostrar historial". */}
       {isAuthenticated && (
@@ -885,12 +952,12 @@ export default function ChatWindow({ initialQuery = null }) {
             historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
           }`}
         >
-          <div className="w-72 xl:w-80 h-full border-r border-line bg-mist/40" inert={historyCollapsed}>
+          <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
             <ChatHistoryPanel
               queries={historyQueries}
               onSelect={handleHistorySelect}
               onNewChat={handleResetRequest}
-              onDelete={!token ? handleDeleteQuery : undefined}
+              onDelete={handleDeleteQuery}
               onClearAll={!token ? handleClearHistory : undefined}
               loading={Boolean(token && historyLoading)}
               error={token ? historyError : ""}
@@ -899,8 +966,11 @@ export default function ChatWindow({ initialQuery = null }) {
         </aside>
       )}
 
-      <div className="flex flex-col h-full flex-1 min-w-0">
-        <header className="flex items-center justify-between px-4 sm:px-6 h-14 shrink-0 gap-2">
+      <div className="chat-main flex h-full min-w-0 flex-1 flex-col">
+        <div className="chat-navbar-slot shrink-0">
+          <Navbar />
+        </div>
+        <header className="chat-main-header flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line/60 px-4 sm:px-6">
           <div className="flex items-center">
             {isAuthenticated && (
               <>
@@ -909,7 +979,7 @@ export default function ChatWindow({ initialQuery = null }) {
                   type="button"
                   onClick={() => setHistoryOpen(true)}
                   aria-label="Ver historial de consultas"
-                  className="lg:hidden inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-line text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
+                  className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
@@ -924,7 +994,7 @@ export default function ChatWindow({ initialQuery = null }) {
                   aria-expanded={!historyCollapsed}
                   aria-controls="chat-history-panel"
                   aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
-                  className="hidden lg:inline-flex items-center gap-2 h-11 px-3 rounded-xl border border-line text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
+                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-line/70 bg-paper/80 px-3 text-xs font-semibold text-muted shadow-xs transition-colors hover:bg-mist hover:text-ink cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
@@ -935,19 +1005,20 @@ export default function ChatWindow({ initialQuery = null }) {
             )}
           </div>
 
-          {/* Iniciar un nuevo chat (ícono de mensaje nuevo) */}
-          <button
-            type="button"
-            onClick={handleResetRequest}
-            title="Iniciar un nuevo chat"
-            aria-label="Iniciar un nuevo chat"
-            className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-            </svg>
-          </button>
+          {!isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleResetRequest}
+              title="Iniciar un nuevo chat"
+              aria-label="Iniciar un nuevo chat"
+              className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
+            </button>
+          )}
         </header>
 
       {/* Región viva: anuncia las respuestas del asistente sin releer todo */}
@@ -958,7 +1029,7 @@ export default function ChatWindow({ initialQuery = null }) {
       <div
         ref={messagesRef}
         onScroll={handleMessagesScroll}
-        className={`flex-1 min-h-0 relative flex flex-col overscroll-contain ${
+        className={`chat-message-scroll relative flex min-h-0 flex-1 flex-col overscroll-contain ${
           phase === "chat"
             ? "overflow-y-auto"
             : "chat-welcome-scroll overflow-hidden"
@@ -966,12 +1037,12 @@ export default function ChatWindow({ initialQuery = null }) {
       >
         {phase !== "chat" ? (
           <div
-            className={`welcome-content flex-1 min-h-max flex flex-col items-center justify-center px-4 py-4 sm:py-6 text-center transition-all duration-300 ease-out ${
+            className={`welcome-content flex min-h-max flex-1 flex-col items-center justify-center px-4 py-4 text-center transition-all duration-300 ease-out sm:py-6 ${
               phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
             }`}
           >
             {/* Avatar interactivo de ChatAP grande, sin marco ni fondo, con mirada interactiva */}
-            <div className="mb-4 relative flex items-center justify-center select-none">
+            <div className="chat-welcome-avatar relative mb-4 flex select-none items-center justify-center">
               <ChatBotAvatar size={avatarSize} reaction={reaction} followMouse={true} />
             </div>
 
@@ -1039,7 +1110,7 @@ export default function ChatWindow({ initialQuery = null }) {
             )}
           </div>
         ) : (
-          <div className="max-w-3xl w-full mx-auto px-4 py-6 space-y-6 animate-fade-up">
+          <div className="chat-conversation mx-auto w-full max-w-3xl space-y-6 px-4 py-6 animate-fade-up">
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.type === "user" && msg.action?.type === "image" && msg.action.dataUrl && (
@@ -1072,7 +1143,7 @@ export default function ChatWindow({ initialQuery = null }) {
       </div>
 
       {/* Barra flotante inferior de consulta */}
-      <div className="p-4 sm:pb-6 pt-2 bg-transparent shrink-0">
+      <div className="chat-composer-area shrink-0 bg-transparent p-4 pt-2 sm:pb-6">
         {/* Invitación a iniciar sesión: aparece al pie de forma fluida tras la
             primera respuesta y solo se cierra con la “x”. */}
         {!isAuthenticated && promoReady && !promoDismissed && (
@@ -1141,7 +1212,7 @@ export default function ChatWindow({ initialQuery = null }) {
           </p>
         )}
 
-        <form onSubmit={handleSend} className="chatap-floating-bar max-w-2xl mx-auto">
+        <form onSubmit={handleSend} className="chatap-floating-bar mx-auto max-w-2xl">
           {/* Lupa / búsqueda */}
           <span className="text-muted/70 pl-2 pr-1 flex items-center justify-center shrink-0 pointer-events-none" aria-hidden="true">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1234,7 +1305,7 @@ export default function ChatWindow({ initialQuery = null }) {
           <ChatHistoryPanel
             queries={historyQueries}
             onSelect={handleHistorySelect}
-            onDelete={!token ? handleDeleteQuery : undefined}
+            onDelete={handleDeleteQuery}
             onClearAll={!token ? handleClearHistory : undefined}
             loading={Boolean(token && historyLoading)}
             error={token ? historyError : ""}

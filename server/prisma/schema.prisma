@@ -35,8 +35,10 @@ enum EstadoUsuario {
 }
 
 enum Genero {
-  M
-  F
+  M // Masculino
+  F // Femenino
+  O // Otro
+  X // Prefiero no decirlo
 }
 
 model Sector {

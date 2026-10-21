@@ -144,7 +144,7 @@ export function detectOffice(text) {
   return hit?.name ?? null;
 }
 
-export function rememberMessage(userId, text) {
+export function rememberMessage(userId, text, chatId = null) {
   if (!userId || !text) return;
   const mem = loadMemory(userId);
   const topic = detectTopic(text);
@@ -159,7 +159,10 @@ export function rememberMessage(userId, text) {
   }
   mem.count = (mem.count || 0) + 1;
   mem.lastAt = new Date().toISOString();
-  mem.messages = [...(mem.messages || []), { text, at: mem.lastAt }].slice(-HISTORY_LIMIT);
+  mem.messages = [
+    ...(mem.messages || []),
+    { id: chatId, text, at: mem.lastAt },
+  ].slice(-HISTORY_LIMIT);
   saveMemory(userId, mem);
   return mem;
 }

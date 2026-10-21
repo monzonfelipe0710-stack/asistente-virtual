@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useAuth } from "../../context/AuthContext";
 import { roleLabel } from "../../lib/roles";
 import GooeyNav from "./GooeyNav";
@@ -10,16 +11,28 @@ const preloadAdmin = () => {
 };
 
 const NAV_LINKS = [
-  { id: "inicio",  label: "Inicio",  to: "/" },
-  { id: "chatap",  label: "ChatAP",  to: "/chat" },
-  { id: "soporte", label: "Soporte", to: "/contacto" },
+  { id: "inicio",  label: "Inicio",  to: "/", match: ["/"] },
+  { id: "chatap",  label: "ChatAP",  to: "/chat", match: ["/chat"] },
+  { id: "soporte", label: "Soporte", to: "/contacto", match: ["/contacto", "/soporte"] },
 ];
+
+// Rutas donde el navbar se oculta al bajar y reaparece al subir.
+// En ChatAP y en el resto de las páginas el navbar queda siempre visible.
+const HIDE_ON_SCROLL_ROUTES = ["/", "/contacto", "/soporte"];
 
 function isPathActive(pathname, target) {
   if (target === "/") {
     return pathname === "/";
   }
   return pathname === target || pathname.startsWith(target + "/");
+}
+
+function isLinkActive(pathname, link) {
+  return (link.match || [link.to]).some((path) => isPathActive(pathname, path));
+}
+
+function hidesOnScroll(pathname) {
+  return HIDE_ON_SCROLL_ROUTES.some((path) => isPathActive(pathname, path));
 }
 
 function ProfileMenu({ user, isStaff, userRole, logout }) {
@@ -191,7 +204,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
     >
       <div className="flex flex-col gap-1 p-2">
         {NAV_LINKS.map((l) => {
-          const active = isPathActive(currentPath, l.to);
+          const active = isLinkActive(currentPath, l);
           return (
             <Link
               key={l.id}
@@ -296,48 +309,85 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
+  const [scrollDirection, setScrollDirection] = useState("");
   const { user, isAuthenticated, isStaff, userRole, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const navRef = useRef(null);
 
-  const activeNavIndex = useMemo(() => {
-    if (location.pathname === "/") return 0;
-    if (location.pathname.startsWith("/chat")) return 1;
-    if (location.pathname.startsWith("/contacto")) return 2;
-    return -1;
-  }, [location.pathname]);
+  const activeNavIndex = useMemo(
+    () => NAV_LINKS.findIndex((l) => isLinkActive(location.pathname, l)),
+    [location.pathname]
+  );
+
+  // Sólo Inicio y Soporte ocultan la barra al bajar; en ChatAP nunca se oculta.
+  const hideOnScroll = useMemo(() => hidesOnScroll(location.pathname), [location.pathname]);
 
   useEffect(() => {
-    let lastScrolled = window.scrollY > 24;
-    let lastY = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
+    let lastScrolled = false;
+    let lastY = 0;
+    let accumulatedDelta = 0;
+    const chatScrollElement = location.pathname.startsWith("/chat")
+      ? document.querySelector(".chat-message-scroll")
+      : null;
+    const getScrollPosition = (event) => {
+      if (event?.currentTarget === chatScrollElement && chatScrollElement) {
+        return chatScrollElement.scrollTop;
+      }
+      return window.scrollY;
+    };
+    lastY = chatScrollElement ? chatScrollElement.scrollTop : window.scrollY;
+
+    const onScroll = (event) => {
+      const y = getScrollPosition(event);
       const isScrolled = y > 24;
       if (isScrolled !== lastScrolled) {
         lastScrolled = isScrolled;
         setScrolled(isScrolled);
       }
-      // Ocultar al bajar, mostrar al subir. Cerca del tope siempre visible.
+
+      // En las páginas sin efecto de ocultado sólo importa el estado "scrolled".
+      if (!hideOnScroll) {
+        lastY = y;
+        return;
+      }
+
       const delta = y - lastY;
       const active = document.activeElement;
       const navHasFocus = !!(navRef.current && active && navRef.current.contains(active));
-      if (y <= 96 || navHasFocus) {
-        setHidden(false);
-      } else if (Math.abs(delta) > 6) {
-        setHidden(delta > 0);
+      if (y <= 24) {
+        setScrollDirection("");
+        accumulatedDelta = 0;
+      } else if (navHasFocus) {
+        setScrollDirection("");
+        accumulatedDelta = 0;
+      } else if (delta !== 0) {
+        if (Math.sign(delta) !== Math.sign(accumulatedDelta)) {
+          accumulatedDelta = delta;
+        } else {
+          accumulatedDelta += delta;
+        }
+        if (Math.abs(accumulatedDelta) >= 10) {
+          setScrollDirection(accumulatedDelta > 0 ? "down" : "up");
+          accumulatedDelta = 0;
+        }
       }
       lastY = y;
     };
+
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    chatScrollElement?.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      chatScrollElement?.removeEventListener("scroll", onScroll);
+    };
+  }, [location.pathname, hideOnScroll]);
 
   const [prevPath, setPrevPath] = useState(location.pathname);
   if (prevPath !== location.pathname) {
     setPrevPath(location.pathname);
     setMenuOpen(false);
+    setScrollDirection("");
   }
 
   useEffect(() => {
@@ -361,86 +411,87 @@ export default function Navbar() {
   }, [menuOpen]);
 
   return (
-    <header className={`nav-shell${hidden && !menuOpen ? " nav-shell--hidden" : ""}`} ref={navRef}>
-      <a
-        href="#contenido"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-xl focus:bg-brand-deep focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+    createPortal(
+      <header
+        className={`nav-shell${location.pathname.startsWith("/chat") ? " nav-shell--chat" : ""}${hideOnScroll && scrollDirection === "down" && !menuOpen ? " nav-shell--hidden" : ""}`}
+        ref={navRef}
       >
-        Saltar al contenido principal
-      </a>
-      <div className={`nav-pill${scrolled ? " nav-pill--scrolled" : ""}`}>
-        {/* ── Izquierda: Identidad ChatAP ── */}
-        <Link to="/" aria-label="ChatAP inicio" className="nav-brand no-underline">
-          <span className="nav-brand-mark" aria-hidden="true">AP</span>
-          <span className="nav-brand-name">
-            ChatAP<span className="nav-brand-dot">.</span>
-          </span>
-        </Link>
-
-        <span className="nav-divider hidden md:block" aria-hidden="true" />
-
-        {/* ── Centro: Navegación Principal con GooeyNav (React Bits) ── */}
-        <nav aria-label="Navegación principal" className="hidden md:flex items-center">
-          <GooeyNav
-            items={NAV_LINKS.map((l) => ({ label: l.label, href: l.to }))}
-            initialActiveIndex={activeNavIndex}
-            onItemClick={(item) => navigate(item.href)}
-            particleCount={15}
-            particleDistances={[90, 10]}
-            particleR={100}
-            animationTime={600}
-            timeVariance={300}
-            colors={[1, 2, 3, 1, 2, 3, 1, 4]}
-          />
-        </nav>
-
-        <span className="nav-divider hidden md:block" aria-hidden="true" />
-
-        {/* ── Derecha: Controles y Perfil/Auth ── */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <div id="accessibility-menu-anchor" className="flex items-center" />
-
-          {isAuthenticated && user ? (
-            <ProfileMenu user={user} isStaff={isStaff} userRole={userRole} logout={logout} />
-          ) : (
-            <Link to="/login" className="nav-cta">
-              Ingresar
+        <a
+          href="#contenido"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-xl focus:bg-brand-deep focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+        >
+          Saltar al contenido principal
+        </a>
+        <div className={`nav-pill${scrolled ? " nav-pill--scrolled" : ""}`}>
+          <div className="nav-pill-side nav-pill-side--start">
+            <Link to="/" aria-label="ChatAP inicio" className="nav-brand no-underline">
+              <span className="nav-brand-mark" aria-hidden="true">AP</span>
+              <span className="nav-brand-name">
+                ChatAP<span className="nav-brand-dot">.</span>
+              </span>
             </Link>
-          )}
+            <span className="nav-divider hidden md:block" aria-hidden="true" />
+          </div>
 
-          {/* Botón menú mobile */}
-          <button
-            type="button"
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-            aria-expanded={menuOpen}
-            className="nav-icon-btn md:hidden"
-          >
-            {menuOpen ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
-              </svg>
-            )}
-          </button>
+          <nav aria-label="Navegación principal" className="hidden md:flex items-center">
+            <GooeyNav
+              items={NAV_LINKS.map((l) => ({ label: l.label, href: l.to }))}
+              initialActiveIndex={activeNavIndex}
+              onItemClick={(item) => navigate(item.href)}
+              particleCount={15}
+              particleDistances={[90, 10]}
+              particleR={100}
+              animationTime={600}
+              timeVariance={300}
+              colors={[1, 2, 3, 1, 2, 3, 1, 4]}
+            />
+          </nav>
+
+          <div className="nav-pill-side nav-pill-side--end">
+            <span className="nav-divider hidden md:block" aria-hidden="true" />
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {isAuthenticated && user ? (
+                <ProfileMenu user={user} isStaff={isStaff} userRole={userRole} logout={logout} />
+              ) : (
+                <Link to="/login" className="nav-cta">
+                  Ingresar
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+                aria-expanded={menuOpen}
+                className="nav-icon-btn md:hidden"
+              >
+                {menuOpen ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+
         </div>
-      </div>
-
-      {/* Popover flotante para móviles */}
-      {menuOpen && (
-        <MobileDrawer
-          onClose={() => setMenuOpen(false)}
-          isAuthenticated={isAuthenticated}
-          user={user}
-          isStaff={isStaff}
-          userRole={userRole}
-          logout={logout}
-          currentPath={location.pathname}
-        />
-      )}
-    </header>
+        {menuOpen && (
+          <MobileDrawer
+            onClose={() => setMenuOpen(false)}
+            isAuthenticated={isAuthenticated}
+            user={user}
+            isStaff={isStaff}
+            userRole={userRole}
+            logout={logout}
+            currentPath={location.pathname}
+          />
+        )}
+      </header>,
+      document.body
+    )
   );
 }

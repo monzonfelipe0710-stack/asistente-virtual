@@ -80,6 +80,13 @@ export const calificarConsulta = async (consultaId, usuarioId, calificacion) => 
   });
 };
 
+export const eliminarConsulta = async (consultaId, usuarioId) => {
+  const resultado = await prisma.consulta.deleteMany({
+    where: { id: consultaId, usuarioId },
+  });
+  return resultado.count > 0;
+};
+
 export const resumenActividad = async (usuarioId) => {
   const ahora = new Date();
   const desde = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));

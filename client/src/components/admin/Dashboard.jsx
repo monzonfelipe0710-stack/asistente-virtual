@@ -171,7 +171,7 @@ export default function Dashboard() {
         <div className="mt-16">
           <PendingBackend
             title="Métricas propias y generales — Pendiente de backend"
-            description="El dashboard del administrador tendrá un selector para ver las métricas de su mesa o las generales. Los endpoints de métricas (hoy solo para superusuario) pasarán a aceptar al administrador con un parámetro de alcance."
+            description="El dashboard del empleado tendrá un selector para ver las métricas de su mesa o las generales. Los endpoints de métricas (hoy disponibles solo para el administrador) pasarán a aceptar al empleado con un parámetro de alcance."
             className="mb-0"
           />
         </div>

@@ -6,32 +6,55 @@ import ChatBotAvatar from "../components/ChatBotAvatar";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
 import { triggerOnboardingForUser } from "../components/common/BotOnboardingModal";
 
-function formatCuil(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
-  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
-}
-
 function formatDni(value) {
   return value.replace(/\D/g, "").slice(0, 8);
 }
 
-function isValidCuil(value) {
-  const digits = value.replace(/\D/g, "");
-  if (!/^\d{11}$/.test(digits)) return false;
-
-  const weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
-  const sum = weights.reduce((total, weight, index) => total + Number(digits[index]) * weight, 0);
-  const checkDigit = 11 - (sum % 11);
-  const expected = checkDigit === 11 ? [0] : checkDigit === 10 ? [4, 9] : [checkDigit];
-  return expected.includes(Number(digits[10]));
-}
+/**
+ * Opciones de género del registro. El valor es el texto visible; el backend
+ * recibe el código equivalente (ver lib/genero.js).
+ */
+const GENERO_OPCIONES = [
+  {
+    valor: "Femenino",
+    icono: (
+      <svg className="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="8" r="5" strokeWidth={2} />
+        <path strokeLinecap="round" strokeWidth={2} d="M12 13v8m-3-3h6" />
+      </svg>
+    ),
+  },
+  {
+    valor: "Masculino",
+    icono: (
+      <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="10" cy="14" r="5" strokeWidth={2} />
+        <path strokeLinecap="round" strokeWidth={2} d="M14 10l6-6m0 0h-5m5 0v5" />
+      </svg>
+    ),
+  },
+  {
+    valor: "Otro",
+    icono: (
+      <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
+    valor: "Prefiero no decirlo",
+    icono: (
+      <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M10.586 10.586a2 2 0 002.828 2.828L18 18m-6.5-6.5a4 4 0 00-5.657-5.657l1.5 1.5m-1.5 12.5l3-3m9.657 0l-1.5-1.5m-6.5 6.5l-3-3" />
+      </svg>
+    ),
+  },
+];
 
 /**
  * Contenedor plegable con altura animada. Al cambiar de modo, los campos que
- * no corresponden (nombre, aviso de empleado, "recordarme") se despliegan o se
- * ocultan de forma fluida en lugar de aparecer/desaparecer de golpe.
+ * no corresponden (DNI, género, "recordarme") se despliegan o se ocultan de
+ * forma fluida en lugar de aparecer/desaparecer de golpe.
  */
 function Collapse({ open, children, className = "" }) {
   return (
@@ -55,10 +78,8 @@ export default function LoginRegisterPage() {
   const location = useLocation();
 
   const [mode, setMode] = useState("login"); // "login" | "register"
-  const [accountType, setAccountType] = useState("ciudadano"); // "ciudadano" | "empleado"
   const [dni, setDni] = useState("");
   const [gender, setGender] = useState("");
-  const [cuil, setCuil] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -82,30 +103,15 @@ export default function LoginRegisterPage() {
         toast("¡Bienvenido/a de nuevo!", "success");
         navigate(from, { replace: true });
       } else {
-        // Dos circuitos:
-        // - Empleado → solicitud al backend (queda PENDIENTE de aprobación).
-        // - Ciudadano → cuenta local (demo) e inicio de sesión inmediato.
-        const rol = accountType === "empleado" ? "ADMINISTRADOR" : "CIUDADANO";
-        if (rol === "ADMINISTRADOR" && !isValidCuil(cuil)) {
-          toast("Ingresá un CUIL válido de 11 dígitos.", "error");
-          setSubmitting(false);
-          return;
-        }
+        // Registro común de ciudadano: el backend valida los datos contra el
+        // padrón y la cuenta queda habilitada al instante.
         const result = await register({
           dni,
           gender,
           email,
           password,
-          rol,
-          cuil: rol === "ADMINISTRADOR" ? cuil.replace(/\D/g, "") : undefined,
         });
-        toast(
-          result?.mensaje ||
-            (accountType === "empleado"
-              ? "Solicitud registrada. La administración revisará tu solicitud."
-              : "Cuenta creada. ¡Ya iniciaste sesión!"),
-          "success"
-        );
+        toast(result?.mensaje || "Cuenta creada. ¡Ya iniciaste sesión!", "success");
         if (result?.autoLogin) {
           if (result.user?.id) triggerOnboardingForUser(result.user.id);
           navigate(from, { replace: true });
@@ -260,7 +266,7 @@ export default function LoginRegisterPage() {
 
             {/* Encabezado del Formulario */}
             <div
-              key={recovery ? "recovery" : !isLogin ? `register-${accountType}` : mode}
+              key={recovery ? "recovery" : mode}
               className="mb-6 animate-form-in"
             >
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink dark:text-white m-0">
@@ -268,17 +274,13 @@ export default function LoginRegisterPage() {
                   ? "Recuperá tu contraseña"
                   : isLogin
                   ? "Iniciá sesión en tu cuenta"
-                  : accountType === "empleado"
-                  ? "Solicitá tu cuenta de empleado"
-                  : "Creá tu cuenta de ciudadano"}
+                  : "Creá tu cuenta"}
               </h1>
               <p className="text-xs sm:text-sm text-muted m-0 mt-1.5">
                 {recovery
                   ? "Ingresá tu correo para recibir un enlace de restablecimiento seguro."
                   : isLogin
                   ? "Ingresá a tu cuenta para continuar tus trámites y consultas."
-                  : accountType === "empleado"
-                  ? "Completá tus datos para solicitar el acceso. La administración revisará tu solicitud."
                   : "Completá tus datos para empezar a usar ChatAP. Tu cuenta se habilita al instante."}
               </p>
             </div>
@@ -351,78 +353,6 @@ export default function LoginRegisterPage() {
               <>
                 {/* Formulario Principal de Login o Solicitud de cuenta */}
                 <form onSubmit={handleSubmit} className="flex flex-col">
-                  {/* Selector de tipo de cuenta: sólo en registro. */}
-                  <Collapse open={!isLogin}>
-                    <div>
-                      <label className="block text-sm font-medium text-muted mb-1.5">
-                        Tipo de cuenta
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setAccountType("ciudadano")}
-                          aria-pressed={accountType === "ciudadano"}
-                          className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
-                            accountType === "ciudadano"
-                              ? "border-brand bg-brand/5 ring-1 ring-brand/20"
-                              : "border-line bg-card hover:border-brand/40"
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                            <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            Ciudadano
-                          </span>
-                          <span className="text-[11px] text-muted">Acceso inmediato</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setAccountType("empleado")}
-                          aria-pressed={accountType === "empleado"}
-                          className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
-                            accountType === "empleado"
-                              ? "border-brand bg-brand/5 ring-1 ring-brand/20"
-                              : "border-line bg-card hover:border-brand/40"
-                          }`}
-                        >
-                          <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Empleado
-                          </span>
-                          <span className="text-[11px] text-muted">Requiere aprobación</span>
-                        </button>
-                      </div>
-                    </div>
-                  </Collapse>
-
-                  <Collapse open={!isLogin && accountType === "empleado"}>
-                    <div>
-                      <label htmlFor="employee-cuil" className="block text-sm font-medium text-muted mb-1.5">
-                        CUIL
-                      </label>
-                      <input
-                        id="employee-cuil"
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        maxLength={13}
-                        required={!isLogin && accountType === "empleado"}
-                        value={cuil}
-                        onChange={(e) => setCuil(formatCuil(e.target.value))}
-                        placeholder="20-12345678-6"
-                        aria-describedby="employee-cuil-hint"
-                        className="w-full px-4 py-2.5 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
-                      />
-                      <p id="employee-cuil-hint" className="mt-1 text-[11px] text-muted">
-                        Ingresá los 11 dígitos tal como figuran en tu constancia.
-                      </p>
-                    </div>
-                  </Collapse>
-
                   {/* DNI: sólo en registro. Se despliega con altura animada. */}
                   <Collapse open={!isLogin}>
                     <div>
@@ -451,45 +381,36 @@ export default function LoginRegisterPage() {
                   {/* Género: sólo en registro. */}
                   <Collapse open={!isLogin}>
                     <div>
-                      <label className="block text-sm font-medium text-muted mb-1.5">
+                      <label id="register-gender-label" className="block text-sm font-medium text-muted mb-1.5">
                         Género
                       </label>
-                      <div role="radiogroup" aria-label="Género" className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={gender === "Femenino"}
-                          onClick={() => setGender("Femenino")}
-                          className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition-all cursor-pointer ${
-                            gender === "Femenino"
-                              ? "border-brand bg-brand/5 ring-1 ring-brand/20 text-ink"
-                              : "border-line bg-card hover:border-brand/40 text-muted"
-                          }`}
-                        >
-                          <svg className="w-4 h-4 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="8" r="5" strokeWidth={2} />
-                            <path strokeLinecap="round" strokeWidth={2} d="M12 13v8m-3-3h6" />
-                          </svg>
-                          Femenino
-                        </button>
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={gender === "Masculino"}
-                          onClick={() => setGender("Masculino")}
-                          className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition-all cursor-pointer ${
-                            gender === "Masculino"
-                              ? "border-brand bg-brand/5 ring-1 ring-brand/20 text-ink"
-                              : "border-line bg-card hover:border-brand/40 text-muted"
-                          }`}
-                        >
-                          <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="10" cy="14" r="5" strokeWidth={2} />
-                            <path strokeLinecap="round" strokeWidth={2} d="M14 10l6-6m0 0h-5m5 0v5" />
-                          </svg>
-                          Masculino
-                        </button>
+                      <div
+                        role="radiogroup"
+                        aria-labelledby="register-gender-label"
+                        aria-required="true"
+                        className="grid grid-cols-2 gap-2"
+                      >
+                        {GENERO_OPCIONES.map((opcion) => (
+                          <button
+                            key={opcion.valor}
+                            type="button"
+                            role="radio"
+                            aria-checked={gender === opcion.valor}
+                            onClick={() => setGender(opcion.valor)}
+                            className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-center text-sm font-semibold leading-tight transition-all cursor-pointer ${
+                              gender === opcion.valor
+                                ? "border-brand bg-brand/5 ring-1 ring-brand/20 text-ink"
+                                : "border-line bg-card hover:border-brand/40 text-muted"
+                            }`}
+                          >
+                            {opcion.icono}
+                            {opcion.valor}
+                          </button>
+                        ))}
                       </div>
+                      <p id="register-gender-hint" className="mt-1 text-[11px] text-muted">
+                        Campo obligatorio. Tus datos se validan contra el padrón de turnos.
+                      </p>
                     </div>
                   </Collapse>
 
@@ -544,24 +465,8 @@ export default function LoginRegisterPage() {
                     </div>
                   </div>
 
-                  {/* Aviso de solicitud de empleado: sólo en registro + tipo empleado. */}
-                  <Collapse open={!isLogin && accountType === "empleado"}>
-                    <div className="flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </span>
-                      <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300 m-0">
-                        <strong className="font-semibold">Solicitud sujeta a aprobación.</strong>{" "}
-                        La administración revisará tu solicitud y vas a poder iniciar sesión
-                        una vez que sea aprobada.
-                      </p>
-                    </div>
-                  </Collapse>
-
-                  {/* Aviso de cuenta de ciudadano: sólo en registro + tipo ciudadano. */}
-                  <Collapse open={!isLogin && accountType === "ciudadano"}>
+                  {/* Aviso de cuenta de ciudadano: sólo en registro. */}
+                  <Collapse open={!isLogin}>
                     <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
                       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,9 +474,8 @@ export default function LoginRegisterPage() {
                         </svg>
                       </span>
                       <p className="text-xs leading-relaxed text-emerald-700 dark:text-emerald-300 m-0">
-                        <strong className="font-semibold">Acceso inmediato.</strong> Tu cuenta
-                        se crea en este dispositivo y entrás al instante; después vas a poder
-                        iniciar sesión con tu correo y contraseña.
+                        <strong className="font-semibold">Acceso inmediato.</strong> Validamos
+                        tus datos contra el padrón y tu cuenta queda habilitada al instante.
                       </p>
                     </div>
                   </Collapse>

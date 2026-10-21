@@ -58,7 +58,6 @@ function Switch({ checked, label, hint, onToggle }) {
 export default function AccessibilityMenu() {
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState(() => readA11y());
-  const [navAnchor, setNavAnchor] = useState(null);
   const [panelPosition, setPanelPosition] = useState({
     top: 0,
     left: 0,
@@ -67,16 +66,6 @@ export default function AccessibilityMenu() {
   const panelRef = useRef(null);
   const btnRef = useRef(null);
   const theme = useTheme();
-
-  useEffect(() => {
-    const updateAnchor = () => {
-      setNavAnchor(document.getElementById("accessibility-menu-anchor"));
-    };
-    const observer = new MutationObserver(updateAnchor);
-    observer.observe(document.body, { childList: true, subtree: true });
-    updateAnchor();
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     saveA11y(prefs);
@@ -91,15 +80,21 @@ export default function AccessibilityMenu() {
       if (!trigger || !panel) return;
 
       const margin = 12;
+      const spaceBelow = window.innerHeight - trigger.bottom - margin - 8;
+      const spaceAbove = trigger.top - margin - 8;
+      const placeAbove = spaceAbove > spaceBelow;
+      const availableHeight = placeAbove ? spaceAbove : spaceBelow;
+      const maxHeight = Math.max(
+        120,
+        Math.min(panel.scrollHeight, availableHeight)
+      );
       const left = Math.max(
         margin,
         Math.min(trigger.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - margin)
       );
-      const top = trigger.bottom + 8;
-      const maxHeight = Math.max(
-        120,
-        Math.min(panel.scrollHeight, window.innerHeight - top - margin)
-      );
+      const top = placeAbove
+        ? trigger.top - maxHeight - 8
+        : trigger.bottom + 8;
       setPanelPosition({ top, left, maxHeight: `${maxHeight}px` });
     }
 
@@ -110,7 +105,7 @@ export default function AccessibilityMenu() {
       window.removeEventListener("resize", positionPanel);
       window.removeEventListener("scroll", positionPanel, true);
     };
-  }, [open, navAnchor]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -263,7 +258,7 @@ export default function AccessibilityMenu() {
   );
 
   const menu = (
-    <div className={`print:hidden ${navAnchor ? "relative z-50" : "fixed top-4 right-4 z-40"}`}>
+    <div className="print:hidden fixed bottom-4 right-4 z-40">
       <button
         id="accessibility-menu"
         ref={btnRef}
@@ -290,7 +285,7 @@ export default function AccessibilityMenu() {
 
   return (
     <>
-      {navAnchor ? createPortal(menu, navAnchor) : menu}
+      {menu}
       {panel}
     </>
   );

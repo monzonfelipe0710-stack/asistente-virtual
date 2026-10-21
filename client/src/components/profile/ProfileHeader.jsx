@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { generoLabel } from "../../lib/genero";
 import { Icon, ICONS } from "./ui";
 import EditProfileModal from "./EditProfileModal";
 
@@ -104,7 +105,7 @@ export default function ProfileHeader({ onSaved }) {
           <InfoItem label="Nombre completo" value={user.name} />
           <InfoItem label="Correo electrónico" value={user.email} mono />
           <InfoItem label="DNI" value={user.dni || "—"} mono />
-          <InfoItem label="Género" value={user.genero || "—"} />
+          <InfoItem label="Género" value={generoLabel(user.genero) || "—"} />
           <InfoItem label="CUIL" value={user.cuil || "—"} mono />
           <InfoItem label="Teléfono" value={user.phone || "—"} mono />
           <InfoItem label="Dependencia" value={user.department || "—"} />

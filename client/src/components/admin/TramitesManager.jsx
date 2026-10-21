@@ -11,6 +11,8 @@ import { EmptyState, PageHeader } from "./ui";
 import { TableSkeleton } from "./Skeleton";
 import { formatDate } from "../../utils/date";
 import TramiteFormModal from "./TramiteFormModal";
+import { downloadCsv } from "../../lib/adminCsv";
+import useLocalStorage from "../../hooks/useLocalStorage";
 
 function formatCosto(costo) {
   if (costo == null || costo === "") return "—";
@@ -26,8 +28,10 @@ export default function TramitesManager() {
   const [error, setError] = useState("");
   const [tramites, setTramites] = useState([]);
   const [sectores, setSectores] = useState([]);
-  const [query, setQuery] = useState("");
-  const [soloMios, setSoloMios] = useState(!isSuperadmin);
+  const preferenceKey = user?.id ?? "anon";
+  const [query, setQuery] = useLocalStorage(`chatap.admin.tramites.query.${preferenceKey}`, "");
+  const [soloMios, setSoloMios] = useLocalStorage(`chatap.admin.tramites.mine.${preferenceKey}`, !isSuperadmin);
+  const [filterStatus, setFilterStatus] = useLocalStorage(`chatap.admin.tramites.status.${preferenceKey}`, "todos");
   const [formOpen, setFormOpen] = useState(false);
   const [editar, setEditar] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -72,6 +76,9 @@ export default function TramitesManager() {
     if (soloMios && userId != null) {
       list = list.filter((t) => t.encargado?.id === userId);
     }
+    if (filterStatus !== "todos") {
+      list = list.filter((t) => (filterStatus === "publicados" ? t.publicado : !t.publicado));
+    }
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -82,7 +89,7 @@ export default function TramitesManager() {
       );
     }
     return [...list].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
-  }, [tramites, soloMios, query, userId]);
+  }, [tramites, soloMios, filterStatus, query, userId]);
 
   const { page, totalPages, paginatedItems, setPage } = usePagination(filtrados, 8);
 
@@ -131,6 +138,25 @@ export default function TramitesManager() {
         title="Trámites"
         description="Creá, editá y publicá los trámites de tu sector. Solo los publicados aparecen en el chat."
       >
+        <button
+          type="button"
+          onClick={() => downloadCsv(
+            "tramites.csv",
+            ["Trámite", "Sector", "Encargado", "Costo", "Estado", "Actualizado"],
+            filtrados.map((tramite) => [
+              tramite.nombre,
+              tramite.sector?.nombre,
+              tramite.encargado?.nombre,
+              formatCosto(tramite.costo),
+              tramite.publicado ? "Publicado" : "Borrador",
+              formatDate(tramite.updatedAt),
+            ])
+          )}
+          disabled={loading || filtrados.length === 0}
+          className="btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Exportar CSV
+        </button>
         <button onClick={abrirNuevo} className="btn-primary flex items-center gap-1.5 text-xs">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -162,7 +188,20 @@ export default function TramitesManager() {
               placeholder="Buscar por nombre, sector o encargado…"
               className="input-field max-w-xs text-sm"
             />
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                aria-label="Filtrar trámites por estado"
+                value={filterStatus}
+                onChange={(event) => {
+                  setFilterStatus(event.target.value);
+                  setPage(1);
+                }}
+                className="input-field py-2! text-xs"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="publicados">Publicados</option>
+                <option value="borradores">Borradores</option>
+              </select>
               <span className="text-xs text-muted">{filtrados.length} trámites</span>
               {!isSuperadmin && (
                 <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none">
@@ -253,7 +292,9 @@ export default function TramitesManager() {
               description={
                 query
                   ? "No hay trámites que coincidan con la búsqueda."
-                  : "Todavía no creaste trámites. Empezá con “Nuevo trámite”."
+                  : filterStatus !== "todos"
+                    ? `No hay trámites ${filterStatus === "publicados" ? "publicados" : "en borrador"}.`
+                    : "Todavía no creaste trámites. Empezá con “Nuevo trámite”."
               }
             />
           )}
