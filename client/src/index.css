@@ -3695,3 +3695,33 @@ html[data-a11y-sr="true"] [data-bot-message]:focus {
     }
   }
 }
+
+
+/* Historial: entrada escalonada y transiciones suaves, sin animar propiedades costosas. */
+@keyframes history-item-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.history-item-enter {
+  animation: history-item-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.history-item-enter > button:first-child {
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.tour-card {
+  transition: margin 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tour-dim {
+  transition: top 320ms cubic-bezier(0.22, 1, 0.36, 1), left 320ms cubic-bezier(0.22, 1, 0.36, 1), width 320ms cubic-bezier(0.22, 1, 0.36, 1), height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .history-item-enter,
+  .tour-card,
+  .tour-dim,
+  .tour-ring,
+  .tour-avatar > * {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
