@@ -1,12 +1,14 @@
 import { createContext, useContext, useCallback, useMemo } from "react";
 import { useSessionStore } from "../store/session";
 import { login as loginRequest } from "../services/auth";
-import { registroCiudadano as registroCiudadanoRequest } from "../services/usuarios";
+import { registroCiudadano as registroCiudadanoRequest, actualizarMiPerfil as actualizarMiPerfilRequest } from "../services/usuarios";
 import {
   findLocalCitizen,
   verifyLocalCitizen,
   normalizeDni,
   isValidDni,
+  loadUsers,
+  saveUsers,
 } from "../lib/auth";
 import { apiErrorMessage } from "../lib/api";
 import { generoCode } from "../lib/genero";
@@ -233,41 +235,61 @@ export function AuthProvider({ children }) {
 
   const updateProfile = useCallback(
     async (profileData) => {
-      const current = usuario || {};
+      const session = useSessionStore.getState();
+      const current = session.usuario || usuario || {};
       const nextFirstName = (profileData.firstName || "").trim();
       const nextLastName = (profileData.lastName || "").trim();
-      const nextFullName =
-        (profileData.name || "").trim() ||
-        (nextFirstName && nextLastName ? `${nextFirstName} ${nextLastName}` : nextFirstName || current.nombre);
+      const nextFullName = `${nextFirstName} ${nextLastName}`.trim();
+      const nextEmail = (profileData.email || current.email || "").trim().toLowerCase();
 
-      const parsed = splitFullName(nextFullName);
-      const fName = nextFirstName || parsed.firstName;
-      const lName = nextLastName || parsed.lastName;
+      if (!nextFirstName || !nextLastName) {
+        throw new Error("Completá tu nombre y apellido.");
+      }
+      if (!emailRegex.test(nextEmail)) {
+        throw new Error("Ingresá un correo electrónico válido.");
+      }
 
-      const updated = {
-        ...current,
-        ...profileData,
-        nombre: nextFullName,
-        name: nextFullName,
-        firstName: fName,
-        lastName: lName,
-        apellido: lName,
-      };
+      let updated;
+      if (session.token) {
+        const response = await actualizarMiPerfilRequest({ nombre: nextFullName, email: nextEmail });
+        const backendUser = response.usuario;
+        updated = {
+          ...current,
+          ...backendUser,
+          nombre: backendUser.nombre,
+          name: backendUser.nombre,
+          fullName: backendUser.nombre,
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          apellido: nextLastName,
+        };
+      } else {
+        // Compatibilidad con cuentas de demostración guardadas en este navegador.
+        const users = loadUsers();
+        const duplicate = users.find((candidate) => candidate.id !== current.id && (candidate.email || "").toLowerCase() === nextEmail);
+        if (duplicate) throw new Error("Ya existe una cuenta con ese correo electrónico.");
+        updated = {
+          ...current,
+          nombre: nextFullName,
+          name: nextFullName,
+          fullName: nextFullName,
+          firstName: nextFirstName,
+          lastName: nextLastName,
+          apellido: nextLastName,
+          email: nextEmail,
+        };
+        saveUsers(users.map((candidate) => candidate.id === current.id ? { ...candidate, ...updated } : candidate));
+      }
 
       saveCustomProfileMeta(current.id, current.dni, {
-        nombre: fName,
-        apellido: lName,
+        nombre: nextFirstName,
+        apellido: nextLastName,
         fullName: nextFullName,
-        phone: profileData.phone || current.phone || "",
-        department: profileData.department || current.department || "",
-        position: profileData.position || current.position || "",
+        phone: current.phone || "",
+        department: current.department || "",
+        position: current.position || "",
       });
-
-      setSession({
-        token: useSessionStore.getState().token,
-        usuario: updated,
-      });
-
+      setSession({ token: session.token, usuario: updated });
       return toFrontUser(updated);
     },
     [usuario, setSession]
