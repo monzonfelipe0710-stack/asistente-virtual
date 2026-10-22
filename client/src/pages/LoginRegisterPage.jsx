@@ -502,7 +502,7 @@ export default function LoginRegisterPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={isLogin ? "30123456 o tucorreo@gmail.com" : "tucorreo@gmail.com"}
-                      autoComplete={isLogin ? "username" : "email username"}
+                      autoComplete={isLogin ? "username" : "email"}
                       className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                     />
                   </div>

@@ -10,7 +10,7 @@ import axios from "axios";
  *   llegar en cualquier momento (p. ej. cuenta suspendida).
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3001",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
   timeout: 20000,
 });
 
