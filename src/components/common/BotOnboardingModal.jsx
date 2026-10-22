@@ -26,7 +26,6 @@ const STEPS = [
     title: "Usá el asistente",
     description: "Escribí una pregunta clara en el campo de consulta y enviala. Podés preguntar por documentación, pasos o requisitos; si la respuesta no alcanza, agregá más detalles.",
     route: "/chat",
-    target: "#chat-here",
   },
   {
     reaction: "playful",
@@ -34,7 +33,6 @@ const STEPS = [
     title: "Adjuntá una imagen",
     description: "Tocá el ícono del clip para elegir una imagen JPEG, PNG o WebP de hasta 8 MB. Adjuntá solo archivos relacionados con tu consulta y evitá incluir datos que no sean necesarios.",
     route: "/chat",
-    target: "#chat-image-button",
   },
   {
     reaction: "happy",
