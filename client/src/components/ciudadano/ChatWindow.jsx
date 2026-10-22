@@ -307,7 +307,7 @@ export default function ChatWindow({ initialQuery = null }) {
         at: consulta.fecha,
         answer: consulta.respuesta,
         calificacion: consulta.calificacion,
-        tramite: consulta.tramite?.nombre ?? consulta.tramite ?? null,
+        tramite: consulta.tramite ?? null,
         estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
       }));
     }
@@ -323,7 +323,7 @@ export default function ChatWindow({ initialQuery = null }) {
         at: consulta.fecha,
         answer: consulta.respuesta,
         calificacion: consulta.calificacion,
-        tramite: consulta.tramite?.nombre ?? consulta.tramite ?? null,
+        tramite: consulta.tramite ?? null,
         estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
       }));
     }
