@@ -36,3 +36,10 @@ export const crearUsuarioSchema = z.object({
   cuil: z.string().regex(/^\d{11}$/, 'El CUIL debe tener 11 dígitos.').optional(),
   sectorIds: z.array(z.number().int().positive()).default([]),
 });
+
+
+// Edición del perfil propio: solo campos personales admitidos por el modelo.
+export const actualizarPerfilSchema = z.object({
+  nombre: z.string().trim().min(1, 'El nombre es obligatorio.').max(120, 'El nombre no puede superar los 120 caracteres.'),
+  email: z.email('El email no es válido.').trim().toLowerCase(),
+});
