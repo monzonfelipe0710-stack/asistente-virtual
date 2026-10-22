@@ -1,22 +1,27 @@
 /**
- * Utilidad para invocar la API nativa de credenciales del navegador (Credential Management API / PasswordCredential).
- * Esto le indica activamente a Google Chrome / Gestor de Contraseñas de Google que pregunte al usuario
- * si desea guardar su correo/usuario y contraseña para el sitio.
+ * Intenta ofrecer las credenciales al gestor del navegador cuando la API está
+ * disponible. Chrome decide si muestra el aviso; la web no puede forzarlo.
+ * Los atributos autocomplete del formulario también permiten que el gestor
+ * detecte el inicio de sesión aunque PasswordCredential no esté disponible.
  */
 export async function promptSaveCredentials({ username, password, name }) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !username || !password) return;
 
-  // 1. Si el navegador soporta PasswordCredential (Google Chrome / Chromium / Edge)
-  if (window.PasswordCredential && navigator.credentials?.store) {
-    try {
-      const cred = new window.PasswordCredential({
-        id: String(username || "").trim(),
-        password: String(password || ""),
-        name: name ? String(name).trim() : undefined,
-      });
-      await navigator.credentials.store(cred);
-    } catch {
-      // Si la política de permisos o el usuario lo desactiva, continuamos sin interrumpir
+  try {
+    if (typeof window.PasswordCredential !== "function" || !navigator.credentials?.store) {
+      return;
     }
+
+    const options = {
+      id: String(username).trim(),
+      password: String(password),
+    };
+    if (name) options.name = String(name).trim();
+
+    const credential = new window.PasswordCredential(options);
+    await navigator.credentials.store(credential);
+  } catch {
+    // La compatibilidad y las preferencias del navegador controlan este aviso.
+    // No debe impedir el acceso a la cuenta si la API no está disponible.
   }
 }
