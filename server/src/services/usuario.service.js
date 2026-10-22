@@ -180,3 +180,12 @@ export const crearUsuarioAdministrado = async (datos) => {
     return usuario;
   });
 };
+
+
+export const actualizarPerfil = async (id, datos) => {
+  return prisma.usuario.update({
+    where: { id },
+    data: { nombre: datos.nombre, email: datos.email },
+    select: { id: true, nombre: true, email: true, rol: true, estado: true, dni: true, cuil: true, genero: true, createdAt: true },
+  });
+};
