@@ -2,60 +2,48 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../common/Toast";
 import { DetailModal, Icon, ICONS, Field } from "./ui";
-import { employeeDepartments } from "../../data/mockEmployeeApprovals";
+import { generoLabel } from "../../lib/genero";
 
 export default function EditProfileModal({ open, onClose, saved }) {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, isStaff } = useAuth();
   const toast = useToast();
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    name: "",
-    department: "",
-    position: "",
-  });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "" });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Actualizar el formulario cuando se abre el modal o cambian los datos del usuario
   useEffect(() => {
     if (!open || !user) return undefined;
-
     const frame = window.requestAnimationFrame(() => {
       setForm({
-        firstName: user?.firstName || user?.nombre || "",
-        lastName: user?.lastName || user?.apellido || "",
-        name: user?.name || "",
-        department: user?.department || "",
-        position: user?.position || "",
+        firstName: user.firstName || user.nombre || "",
+        lastName: user.lastName || user.apellido || "",
+        email: user.email || "",
       });
+      setError("");
     });
-
     return () => window.cancelAnimationFrame(frame);
   }, [open, user]);
 
   if (!user) return null;
 
-  const isEmployee = !!(user.department || user.position || user.cuil);
-
-  function handleSave(e) {
+  async function handleSave(e) {
     e.preventDefault();
     setError("");
     setSaving(true);
-    const fullName = `${form.firstName || ""} ${form.lastName || ""}`.trim() || form.name;
-    updateProfile({
-      ...form,
-      name: fullName,
-    })
-      .then(() => {
-        toast("Perfil actualizado correctamente.", "success");
-        onClose();
-        saved?.();
-      })
-      .catch((err) => {
-        setError(err.message || "No se pudo actualizar el perfil.");
-      })
-      .finally(() => setSaving(false));
+    try {
+      await updateProfile({
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+      });
+      toast("Perfil actualizado correctamente.", "success");
+      onClose();
+      saved?.();
+    } catch (err) {
+      setError(err.message || "No se pudo actualizar el perfil.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -68,11 +56,11 @@ export default function EditProfileModal({ open, onClose, saved }) {
           <div className="min-w-0">
             <h2 className="text-base font-bold text-ink m-0">Editar perfil</h2>
             <p className="text-[11px] text-muted m-0 mt-0.5">
-              Solo podés modificar los campos habilitados.
+              Actualizá tu nombre, apellido y correo electrónico.
             </p>
           </div>
         </div>
-        <button className="text-muted hover:text-ink p-1 cursor-pointer" onClick={onClose} aria-label="Cerrar">
+        <button type="button" className="text-muted hover:text-ink p-1 cursor-pointer" onClick={onClose} aria-label="Cerrar">
           <Icon path={ICONS.close} />
         </button>
       </div>
@@ -80,80 +68,65 @@ export default function EditProfileModal({ open, onClose, saved }) {
       <form onSubmit={handleSave} className="px-5 py-4 overflow-y-auto space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Nombre *</label>
+            <label htmlFor="profile-first-name" className="block text-xs font-medium text-muted mb-1">Nombre *</label>
             <input
+              id="profile-first-name"
               className="input-field"
+              autoComplete="given-name"
               value={form.firstName}
-              onChange={(e) => {
-                const nextFirst = e.target.value;
-                setForm({
-                  ...form,
-                  firstName: nextFirst,
-                  name: `${nextFirst} ${form.lastName}`.trim(),
-                });
-              }}
+              onChange={(e) => setForm((previous) => ({ ...previous, firstName: e.target.value }))}
+              maxLength={60}
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Apellido *</label>
+            <label htmlFor="profile-last-name" className="block text-xs font-medium text-muted mb-1">Apellido *</label>
             <input
+              id="profile-last-name"
               className="input-field"
+              autoComplete="family-name"
               value={form.lastName}
-              onChange={(e) => {
-                const nextLast = e.target.value;
-                setForm({
-                  ...form,
-                  lastName: nextLast,
-                  name: `${form.firstName} ${nextLast}`.trim(),
-                });
-              }}
+              onChange={(e) => setForm((previous) => ({ ...previous, lastName: e.target.value }))}
+              maxLength={60}
               required
             />
           </div>
         </div>
 
-        {isEmployee && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Dependencia</label>
-              <select
-                className="input-field cursor-pointer"
-                value={form.department}
-                onChange={(e) => setForm({ ...form, department: e.target.value })}
-              >
-                <option value="">Seleccionar</option>
-                {employeeDepartments.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Puesto</label>
-              <input
-                className="input-field"
-                value={form.position}
-                onChange={(e) => setForm({ ...form, position: e.target.value })}
-              />
-            </div>
-          </div>
-        )}
+        <div>
+          <label htmlFor="profile-email" className="block text-xs font-medium text-muted mb-1">Correo electrónico *</label>
+          <input
+            id="profile-email"
+            type="email"
+            className="input-field"
+            autoComplete="email"
+            inputMode="email"
+            value={form.email}
+            onChange={(e) => setForm((previous) => ({ ...previous, email: e.target.value }))}
+            maxLength={254}
+            required
+          />
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            Usá una dirección a la que tengas acceso. El correo se actualizará en tu cuenta.
+          </p>
+        </div>
 
-        {isEmployee && (
-          <div className="rounded-xl border border-line bg-mist px-4 py-3">
-            <p className="text-[10px] uppercase tracking-widest text-faint m-0 mb-2">
-              Datos validados · no editables
-            </p>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-              <Field label="DNI" value={user.dni} mono />
-              <Field label="CUIL" value={user.cuil} mono />
-              <Field label="Correo electrónico" value={user.email} mono />
-            </dl>
-          </div>
-        )}
+        <div className="rounded-xl border border-line bg-mist px-4 py-3">
+          <p className="text-[10px] uppercase tracking-widest text-faint m-0 mb-2">
+            Datos de identidad · no editables
+          </p>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <Field label="DNI" value={user.dni} mono />
+            <Field label="Género registrado" value={generoLabel(user.genero) || "—"} />
+            {isStaff && <Field label="CUIL" value={user.cuil} mono />}
+          </dl>
+          <p className="mt-3 mb-0 text-[11px] leading-relaxed text-muted">
+            Estos datos se mantienen protegidos porque están vinculados a la verificación de tu identidad.
+          </p>
+        </div>
 
         {error && (
-          <p className="text-sm text-bad m-0">
+          <p role="alert" className="text-sm text-bad m-0">
             <Icon path={ICONS.alert} className="w-4 h-4 inline mr-1 -mt-0.5" />
             {error}
           </p>
@@ -163,11 +136,7 @@ export default function EditProfileModal({ open, onClose, saved }) {
           <button type="button" className="btn-ghost py-2! px-3.5! text-[13px]!" onClick={onClose}>
             Cancelar
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn-primary py-2! px-3.5! text-[13px]! disabled:opacity-60"
-          >
+          <button type="submit" disabled={saving} className="btn-primary py-2! px-3.5! text-[13px]! disabled:opacity-60">
             {saving ? "Guardando…" : "Guardar cambios"}
           </button>
         </div>
