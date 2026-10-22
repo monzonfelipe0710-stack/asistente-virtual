@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAdmin } from "../../context/AdminContext";
 
@@ -101,6 +102,15 @@ function SidebarIcon({ path, className = "" }) {
 export default function AdminSidebar({ open, onToggle }) {
   const { can } = useAdmin();
   const location = useLocation();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar pantallas móviles
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const isLinkActive = (link) =>
     location.pathname === link.to ||
@@ -108,7 +118,7 @@ export default function AdminSidebar({ open, onToggle }) {
 
   return (
     <aside
-      className="fixed top-0 left-0 bottom-0 z-40 flex flex-col overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+      className={`fixed top-0 left-0 bottom-0 z-40 flex flex-col overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${isMobile && !open ? '-translate-x-full' : ''}`}
       style={{
         backgroundColor: "var(--sidebar-bg)",
         borderRight: "1px solid var(--sidebar-border)",

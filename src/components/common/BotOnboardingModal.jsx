@@ -25,7 +25,7 @@ const STEPS = [
     reaction: "happy",
     kicker: "A tu manera",
     title: "Adaptá la página a tus necesidades",
-    description: "Abrí Accesibilidad para agrandar el texto, activar alto contraste o elegir una letra más legible.",
+    description: "Abrí Accesibilidad para agrandar el texto, activar alto contraste o elegir una letra más legible. Podés ver este tutorial nuevamente desde tu perfil.",
     route: "/chat",
     target: "#accessibility-menu",
   },
@@ -36,6 +36,15 @@ export function triggerOnboardingForUser(userId) {
   try {
     localStorage.setItem(`${TRIGGER_KEY_PREFIX}${userId}`, "true");
     window.dispatchEvent(new CustomEvent("chatap-trigger-onboarding"));
+  } catch {
+    /* noop */
+  }
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function forceOpenTutorial() {
+  try {
+    window.dispatchEvent(new CustomEvent("chatap-force-open-tutorial"));
   } catch {
     /* noop */
   }
@@ -67,15 +76,26 @@ export default function BotOnboardingModal() {
     }
   }, [user]);
 
+  const forceOpen = useCallback(() => {
+    if (!user?.id) return;
+    setIsOpen(true);
+    setIsClosing(false);
+    setStep(0);
+    setDirection("next");
+  }, [user]);
+
   useEffect(() => {
     const raf = requestAnimationFrame(() => checkShouldOpen());
     const handleEvent = () => checkShouldOpen();
+    const handleForceOpen = () => forceOpen();
     window.addEventListener("chatap-trigger-onboarding", handleEvent);
+    window.addEventListener("chatap-force-open-tutorial", handleForceOpen);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("chatap-trigger-onboarding", handleEvent);
+      window.removeEventListener("chatap-force-open-tutorial", handleForceOpen);
     };
-  }, [checkShouldOpen]);
+  }, [checkShouldOpen, forceOpen]);
 
   // Cierre animado y fluido
   const handleFinish = useCallback((destination) => {

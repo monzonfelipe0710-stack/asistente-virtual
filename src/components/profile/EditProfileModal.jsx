@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../common/Toast";
 import { DetailModal, Icon, ICONS, Field } from "./ui";
@@ -7,16 +7,28 @@ import { employeeDepartments } from "../../data/mockEmployeeApprovals";
 export default function EditProfileModal({ open, onClose, saved }) {
   const { user, updateProfile } = useAuth();
   const toast = useToast();
-  const [form, setForm] = useState(() => ({
-    firstName: user?.firstName || user?.nombre || "",
-    lastName: user?.lastName || user?.apellido || "",
-    name: user?.name || "",
-    phone: user?.phone || "",
-    department: user?.department || "",
-    position: user?.position || "",
-  }));
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    name: "",
+    department: "",
+    position: "",
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Actualizar el formulario cuando se abre el modal o cambian los datos del usuario
+  useEffect(() => {
+    if (open && user) {
+      setForm({
+        firstName: user?.firstName || user?.nombre || "",
+        lastName: user?.lastName || user?.apellido || "",
+        name: user?.name || "",
+        department: user?.department || "",
+        position: user?.position || "",
+      });
+    }
+  }, [open, user]);
 
   if (!user) return null;
 
@@ -95,15 +107,6 @@ export default function EditProfileModal({ open, onClose, saved }) {
               required
             />
           </div>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-muted mb-1">Teléfono</label>
-          <input
-            className="input-field"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            placeholder="3704 00-0000"
-          />
         </div>
 
         {isEmployee && (

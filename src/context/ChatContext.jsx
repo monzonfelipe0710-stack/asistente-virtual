@@ -204,6 +204,23 @@ export function ChatProvider({ children }) {
     setMessages([]);
   }, []);
 
+  const reloadConsultas = useCallback(async () => {
+    if (!ownerId || !token) return;
+    setHistoryLoading(true);
+    setHistoryError("");
+    try {
+      const rows = await misConsultas();
+      const newestFirst = [...rows].sort(
+        (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      );
+      setConsultas(newestFirst);
+    } catch (error) {
+      setHistoryError(apiErrorMessage(error));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [ownerId, token]);
+
   return (
     <ChatContext.Provider
       value={{
@@ -220,6 +237,7 @@ export function ChatProvider({ children }) {
         removeLocalConversation,
         clearHistory,
         clearLocalHistory,
+        reloadConsultas,
         hasHistory: messages.length > 0,
       }}
     >
