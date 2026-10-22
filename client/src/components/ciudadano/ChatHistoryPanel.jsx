@@ -119,6 +119,25 @@ export default function ChatHistoryPanel({
                     {query.at && (
                       <span className="mt-1 block text-[11px] font-medium text-muted">{formatWhen(query.at)}</span>
                     )}
+                    {(query.estado || query.tramite || query.calificacion === 0 || query.calificacion === 1) && (
+                      <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {query.estado && (
+                          <span className="rounded-md bg-mist px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                            {query.estado}
+                          </span>
+                        )}
+                        {query.tramite && (
+                          <span className="rounded-md bg-brand/8 px-1.5 py-0.5 text-[10px] font-medium text-brand-deep">
+                            Trámite: {typeof query.tramite === "string" ? query.tramite : query.tramite.nombre}
+                          </span>
+                        )}
+                        {(query.calificacion === 0 || query.calificacion === 1) && (
+                          <span className="rounded-md bg-mist px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                            {query.calificacion === 1 ? "Te sirvió" : "No te sirvió"}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </span>
                 </button>
                 {onDelete && (
