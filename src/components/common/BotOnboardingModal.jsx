@@ -277,7 +277,7 @@ export default function BotOnboardingModal() {
       aria-modal="true"
       aria-label="Tutorial de bienvenida"
       aria-describedby="tour-description"
-      className={`fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${
+      className={`tour-overlay fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${
         hasSpotlight ? "" : "justify-center"
       } ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
     >
