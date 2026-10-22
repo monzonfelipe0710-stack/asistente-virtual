@@ -5,8 +5,21 @@ import {
   asignarSectoresSchema,
   registroCiudadanoSchema,
   crearUsuarioSchema,
+  actualizarPerfilSchema,
 } from "../validators/usuario.validator.js";
 import * as turnosService from "../services/turnos.service.js";
+
+export const actualizarMiPerfil = async (req, res) => {
+  const datos = actualizarPerfilSchema.parse(req.body);
+  const existente = await usuarioService.buscarPorEmail(datos.email);
+  if (existente && existente.id !== req.usuario.id) {
+    const error = new Error('Ya existe una cuenta con ese correo electrónico.');
+    error.statusCode = 409;
+    throw error;
+  }
+  const usuario = await usuarioService.actualizarPerfil(req.usuario.id, datos);
+  res.json({ mensaje: 'Perfil actualizado correctamente.', usuario });
+};
 
 export const registrar = async (req, res) => {
   const datos = registroSchema.parse(req.body);
