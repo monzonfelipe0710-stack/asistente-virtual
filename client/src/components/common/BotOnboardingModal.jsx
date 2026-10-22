@@ -374,11 +374,9 @@ export default function BotOnboardingModal() {
             </button>
           )}
 
-          {!isLast && (
-            <button type="button" onClick={() => handleFinish()} className="tour-skip">
-              Omitir
-            </button>
-          )}
+          <button type="button" onClick={() => handleFinish()} className="tour-skip">
+            {isLast ? "Cerrar tutorial" : "Omitir"}
+          </button>
         </div>
       </div>
     </div>
