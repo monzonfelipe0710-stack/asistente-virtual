@@ -1297,6 +1297,7 @@ export default function ChatWindow({ initialQuery = null }) {
             className="sr-only"
           />
           <label
+            id="chat-image-button"
             htmlFor="chat-image-upload"
             title="Adjuntar una imagen"
             aria-label="Adjuntar una imagen"
