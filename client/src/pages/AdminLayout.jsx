@@ -20,8 +20,24 @@ const SECTION_TITLES = {
 export default function AdminLayout() {
   const { user, userRole } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const mainRef = useRef(null);
   const { pathname } = useLocation();
+
+  // Detectar pantallas móviles
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Ocultar sidebar en móvil por defecto
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
@@ -61,21 +77,43 @@ export default function AdminLayout() {
 
   return (
     <div className="admin-layout-shell h-screen overflow-hidden flex transition-colors duration-200" style={{ backgroundColor: "var(--color-paper)" }}>
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <div data-print-hide>
         <AdminSidebar open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
       </div>
       <div
         className="admin-layout-content flex-1 flex flex-col min-w-0 h-screen overflow-hidden transition-[margin] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={{ marginLeft: sidebarOpen ? "var(--sidebar-width)" : "var(--sidebar-collapsed-width)" }}
+        style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? "var(--sidebar-width)" : "var(--sidebar-collapsed-width)") }}
       >
         <header
           className="h-16 shrink-0 flex items-center justify-between px-5 lg:px-8 border-b border-line/70 backdrop-blur-md"
           data-print-hide
           style={{ backgroundColor: "color-mix(in srgb, var(--color-paper) 85%, transparent)" }}
         >
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-faint m-0">Panel de administración</p>
-            <h1 className="text-[15px] font-bold leading-tight tracking-tight m-0 truncate" style={{ color: "var(--color-ink)" }}>{sectionTitle}</h1>
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="lg:hidden p-2 rounded-lg hover:bg-mist/70 transition-colors"
+              aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {sidebarOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-faint m-0">Panel de administración</p>
+              <h1 className="text-[15px] font-bold leading-tight tracking-tight m-0 truncate" style={{ color: "var(--color-ink)" }}>{sectionTitle}</h1>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {user && (

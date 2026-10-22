@@ -110,6 +110,7 @@ export default function ChatWindow({ initialQuery = null }) {
     removeLocalConversation,
     clearHistory,
     clearLocalHistory,
+    reloadConsultas,
   } = useChat();
   const { user, isAuthenticated } = useAuth();
   const token = useSessionStore((state) => state.token);
@@ -517,6 +518,8 @@ export default function ChatWindow({ initialQuery = null }) {
         fecha: consultationData.consultaFecha || new Date().toISOString(),
         tramite: null,
       }, userId);
+      // Recargar consultas para actualizar el historial
+      setTimeout(() => reloadConsultas(), 100);
     }
 
     presentBotMessage(finalText, finalActions, {
@@ -530,6 +533,13 @@ export default function ChatWindow({ initialQuery = null }) {
   function sendText(text, image = null, preview = "") {
     const t = (text ?? "").trim();
     if (!t) return;
+
+    // Verificar límite de 4 consultas para usuarios autenticados
+    if (token && consultas.length >= 4) {
+      toast("Has alcanzado el límite de 4 consultas. Elimina alguna consulta del historial para poder hacer más.", "error");
+      return;
+    }
+
     beginChat();
     const userMessageId = addMessage("user", t, image ? {
       type: "image",

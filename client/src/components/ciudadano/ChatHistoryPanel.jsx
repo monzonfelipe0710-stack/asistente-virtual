@@ -123,7 +123,7 @@ export default function ChatHistoryPanel({
                     onClick={() => onDelete(query)}
                     aria-label={`Borrar del historial: ${query.text}`}
                     title="Borrar esta consulta"
-                    className="shrink-0 self-center rounded-lg p-2 text-muted transition-colors hover:bg-bad/10 hover:text-bad sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 cursor-pointer"
+                    className="shrink-0 self-center rounded-lg p-2 text-muted transition-colors hover:bg-bad/10 hover:text-bad opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 cursor-pointer"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 7h12M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0v11a1 1 0 001 1h8a1 1 0 001-1V7M10 11v6m4-6v6" />

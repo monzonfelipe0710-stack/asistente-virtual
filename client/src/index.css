@@ -857,18 +857,18 @@ select {
     .container-ia-chat {
       padding-inline: 0.75rem;
     }
+  }
 
-    @media (prefers-reduced-motion: reduce) {
-      .navbar-action,
-      .quick-reply-card,
-      .quick-reply-arrow,
-      .container-ia-chat .input-text,
-      .container-ia-chat .label-voice,
-      .container-ia-chat .label-text,
-      .container-ia-chat .icon-voice-idle {
-        animation: none;
-        transition-duration: 0.01ms;
-      }
+  @media (prefers-reduced-motion: reduce) {
+    .navbar-action,
+    .quick-reply-card,
+    .quick-reply-arrow,
+    .container-ia-chat .input-text,
+    .container-ia-chat .label-voice,
+    .container-ia-chat .label-text,
+    .container-ia-chat .icon-voice-idle {
+      animation: none;
+      transition-duration: 0.01ms;
     }
   }
 }

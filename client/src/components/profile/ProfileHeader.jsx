@@ -4,6 +4,7 @@ import { generoLabel } from "../../lib/genero";
 import { getInitials } from "../../lib/profileMeta";
 import { Icon, ICONS } from "./ui";
 import EditProfileModal from "./EditProfileModal";
+import { forceOpenTutorial } from "../common/BotOnboardingModal";
 
 const STATUS_TONE = {
   Activo: "bg-ok/10 text-ok border border-ok/20",
@@ -88,13 +89,22 @@ export default function ProfileHeader({ onSaved }) {
               </div>
             </div>
 
-            <button
-              onClick={() => setEditOpen(true)}
-              className="btn-primary shrink-0"
-            >
-              <Icon path={ICONS.profile} className="w-4 h-4" />
-              Editar perfil
-            </button>
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              <button
+                onClick={() => setEditOpen(true)}
+                className="btn-primary shrink-0 flex-1 sm:flex-none"
+              >
+                <Icon path={ICONS.profile} className="w-4 h-4" />
+                Editar perfil
+              </button>
+              <button
+                onClick={forceOpenTutorial}
+                className="btn-secondary shrink-0 flex-1 sm:flex-none"
+              >
+                <Icon path={ICONS.chat} className="w-4 h-4" />
+                Ver tutorial
+              </button>
+            </div>
           </div>
         </div>
 
@@ -105,12 +115,8 @@ export default function ProfileHeader({ onSaved }) {
           <InfoItem label="Correo electrónico" value={user.email} mono />
           <InfoItem label="DNI" value={user.dni || "—"} mono />
           <InfoItem label="Género" value={generoLabel(user.genero) || "—"} />
-          <InfoItem label="CUIL" value={user.cuil || "—"} mono />
-          <InfoItem label="Teléfono" value={user.phone || "—"} mono />
-          <InfoItem label="Dependencia" value={user.department || "—"} />
-          <InfoItem label="Puesto" value={user.position || "—"} />
-          <InfoItem label="Registrado" value={user.createdAt ? new Date(user.createdAt).toLocaleDateString("es-AR") : "—"} />
-          <InfoItem label="Último acceso" value={user.lastAccessAt ? new Date(user.lastAccessAt).toLocaleString("es-AR") : "—"} />
+          {isStaff && <InfoItem label="CUIL" value={user.cuil || "—"} mono />}
+          {isStaff && <InfoItem label="Puesto" value={user.position || "—"} />}
         </div>
       </header>
 

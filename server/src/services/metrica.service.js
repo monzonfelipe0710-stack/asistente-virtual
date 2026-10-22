@@ -62,3 +62,10 @@ export const consultasDeUsuario = async (usuarioId) => {
     },
   });
 };
+
+export const contarConsultasDeUsuario = async (usuarioId) => {
+  const count = await prisma.consulta.count({
+    where: { usuarioId },
+  });
+  return count;
+};

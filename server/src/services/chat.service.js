@@ -1,7 +1,7 @@
 import { openai } from "../config/openai.js";
 import prisma from "../config/prisma.js";
 import { buscarTramites } from "./busqueda.service.js";
-import { registrarConsulta } from "./metrica.service.js";
+import { registrarConsulta, contarConsultasDeUsuario } from "./metrica.service.js";
 
 const MODELO_CHAT = "gpt-4o-mini";
 
@@ -82,6 +82,16 @@ const cargarDetalle = async (ids) => {
 };
 
 export const responderConsulta = async (pregunta, usuarioId = null) => {
+  // Verificar límite de 4 consultas para usuarios autenticados
+  if (usuarioId) {
+    const consultasCount = await contarConsultasDeUsuario(usuarioId);
+    if (consultasCount >= 4) {
+      const error = new Error("Has alcanzado el límite de 4 consultas. Elimina alguna consulta del historial para poder hacer más.");
+      error.statusCode = 429;
+      throw error;
+    }
+  }
+
   const encontrados = await buscarTramites(pregunta);
   const tramites =
     encontrados.length > 0
