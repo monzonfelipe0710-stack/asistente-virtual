@@ -27,7 +27,7 @@ const STEPS = [
     title: "Elegí un tema sugerido",
     description: "Si estás en la pantalla inicial, acá aparecen botones con temas frecuentes, como recibos de haberes, expedientes o licencias. Tocá uno para enviar una pregunta de ejemplo sin escribirla completa. Si ya estás en una conversación, podés escribir directamente en el campo de consulta que te voy a mostrar en el próximo paso.",
     route: "/chat",
-    target: ["#chatap-pills-container", "#chat-input-form"],
+    target: ["#chatap-pills-container", "#chat-here"],
   },
   {
     reaction: "happy",
@@ -35,7 +35,7 @@ const STEPS = [
     title: "Escribí tu consulta acá",
     description: "Este campo es donde escribís con tus propias palabras lo que necesitás saber. Por ejemplo: «¿Qué documentación necesito para solicitar una licencia?». Después enviá la consulta con la flecha que aparece a la derecha.",
     route: "/chat",
-    target: "#chat-input-form",
+    target: "#chat-here",
   },
   {
     reaction: "playful",
@@ -51,7 +51,7 @@ const STEPS = [
     title: "Seguí los pasos sugeridos",
     description: "Cuando estás en la pantalla inicial, debajo de los temas frecuentes aparecen las «Asistencias guiadas». Elegí una para recibir orientación paso a paso. Si no ves esa sección porque ya estás conversando, no pasa nada: podés seguir preguntando desde el campo de consulta.",
     route: "/chat",
-    target: ["#chat-guided-assists", "#chat-input-form"],
+    target: ["#chat-guided-assists", "#chat-here"],
   },
   {
     reaction: "excited",
