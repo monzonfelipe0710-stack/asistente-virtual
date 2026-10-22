@@ -1032,6 +1032,7 @@ export default function ChatWindow({ initialQuery = null }) {
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
+              id="chat-history-open-button"
               aria-label="Ver historial de consultas"
               className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
             >
@@ -1050,6 +1051,7 @@ export default function ChatWindow({ initialQuery = null }) {
             <button
               type="button"
               onClick={() => setHistoryCollapsed((v) => !v)}
+              id="chat-history-toggle-button"
               aria-expanded={!historyCollapsed}
               aria-controls="chat-history-panel"
               aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
@@ -1065,6 +1067,7 @@ export default function ChatWindow({ initialQuery = null }) {
           <button
             type="button"
             onClick={handleResetRequest}
+            id="chat-new-conversation-button"
             title="Iniciar un nuevo chat"
             aria-label="Iniciar un nuevo chat"
             className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
@@ -1119,7 +1122,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </p>
 
             {/* Botones de consulta rápida tipo Píldoras (2 filas de 3) */}
-            <div className="chatap-pills-container">
+            <div id="chatap-pills-container" className="chatap-pills-container">
               {CHATAP_PILLS.map((pill) => (
                 <button
                   key={pill.id}
@@ -1134,7 +1137,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
 
             {/* Asistencias guiadas paso a paso */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
+            <div id="chat-guided-assists" className="mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                 Asistencias guiadas:
               </span>
@@ -1267,7 +1270,7 @@ export default function ChatWindow({ initialQuery = null }) {
           </p>
         )}
 
-        <form onSubmit={handleSend} className="chatap-floating-bar mx-auto max-w-2xl">
+        <form id="chat-input-form" onSubmit={handleSend} className="chatap-floating-bar mx-auto max-w-2xl">
           {/* Lupa / búsqueda */}
           <span className="text-muted/70 pl-2 pr-1 flex items-center justify-center shrink-0 pointer-events-none" aria-hidden="true">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
