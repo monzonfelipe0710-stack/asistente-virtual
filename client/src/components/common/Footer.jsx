@@ -226,11 +226,11 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} ChatAP · Desarrollado en articulación conjunta por la Subsecretaría de Recursos Humanos y el Instituto Politécnico Formosa · Gobierno de Formosa.
           </p>
           <div className="flex items-center gap-5 text-xs text-muted font-neue-text">
-            <Link to="/contacto" className="hover:text-ink transition-colors no-underline">
+            <Link to="/terminos" className="hover:text-ink transition-colors no-underline">
               Términos y Condiciones
             </Link>
             <span className="text-line" aria-hidden="true">·</span>
-            <Link to="/contacto" className="hover:text-ink transition-colors no-underline">
+            <Link to="/privacidad" className="hover:text-ink transition-colors no-underline">
               Privacidad
             </Link>
             <span className="text-line" aria-hidden="true">·</span>
