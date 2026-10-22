@@ -11,30 +11,44 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Bienvenido/a a ChatAP!",
     title: (user) => `¡Hola, ${user?.name ? user.name.split(" ")[0] : "amigo/a"}!`,
-    description: "Te acompaño a conocer las funciones principales. Podés avanzar a tu ritmo y cerrar el recorrido cuando quieras.",
+    description: "Te ayudo a orientarte sobre trámites y consultas de Recursos Humanos. Podés avanzar a tu ritmo, ajustar la accesibilidad y cerrar el recorrido cuando quieras.",
   },
   {
     reaction: "playful",
-    kicker: "Tu primera consulta",
-    title: "Escribí o elegí una consulta",
-    description: "Escribí tu duda con tus propias palabras o elegí un tema sugerido. Cuanto más clara sea tu pregunta, mejor podremos orientarte.",
+    kicker: "Encontrá lo que necesitás",
+    title: "Buscá un trámite",
+    description: "Escribí el nombre del trámite o elegí uno de los temas sugeridos. Cuando haya información relacionada disponible, ChatAP puede mostrarte opciones y requisitos para seguir.",
+    route: "/chat",
+  },
+  {
+    reaction: "happy",
+    kicker: "Preguntá con tus palabras",
+    title: "Usá el asistente",
+    description: "Escribí una pregunta clara en el campo de consulta y enviala. Podés preguntar por documentación, pasos o requisitos; si la respuesta no alcanza, agregá más detalles.",
     route: "/chat",
     target: "#chat-here",
   },
   {
     reaction: "playful",
-    kicker: "Tus consultas, a mano",
-    title: "Volvé al historial cuando lo necesites",
-    description: "En el panel de conversaciones podés volver a abrir consultas anteriores. Así no necesitás escribir de nuevo una pregunta que ya hiciste.",
+    kicker: "Una imagen también ayuda",
+    title: "Adjuntá una imagen",
+    description: "Tocá el ícono del clip para elegir una imagen JPEG, PNG o WebP de hasta 8 MB. Adjuntá solo archivos relacionados con tu consulta y evitá incluir datos que no sean necesarios.",
     route: "/chat",
+    target: "#chat-image-button",
   },
   {
     reaction: "happy",
-    kicker: "A tu manera",
-    title: "Adaptá la página a tus necesidades",
-    description: "Desde Accesibilidad podés agrandar el texto, activar el alto contraste o elegir una letra más legible. Elegí lo que te resulte más cómodo. Podés volver a abrir este tutorial desde tu perfil.",
+    kicker: "Tus consultas, a mano",
+    title: "Volvé al historial",
+    description: "En el panel de conversaciones podés abrir consultas anteriores y revisar sus respuestas. Si estás en un celular, buscá el control para mostrar el panel de historial.",
     route: "/chat",
-    target: "#accessibility-menu",
+  },
+  {
+    reaction: "excited",
+    kicker: "Seguí con confianza",
+    title: "Consultá requisitos y estado",
+    description: "Preguntá por los requisitos o por el seguimiento de un expediente. La información de estado depende de las integraciones disponibles; si no puede verificarse en línea, confirmala por un canal oficial. ¡Ya podés empezar!",
+    route: "/chat",
   },
 ];
 
@@ -329,7 +343,7 @@ export default function BotOnboardingModal() {
         {/* Controles mínimos */}
         <div className="tour-controls">
           <span className="tour-step-count" aria-live="polite">
-            {step + 1} / {STEPS.length}
+            Paso {step + 1} de {STEPS.length}
           </span>
           {!isFirst && (
             <button
@@ -338,25 +352,21 @@ export default function BotOnboardingModal() {
               className="tour-btn"
               aria-label="Paso anterior"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M15 19l-7-7 7-7" />
               </svg>
+              <span>Anterior</span>
             </button>
           )}
 
           {isLast ? (
-            <>
-              <button type="button" onClick={() => handleFinish()} className="tour-btn tour-btn-ghost">
-                Explorar
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFinish("/chat")}
-                className="tour-btn tour-btn-primary"
-              >
-                Ir al Chat
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => handleFinish("/chat")}
+              className="tour-btn tour-btn-primary"
+            >
+              Comenzar a usar el asistente
+            </button>
           ) : (
             <button type="button" onClick={goToNext} className="tour-btn tour-btn-primary">
               {isFirst ? "Comenzar" : "Siguiente"}
