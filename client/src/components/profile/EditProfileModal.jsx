@@ -19,7 +19,9 @@ export default function EditProfileModal({ open, onClose, saved }) {
 
   // Actualizar el formulario cuando se abre el modal o cambian los datos del usuario
   useEffect(() => {
-    if (open && user) {
+    if (!open || !user) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
       setForm({
         firstName: user?.firstName || user?.nombre || "",
         lastName: user?.lastName || user?.apellido || "",
@@ -27,7 +29,9 @@ export default function EditProfileModal({ open, onClose, saved }) {
         department: user?.department || "",
         position: user?.position || "",
       });
-    }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [open, user]);
 
   if (!user) return null;

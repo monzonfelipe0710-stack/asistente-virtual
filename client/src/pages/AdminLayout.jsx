@@ -19,25 +19,26 @@ const SECTION_TITLES = {
 
 export default function AdminLayout() {
   const { user, userRole } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= 1024
+  );
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 1024
+  );
   const mainRef = useRef(null);
   const { pathname } = useLocation();
 
-  // Detectar pantallas móviles
+  // Mantener sincronizado el layout con el tamaño de la ventana.
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile) setSidebarOpen(false);
+    };
+
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  // Ocultar sidebar en móvil por defecto
-  useEffect(() => {
-    if (isMobile && sidebarOpen) {
-      setSidebarOpen(false);
-    }
-  }, [isMobile]);
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });

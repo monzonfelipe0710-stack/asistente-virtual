@@ -28,6 +28,8 @@ import {
 } from "../../lib/chatMemory";
 
 
+const crearIdConsultaLocal = () => `c_${Date.now()}`;
+
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
@@ -577,7 +579,7 @@ export default function ChatWindow({ initialQuery = null }) {
     // Registro INMEDIATO en el historial apenas el usuario envía la consulta
     const effectiveId = userId || "ciudadano_anonimo";
     rememberMessage(effectiveId, t, userMessageId);
-    const immediateConsultaId = `c_${Date.now()}`;
+    const immediateConsultaId = crearIdConsultaLocal();
     recordConsulta({
       id: immediateConsultaId,
       textoConsulta: t,
