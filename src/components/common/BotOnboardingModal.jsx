@@ -11,7 +11,7 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Bienvenido/a a ChatAP!",
     title: (user) => `¡Hola, ${user?.name ? user.name.split(" ")[0] : "amigo/a"}!`,
-    description: "Te ayudo a orientarte sobre trámites y consultas de Recursos Humanos. Podés avanzar a tu ritmo, ajustar la accesibilidad y cerrar el recorrido cuando quieras.",
+    description: "Te ayudo a orientarte sobre trámites y consultas de Recursos Humanos. Podés avanzar a tu ritmo y cerrar el recorrido cuando quieras. ¿Querés repasarlo más adelante? Podés volver a abrir este tutorial desde Mi perfil, en la sección «Ayuda rápida», tocando «Volver a ver tutorial».",
   },
   {
     reaction: "playful",
