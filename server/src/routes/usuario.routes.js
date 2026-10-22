@@ -7,8 +7,8 @@ import { registroLimiter } from '../config/rateLimit.js';
 
 const router = Router();
 
-// Pública: registro de ciudadano (verificación contra el padrón).
-// El alta de personal la realiza la administración desde el panel.
+// Pública: registro de solicitud
+router.post('/registro', registroLimiter, asyncHandler(usuarioController.registrar));
 router.post('/registro-ciudadano', registroLimiter, asyncHandler(usuarioController.registrarCiudadano));
 
 // Solo superusuario: gestión de solicitudes  

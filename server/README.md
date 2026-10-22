@@ -118,7 +118,7 @@ controllers lanzan errores con `statusCode` y `asyncHandler` los deriva al
 
 | Modelo (tabla) | Descripción |
 |---|---|
-| `Usuario` (`usuarios`) | Personal y ciudadanos. Los ciudadanos se registran verificados y quedan `APROBADO`; las cuentas de administración requieren aprobación |
+| `Usuario` (`usuarios`) | Personal que opera el sistema. Rol `SUPERUSUARIO` o `ADMINISTRADOR`; estado `PENDIENTE`, `APROBADO`, `RECHAZADO` o `SUSPENDIDO` |
 | `Sector` (`sectores`) | Jerarquía organizativa (`MINISTERIO`, `SUBSECRETARIA`, `DEPARTAMENTO`) con `parentId`. Nombre único bajo un mismo padre |
 | `Tramite` (`tramites`) | Trámite con nombre, descripción, costo, sector, encargado (usuario), flag `publicado` y `embedding vector(1536)` |
 | `Requisito` (`requisitos`) | Requisitos de un trámite, con dónde se consigue y costo |
@@ -126,7 +126,7 @@ controllers lanzan errores con `statusCode` y `asyncHandler` los deriva al
 | `TramiteMesa` (`tramite_mesa`) | Relación N a N trámite ↔ mesa |
 | `Documento` (`documentos`) | Formularios descargables. Guarda la key del archivo en R2, no el archivo |
 | `UsuarioSector` (`usuario_sector`) | Relación N a N usuario ↔ sector (todavía sin endpoints) |
-| `Consulta` (`consultas`) | Pregunta, respuesta, usuario, trámite relacionado, tópico y calificación del chat |
+| `Consulta` (`consultas`) | Registro de cada pregunta del chat, para las métricas |
 
 Además, la tabla `tramites` tiene una columna generada `search_vector` (full-text en
 español sobre nombre + descripción) que no figura en el schema de Prisma: se crea en la
@@ -154,7 +154,6 @@ correcta pero la cuenta no está habilitada.
 |---|---|
 | `SUPERUSUARIO` | Gestionar usuarios y sectores, ver métricas |
 | `ADMINISTRADOR` | Crear trámites y gestionar los suyos (editar, publicar, borrar, documentos) |
-| `CIUDADANO` | Consultar el chat y acceder a su historial y actividad personal |
 
 ## Endpoints
 
@@ -165,14 +164,13 @@ Los endpoints autenticados esperan el header `Authorization: Bearer <token>`.
 
 | Método | Ruta | Acceso |
 |---|---|---|
-| `POST` | `/api/auth/login` | Público (10 intentos cada 15 min). Body `{ email, password }` o `{ dni, password }`, responde `{ token, usuario }` |
+| `POST` | `/api/auth/login` | Público (10 intentos cada 15 min). Body `{ email, password }`, responde `{ token, usuario }` |
 
 ### Usuarios
 
 | Método | Ruta | Acceso |
 |---|---|---|
 | `POST` | `/api/usuarios/registro` | Público (5 por hora). Body `{ nombre, email, password }` (mínimo 8 caracteres) |
-| `POST` | `/api/usuarios/registro-ciudadano` | Público (5 por hora). Verifica DNI y género contra el padrón y crea una cuenta ciudadana |
 | `GET` | `/api/usuarios` | Superusuario. Admite `?estado=PENDIENTE\|APROBADO\|RECHAZADO\|SUSPENDIDO`. Nunca devuelve el hash |
 | `GET` | `/api/usuarios/pendientes` | Superusuario |
 | `PATCH` | `/api/usuarios/:id/aprobar` | Superusuario. Solo sobre `PENDIENTE` |
@@ -228,16 +226,7 @@ rutas con `:docId` verifican que el documento pertenezca al trámite `:id` de la
 
 | Método | Ruta | Acceso |
 |---|---|---|
-| `POST` | `/api/chat` | Público (10 por minuto; asocia usuario si hay sesión). Body `{ pregunta }` (hasta 500 caracteres), responde `{ consultaId, respuesta, tramitesEncontrados, encontrado }` |
-| `GET` | `/api/chat/checklist/:tramiteId` | Público. Requisitos, costos y mesas para preparar el checklist |
-
-### Historial y actividad personal
-
-| Método | Ruta | Acceso |
-|---|---|---|
-| `GET` | `/api/consultas/mias` | Autenticado. Hasta 100 consultas propias, con respuestas y calificaciones |
-| `GET` | `/api/consultas/resumen` | Autenticado. Totales personales y temas agrupados del mes actual |
-| `PATCH` | `/api/consultas/:id/calificar` | Autenticado. Solo permite calificar una consulta propia con `1` (útil) o `0` (no útil) |
+| `POST` | `/api/chat` | Público (10 por minuto). Body `{ pregunta }` (hasta 500 caracteres), responde `{ respuesta, tramitesEncontrados, encontrado }` |
 
 ### Métricas
 
@@ -267,7 +256,7 @@ Cualquier ruta no registrada responde `404 { "error": "Ruta no encontrada." }`.
    consiguen y su costo, mesas de entrada, nombres de formularios descargables).
 4. **Respuesta.** Se envía a `gpt-4o-mini` (temperatura 0,3) con un system prompt que le
    exige responder solo con la información del contexto y limitarse a temas de trámites.
-5. **Registro.** Cada consulta, su respuesta y su tópico se guardan en `consultas` antes de responder. Si hubo resultados se atribuye
+5. **Registro.** Cada consulta se guarda en `consultas`. Si hubo resultados se atribuye
    al trámite mejor rankeado; si no, queda como `encontrado = false` y se responde un
    mensaje fijo sin llamar al modelo.
 
