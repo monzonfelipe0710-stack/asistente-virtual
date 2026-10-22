@@ -55,15 +55,15 @@ const CONTENT = {
         "La información puede utilizarse para crear y administrar la cuenta, responder consultas, mostrar el historial asociado a la cuenta, mantener la seguridad, diagnosticar errores y mejorar el funcionamiento del servicio, siempre de acuerdo con las finalidades que la institución responsable determine y comunique."
       ]},
       { title: "4. Consultas, archivos y servicios externos", paragraphs: [
-        "El contenido que escribís y los archivos que adjuntás pueden necesitar procesamiento técnico para generar una respuesta. Si el sistema utiliza proveedores externos de infraestructura o inteligencia artificial, la institución debe identificar esos proveedores, las finalidades del intercambio, la ubicación del tratamiento y las condiciones aplicables antes de publicar esta política como definitiva.",
-        "Proveedores utilizados y categorías de datos compartidos: [COMPLETAR TRAS VERIFICAR LA CONFIGURACIÓN DE PRODUCCIÓN Y LOS CONTRATOS APLICABLES]."
+        "Según el código actual, las consultas se procesan mediante la API de OpenAI (modelo gpt-4o-mini). Cuando adjuntás una imagen, el servidor la procesa en memoria y la envía a esa API para describirla y leer el texto visible; no se guarda como archivo local por este flujo. El catálogo de documentos utiliza almacenamiento compatible con S3 configurado mediante variables de R2. La cuenta, región de procesamiento, contratos, configuración de producción y condiciones de conservación de cada proveedor deben ser confirmadas por la institución responsable.",
+        "Antes de publicar la política como definitiva, completar: proveedor y ubicación exacta del almacenamiento R2, configuración de la base de datos, acuerdos vigentes con proveedores, datos que efectivamente se transmiten y canal para consultas sobre el tratamiento."
       ]},
       { title: "5. Conservación y seguridad", paragraphs: [
         "Los datos deben conservarse solo durante el plazo necesario para las finalidades informadas y de acuerdo con las obligaciones legales y administrativas aplicables. El plazo concreto de conservación del registro, el historial, los archivos y los registros técnicos debe ser definido y publicado por el responsable institucional.",
         "La plataforma debe implementar medidas de seguridad adecuadas. Ningún sistema puede prometer seguridad absoluta; no incluyas en tus consultas información que no sea necesaria."
       ]},
       { title: "6. Derechos de las personas", paragraphs: [
-        "De acuerdo con la normativa aplicable en Argentina, las personas pueden contar con derechos de acceso, rectificación y, cuando corresponda, supresión de sus datos personales. La forma de ejercerlos, las excepciones aplicables y los plazos deben ser atendidos por el responsable del tratamiento conforme a la Ley 25.326 y su normativa complementaria.",
+        "De acuerdo con la normativa aplicable en Argentina, las personas pueden ejercer los derechos de acceso, actualización, rectificación y, cuando corresponda, supresión de sus datos personales. La forma de ejercerlos, las excepciones aplicables y los plazos deben ser atendidos por el responsable del tratamiento conforme a la Ley 25.326 y su normativa complementaria.",
         "Canal para solicitudes sobre datos personales: [COMPLETAR CORREO, FORMULARIO O DEPENDENCIA OFICIAL VERIFICADA]."
       ]},
       { title: "7. Cookies, almacenamiento local y sesión", paragraphs: [
