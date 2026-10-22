@@ -25,9 +25,9 @@ const STEPS = [
     reaction: "playful",
     kicker: "Atajos para empezar",
     title: "Elegí un tema sugerido",
-    description: "En el centro de la pantalla aparecen estos botones con temas frecuentes, como recibos de haberes, expedientes o licencias. Tocá uno para enviar una pregunta de ejemplo sin tener que escribirla completa.",
+    description: "Si estás en la pantalla inicial, acá aparecen botones con temas frecuentes, como recibos de haberes, expedientes o licencias. Tocá uno para enviar una pregunta de ejemplo sin escribirla completa. Si ya estás en una conversación, podés escribir directamente en el campo de consulta que te voy a mostrar en el próximo paso.",
     route: "/chat",
-    target: "#chatap-pills-container",
+    target: ["#chatap-pills-container", "#chat-input-form"],
   },
   {
     reaction: "happy",
@@ -49,9 +49,9 @@ const STEPS = [
     reaction: "happy",
     kicker: "También hay ayuda guiada",
     title: "Seguí los pasos sugeridos",
-    description: "Debajo de los temas frecuentes vas a encontrar las «Asistencias guiadas». Elegí una para que ChatAP te acompañe paso a paso en consultas que necesitan más orientación.",
+    description: "Cuando estás en la pantalla inicial, debajo de los temas frecuentes aparecen las «Asistencias guiadas». Elegí una para recibir orientación paso a paso. Si no ves esa sección porque ya estás conversando, no pasa nada: podés seguir preguntando desde el campo de consulta.",
     route: "/chat",
-    target: "#chat-guided-assists",
+    target: ["#chat-guided-assists", "#chat-input-form"],
   },
   {
     reaction: "excited",
