@@ -81,7 +81,7 @@ export default function ChatHistoryPanel({
           <div role="status" className="space-y-2">
             <span className="sr-only">Cargando historial…</span>
             {[0, 1, 2].map((item) => (
-              <div key={item} className="h-[4.25rem] animate-pulse rounded-xl bg-mist/70" />
+              <div key={item} className="history-skeleton h-[4.25rem] animate-pulse rounded-xl bg-mist/70" />
             ))}
           </div>
         ) : visible.length === 0 ? (
