@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import Navbar from "../components/common/Navbar";
+import Footer from "../components/common/Footer";
 
 const CONTENT = {
   terms: {
@@ -79,7 +81,9 @@ export default function LegalPage({ type = "terms" }) {
   const updatedAt = "22 de octubre de 2026";
 
   return (
-    <main className="min-h-screen bg-paper text-ink">
+    <div className="min-h-screen flex flex-col bg-paper text-ink">
+      <Navbar />
+      <main className="flex-1">
       <section className="border-b border-line bg-mist/40">
         <div className="ed-max section-bleed py-12 sm:py-16">
           <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-deep no-underline transition-colors hover:text-brand">
@@ -136,6 +140,8 @@ export default function LegalPage({ type = "terms" }) {
           <p className="m-0 text-xs leading-relaxed text-muted">ChatAP · Recursos Humanos · Provincia de Formosa. Para conocer la versión oficial, verificá las publicaciones del organismo responsable.</p>
         </div>
       </div>
-    </main>
+      </main>
+      <Footer />
+    </div>
   );
 }
