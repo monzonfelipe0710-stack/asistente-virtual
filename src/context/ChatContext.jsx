@@ -123,13 +123,13 @@ export function ChatProvider({ children }) {
     );
   }, []);
 
-  const recordConsulta = useCallback((consulta, expectedOwnerId) => {
-    if (!token || ownerRef.current !== expectedOwnerId || !consulta?.id) return;
+  const recordConsulta = useCallback((consulta) => {
+    if (!consulta?.id) return;
     setConsultas((prev) => [
       consulta,
       ...prev.filter((row) => row.id !== consulta.id),
     ]);
-  }, [token]);
+  }, []);
 
   const openConversation = useCallback((conversationMessages) => {
     setMessages(conversationMessages);
@@ -147,12 +147,21 @@ export function ChatProvider({ children }) {
     };
     const start = localHistoryRef.current.findIndex(matchesQuery);
     if (start < 0) {
-      setMessages([{
+      const msgs = [{
         id: query.id || `historial-${query.at}`,
         type: "user",
         text: query.text,
         timestamp: query.at || new Date().toISOString(),
-      }]);
+      }];
+      if (query.answer) {
+        msgs.push({
+          id: `historial-${query.at}-res`,
+          type: "bot",
+          text: query.answer,
+          timestamp: query.at || new Date().toISOString(),
+        });
+      }
+      setMessages(msgs);
       return;
     }
     const nextUser = localHistoryRef.current.findIndex(
