@@ -62,3 +62,10 @@ export async function reactivar(id) {
   const { data } = await api.patch(`/api/usuarios/${id}/reactivar`);
   return data;
 }
+
+
+/** PATCH /api/usuarios/me/perfil — actualiza el perfil de la cuenta autenticada. */
+export async function actualizarMiPerfil({ nombre, email }) {
+  const { data } = await api.patch("/api/usuarios/me/perfil", { nombre, email });
+  return data;
+}
