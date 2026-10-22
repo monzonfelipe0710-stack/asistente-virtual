@@ -132,3 +132,51 @@ export const cambiarPassword = async (id, passwordNueva) => {
     data: { passwordHash, resetTokenHash: null, resetTokenExpira: null },
   });
 };
+
+export const buscarPorDniCualquiera = async (dni) => {
+  return prisma.usuario.findFirst({ where: { dni } });
+};
+
+export const buscarPorCuil = async (cuil) => {
+  return prisma.usuario.findUnique({ where: { cuil } });
+};
+
+export const crearUsuarioAdministrado = async (datos) => {
+  const passwordHash = await bcrypt.hash(datos.password, 10);
+  const sectorIds = datos.rol === 'ADMINISTRADOR' ? datos.sectorIds : [];
+
+  return prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.create({
+      data: {
+        nombre: datos.nombre,
+        email: datos.email,
+        passwordHash,
+        rol: datos.rol,
+        estado: 'APROBADO',
+        dni: datos.dni ?? null,
+        cuil: datos.cuil ?? null,
+      },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        estado: true,
+        dni: true,
+        cuil: true,
+      },
+    });
+
+    if (sectorIds.length > 0) {
+      await tx.usuarioSector.createMany({
+        data: sectorIds.map((sectorId) => ({
+          usuarioId: usuario.id,
+          sectorId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    return usuario;
+  });
+};

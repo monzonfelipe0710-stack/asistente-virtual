@@ -24,3 +24,15 @@ export const registroCiudadanoSchema = z.object({
   email: z.email('El email no es válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
 });
+
+export const crearUsuarioSchema = z.object({
+  nombre: z.string().trim().min(1, 'El nombre es obligatorio.'),
+  email: z.email('El email no es válido.').trim().toLowerCase(),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  rol: z.enum(['ADMINISTRADOR', 'CIUDADANO'], {
+    error: () => 'El rol debe ser ADMINISTRADOR o CIUDADANO.',
+  }),
+  dni: z.string().regex(/^\\d{7,8}$/, 'El DNI debe tener 7 u 8 dígitos.').optional(),
+  cuil: z.string().regex(/^\\d{11}$/, 'El CUIL debe tener 11 dígitos.').optional(),
+  sectorIds: z.array(z.number().int().positive()).default([]),
+});

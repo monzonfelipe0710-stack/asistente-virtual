@@ -7,6 +7,9 @@ import { registroLimiter } from '../config/rateLimit.js';
 
 const router = Router();
 
+// Alta directa de cuentas desde el panel de superusuario.
+router.post('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.crearUsuarioAdministrativo));
+
 // Pública: registro de solicitud
 router.post('/registro', registroLimiter, asyncHandler(usuarioController.registrar));
 router.post('/registro-ciudadano', registroLimiter, asyncHandler(usuarioController.registrarCiudadano));

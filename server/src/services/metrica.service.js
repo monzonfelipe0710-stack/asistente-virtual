@@ -57,6 +57,7 @@ export const consultasDeUsuario = async (usuarioId) => {
       id: true,
       textoConsulta: true,
       encontrado: true,
+      calificacion: true,
       fecha: true,
       tramite: { select: { id: true, nombre: true } },
     },

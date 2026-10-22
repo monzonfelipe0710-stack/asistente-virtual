@@ -4,6 +4,7 @@ import {
   registroSchema,
   asignarSectoresSchema,
   registroCiudadanoSchema,
+  crearUsuarioSchema,
 } from "../validators/usuario.validator.js";
 import * as turnosService from "../services/turnos.service.js";
 
@@ -217,6 +218,49 @@ export const registrarCiudadano = async (req, res) => {
 
   res.status(201).json({
     mensaje: "Cuenta de ciudadano creada. Ya podés iniciar sesión.",
+    usuario,
+  });
+};
+
+
+export const crearUsuarioAdministrativo = async (req, res) => {
+  const datos = crearUsuarioSchema.parse(req.body);
+
+  if (await usuarioService.buscarPorEmail(datos.email)) {
+    const error = new Error('Ya existe una cuenta registrada con ese correo.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (datos.dni && await usuarioService.buscarPorDniCualquiera(datos.dni)) {
+    const error = new Error('Ya existe una cuenta registrada con ese DNI.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (datos.cuil && await usuarioService.buscarPorCuil(datos.cuil)) {
+    const error = new Error('Ya existe una cuenta registrada con ese CUIL.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const sectorIds = datos.rol === 'ADMINISTRADOR'
+    ? [...new Set(datos.sectorIds)]
+    : [];
+  const sectoresExistentes = await usuarioService.contarSectoresExistentes(sectorIds);
+  if (sectoresExistentes !== sectorIds.length) {
+    const error = new Error('Uno o más sectores seleccionados no existen.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const usuario = await usuarioService.crearUsuarioAdministrado({
+    ...datos,
+    sectorIds,
+  });
+
+  res.status(201).json({
+    mensaje: 'Cuenta creada correctamente.',
     usuario,
   });
 };
