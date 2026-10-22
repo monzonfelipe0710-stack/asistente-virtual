@@ -17,6 +17,15 @@ describe('loginSchema', () => {
     assert.equal(mensaje(loginSchema, { email: 'no-es-email', password: 'x' }), 'El email no es válido.');
   });
 
+  it('acepta iniciar sesión con DNI', () => {
+    assert.equal(loginSchema.safeParse({ dni: '12345678', password: '12345678' }).success, true);
+  });
+
+  it('exige exactamente un identificador entre email y DNI', () => {
+    assert.equal(loginSchema.safeParse({ password: '12345678' }).success, false);
+    assert.equal(loginSchema.safeParse({ email: 'a@b.com', dni: '12345678', password: '12345678' }).success, false);
+  });
+
   it('rechaza una contraseña vacía', () => {
     assert.equal(mensaje(loginSchema, { email: 'a@b.com', password: '' }), 'La contraseña es obligatoria.');
   });

@@ -27,7 +27,46 @@ Formato de salida (obligatorio): devolvés un objeto JSON con estos campos:
 Si ningún trámite del contexto responde la consulta, poné "encontrado": false, "tramitesUsados": [] y en "respuesta" indicá que no encontraste información y sugerí reformular o consultar en una mesa de entrada.`;
 
 const formatearCosto = (costo) =>
-  costo == null || Number(costo) === 0 ? "sin costo" : `$${costo}`;
+  costo == null || Number(costo) === 0 ? "sin costo" : `${costo}`;
+
+const describirImagen = async (pregunta, imagen) => {
+  if (!imagen) return '';
+
+  const completion = await openai.chat.completions.create({
+    model: MODELO_CHAT,
+    messages: [
+      {
+        role: 'system',
+        content: 'Describí brevemente la imagen y transcribí el texto visible que pueda ayudar a identificar un trámite público. No respondas la consulta, no inventes texto ilegible y no agregues información que no esté en la imagen.',
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `Pregunta del ciudadano: ${pregunta}` },
+          {
+            type: 'image_url',
+            image_url: {
+              url: `data:${imagen.mimetype};base64,${imagen.buffer.toString('base64')}`,
+            },
+          },
+        ],
+      },
+    ],
+    temperature: 0,
+    max_tokens: 350,
+  });
+
+  return completion.choices[0]?.message?.content?.trim() ?? '';
+};
+
+const registrarConsultaSeguro = async (datos) => {
+  try {
+    return await registrarConsulta(datos);
+  } catch (err) {
+    console.error('Error al registrar consulta:', err.message);
+    return null;
+  }
+};
 
 const formatearTramite = (t) => {
   const lineas = [
@@ -81,7 +120,7 @@ const cargarDetalle = async (ids) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-export const responderConsulta = async (pregunta, usuarioId = null) => {
+export const responderConsulta = async (pregunta, usuarioId = null, imagen = null) => {
   // Verificar límite de 4 consultas para usuarios autenticados
   if (usuarioId) {
     const consultasCount = await contarConsultasDeUsuario(usuarioId);
@@ -92,26 +131,31 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
     }
   }
 
-  const encontrados = await buscarTramites(pregunta);
+  const descripcionImagen = await describirImagen(pregunta, imagen);
+  const preguntaBusqueda = descripcionImagen
+    ? `${pregunta}\nInformación visible en la imagen: ${descripcionImagen}`
+    : pregunta;
+
+  const encontrados = await buscarTramites(preguntaBusqueda);
   const tramites =
     encontrados.length > 0
       ? await cargarDetalle(encontrados.map((t) => t.id))
       : [];
 
   if (tramites.length === 0) {
-    registrarConsulta({
+    const consulta = await registrarConsultaSeguro({
       textoConsulta: pregunta,
       tramiteId: null,
       encontrado: false,
       usuarioId,
-    }).catch((err) =>
-      console.error("Error al registrar consulta:", err.message),
-    );
+    });
 
     return {
       respuesta: MENSAJE_SIN_RESPUESTA,
       tramitesEncontrados: [],
       encontrado: false,
+      consultaId: consulta?.id ?? null,
+      consultaFecha: consulta?.fecha ?? null,
     };
   }
 
@@ -161,16 +205,18 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
       })
     : [];
 
-  registrarConsulta({
+  const consulta = await registrarConsultaSeguro({
     textoConsulta: pregunta,
     tramiteId: encontrado ? idsUsados[0] : null,
     encontrado,
     usuarioId,
-  }).catch((err) => console.error("Error al registrar consulta:", err.message));
+  });
 
   return {
     respuesta: encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA,
     tramitesEncontrados,
     encontrado,
+    consultaId: consulta?.id ?? null,
+    consultaFecha: consulta?.fecha ?? null,
   };
 };

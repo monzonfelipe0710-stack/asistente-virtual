@@ -13,12 +13,25 @@ const MENSAJES_ESTADO = {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = loginSchema.parse(req.body);
+  const { email, dni, password } = loginSchema.parse(req.body);
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
+  const candidatos = email
+    ? [await prisma.usuario.findUnique({ where: { email } })].filter(Boolean)
+    : await prisma.usuario.findMany({
+        where: { dni },
+        orderBy: { id: 'asc' },
+      });
 
-  // 1. Identidad: email existe + contraseña correcta (mensaje genérico a propósito)
-  if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
+  let usuario = null;
+  for (const candidato of candidatos) {
+    if (await bcrypt.compare(password, candidato.passwordHash)) {
+      usuario = candidato;
+      break;
+    }
+  }
+
+  // Mensaje genérico para no revelar si existe el email o DNI.
+  if (!usuario) {
     const error = new Error('Credenciales inválidas');
     error.statusCode = 401;
     throw error;
@@ -39,7 +52,14 @@ export const login = async (req, res) => {
 
   res.json({
     token,
-    usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol },
+    usuario: {
+      id: usuario.id,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+      dni: usuario.dni,
+      genero: usuario.genero,
+    },
   });
 };
 

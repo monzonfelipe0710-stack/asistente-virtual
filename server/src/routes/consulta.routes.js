@@ -7,6 +7,8 @@ const router = Router();
 
 router.get('/mias', autenticar, asyncHandler(consultaController.misConsultas));
 router.get('/resumen', autenticar, asyncHandler(consultaController.resumenConsultas));
+router.patch('/:id/calificar', autenticar, asyncHandler(consultaController.calificarConsulta));
+router.get('/:id', autenticar, asyncHandler(consultaController.obtenerConsulta));
 router.delete('/:id', autenticar, asyncHandler(consultaController.eliminarConsulta));
 
 export default router;

@@ -150,6 +150,7 @@ model Usuario {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   dni           String?
+  cuil          String? @unique
   genero        Genero?
   resetTokenHash String?  @map("reset_token_hash")
   resetTokenExpira DateTime?  @map("reset_token_expira")
@@ -177,6 +178,7 @@ model Consulta {
   id              Int @id @default(autoincrement())
   textoConsulta   String @map("texto_consulta")
   encontrado      Boolean @default(false)
+  calificacion    Int?
   fecha           DateTime @default(now())
 
   tramiteId Int? @map("tramite_id")
