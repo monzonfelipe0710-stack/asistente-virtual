@@ -10,6 +10,7 @@ const CiudadanoPage = lazy(() => import("../pages/CiudadanoPage"));
 
 const AdminLayout = lazy(() => import("../pages/AdminLayout"));
 const ContactoPage = lazy(() => import("../pages/ContactoPage"));
+const LegalPage = lazy(() => import("../pages/LegalPage"));
 const NotFoundPage = lazy(() => import("../pages/NotFoundPage"));
 const AdminDashboard = lazy(() => import("../components/admin/Dashboard"));
 const ProfilePage = lazy(() => import("../pages/ProfilePage"));
@@ -69,6 +70,9 @@ export default function AppRoutes({ location }) {
       <Route path="/chat" element={<Lazy><CiudadanoPage /></Lazy>} />
       <Route path="/login" element={<LoginRegisterPage />} />
       <Route path="/restablecer" element={<ResetPasswordPage />} />
+
+      <Route path="/terminos" element={<Lazy><LegalPage type="terms" /></Lazy>} />
+      <Route path="/privacidad" element={<Lazy><LegalPage type="privacy" /></Lazy>} />
 
       <Route path="/contacto" element={<Lazy><ContactoPage /></Lazy>} />
       <Route path="/soporte" element={<Lazy><ContactoPage /></Lazy>} />
