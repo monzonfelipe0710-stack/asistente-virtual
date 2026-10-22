@@ -59,7 +59,7 @@ const STEPS = [
     title: "Podés volver cuando quieras",
     description: "Ahora ya sabés dónde buscar conversaciones, elegir temas y escribir tus consultas. Si más adelante necesitás recordar cómo funciona algo, abrí Mi perfil → Ayuda rápida → «Volver a ver tutorial». La información de trámites y estados puede depender de las integraciones disponibles; confirmá por canales oficiales si necesitás una verificación formal.",
     route: "/chat",
-    target: "#chat-input-form",
+    target: "#chat-here",
   },
 ];
 
