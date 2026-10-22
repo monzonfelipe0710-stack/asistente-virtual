@@ -307,7 +307,8 @@ export default function ChatWindow({ initialQuery = null }) {
         at: consulta.fecha,
         answer: consulta.respuesta,
         calificacion: consulta.calificacion,
-        tramite: consulta.tramite,
+        tramite: consulta.tramite?.nombre ?? consulta.tramite ?? null,
+        estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
       }));
     }
     const mem = loadMemory(effectiveId);
@@ -322,7 +323,8 @@ export default function ChatWindow({ initialQuery = null }) {
         at: consulta.fecha,
         answer: consulta.respuesta,
         calificacion: consulta.calificacion,
-        tramite: consulta.tramite,
+        tramite: consulta.tramite?.nombre ?? consulta.tramite ?? null,
+        estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
       }));
     }
     return [];
