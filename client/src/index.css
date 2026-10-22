@@ -3715,12 +3715,18 @@ html[data-a11y-sr="true"] [data-bot-message]:focus {
   transition: top 320ms cubic-bezier(0.22, 1, 0.36, 1), left 320ms cubic-bezier(0.22, 1, 0.36, 1), width 320ms cubic-bezier(0.22, 1, 0.36, 1), height 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-  .history-item-enter,
-  .tour-card,
-  .tour-dim,
-  .tour-ring,
-  .tour-avatar > * {
+  .history-item-enter {
     animation: none !important;
+    animation-delay: 0ms !important;
+  }
+
+  .tour-overlay,
+  .tour-overlay *,
+  .tour-dim,
+  .tour-ring {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
