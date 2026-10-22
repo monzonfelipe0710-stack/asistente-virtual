@@ -161,7 +161,15 @@ export default function BotOnboardingModal() {
     let raf = 0;
 
     const measure = () => {
-      const el = document.querySelector(current.target);
+      const targets = Array.isArray(current.target) ? current.target : [current.target];
+      const el = targets
+        .map((selector) => document.querySelector(selector))
+        .find((candidate) => {
+          if (!candidate) return false;
+          const bounds = candidate.getBoundingClientRect();
+          const style = window.getComputedStyle(candidate);
+          return bounds.width > 0 && bounds.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+        });
       if (el) {
         const r = el.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) {
@@ -186,7 +194,7 @@ export default function BotOnboardingModal() {
           lastRect = rect;
           setSpotlight({
             rect,
-            placement: rect.bottom + 260 < window.innerHeight ? "below" : "above",
+            placement: rect.bottom + 235 < window.innerHeight ? "below" : "above",
           });
           if (stableFrames >= 8) {
             measureRef.current = null;
