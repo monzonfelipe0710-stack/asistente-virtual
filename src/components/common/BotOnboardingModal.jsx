@@ -22,10 +22,17 @@ const STEPS = [
     target: "#chat-here",
   },
   {
+    reaction: "playful",
+    kicker: "Tus consultas, a mano",
+    title: "Volvé al historial cuando lo necesites",
+    description: "En el panel de conversaciones podés volver a abrir consultas anteriores. Así no necesitás escribir de nuevo una pregunta que ya hiciste.",
+    route: "/chat",
+  },
+  {
     reaction: "happy",
     kicker: "A tu manera",
     title: "Adaptá la página a tus necesidades",
-    description: "Abrí Accesibilidad para agrandar el texto, activar alto contraste o elegir una letra más legible. Podés ver este tutorial nuevamente desde tu perfil.",
+    description: "Desde Accesibilidad podés agrandar el texto, activar el alto contraste o elegir una letra más legible. Elegí lo que te resulte más cómodo. Podés volver a abrir este tutorial desde tu perfil.",
     route: "/chat",
     target: "#accessibility-menu",
   },
