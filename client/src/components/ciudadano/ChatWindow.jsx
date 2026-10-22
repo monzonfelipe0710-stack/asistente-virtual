@@ -269,37 +269,36 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Memoria: cargamos el contexto del usuario para personalizar la bienvenida.
   useEffect(() => {
+    const effectiveId = userId || "ciudadano_anonimo";
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setWelcomeMem(
-      !userId
-        ? null
-        : token
-          ? {
-              count: consultas.length,
-              lastTopic: consultas[0]?.topico === "haberes"
+      token && consultas.length > 0
+        ? {
+            count: consultas.length,
+            lastTopic: consultas[0]?.topico === "haberes"
+              ? "recibos"
+              : consultas[0]?.topico === "requisitos"
+                ? "tramites"
+                : consultas[0]?.topico,
+            topics: consultas.reduce((counts, consulta) => {
+              const topic = consulta.topico === "haberes"
                 ? "recibos"
-                : consultas[0]?.topico === "requisitos"
+                : consulta.topico === "requisitos"
                   ? "tramites"
-                  : consultas[0]?.topico,
-              topics: consultas.reduce((counts, consulta) => {
-                const topic = consulta.topico === "haberes"
-                  ? "recibos"
-                  : consulta.topico === "requisitos"
-                    ? "tramites"
-                    : consulta.topico;
-                if (topic) counts[topic] = (counts[topic] || 0) + 1;
-                return counts;
-              }, {}),
-              preferredOffice: null,
-            }
-          : loadMemory(userId)
+                  : consulta.topico;
+              if (topic) counts[topic] = (counts[topic] || 0) + 1;
+              return counts;
+            }, {}),
+            preferredOffice: null,
+          }
+        : loadMemory(effectiveId)
     );
-  }, [userId, token, consultas]);
+  }, [userId, token, consultas, historyVersion]);
 
-  // Las cuentas backend usan Consulta; las cuentas demo conservan su memoria local.
+  // Historial de consultas: disponible para usuarios con sesión y usuarios locales
   const historyQueries = useMemo(() => {
-    if (!userId) return [];
-    if (token) {
+    const effectiveId = userId || "ciudadano_anonimo";
+    if (token && consultas.length > 0) {
       return consultas.slice(0, HISTORY_LIMIT).map((consulta) => ({
         id: consulta.id,
         text: consulta.textoConsulta,
@@ -309,8 +308,22 @@ export default function ChatWindow({ initialQuery = null }) {
         tramite: consulta.tramite,
       }));
     }
-    const mem = loadMemory(userId);
-    return (mem?.messages ?? []).slice().reverse();
+    const mem = loadMemory(effectiveId);
+    const memQueries = (mem?.messages ?? []).slice().reverse();
+    if (memQueries.length > 0) {
+      return memQueries;
+    }
+    if (consultas.length > 0) {
+      return consultas.slice(0, HISTORY_LIMIT).map((consulta) => ({
+        id: consulta.id,
+        text: consulta.textoConsulta,
+        at: consulta.fecha,
+        answer: consulta.respuesta,
+        calificacion: consulta.calificacion,
+        tramite: consulta.tramite,
+      }));
+    }
+    return [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, token, consultas, messages, historyVersion]);
 
@@ -429,7 +442,7 @@ export default function ChatWindow({ initialQuery = null }) {
     }, charDelay);
   }
 
-  async function respondTo(userText, image = null, userMessageId = null) {
+  async function respondTo(userText, image = null, userMessageId = null, immediateConsultaId = null) {
     setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
 
@@ -496,13 +509,12 @@ export default function ChatWindow({ initialQuery = null }) {
       }
     }
 
-    if (userId && !token) {
-      rememberAnswer(userId, {
-        label: userText,
-        topic: detectTopic(userText),
-        kind: error ? "error" : "chat",
-      });
-    }
+    const effectiveId = userId || "ciudadano_anonimo";
+    rememberAnswer(effectiveId, {
+      label: userText,
+      topic: detectTopic(userText),
+      kind: error ? "error" : "chat",
+    });
 
     if (consultationData?.consultaId && token) {
       if (userMessageId) {
@@ -517,10 +529,25 @@ export default function ChatWindow({ initialQuery = null }) {
         topico: detectTopic(userText),
         fecha: consultationData.consultaFecha || new Date().toISOString(),
         tramite: null,
-      }, userId);
+      });
+      if (immediateConsultaId && immediateConsultaId !== consultationData.consultaId) {
+        removeConsulta(immediateConsultaId);
+      }
       // Recargar consultas para actualizar el historial
       setTimeout(() => reloadConsultas(), 100);
+    } else if (immediateConsultaId) {
+      recordConsulta({
+        id: immediateConsultaId,
+        textoConsulta: userText,
+        respuesta: finalText,
+        encontrado: null,
+        calificacion: null,
+        topico: detectTopic(userText),
+        fecha: new Date().toISOString(),
+        tramite: null,
+      });
     }
+    setHistoryVersion((v) => v + 1);
 
     presentBotMessage(finalText, finalActions, {
       error,
@@ -534,9 +561,9 @@ export default function ChatWindow({ initialQuery = null }) {
     const t = (text ?? "").trim();
     if (!t) return;
 
-    // Verificar límite de 4 consultas para usuarios autenticados
-    if (token && consultas.length >= 4) {
-      toast("Has alcanzado el límite de 4 consultas. Elimina alguna consulta del historial para poder hacer más.", "error");
+    // Verificar límite de consultas para usuarios autenticados
+    if (token && consultas.length >= HISTORY_LIMIT) {
+      toast(`Has alcanzado el límite de ${HISTORY_LIMIT} consultas. Eliminá alguna consulta del historial para poder hacer más.`, "error");
       return;
     }
 
@@ -546,16 +573,32 @@ export default function ChatWindow({ initialQuery = null }) {
       dataUrl: preview,
       fileName: image.name,
     } : undefined);
+
+    // Registro INMEDIATO en el historial apenas el usuario envía la consulta
+    const effectiveId = userId || "ciudadano_anonimo";
+    rememberMessage(effectiveId, t, userMessageId);
+    const immediateConsultaId = `c_${Date.now()}`;
+    recordConsulta({
+      id: immediateConsultaId,
+      textoConsulta: t,
+      respuesta: "",
+      encontrado: null,
+      calificacion: null,
+      topico: detectTopic(t),
+      fecha: new Date().toISOString(),
+      tramite: null,
+    });
+    setHistoryVersion((v) => v + 1);
+
     if (wizardRef.current && !image) {
       wizardRef.current.lastMessageId = userMessageId;
       runWizardStep(t);
       return;
     }
     if (image) wizardRef.current = null;
-    if (userId && !token) rememberMessage(userId, t, userMessageId);
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
-    respondTo(t, image, userMessageId);
+    respondTo(t, image, userMessageId, immediateConsultaId);
   }
 
   async function handleChecklist(action) {
@@ -864,7 +907,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Borrar una consulta puntual del historial guardado.
   async function handleDeleteQuery(query) {
-    if (!userId) return;
+    const effectiveId = userId || "ciudadano_anonimo";
     const isActiveConversation = messages.some((message) =>
       token
         ? message.consultaId === query.id
@@ -875,7 +918,7 @@ export default function ChatWindow({ initialQuery = null }) {
             (!query.at ||
               Math.abs(new Date(message.timestamp).getTime() - new Date(query.at).getTime()) < 5000)
     );
-    if (token) {
+    if (token && typeof query.id === "number") {
       try {
         await eliminarConsulta(query.id);
         removeConsulta(query.id);
@@ -884,8 +927,9 @@ export default function ChatWindow({ initialQuery = null }) {
         return;
       }
     } else {
-      removeMemoryMessage(userId, query.at);
+      removeMemoryMessage(effectiveId, query.at);
       removeLocalConversation(query);
+      if (query.id) removeConsulta(query.id);
     }
     if (isActiveConversation) resetConversation();
     setHistoryVersion((v) => v + 1);
@@ -894,8 +938,8 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Vaciar todo el historial guardado.
   function handleClearHistory() {
-    if (!userId) return;
-    clearMemoryMessages(userId);
+    const effectiveId = userId || "ciudadano_anonimo";
+    clearMemoryMessages(effectiveId);
     clearLocalHistory();
     setHistoryVersion((v) => v + 1);
     if (screenReader) setAnnounce("Historial borrado.");
@@ -951,84 +995,81 @@ export default function ChatWindow({ initialQuery = null }) {
 
   return (
     <div className="chat-window-shell relative flex h-full bg-paper">
-      {/* Apartado lateral solo para usuarios con cuenta (pantallas grandes).
+      {/* Apartado lateral de historial (pantallas grandes).
           Se puede ocultar y mostrar con el botón "Ocultar/Mostrar historial". */}
-      {isAuthenticated && (
-        <aside
-          id="chat-history-panel"
-          aria-label="Historial de consultas"
-          aria-hidden={historyCollapsed}
-          className={`hidden lg:block shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none ${
-            historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
-          }`}
-        >
-          <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
-            <ChatHistoryPanel
-              queries={historyQueries}
-              onSelect={handleHistorySelect}
-              onNewChat={handleResetRequest}
-              onDelete={handleDeleteQuery}
-              onClearAll={!token ? handleClearHistory : undefined}
-              loading={Boolean(token && historyLoading)}
-              error={token ? historyError : ""}
-            />
-          </div>
-        </aside>
-      )}
+      <aside
+        id="chat-history-panel"
+        aria-label="Historial de consultas"
+        aria-hidden={historyCollapsed}
+        className={`hidden lg:block shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none ${
+          historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
+        }`}
+      >
+        <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
+          <ChatHistoryPanel
+            queries={historyQueries}
+            onSelect={handleHistorySelect}
+            onNewChat={handleResetRequest}
+            onDelete={handleDeleteQuery}
+            onClearAll={!token ? handleClearHistory : undefined}
+            loading={Boolean(token && historyLoading)}
+            error={token ? historyError : ""}
+          />
+        </div>
+      </aside>
 
       <div className="chat-main flex h-full min-w-0 flex-1 flex-col">
         <div className="chat-navbar-slot shrink-0">
           <Navbar />
         </div>
         <header className="chat-main-header flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line/60 px-4 sm:px-6">
-          <div className="flex items-center">
-            {isAuthenticated && (
-              <>
-                {/* Pantallas chicas: el historial se abre como diálogo. */}
-                <button
-                  type="button"
-                  onClick={() => setHistoryOpen(true)}
-                  aria-label="Ver historial de consultas"
-                  className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
-                  </svg>
-                  <span>Historial</span>
-                </button>
-
-                {/* Pantallas grandes: oculta y muestra el panel lateral. */}
-                <button
-                  type="button"
-                  onClick={() => setHistoryCollapsed((v) => !v)}
-                  aria-expanded={!historyCollapsed}
-                  aria-controls="chat-history-panel"
-                  aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
-                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-line/70 bg-paper/80 px-3 text-xs font-semibold text-muted shadow-xs transition-colors hover:bg-mist hover:text-ink cursor-pointer"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
-                  </svg>
-                  <span>{historyCollapsed ? "Mostrar historial" : "Ocultar historial"}</span>
-                </button>
-              </>
-            )}
-          </div>
-
-          {!isAuthenticated && (
+          <div className="flex items-center gap-2">
+            {/* Pantallas chicas: el historial se abre como diálogo. */}
             <button
               type="button"
-              onClick={handleResetRequest}
-              title="Iniciar un nuevo chat"
-              aria-label="Iniciar un nuevo chat"
-              className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+              onClick={() => setHistoryOpen(true)}
+              aria-label="Ver historial de consultas"
+              className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
               </svg>
+              <span>Historial</span>
+              {historyQueries.length > 0 && (
+                <span className="rounded-full bg-brand/10 text-brand-deep px-1.5 py-0.5 text-[10px] font-bold">
+                  {historyQueries.length}
+                </span>
+              )}
             </button>
-          )}
+
+            {/* Pantallas grandes: oculta y muestra el panel lateral. */}
+            <button
+              type="button"
+              onClick={() => setHistoryCollapsed((v) => !v)}
+              aria-expanded={!historyCollapsed}
+              aria-controls="chat-history-panel"
+              aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
+              className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-line/70 bg-paper/80 px-3 text-xs font-semibold text-muted shadow-xs transition-colors hover:bg-mist hover:text-ink cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
+              </svg>
+              <span>{historyCollapsed ? "Mostrar historial" : "Ocultar historial"}</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleResetRequest}
+            title="Iniciar un nuevo chat"
+            aria-label="Iniciar un nuevo chat"
+            className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
+          </button>
         </header>
 
       {/* Región viva: anuncia las respuestas del asistente sin releer todo */}

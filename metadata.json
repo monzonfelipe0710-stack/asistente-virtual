@@ -1,0 +1,8 @@
+{
+  "name": "ChatAP - Asistente Virtual",
+  "description": "Chatbot y asistente virtual para trámites, documentación y servicios de la administración pública.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

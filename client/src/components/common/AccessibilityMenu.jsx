@@ -258,16 +258,16 @@ export default function AccessibilityMenu() {
   );
 
   const menu = (
-    <div className="print:hidden fixed bottom-4 right-4 z-40 sm:bottom-4 sm:right-4 md:bottom-6 md:right-6">
+    <div className="print:hidden fixed bottom-24 right-3.5 z-40 sm:bottom-6 sm:right-6 md:bottom-6 md:right-6">
       <button
         id="accessibility-menu"
         ref={btnRef}
-        type="button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label="Opciones de accesibilidad"
         title="Opciones de accesibilidad"
-        className={`relative grid h-11 w-11 sm:h-12 sm:w-12 place-items-center rounded-full border shadow-lg transition-colors cursor-pointer ${
+        className={`relative grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-full border shadow-lg transition-colors cursor-pointer ${
           activeCount > 0
             ? "bg-brand-deep text-white border-brand-deep"
             : "bg-paper text-ink border-line hover:bg-mist"

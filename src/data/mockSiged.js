@@ -1,0 +1,58 @@
+export const sigedRecords = [
+  {
+    id: "EXP-2026-00452",
+    type: "Solicitud de Licencia",
+    applicant: "María González",
+    department: "Mesa de Entradas",
+    date: "2026-06-01",
+    status: "En proceso",
+    lastMovement: "Pase a Dirección General",
+  },
+  {
+    id: "EXP-2026-00453",
+    type: "Certificación de Servicios",
+    applicant: "Ana Martínez",
+    department: "Recursos Humanos",
+    date: "2026-06-02",
+    status: "Finalizado",
+    lastMovement: "Certificado emitido",
+  },
+  {
+    id: "EXP-2026-00454",
+    type: "Declaración Jurada",
+    applicant: "Pedro López",
+    department: "Legajos",
+    date: "2026-05-30",
+    status: "Observado",
+    lastMovement: "Requiere documentación adicional",
+  },
+  {
+    id: "EXP-2026-00455",
+    type: "Solicitud de Viáticos",
+    applicant: "Laura Fernández",
+    department: "Liquidaciones",
+    date: "2026-06-03",
+    status: "En proceso",
+    lastMovement: "En evaluación presupuestaria",
+  },
+  {
+    id: "EXP-2026-00456",
+    type: "Pase a Planta Permanente",
+    applicant: "Jorge Ramírez",
+    department: "Sistemas",
+    date: "2026-05-15",
+    status: "Finalizado",
+    lastMovement: "Resolución publicada",
+  },
+  {
+    id: "EXP-2026-00457",
+    type: "Permiso por Estudio",
+    applicant: "Carlos Rodríguez",
+    department: "Sistemas",
+    date: "2026-06-04",
+    status: "Ingresado",
+    lastMovement: "Mesa de Entradas - Pendiente de asignación",
+  },
+];
+
+export const sigedStatuses = ["Ingresado", "En proceso", "Observado", "Finalizado"];
