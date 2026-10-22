@@ -98,8 +98,12 @@ export default function ChatHistoryPanel({
           </div>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {visible.map((query) => (
-              <li key={query.id ?? `${query.at || ""}-${query.text}`} className="group flex items-stretch gap-1">
+            {visible.map((query, index) => (
+              <li
+                key={query.id ?? `${query.at || ""}-${query.text}`}
+                className="history-item-enter group flex items-stretch gap-1"
+                style={{ animationDelay: `${Math.min(index, 7) * 35}ms` }}
+              >
                 <button
                   type="button"
                   onClick={() => onSelect?.(query)}
