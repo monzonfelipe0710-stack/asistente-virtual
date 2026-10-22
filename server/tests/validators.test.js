@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loginSchema } from '../src/validators/auth.validators.js';
-import { filtroUsuariosSchema, registroCiudadanoSchema } from '../src/validators/usuario.validator.js';
+import { registroSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
 import { crearSectorSchema, actualizarSectorSchema } from '../src/validators/sector.validator.js';
 import { crearTramiteSchema, actualizarTramiteSchema } from '../src/validators/tramite.validator.js';
 
@@ -11,19 +11,26 @@ const mensaje = (schema, valor) => schema.safeParse(valor).error?.issues[0].mess
 describe('loginSchema', () => {
   it('acepta credenciales válidas', () => {
     assert.equal(loginSchema.safeParse({ email: 'a@b.com', password: 'x' }).success, true);
-    assert.equal(loginSchema.safeParse({ dni: '12345678', password: 'x' }).success, true);
   });
 
   it('rechaza un email mal formado', () => {
     assert.equal(mensaje(loginSchema, { email: 'no-es-email', password: 'x' }), 'El email no es válido.');
   });
 
-  it('rechaza un DNI con formato inválido', () => {
-    assert.equal(loginSchema.safeParse({ dni: '123', password: 'x' }).success, false);
-  });
-
   it('rechaza una contraseña vacía', () => {
     assert.equal(mensaje(loginSchema, { email: 'a@b.com', password: '' }), 'La contraseña es obligatoria.');
+  });
+});
+
+describe('registroSchema', () => {
+  it('exige al menos 8 caracteres de contraseña', () => {
+    const m = mensaje(registroSchema, { nombre: 'Ana', email: 'a@b.com', password: 'corta' });
+    assert.equal(m, 'La contraseña debe tener al menos 8 caracteres.');
+  });
+
+  it('acepta un registro completo', () => {
+    const r = registroSchema.safeParse({ nombre: 'Ana', email: 'a@b.com', password: '12345678' });
+    assert.equal(r.success, true);
   });
 });
 
@@ -100,21 +107,5 @@ describe('filtroUsuariosSchema', () => {
   it('rechaza un estado desconocido con mensaje propio', () => {
     const m = mensaje(filtroUsuariosSchema, { estado: 'CUALQUIERA' });
     assert.match(m, /El estado debe ser/);
-  });
-});
-
-describe('registroCiudadanoSchema', () => {
-  const base = { dni: '30123456', email: 'a@b.com', password: '12345678' };
-
-  it('acepta los cuatro géneros', () => {
-    // M = Masculino, F = Femenino, O = Otro, X = Prefiero no decirlo.
-    for (const genero of ['M', 'F', 'O', 'X']) {
-      assert.equal(registroCiudadanoSchema.safeParse({ ...base, genero }).success, true, genero);
-    }
-  });
-
-  it('rechaza un género desconocido con mensaje propio', () => {
-    const m = mensaje(registroCiudadanoSchema, { ...base, genero: 'Z' });
-    assert.match(m, /El género debe ser M, F, O o X/);
   });
 });
