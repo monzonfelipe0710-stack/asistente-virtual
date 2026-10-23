@@ -424,6 +424,10 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
+  // El panel de administración tiene su propio encabezado responsive.
+  // No mostramos el navbar flotante encima durante las transiciones de ruta.
+  if (location.pathname.startsWith("/admin")) return null;
+
   return (
     createPortal(
       <header
