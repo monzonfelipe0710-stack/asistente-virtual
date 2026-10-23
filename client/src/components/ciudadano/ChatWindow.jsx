@@ -674,7 +674,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
     if (
       !savedThreads.some((thread) => thread.id === activeThreadId) &&
-      savedThreads.length >= HISTORY_LIMIT
+      historyQueries.length >= HISTORY_LIMIT
     ) {
       toast(
         `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
