@@ -1087,6 +1087,7 @@ export default function ChatWindow({ initialQuery = null }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
             </svg>
           </button>
+          )}
         </header>
 
       {/* Región viva: anuncia las respuestas del asistente sin releer todo */}
