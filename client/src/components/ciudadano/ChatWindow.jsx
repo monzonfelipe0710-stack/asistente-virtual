@@ -389,6 +389,7 @@ export default function ChatWindow({ initialQuery = null }) {
     if (threadOwnerRef.current !== effectiveId) {
       threadOwnerRef.current = effectiveId;
       setSavedThreads(cargarConversaciones(effectiveId));
+      setPendingDeleteKeys(new Set());
       const nextThreadId = crearIdConversacion();
       activeThreadIdRef.current = nextThreadId;
       setActiveThreadId(nextThreadId);
