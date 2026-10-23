@@ -189,3 +189,29 @@ export const actualizarPerfil = async (id, datos) => {
     select: { id: true, nombre: true, email: true, rol: true, estado: true, dni: true, cuil: true, genero: true, createdAt: true },
   });
 };
+
+export const eliminarCuenta = async (id) => {
+  return prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.findUnique({ where: { id }, select: { id: true, rol: true } });
+    if (!usuario) {
+      const error = new Error('La cuenta ya no existe.');
+      error.statusCode = 404;
+      throw error;
+    }
+    if (usuario.rol === 'SUPERUSUARIO') {
+      const error = new Error('La cuenta de superusuario no se puede eliminar desde Mi perfil.');
+      error.statusCode = 409;
+      throw error;
+    }
+    const tramitesACargo = await tx.tramite.count({ where: { encargadoId: id } });
+    if (tramitesACargo > 0) {
+      const error = new Error('No se puede eliminar esta cuenta porque tiene trámites a cargo. Transferí esos trámites a otro administrador antes de continuar.');
+      error.statusCode = 409;
+      throw error;
+    }
+    await tx.usuarioSector.deleteMany({ where: { usuarioId: id } });
+    await tx.consulta.updateMany({ where: { usuarioId: id }, data: { usuarioId: null } });
+    await tx.usuario.delete({ where: { id } });
+    return { eliminado: true };
+  });
+};
