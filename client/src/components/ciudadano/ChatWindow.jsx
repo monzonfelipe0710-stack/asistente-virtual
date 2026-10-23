@@ -1613,7 +1613,7 @@ export default function ChatWindow({ initialQuery = null }) {
       {/* Historial móvil: panel lateral de altura completa, con fondo y cierre suave. */}
       {isAuthenticated && (
         <div
-          className={`fixed inset-0 z-[100] lg:hidden ${historyOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+          className={`chat-mobile-history-overlay fixed inset-0 z-[100] lg:hidden ${historyOpen ? "pointer-events-auto" : "pointer-events-none"}`}
           aria-hidden={!historyOpen}
         >
           <button
