@@ -4,7 +4,6 @@ import MessageBubble from "./MessageBubble";
 import ChatBotAvatar from "../ChatBotAvatar";
 import ChatHistoryPanel from "./ChatHistoryPanel";
 import Navbar from "../common/Navbar";
-import Modal from "../common/Modal";
 import { BotReactionController } from "./BotReactionController";
 import { wizards, wizardLabels } from "../../data/wizard";
 import { obtenerChecklist, preguntar } from "../../services/chat";
@@ -183,6 +182,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [promoLeaving, setPromoLeaving] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const historyDrawerRef = useRef(null);
+  const historyCloseButtonRef = useRef(null);
+  const historyTriggerRef = useRef(null);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
@@ -191,6 +193,47 @@ export default function ChatWindow({ initialQuery = null }) {
     cargarConversaciones(user?.id || "ciudadano_anonimo")
   );
   const threadOwnerRef = useRef(user?.id || "ciudadano_anonimo");
+
+  // El historial móvil funciona como un drawer lateral accesible, al estilo de
+  // las apps de chat: Escape cierra, Tab queda dentro y el foco vuelve al botón.
+  useEffect(() => {
+    if (!historyOpen) return undefined;
+    const previousFocus = document.activeElement;
+
+    function handleDrawerKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setHistoryOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !historyDrawerRef.current) return;
+      const focusable = Array.from(
+        historyDrawerRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleDrawerKeyDown);
+    historyCloseButtonRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", handleDrawerKeyDown);
+      if (previousFocus && typeof previousFocus.focus === "function") previousFocus.focus();
+    };
+  }, [historyOpen]);
 
   // Callbacks estables: junto con React.memo en MessageBubble evitan
   // re-renderizar todo el historial en cada tick del efecto de tipeo.
@@ -1195,6 +1238,7 @@ export default function ChatWindow({ initialQuery = null }) {
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
+                ref={historyTriggerRef}
                 id="chat-history-open-button"
                 aria-label="Ver historial de consultas"
                 className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
@@ -1519,25 +1563,42 @@ export default function ChatWindow({ initialQuery = null }) {
       </div>
       </div>
 
-      {/* Historial en pantallas chicas: se abre como diálogo accesible. */}
-      <Modal
-        open={historyOpen}
-        onClose={() => setHistoryOpen(false)}
-        title="Historial de consultas"
-        showActions={false}
-      >
-        <div className="h-[50dvh] min-h-[10rem] max-h-[70dvh] -mx-1">
-          <ChatHistoryPanel
-            queries={historyQueries}
-            onSelect={handleHistorySelect}
-            onDelete={handleDeleteQuery}
-            onClearAll={!token ? handleClearHistory : undefined}
-            loading={Boolean(token && historyLoading)}
-            error={token ? historyError : ""}
-            onNewChat={handleResetRequest}
+      {/* Historial móvil: panel lateral de altura completa, con fondo y cierre suave. */}
+      {isAuthenticated && (
+        <div
+          className={`fixed inset-0 z-[100] lg:hidden ${historyOpen ? "visible" : "invisible pointer-events-none"}`}
+          aria-hidden={!historyOpen}
+        >
+          <button
+            type="button"
+            tabIndex={historyOpen ? 0 : -1}
+            onClick={() => setHistoryOpen(false)}
+            aria-label="Cerrar historial"
+            className={`absolute inset-0 h-full w-full bg-slate-950/45 transition-opacity duration-250 motion-reduce:transition-none ${historyOpen ? "opacity-100" : "opacity-0"}`}
           />
+          <aside
+            ref={historyDrawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Historial de consultas"
+            tabIndex={-1}
+            className={`chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-[100vh] h-[100dvh] w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none ${historyOpen ? "translate-x-0" : "-translate-x-full"}`}
+          >
+            <ChatHistoryPanel
+              queries={historyQueries}
+              onSelect={handleHistorySelect}
+              onDelete={handleDeleteQuery}
+              onClearAll={!token ? handleClearHistory : undefined}
+              loading={Boolean(token && historyLoading)}
+              error={token ? historyError : ""}
+              onNewChat={handleResetRequest}
+              onClose={() => setHistoryOpen(false)}
+              closeButtonRef={historyCloseButtonRef}
+              className="pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            />
+          </aside>
         </div>
-      </Modal>
+      )}
 
     </div>
   );
