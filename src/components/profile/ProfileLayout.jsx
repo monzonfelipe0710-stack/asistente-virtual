@@ -15,7 +15,7 @@ import Permisos from "./sections/Permisos";
 import Auditoria from "./sections/Auditoria";
 
 export default function ProfileLayout() {
-  const { isSuperadmin, userRole, deleteAccount, logout, user } = useAuth();
+  const { isSuperadmin, userRole, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const data = useProfileData();
   const [go, setGo] = useState(null);
