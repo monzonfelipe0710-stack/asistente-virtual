@@ -153,6 +153,8 @@ model Usuario {
   genero        Genero?
   resetTokenHash String?  @map("reset_token_hash")
   resetTokenExpira DateTime?  @map("reset_token_expira")
+  debeCambiarPassword Boolean @default(false) @map("debe_cambiar_password")
+  passwordCambiadaEn  DateTime? @map("password_cambiada_en")
 
   sectores      UsuarioSector[]
   tramitesACargo Tramite[]

@@ -2,29 +2,9 @@ import prisma from '../config/prisma.js';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
-export const registrarSolicitud = async (datos) => {
-  const passwordHash = await bcrypt.hash(datos.password, 10);
-
-  return prisma.usuario.create({
-    data: {
-      nombre: datos.nombre,
-      email: datos.email,
-      passwordHash,
-      rol: 'ADMINISTRADOR',
-    },
-  });
-};
 
 export const buscarPorEmail = async (email) => {
   return prisma.usuario.findUnique({ where: {email} });
-};
-
-export const listarPendientes = async () => {
-  return prisma.usuario.findMany({
-    where: {estado: 'PENDIENTE'},
-    select: { id: true, nombre: true, email: true, estado: true, createdAt: true},
-    orderBy: { createdAt: 'asc'},
-  });
 };
 
 export const cambiarEstado = async (id, nuevoEstado) => {
@@ -129,6 +109,28 @@ export const cambiarPassword = async (id, passwordNueva) => {
   const passwordHash = await bcrypt.hash(passwordNueva, 10);
   return prisma.usuario.update({
     where: { id },
-    data: { passwordHash, resetTokenHash: null, resetTokenExpira: null },
+    data: {
+      passwordHash,
+      resetTokenHash: null,
+      resetTokenExpira: null,
+      debeCambiarPassword: false,
+      passwordCambiadaEn: new Date(),
+    },
+  });
+};
+
+export const crearEmpleado = async ({ nombre, email, password, sectorIds = [] }) => {
+  const passwordHash = await bcrypt.hash(password, 10);
+  return prisma.usuario.create({
+    data: {
+      nombre,
+      email,
+      passwordHash,
+      rol: 'ADMINISTRADOR',
+      estado: 'APROBADO',
+      debeCambiarPassword: true,
+      sectores: { create: sectorIds.map((sectorId) => ({ sectorId })) },
+    },
+    select: { id: true, nombre: true, email: true, rol: true, estado: true },
   });
 };

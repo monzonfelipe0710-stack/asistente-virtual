@@ -1,36 +1,11 @@
 import * as usuarioService from "../services/usuario.service.js";
 import {
   filtroUsuariosSchema,
-  registroSchema,
+  crearEmpleadoSchema,
   asignarSectoresSchema,
   registroCiudadanoSchema,
 } from "../validators/usuario.validator.js";
 import * as turnosService from "../services/turnos.service.js";
-
-export const registrar = async (req, res) => {
-  const datos = registroSchema.parse(req.body);
-
-  const existente = await usuarioService.buscarPorEmail(datos.email);
-  if (existente) {
-    const error = new Error(
-      "Ya existe una cuenta registrada con esa dirección de correo electrónico.",
-    );
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const usuario = await usuarioService.registrarSolicitud(datos);
-
-  res.status(201).json({
-    mensaje: "Solicitud registrada. Queda pendiente de aprobación.",
-    usuario: {
-      id: usuario.id,
-      nombre: usuario.nombre,
-      email: usuario.email,
-      estado: usuario.estado,
-    },
-  });
-};
 
 export const listar = async (req, res) => {
   const { estado } = filtroUsuariosSchema.parse(req.query);
@@ -38,49 +13,33 @@ export const listar = async (req, res) => {
   res.json(usuarios);
 };
 
-export const listarPendientes = async (req, res) => {
-  const pendientes = await usuarioService.listarPendientes();
-  res.json(pendientes);
-};
+export const crearEmpleado = async (req, res) => {
+  const datos = crearEmpleadoSchema.parse(req.body);
 
-export const aprobar = async (req, res) => {
-  const id = Number(req.params.id);
-
-  const usuario = await usuarioService.obtenerPorId(id);
-  if (!usuario) {
-    const error = new Error("Usuario no existente.");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  if (usuario.estado !== "PENDIENTE") {
-    const error = new Error("La solicitud ya fue procesada.");
+  if (await usuarioService.buscarPorEmail(datos.email)) {
+    const error = new Error('Ya existe una cuenta registrada con ese correo.');
     error.statusCode = 409;
     throw error;
   }
 
-  const actualizado = await usuarioService.cambiarEstado(id, "APROBADO");
-  res.json({ mensaje: "Administrador aprobado", usuario: actualizado });
-};
-
-export const rechazar = async (req, res) => {
-  const id = Number(req.params.id);
-
-  const usuario = await usuarioService.obtenerPorId(id);
-  if (!usuario) {
-    const error = new Error("Usuario no encontrado.");
-    error.statusCode = 404;
-    throw error;
-  }
-  if (usuario.estado !== "PENDIENTE") {
-    const error = new Error("La solicitud ya fue procesada.");
-    error.statusCode = 409;
-    throw error;
+  const idsUnicos = [...new Set(datos.sectorIds)];
+  if (idsUnicos.length > 0) {
+    const existentes = await usuarioService.contarSectoresExistentes(idsUnicos);
+    if (existentes !== idsUnicos.length) {
+      const error = new Error('Uno o más sectores no existen.');
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
-  const actualizado = await usuarioService.cambiarEstado(id, "RECHAZADO");
-  res.json({ mensaje: "Solicitud rechazada.", usuario: actualizado });
+  const usuario = await usuarioService.crearEmpleado({ ...datos, sectorIds: idsUnicos });
+
+  res.status(201).json({
+    mensaje: 'Empleado creado. Pasale las credenciales; en el primer ingreso deberá cambiar la contraseña.',
+    usuario,
+  });
 };
+
 export const suspender = async (req, res) => {
   const id = Number(req.params.id);
 

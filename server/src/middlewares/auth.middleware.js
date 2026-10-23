@@ -1,11 +1,12 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../config/prisma.js';
 
-export const autenticar = async (req, res, next) => {
+// Carga y valida el usuario del token (JWT + estado + invalidación por cambio de contraseña).
+// NO chequea debeCambiarPassword: eso lo decide cada middleware.
+const cargarUsuarioDesdeToken = async (req) => {
   const authHeader = req.headers.authorization;
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    const error= new Error('No autorizado: falta el token.');
+    const error = new Error('No autorizado: falta el token.');
     error.statusCode = 401;
     throw error;
   }
@@ -21,12 +22,12 @@ export const autenticar = async (req, res, next) => {
     throw error;
   }
 
-  // El token es una foto del momento del login: no sabe si después se suspendió
-  // al usuario o le cambió el rol. Por eso el estado y el rol se releen de la
-  // base en cada request, y una suspensión tiene efecto inmediato.
   const usuario = await prisma.usuario.findUnique({
     where: { id: payload.id },
-    select: { id: true, nombre: true, email: true, rol: true, estado: true },
+    select: {
+      id: true, nombre: true, email: true, rol: true, estado: true,
+      debeCambiarPassword: true, passwordCambiadaEn: true,
+    },
   });
 
   if (!usuario || usuario.estado !== 'APROBADO') {
@@ -35,13 +36,39 @@ export const autenticar = async (req, res, next) => {
     throw error;
   }
 
+  // Invalida tokens de antes del último cambio de contraseña (#4 B.7).
+  // Comparación exacta del claim pwd contra el valor actual: no depende de la precisión del tiempo.
+  const pwdActual = usuario.passwordCambiadaEn?.getTime() ?? 0;
+  if ((payload.pwd ?? 0) !== pwdActual) {
+    const error = new Error('Tu sesión expiró porque se cambió la contraseña. Iniciá sesión de nuevo.');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  return usuario;
+};
+
+export const autenticar = async (req, res, next) => {
+  const usuario = await cargarUsuarioDesdeToken(req);
+
+  if (usuario.debeCambiarPassword) {
+    const error = new Error('Debés cambiar tu contraseña antes de continuar.');
+    error.statusCode = 403;
+    error.codigo = 'PASSWORD_CHANGE_REQUIRED';
+    throw error;
+  }
+
   req.usuario = usuario;
+  next();
+};
+
+export const autenticarCambioPassword = async (req, res, next) => {
+  req.usuario = await cargarUsuarioDesdeToken(req);
   next();
 };
 
 export const autenticarOpcional = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next();
   }

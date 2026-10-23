@@ -1,11 +1,5 @@
 import { z } from 'zod';
 
-export const registroSchema = z.object ({
-  nombre: z.string().min(1, 'El nombre es obligatorio.'),
-  email: z.email('El email no es válido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.')
-})
-
 export const filtroUsuariosSchema = z.object({
   estado: z
     .enum(['PENDIENTE', 'APROBADO', 'RECHAZADO', 'SUSPENDIDO'], {
@@ -23,4 +17,11 @@ export const registroCiudadanoSchema = z.object({
   genero: z.enum(['M', 'F'], { error: () => 'El género debe ser M o F.' }),
   email: z.email('El email no es válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+});
+
+export const crearEmpleadoSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es obligatorio.'),
+  email: z.email('El email no es válido.'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  sectorIds: z.array(z.number().int().positive()).optional().default([]),
 });
