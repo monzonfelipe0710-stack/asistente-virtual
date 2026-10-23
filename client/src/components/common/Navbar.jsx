@@ -16,9 +16,9 @@ const NAV_LINKS = [
   { id: "soporte", label: "Soporte", to: "/contacto", match: ["/contacto", "/soporte"] },
 ];
 
-// Rutas donde el navbar se oculta al bajar y reaparece al subir.
-// En ChatAP y en el resto de las páginas el navbar queda siempre visible.
-const HIDE_ON_SCROLL_ROUTES = ["/", "/contacto", "/soporte"];
+// En todas las páginas con scroll normal, el navbar se oculta al bajar
+// y reaparece al subir. La conversación con el bot queda excluida.
+const CHAT_ROUTE = "/chat";
 
 function isPathActive(pathname, target) {
   if (target === "/") {
@@ -32,7 +32,7 @@ function isLinkActive(pathname, link) {
 }
 
 function hidesOnScroll(pathname) {
-  return HIDE_ON_SCROLL_ROUTES.some((path) => isPathActive(pathname, path));
+  return !isPathActive(pathname, CHAT_ROUTE);
 }
 
 function ProfileMenu({ user, isStaff, userRole, logout }) {
@@ -322,7 +322,7 @@ export default function Navbar() {
     [location.pathname]
   );
 
-  // Sólo Inicio y Soporte ocultan la barra al bajar; en ChatAP nunca se oculta.
+  // El efecto se aplica a todas las páginas salvo la conversación de ChatAP.
   const hideOnScroll = useMemo(() => hidesOnScroll(location.pathname), [location.pathname]);
 
   useEffect(() => {
