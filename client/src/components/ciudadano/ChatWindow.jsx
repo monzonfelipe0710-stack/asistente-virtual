@@ -1383,9 +1383,26 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
 
             {/* Subtítulo descriptivo */}
-            <p className="text-sm sm:text-base text-muted font-neue-text max-w-md mx-auto leading-relaxed mb-6 m-0">
+            <p className="text-sm sm:text-base text-muted font-neue-text max-w-md mx-auto leading-relaxed mb-3 m-0">
               Estoy para ayudarte con tus gestiones y trámites provinciales. Elegí una de las opciones o escribí directamente lo que necesitás.
             </p>
+
+            {/* Asistencias guiadas paso a paso */}
+            <div id="chat-guided-assists" className="chat-guided-assists mt-2 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                Asistencias guiadas:
+              </span>
+              {Object.entries(wizardLabels()).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => startWizard(id)}
+                  className="bubble-chip"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
             {/* Botones de consulta rápida tipo Píldoras (2 filas de 3) */}
             <div id="chatap-pills-container" className="chatap-pills-container">
@@ -1398,23 +1415,6 @@ export default function ChatWindow({ initialQuery = null }) {
                 >
                   <span className="shrink-0">{pill.icon}</span>
                   <span>{pill.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Asistencias guiadas paso a paso */}
-            <div id="chat-guided-assists" className="chat-guided-assists mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-                Asistencias guiadas:
-              </span>
-              {Object.entries(wizardLabels()).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => startWizard(id)}
-                  className="bubble-chip"
-                >
-                  {label}
                 </button>
               ))}
             </div>
