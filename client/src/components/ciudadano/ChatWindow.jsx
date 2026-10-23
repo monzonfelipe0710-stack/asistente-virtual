@@ -1403,7 +1403,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
 
             {/* Asistencias guiadas paso a paso */}
-            <div id="chat-guided-assists" className="mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
+            <div id="chat-guided-assists" className="chat-guided-assists mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                 Asistencias guiadas:
               </span>
