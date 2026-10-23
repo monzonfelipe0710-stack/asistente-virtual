@@ -672,7 +672,24 @@ export default function ChatWindow({ initialQuery = null }) {
     const t = (text ?? "").trim();
     if (!t) return;
 
-    // Cada hilo nuevo es independiente; no bloqueamos el envío por el historial.
+    // También protegemos el envío directo (por ejemplo, desde una búsqueda inicial):
+    // un hilo nuevo no puede empezar si ya existen cuatro conversaciones.
+    const activeThreadExists = savedThreads.some((thread) => thread.id === activeThreadId) ||
+      historyQueries.some((item) => item.threadId === activeThreadId);
+    const currentThread = crearResumenConversacion(activeThreadId, messages);
+    const currentAlreadyCounted = historyQueries.some(
+      (item) => item.threadId === activeThreadId ||
+        (currentThread && item.text === currentThread.text)
+    );
+    const conversationCount = Math.max(historyQueries.length, savedThreads.length) +
+      (currentThread && !currentAlreadyCounted ? 1 : 0);
+    if (!activeThreadExists && conversationCount >= HISTORY_LIMIT) {
+      const message = "Llegaste al límite de 4 conversaciones. Eliminá una del historial para crear una nueva.";
+      setAnnounce(message);
+      toast?.(message, "error");
+      return;
+    }
+
     beginChat();
     const userMessageId = addMessage("user", t, image ? {
       type: "image",
@@ -964,10 +981,24 @@ export default function ChatWindow({ initialQuery = null }) {
     setAnnounce(resetMsg);
   }
 
-  // Un hilo activo se conserva automáticamente; empezar otro nunca vuelve a abrirlo
-  // ni cancela la respuesta que pueda estar ejecutándose en segundo plano.
+  // Nunca se permite crear un quinto hilo. Si ya hay cuatro conversaciones,
+  // el usuario debe borrar una antes de iniciar otra.
   function handleResetRequest() {
     const currentThread = crearResumenConversacion(activeThreadId, messages);
+    const currentAlreadyCounted = historyQueries.some(
+      (item) => item.threadId === activeThreadId ||
+        (currentThread && item.text === currentThread.text)
+    );
+    const conversationCount = Math.max(historyQueries.length, savedThreads.length) +
+      (currentThread && !currentAlreadyCounted ? 1 : 0);
+
+    if (conversationCount >= HISTORY_LIMIT) {
+      const message = "Llegaste al límite de 4 conversaciones. Eliminá una del historial para crear una nueva.";
+      setAnnounce(message);
+      toast?.(message, "error");
+      return;
+    }
+
     const effectiveId = userId || "ciudadano_anonimo";
     if (currentThread) {
       const next = [
@@ -978,6 +1009,7 @@ export default function ChatWindow({ initialQuery = null }) {
       guardarConversaciones(effectiveId, next);
       setSavedThreads(next);
     }
+    setHistoryOpen(false);
     resetConversation();
   }
 
@@ -1502,10 +1534,7 @@ export default function ChatWindow({ initialQuery = null }) {
             onClearAll={!token ? handleClearHistory : undefined}
             loading={Boolean(token && historyLoading)}
             error={token ? historyError : ""}
-            onNewChat={() => {
-              setHistoryOpen(false);
-              handleResetRequest();
-            }}
+            onNewChat={handleResetRequest}
           />
         </div>
       </Modal>
