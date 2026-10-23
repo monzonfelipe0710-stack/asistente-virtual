@@ -4247,3 +4247,105 @@ pre {
   background: color-mix(in srgb, var(--color-paper) 98%, #000 2%);
   border-color: color-mix(in srgb, var(--color-line) 92%, transparent);
 }
+
+
+/* Tutorial con contraste deliberado para tema claro y oscuro. */
+html:not(.dark) .tour-card {
+  background: #ffffff;
+  border-color: #dbe3ef;
+  color: #172033;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 22%);
+}
+html:not(.dark) .tour-bubble {
+  background: #ffffff;
+  border-color: #dbe3ef;
+  color: #172033;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
+}
+html:not(.dark) .tour-kicker { color: #315bd6; }
+html:not(.dark) .tour-title { color: #172033; }
+html:not(.dark) .tour-desc { color: #526078; }
+html:not(.dark) .tour-step-count,
+html:not(.dark) .tour-skip { color: #58657a; }
+html:not(.dark) .tour-btn:not(.tour-btn-primary) {
+  background: #f8fafc;
+  border-color: #d6deea;
+  color: #344258;
+}
+html:not(.dark) .tour-btn:not(.tour-btn-primary):hover {
+  background: #edf2f9;
+  color: #172033;
+}
+html:not(.dark) .tour-btn-primary {
+  background: #2857d9;
+  border-color: #2857d9;
+  color: #ffffff;
+}
+html:not(.dark) .tour-btn-primary:hover {
+  background: #1e45b5;
+  border-color: #1e45b5;
+  color: #ffffff;
+}
+html.dark .tour-card {
+  background: #0b1428;
+  border-color: #263653;
+  color: #eef4ff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+}
+html.dark .tour-bubble {
+  background: #111e36;
+  border-color: #2b3d5b;
+  color: #eef4ff;
+}
+html.dark .tour-kicker { color: #9db8ff; }
+html.dark .tour-title { color: #f5f8ff; }
+html.dark .tour-desc { color: #b7c5dc; }
+html.dark .tour-step-count,
+html.dark .tour-skip { color: #a8b7d0; }
+html.dark .tour-btn:not(.tour-btn-primary) {
+  background: #14213a;
+  border-color: #304360;
+  color: #d9e4f6;
+}
+html.dark .tour-btn:not(.tour-btn-primary):hover {
+  background: #1b2c4b;
+  color: #ffffff;
+}
+html.dark .tour-btn-primary {
+  background: #4d7dff;
+  border-color: #4d7dff;
+  color: #ffffff;
+}
+html.dark .tour-btn-primary:hover {
+  background: #6790ff;
+  border-color: #6790ff;
+  color: #ffffff;
+}
+html:not(.dark) .tour-avatar {
+  background: #ffffff;
+  border-color: #dbe3ef;
+}
+html.dark .tour-avatar {
+  background: #111e36;
+  border-color: #2b3d5b;
+}
+.chat-guided-assists {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.85rem;
+}
+.chat-guided-assists .bubble-chip {
+  min-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25;
+}
+@media (max-height: 760px) and (min-width: 641px) {
+  .chat-welcome-avatar { margin-bottom: 0.5rem !important; }
+  .welcome-content { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+}
+@media (max-width: 640px) {
+  .chat-welcome-avatar { margin-bottom: 0.5rem !important; }
+  .welcome-content { padding-top: 0.75rem !important; padding-bottom: 1rem !important; }
+  .chat-guided-assists { margin-bottom: 0.65rem; }
+}
