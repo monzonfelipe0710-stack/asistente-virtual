@@ -3,7 +3,7 @@ import { readJSON, writeJSON } from "./auth";
 const MEMORY_PREFIX = "chatap.memory.";
 
 // Máximo de consultas que guardamos y mostramos en el historial.
-export const HISTORY_LIMIT = 12;
+export const HISTORY_LIMIT = 4;
 
 const TOPICS = {
   licencias: {
