@@ -382,47 +382,52 @@ export default function HomePage() {
         </section>
 
         {/* 5 · Funciones Clave */}
-        <section id="capacidades" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
-          <div className="ed-max flex flex-col gap-12">
-            <div className="max-w-2xl space-y-3">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+        <section id="capacidades" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
+          <div className="ed-max flex flex-col items-center gap-12">
+            <div className="mx-auto max-w-3xl space-y-4 text-center">
+              <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wider text-brand">
                 Funciones clave
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-ink tracking-tight m-0 leading-tight text-balance">
                 Todo lo que ChatAP resuelve por vos.
               </h2>
-              <p className="text-base text-muted m-0 leading-relaxed">
+              <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted m-0 leading-relaxed">
                 Orientación, respuestas, documentos y consultas al SIGED, más el panel de usuarios y la gestión del conocimiento de la Subsecretaría de Recursos Humanos.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid w-full max-w-6xl grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7">
               {FEATURES.map((item) => (
-                <div key={item.id} className="minimal-feature-card group">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="grid h-10 w-10 place-items-center rounded-xl bg-mist dark:bg-neutral-800 border border-line">
+                <div
+                  key={item.id}
+                  className={`minimal-feature-card group h-full min-w-0 ${item.id === "tiempo" ? "sm:col-span-2 sm:mx-auto sm:w-[calc(50%-0.75rem)] lg:col-span-1 lg:w-full" : ""}`}
+                >
+                  <div className="flex flex-1 flex-col gap-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-mist dark:bg-neutral-800 border border-line">
                         {item.icon}
                       </span>
-                      <span className="text-[11px] font-mono text-muted uppercase tracking-wider font-semibold">
+                      <span className="inline-flex max-w-[70%] items-center rounded-full border border-line/70 bg-paper/70 px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-muted text-right leading-snug">
                         {item.badge}
                       </span>
                     </div>
-                    <h3 className="text-xl font-bold text-ink tracking-tight m-0 group-hover:text-brand transition-colors">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-muted leading-relaxed m-0">
-                      {item.description}
-                    </p>
+                    <div className="space-y-3">
+                      <h3 className="text-xl sm:text-2xl font-bold text-ink tracking-tight m-0 group-hover:text-brand transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm sm:text-base text-muted leading-relaxed m-0">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
-                  <div className="pt-4 border-t border-line/60">
+                  <div className="mt-7 pt-4 border-t border-line/60">
                     <Link
                       to="/chat"
                       onPointerEnter={prefetchChat}
-                      className="text-xs font-bold text-brand hover:underline inline-flex items-center gap-1 no-underline"
+                      className="min-h-11 text-sm font-bold text-brand hover:underline inline-flex items-center gap-2 no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
                     >
                       <span>Consultar ahora</span>
-                      <span>→</span>
+                      <span aria-hidden="true">→</span>
                     </Link>
                   </div>
                 </div>
