@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { generoLabel } from "../../lib/genero";
 import { getInitials } from "../../lib/profileMeta";
@@ -33,7 +32,7 @@ function InfoItem({ label, value, mono = false }) {
   );
 }
 
-export default function ProfileHeader({ onSaved }) {
+export default function ProfileHeader() {
   const { user, userRole, isStaff } = useAuth();
 
   if (!user) return null;
