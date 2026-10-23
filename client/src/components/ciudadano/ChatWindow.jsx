@@ -560,9 +560,12 @@ export default function ChatWindow({ initialQuery = null }) {
     const t = (text ?? "").trim();
     if (!t) return;
 
-    // Verificar límite de consultas para usuarios autenticados
+    // No permitir registrar una quinta conversación en el historial.
     if (token && consultas.length >= HISTORY_LIMIT) {
-      toast(`Has alcanzado el límite de ${HISTORY_LIMIT} consultas. Eliminá alguna consulta del historial para poder hacer más.`, "error");
+      toast(
+        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una del historial antes de crear otra.`,
+        "error"
+      );
       return;
     }
 
@@ -854,9 +857,18 @@ export default function ChatWindow({ initialQuery = null }) {
     setAnnounce(resetMsg);
   }
 
-  // El botón de "nuevo chat" solo reinicia directo si no hay nada que perder.
-  // Si ya hay una conversación, pedimos confirmación antes de borrarla.
+  // Los usuarios registrados pueden mantener hasta HISTORY_LIMIT conversaciones.
+  // Antes de iniciar otra, verificamos el límite y mostramos un aviso claro.
   function handleResetRequest() {
+    if (isAuthenticated && historyQueries.length >= HISTORY_LIMIT) {
+      toast(
+        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una del historial antes de crear otra.`,
+        "error"
+      );
+      return;
+    }
+
+    // Si ya hay una conversación activa, pedimos confirmación antes de reiniciarla.
     if (messages.length > 0) {
       setConfirmReset(true);
       return;
