@@ -1,5 +1,5 @@
 import ChatBotAvatar from "../ChatBotAvatar";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { calificarConsulta } from "../../services/consultas";
 import { apiErrorMessage } from "../../lib/api";
 
@@ -88,7 +88,7 @@ function ChecklistButton({ action, onChecklist }) {
   );
 }
 
-export default function MessageBubble({
+function MessageBubble({
   message,
   speaking = false,
   typedText = "",
@@ -217,3 +217,5 @@ export default function MessageBubble({
     </article>
   );
 }
+
+export default memo(MessageBubble);

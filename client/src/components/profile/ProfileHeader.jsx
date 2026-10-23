@@ -3,8 +3,6 @@ import { useAuth } from "../../context/AuthContext";
 import { generoLabel } from "../../lib/genero";
 import { getInitials } from "../../lib/profileMeta";
 import { Icon, ICONS } from "./ui";
-import EditProfileModal from "./EditProfileModal";
-import { forceOpenTutorial } from "../common/BotOnboardingModal";
 
 const STATUS_TONE = {
   Activo: "bg-ok/10 text-ok border border-ok/20",
@@ -37,7 +35,6 @@ function InfoItem({ label, value, mono = false }) {
 
 export default function ProfileHeader({ onSaved }) {
   const { user, userRole, isStaff } = useAuth();
-  const [editOpen, setEditOpen] = useState(false);
 
   if (!user) return null;
 
@@ -90,13 +87,7 @@ export default function ProfileHeader({ onSaved }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-              <button
-                onClick={() => setEditOpen(true)}
-                className="btn-primary shrink-0 flex-1 sm:flex-none"
-              >
-                <Icon path={ICONS.profile} className="w-4 h-4" />
-                Editar perfil
-              </button>
+              {/* Sin botón de editar perfil según solicitud del usuario */}
             </div>
           </div>
         </div>
@@ -112,29 +103,6 @@ export default function ProfileHeader({ onSaved }) {
           {isStaff && <InfoItem label="Puesto" value={user.position || "—"} />}
         </div>
       </header>
-
-      <section aria-labelledby="profile-tutorial-heading" className="mt-5 rounded-2xl border border-brand-deep/15 bg-brand-deep/[0.035] px-5 py-5 sm:px-6 sm:py-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-        <span className="w-12 h-12 rounded-2xl grid place-items-center shrink-0 bg-brand-deep/10 text-brand-deep">
-          <Icon path={ICONS.chat} className="w-5 h-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-brand">Ayuda rápida</p>
-          <h2 id="profile-tutorial-heading" className="m-0 mt-1 text-base font-bold text-ink">¿Querés volver a ver cómo funciona ChatAP?</h2>
-          <p className="m-0 mt-1 text-sm leading-relaxed text-muted">
-            Podés volver a abrir el tutorial cuando quieras desde esta sección de Mi perfil. Te guía paso a paso por las funciones principales.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={forceOpenTutorial}
-          className="btn-secondary w-full sm:w-auto shrink-0 justify-center"
-        >
-          <Icon path={ICONS.chat} className="w-4 h-4" />
-          Volver a ver tutorial
-        </button>
-      </section>
-
-      <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} saved={onSaved} />
     </>
   );
 }

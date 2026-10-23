@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import ChatBotAvatar from "../ChatBotAvatar";
@@ -14,7 +14,6 @@ import { useAuth } from "../../context/AuthContext";
 import { useSessionStore } from "../../store/session";
 import { apiErrorMessage } from "../../lib/api";
 import { useToast } from "../common/Toast";
-import useA11y from "../../hooks/useA11y";
 import {
   rememberMessage,
   rememberAnswer,
@@ -142,7 +141,6 @@ export default function ChatWindow({ initialQuery = null }) {
   const typingTimerRef = useRef(null);
   const greetedRef = useRef(false);
   const wizardRef = useRef(null);
-  const answeredRef = useRef(false);
   const [welcomeMem, setWelcomeMem] = useState(null);
   const [promoReady, setPromoReady] = useState(false);
   const [promoDismissed, setPromoDismissed] = useState(false);
@@ -151,8 +149,20 @@ export default function ChatWindow({ initialQuery = null }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
-  const a11y = useA11y();
-  const screenReader = !!a11y.screenReader;
+
+  // Callbacks estables: junto con React.memo en MessageBubble evitan
+  // re-renderizar todo el historial en cada tick del efecto de tipeo.
+  const actionsRef = useRef({});
+  useEffect(() => {
+    actionsRef.current = {
+      followUp: handleFollowUp,
+      checklist: handleChecklist,
+      rate: handleRate,
+    };
+  });
+  const onFollowUp = useCallback((payload) => actionsRef.current.followUp?.(payload), []);
+  const onChecklist = useCallback((action) => actionsRef.current.checklist?.(action), []);
+  const onRate = useCallback((id, value) => actionsRef.current.rate?.(id, value), []);
 
   const [speechSupported] = useState(
     () =>
@@ -160,8 +170,8 @@ export default function ChatWindow({ initialQuery = null }) {
       !!(window.SpeechRecognition || window.webkitSpeechRecognition)
   );
 
-  // Tamaño del avatar adaptable a la altura de pantalla para que la bienvenida
-  // entre completa, sin scroll y sin quedar tapada por las barras.
+  // Tamaño del avatar adaptable a la altura de pantalla; si el contenido no
+  // entra, la bienvenida se desplaza (ver .chat-welcome-scroll).
   const [avatarSize, setAvatarSize] = useState(() => {
     if (typeof window === "undefined") return 92;
     const h = window.innerHeight;
@@ -201,7 +211,9 @@ export default function ChatWindow({ initialQuery = null }) {
     if (phase !== "chat") return;
     if (!nearBottomRef.current) return;
     const el = messagesRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    // Durante el tipeo avanzamos de forma instantánea: reiniciar un scroll
+    // suave en cada carácter provoca tirones y compite con el hilo principal.
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: typedText ? "auto" : "smooth" });
   }, [messages, isTyping, phase, typedText]);
 
   function handleMessagesScroll() {
@@ -331,21 +343,6 @@ export default function ChatWindow({ initialQuery = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, token, consultas, messages, historyVersion]);
 
-  // Modo lector de pantalla: al terminar de responder, el foco pasa a la
-  // última respuesta para que el lector externo (NVDA, JAWS, VoiceOver) la
-  // lea. No le quitamos el foco al ciudadano si está escribiendo otra consulta.
-  useEffect(() => {
-    if (!screenReader) return;
-    if (phase !== "chat" || speakingId) return;
-    if (!answeredRef.current) return;
-    const active = typeof document !== "undefined" ? document.activeElement : null;
-    if (active && active.id === "chat-here") return;
-    const last = messages[messages.length - 1];
-    if (!last || last.type !== "bot") return;
-    const el = messagesRef.current?.querySelector("[data-bot-message]:last-of-type");
-    el?.focus?.();
-  }, [screenReader, phase, speakingId, messages]);
-
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
   const sendTextRef = useRef(null);
@@ -395,9 +392,7 @@ export default function ChatWindow({ initialQuery = null }) {
     setPromoReady(true);
 
     // Anuncio para tecnologías de asistencia: texto completo, una sola vez.
-    // En modo lector de pantalla aclaramos de quién es la respuesta.
-    answeredRef.current = true;
-    setAnnounce(screenReader ? `Respuesta del asistente: ${finalText}` : finalText);
+    setAnnounce(finalText);
 
     // Con movimiento reducido se muestra el texto completo de inmediato.
     const reduceMotion =
@@ -854,10 +849,9 @@ export default function ChatWindow({ initialQuery = null }) {
     startedRef.current = false;
     greetedRef.current = false;
     wizardRef.current = null;
-    answeredRef.current = false;
     nearBottomRef.current = true;
     const resetMsg = "Se inició un chat nuevo. Escribí tu consulta cuando quieras.";
-    setAnnounce(screenReader ? resetMsg : "");
+    setAnnounce(resetMsg);
   }
 
   // El botón de "nuevo chat" solo reinicia directo si no hay nada que perder.
@@ -937,7 +931,7 @@ export default function ChatWindow({ initialQuery = null }) {
     }
     if (isActiveConversation) resetConversation();
     setHistoryVersion((v) => v + 1);
-    if (screenReader) setAnnounce("Conversación borrada del historial.");
+    setAnnounce("Conversación borrada del historial.");
   }
 
   // Vaciar todo el historial guardado.
@@ -946,7 +940,7 @@ export default function ChatWindow({ initialQuery = null }) {
     clearMemoryMessages(effectiveId);
     clearLocalHistory();
     setHistoryVersion((v) => v + 1);
-    if (screenReader) setAnnounce("Historial borrado.");
+    setAnnounce("Historial borrado.");
   }
 
   // Volver a leer en voz alta la última respuesta del asistente.
@@ -1000,77 +994,85 @@ export default function ChatWindow({ initialQuery = null }) {
   return (
     <div className="chat-window-shell relative flex h-full bg-paper">
       {/* Apartado lateral de historial (pantallas grandes).
-          Se puede ocultar y mostrar con el botón "Ocultar/Mostrar historial". */}
-      <aside
-        id="chat-history-panel"
-        aria-label="Historial de consultas"
-        aria-hidden={historyCollapsed}
-        className={`hidden lg:block shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none ${
-          historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
-        }`}
-      >
-        <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
-          <ChatHistoryPanel
-            queries={historyQueries}
-            onSelect={handleHistorySelect}
-            onNewChat={handleResetRequest}
-            onDelete={handleDeleteQuery}
-            onClearAll={!token ? handleClearHistory : undefined}
-            loading={Boolean(token && historyLoading)}
-            error={token ? historyError : ""}
-          />
-        </div>
-      </aside>
+          Solo visible para usuarios autenticados. */}
+      {isAuthenticated && (
+        <aside
+          id="chat-history-panel"
+          aria-label="Historial de consultas"
+          aria-hidden={historyCollapsed}
+          className={`hidden lg:block shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none ${
+            historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
+          }`}
+        >
+          <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
+            <ChatHistoryPanel
+              queries={historyQueries}
+              onSelect={handleHistorySelect}
+              onNewChat={handleResetRequest}
+              onDelete={handleDeleteQuery}
+              onClearAll={!token ? handleClearHistory : undefined}
+              loading={Boolean(token && historyLoading)}
+              error={token ? historyError : ""}
+            />
+          </div>
+        </aside>
+      )}
 
       <div className="chat-main flex h-full min-w-0 flex-1 flex-col">
-        <div className="chat-navbar-slot shrink-0">
-          <Navbar />
-        </div>
-        <header className="chat-main-header flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line/60 px-4 sm:px-6">
+        <Navbar />
+        <header className="chat-main-header flex h-14 shrink-0 items-center justify-between gap-2 px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            {/* Pantallas chicas: el historial se abre como diálogo. */}
-            <button
-              type="button"
-              onClick={() => setHistoryOpen(true)}
-              aria-label="Ver historial de consultas"
-              className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
-              </svg>
-              <span>Historial</span>
-              {historyQueries.length > 0 && (
-                <span className="rounded-full bg-brand/10 text-brand-deep px-1.5 py-0.5 text-[10px] font-bold">
-                  {historyQueries.length}
-                </span>
-              )}
-            </button>
+            {/* Pantallas chicas: el historial se abre como diálogo. Solo para autenticados. */}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                id="chat-history-open-button"
+                aria-label="Ver historial de consultas"
+                className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
+                </svg>
+                <span>Historial</span>
+                {historyQueries.length > 0 && (
+                  <span className="rounded-full bg-brand/10 text-brand-deep px-1.5 py-0.5 text-[10px] font-bold">
+                    {historyQueries.length}
+                  </span>
+                )}
+              </button>
+            )}
 
-            {/* Pantallas grandes: oculta y muestra el panel lateral. */}
-            <button
-              type="button"
-              onClick={() => setHistoryCollapsed((v) => !v)}
-              aria-expanded={!historyCollapsed}
-              aria-controls="chat-history-panel"
-              aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
-              className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-line/70 bg-paper/80 px-3 text-xs font-semibold text-muted shadow-xs transition-colors hover:bg-mist hover:text-ink cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
-              </svg>
-              <span>{historyCollapsed ? "Mostrar historial" : "Ocultar historial"}</span>
-            </button>
+            {/* Pantallas grandes: oculta y muestra el panel lateral. Solo para autenticados. */}
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => setHistoryCollapsed((v) => !v)}
+                id="chat-history-toggle-button"
+                aria-expanded={!historyCollapsed}
+                aria-controls="chat-history-panel"
+                aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
+                className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-line/70 bg-paper/80 px-3 text-xs font-semibold text-muted shadow-xs transition-colors hover:bg-mist hover:text-ink cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
+                </svg>
+                <span>{historyCollapsed ? "Mostrar historial" : "Ocultar historial"}</span>
+              </button>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleResetRequest}
-            title="Iniciar un nuevo chat"
-            aria-label="Iniciar un nuevo chat"
-            className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
+          {!isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleResetRequest}
+              id="chat-new-conversation-button"
+              title="Iniciar un nuevo chat"
+              aria-label="Iniciar un nuevo chat"
+              className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
             </svg>
           </button>
@@ -1084,15 +1086,13 @@ export default function ChatWindow({ initialQuery = null }) {
       <div
         ref={messagesRef}
         onScroll={handleMessagesScroll}
-        className={`chat-message-scroll relative flex min-h-0 flex-1 flex-col overscroll-contain ${
-          phase === "chat"
-            ? "overflow-y-auto"
-            : "chat-welcome-scroll overflow-hidden"
+        className={`chat-message-scroll relative flex min-h-0 flex-1 flex-col overflow-x-hidden overscroll-contain ${
+          phase === "chat" ? "overflow-y-auto" : "chat-welcome-scroll overflow-y-auto"
         }`}
       >
         {phase !== "chat" ? (
           <div
-            className={`welcome-content flex min-h-max flex-1 flex-col items-center justify-center px-4 py-4 text-center transition-all duration-300 ease-out sm:py-6 ${
+            className={`welcome-content flex min-h-max flex-1 flex-col items-center justify-center px-4 py-4 text-center transition-all duration-500 ease-out sm:py-6 ${
               phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
             }`}
           >
@@ -1119,7 +1119,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </p>
 
             {/* Botones de consulta rápida tipo Píldoras (2 filas de 3) */}
-            <div className="chatap-pills-container">
+            <div id="chatap-pills-container" className="chatap-pills-container">
               {CHATAP_PILLS.map((pill) => (
                 <button
                   key={pill.id}
@@ -1134,7 +1134,7 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
 
             {/* Asistencias guiadas paso a paso */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
+            <div id="chat-guided-assists" className="mt-4 flex flex-wrap items-center justify-center gap-2 animate-fade-in">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
                 Asistencias guiadas:
               </span>
@@ -1187,9 +1187,9 @@ export default function ChatWindow({ initialQuery = null }) {
                   speaking={msg.id === speakingId}
                   typedText={msg.id === speakingId ? typedText : ""}
                   reaction={reaction}
-                  onFollowUp={handleFollowUp}
-                  onChecklist={handleChecklist}
-                  onRate={handleRate}
+                  onFollowUp={onFollowUp}
+                  onChecklist={onChecklist}
+                  onRate={onRate}
                 />
               </div>
             ))}
@@ -1267,7 +1267,7 @@ export default function ChatWindow({ initialQuery = null }) {
           </p>
         )}
 
-        <form onSubmit={handleSend} className="chatap-floating-bar mx-auto max-w-2xl">
+        <form id="chat-input-form" onSubmit={handleSend} className="chatap-floating-bar mx-auto max-w-2xl">
           {/* Lupa / búsqueda */}
           <span className="text-muted/70 pl-2 pr-1 flex items-center justify-center shrink-0 pointer-events-none" aria-hidden="true">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1338,11 +1338,12 @@ export default function ChatWindow({ initialQuery = null }) {
             className={`ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all ${
               input.trim()
                 ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
-                : "text-muted/40 cursor-not-allowed opacity-0 pointer-events-none w-0 p-0 overflow-hidden"
+                : "bg-transparent text-muted/30 cursor-not-allowed hover:bg-transparent hover:text-muted/30"
             }`}
             aria-label="Enviar consulta"
+            aria-disabled={!input.trim() || (!!imageFile && !imagePreview)}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12l7-7l7 7m-7 7V5" />
             </svg>
           </button>
@@ -1357,7 +1358,7 @@ export default function ChatWindow({ initialQuery = null }) {
         title="Historial de consultas"
         showActions={false}
       >
-        <div className="h-[50vh] min-h-[18rem] max-h-[70vh] -mx-1">
+        <div className="h-[50dvh] min-h-[10rem] max-h-[70dvh] -mx-1">
           <ChatHistoryPanel
             queries={historyQueries}
             onSelect={handleHistorySelect}

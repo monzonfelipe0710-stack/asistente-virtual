@@ -75,7 +75,21 @@ export default function InteractiveChatMockup() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [activeChipToast, setActiveChipToast] = useState(null);
   const chatScrollRef = useRef(null);
+  const rootRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(true);
   const current = SCENARIOS[scenarioIdx];
+
+  // Fuera de pantalla detenemos la conversación automática y sus renders.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: "160px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Auto-scroll inside mockup on step change
   useEffect(() => {
@@ -93,7 +107,7 @@ export default function InteractiveChatMockup() {
 
   // Continuous fluid conversation loop
   useEffect(() => {
-    if (isTransitioning) return;
+    if (isTransitioning || !isVisible) return undefined;
     if (prefersReducedMotion()) return undefined;
 
     // Fluid timings for seamless progression
@@ -121,7 +135,7 @@ export default function InteractiveChatMockup() {
     }, delays[step] || 2000);
 
     return () => clearTimeout(timer);
-  }, [step, scenarioIdx, isTransitioning]);
+  }, [step, scenarioIdx, isTransitioning, isVisible]);
 
   function handleSelectScenario(index) {
     if (index === scenarioIdx && step === 1) return;
@@ -148,6 +162,7 @@ export default function InteractiveChatMockup() {
 
   return (
     <div
+      ref={rootRef}
       className="w-full max-w-lg mx-auto rounded-3xl border border-line bg-gradient-to-b from-mist/90 via-paper to-mist/60 p-3 sm:p-5 shadow-xl transition-all relative select-none"
       aria-label="Simulador interactivo de conversación con ChatAP"
     >

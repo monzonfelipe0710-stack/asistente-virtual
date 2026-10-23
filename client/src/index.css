@@ -188,8 +188,14 @@
     scroll-behavior: smooth;
     background-color: var(--color-paper);
     color: var(--color-ink);
+    /* clip evita crear un contenedor de scroll vertical implícito
+       (overflow-y: auto) que bloqueaba la rueda en responsive. */
     overflow-x: hidden;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: clip;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      font-size 0.22s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   body {
@@ -198,6 +204,7 @@
     text-rendering: optimizeLegibility;
     font-feature-settings: "cv03", "cv04", "cv09", "cv11";
     overflow-x: hidden;
+    overflow-x: clip;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
@@ -310,17 +317,7 @@ select {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-/* ── Footer 51 (Shadcnblocks): Barra inferior con patrón de rayas diagonales ── */
-.footer-striped-pattern {
-  background-color: color-mix(in srgb, var(--color-mist) 40%, var(--color-paper));
-  background-image: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--color-line) 80%, transparent) 0px,
-    color-mix(in srgb, var(--color-line) 80%, transparent) 1px,
-    transparent 1px,
-    transparent 10px
-  );
-}
+
 
 @layer utilities {
   .admin-content { margin-left: var(--sidebar-width); }
@@ -1215,8 +1212,8 @@ select {
   .animate-fade-out { animation: fade-out 0.18s ease-in both; }
   .animate-scale-in { animation: scale-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
   .animate-scale-out { animation: scale-out 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .animate-step-next { animation: step-slide-next 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .animate-step-prev { animation: step-slide-prev 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-step-next { animation: step-slide-next 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-step-prev { animation: step-slide-prev 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
   .animate-avatar-pop { animation: avatar-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-theme-transition { animation: theme-transition 0.2s ease-out; }
   .animate-counter { animation: counter 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
@@ -1573,7 +1570,7 @@ select {
     border: 2px solid color-mix(in srgb, var(--color-brand) 82%, white);
     border-radius: 0.75rem;
     animation: tour-glow 1.8s ease-in-out infinite;
-    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1), left 0.42s cubic-bezier(0.22, 1, 0.36, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1), height 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: top 0.5s cubic-bezier(0.16, 1, 0.3, 1), left 0.5s cubic-bezier(0.16, 1, 0.3, 1), width 0.5s cubic-bezier(0.16, 1, 0.3, 1), height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
     pointer-events: none;
   }
   .tour-card {
@@ -1584,6 +1581,7 @@ select {
     background: color-mix(in srgb, var(--color-paper) 94%, transparent);
     box-shadow: 0 20px 60px rgba(5, 10, 25, 0.22);
     backdrop-filter: blur(18px);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .tour-avatar {
     border-radius: 1rem;
@@ -2260,7 +2258,7 @@ select {
 @layer components {
   .nav-shell {
     position: fixed;
-    top: 1rem;
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
     z-index: 60;
@@ -2271,11 +2269,12 @@ select {
     transition:
       transform 560ms cubic-bezier(0.22, 1, 0.36, 1),
       opacity 440ms ease !important;
+    padding-top: 0.75rem;
   }
 
   @media (min-width: 640px) {
     .nav-shell {
-      top: 1.25rem;
+      padding-top: 1rem;
     }
   }
 
@@ -2310,6 +2309,19 @@ select {
     .nav-pill {
       column-gap: 0.35rem;
       padding: 0.35rem 0.35rem 0.35rem 0.5rem;
+    }
+  }
+
+  /* En móvil la navegación central se oculta: usamos flex para evitar la
+     columna vacía de la grilla que dejaba un hueco a la derecha del botón ≡. */
+  @media (max-width: 767px) {
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      column-gap: 0;
+      gap: 0.5rem;
+      padding: 0.35rem;
     }
   }
 
@@ -2512,6 +2524,7 @@ select {
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     z-index: 65;
     overflow: hidden;
+    pointer-events: auto;
   }
 }
 
@@ -3426,16 +3439,8 @@ html[data-a11y-readable="true"] label {
   line-height: 1.65 !important;
 }
 
-/* Modo lector de pantalla: refuerza el foco visible para uso solo con teclado. */
-html[data-a11y-sr="true"] :focus-visible {
-  outline: 3px solid var(--color-brand);
-  outline-offset: 2px;
-}
-html[data-a11y-sr="true"] [data-bot-message]:focus {
-  outline: 3px solid var(--color-brand);
-  outline-offset: 2px;
-  border-radius: var(--radius-card);
-}
+/* Alto contraste y tipografía legible.
+   (La opción de lector de pantalla se retiró del menú de accesibilidad.) */
 
 @media (prefers-reduced-motion: reduce) {
   html[data-a11y-text],
@@ -3517,6 +3522,15 @@ html[data-a11y-sr="true"] [data-bot-message]:focus {
     background-image:
       radial-gradient(ellipse at 76% 8%, rgba(47, 107, 255, 0.08), transparent 34rem),
       linear-gradient(135deg, #f8faff 0%, #f2f6fc 55%, #f7f9fd 100%);
+    height: 100vh;
+    height: 100dvh;
+    padding-top: 5.5rem; /* altura navbar fijo móvil */
+  }
+
+  @media (min-width: 640px) {
+    .chat-page-shell {
+      padding-top: 6rem; /* altura navbar fijo desktop */
+    }
   }
 
   .dark .chat-page-shell {
@@ -3554,20 +3568,34 @@ html[data-a11y-sr="true"] [data-bot-message]:focus {
   }
 
   .nav-shell--chat {
-    top: 0;
     display: flex;
     justify-content: center;
-    padding: 0.75rem 0 0;
   }
 
-  .chat-navbar-slot {
-    height: 4.3rem;
-    flex: 0 0 4.3rem;
+  .nav-shell--chat .nav-pill {
+    /* Mismo estilo visual que en Inicio/Soporte */
   }
 
   .chat-main-header {
     background: color-mix(in srgb, var(--color-paper) 72%, transparent);
     backdrop-filter: blur(16px);
+  }
+
+  /* La bienvenida se desplaza cuando el alto del dispositivo no alcanza
+     (móvil apaisado, tablet chica o texto agrandado). */
+  .chat-welcome-scroll {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-line) 80%, transparent) transparent;
+  }
+
+  .chat-welcome-scroll::-webkit-scrollbar {
+    width: 0.375rem;
+  }
+
+  .chat-welcome-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-line) 85%, transparent);
+    border-radius: 999px;
   }
 
   .dark .chat-main {
@@ -3693,6 +3721,49 @@ html[data-a11y-sr="true"] [data-bot-message]:focus {
     .chat-conversation {
       padding-inline: 0.875rem;
     }
+
+    .chatap-floating-bar {
+      border-radius: 1rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    .chatap-floating-bar input {
+      font-size: 1rem;
+      height: 3rem;
+    }
+
+    .chatap-floating-bar button[aria-label="Enviar consulta"],
+    .chatap-floating-bar button[aria-label="Adjuntar una imagen"],
+    .chatap-floating-bar button[aria-label="Hablar con el asistente"],
+    .chatap-floating-bar button[aria-label="Detener dictado"] {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .chat-main-header {
+      padding-inline: 0.75rem;
+    }
+
+    .chat-welcome-avatar {
+      margin-bottom: 1rem;
+    }
+
+    .chatap-pills-container {
+      gap: 0.5rem;
+    }
+
+    .chatap-pill-btn {
+      min-height: 44px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .bubble-chip {
+      min-height: 44px;
+      padding: 0.75rem 1rem;
+    }
   }
 }
 
@@ -3737,3 +3808,110 @@ html[data-a11y-sr="true"] [data-bot-message]:focus {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Rendimiento en pantallas chicas ─────────────────────────────
+   En móvil el blur (backdrop-filter) y las animaciones decorativas
+   infinitas consumen GPU/CPU y provocan tirones. Los reemplazamos por
+   fondos opacos equivalentes y desactivamos lo puramente decorativo. */
+@media (max-width: 767px) {
+  .nav-pill,
+  .nav-dropdown,
+  .nav-drawer,
+  .hud-glass-badge,
+  .tour-card {
+    backdrop-filter: none !important;
+  }
+
+  .nav-pill { background: #0a1124; }
+  .nav-pill--scrolled { background: #070e20; }
+  .nav-dropdown,
+  .nav-drawer { background: #0a1124; }
+  .hud-glass-badge { background: rgba(7, 14, 32, 0.94); }
+  .tour-card { background: var(--color-paper); }
+
+  .chat-main-header,
+  .chat-sidebar-frame {
+    backdrop-filter: none !important;
+    background: var(--color-paper);
+  }
+
+  /* Cubre utilidades de Tailwind (backdrop-blur-*) que puedan quedar. */
+  [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+  }
+
+  .ambient-glow-brand,
+  .text-shimmer-brand,
+  .animate-ticker,
+  .animate-float,
+  .animate-ring-pulse,
+  .animate-arrow-slide,
+  .animate-pulse-soft,
+  .home-fallback-drift,
+  .tour-avatar > * {
+    animation: none !important;
+  }
+
+  .ambient-glow-brand { filter: none !important; }
+  .text-shimmer-brand {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+
+  .nav-shell,
+  .reveal,
+  .reveal-img {
+    will-change: auto;
+  }
+}
+
+/* ── Chat en pantallas muy bajas ─────────────────────────────────
+   Teléfonos apaisados (iPhone 6/SE), ventanas de PC con poca altura:
+   recuperamos alto útil sin perder los objetivos táctiles de 44px. */
+@media (max-height: 540px) {
+  .chat-page-shell {
+    padding-top: 4.5rem;
+  }
+
+  .chat-main-header {
+    height: 3rem;
+  }
+
+  .welcome-content {
+    gap: 0.4rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .chat-welcome-avatar {
+    margin-bottom: 0.5rem;
+  }
+
+  .welcome-content h1 {
+    font-size: 1.6rem;
+    line-height: 1.12;
+  }
+
+  .welcome-content p {
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .chatap-pills-container {
+    gap: 0.4rem;
+  }
+
+  .chatap-pill-btn {
+    padding: 0.5rem 1rem;
+  }
+
+  .bubble-chip {
+    padding: 0.45rem 0.8rem;
+  }
+
+  .chat-composer-area {
+    padding-top: 0.25rem;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+

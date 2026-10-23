@@ -197,20 +197,22 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
 }
 
 function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, currentPath }) {
+  const closeMenu = () => onClose();
+
   return (
     <nav
       aria-label="Navegación móvil"
       className="nav-drawer animate-fade-up"
     >
-      <div className="flex flex-col gap-1 p-2">
+      <div className="flex flex-col gap-0 p-1">
         {NAV_LINKS.map((l) => {
           const active = isLinkActive(currentPath, l);
           return (
             <Link
               key={l.id}
               to={l.to}
-              onClick={onClose}
-              className={`flex items-center justify-between px-3.5 min-h-12 rounded-xl text-sm font-medium tracking-wide transition-colors no-underline ${
+              onClick={closeMenu}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium tracking-wide transition-colors no-underline ${
                 active
                   ? "bg-white/10 text-white font-semibold"
                   : "text-white/70 hover:text-white hover:bg-white/5"
@@ -228,8 +230,8 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
         })}
 
         {isAuthenticated && user ? (
-          <div className="mt-2 pt-2 border-t border-white/10 flex flex-col gap-1">
-            <div className="px-3.5 py-1.5 flex items-center gap-2">
+          <div className="mt-1 pt-1 border-t border-white/10 flex flex-col gap-0">
+            <div className="px-3 py-1 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-brand-deep text-white text-[10px] font-bold flex items-center justify-center ring-1 ring-white/20">
                 {(user.name || user.dni || user.email || "?").charAt(0).toUpperCase()}
               </span>
@@ -241,8 +243,8 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
 
             <Link
               to="/perfil"
-              onClick={onClose}
-              className="flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
+              onClick={closeMenu}
+              className="flex items-center justify-between px-3 py-1.5 rounded-lg text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
             >
               <span>Mi perfil</span>
               <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,8 +256,8 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
               href="https://www.formosa.gob.ar/miportal/login"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={onClose}
-              className="flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
+              onClick={closeMenu}
+              className="flex items-center justify-between px-3 py-1.5 rounded-lg text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
             >
               <span>MiPortal</span>
               <svg className="w-3.5 h-3.5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,8 +268,8 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
             {isStaff && (
               <Link
                 to="/admin"
-                onClick={onClose}
-                className="flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
+                onClick={closeMenu}
+                className="flex items-center justify-between px-3 py-1.5 rounded-lg text-sm text-white/75 hover:text-white hover:bg-white/5 transition-colors no-underline"
               >
                 <span>Panel Admin</span>
                 <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +284,7 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
                 onClose();
                 logout();
               }}
-              className="w-full mt-1 flex items-center justify-between px-3.5 min-h-11 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+              className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
             >
               <span>Cerrar sesión</span>
               <svg className="w-3.5 h-3.5 text-red-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,11 +293,11 @@ function MobileDrawer({ onClose, isAuthenticated, user, isStaff, logout, current
             </button>
           </div>
         ) : (
-          <div className="border-t border-white/10 mt-1 pt-2">
+          <div className="border-t border-white/10 mt-1 pt-1">
             <Link
               to="/login"
-              onClick={onClose}
-              className="flex items-center justify-center px-4 min-h-12 text-sm font-semibold rounded-xl text-white bg-brand hover:bg-brand-dark transition-colors no-underline shadow-xs"
+              onClick={closeMenu}
+              className="flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg text-white bg-brand hover:bg-brand-dark transition-colors no-underline shadow-xs"
             >
               Ingresar
             </Link>
@@ -341,6 +343,13 @@ export default function Navbar() {
     const onScroll = (event) => {
       const y = getScrollPosition(event);
       const isScrolled = y > 24;
+      
+      // En ChatAP no cambiamos el estado scrolled para evitar transiciones visuales
+      if (location.pathname.startsWith("/chat")) {
+        lastY = y;
+        return;
+      }
+      
       if (isScrolled !== lastScrolled) {
         lastScrolled = isScrolled;
         setScrolled(isScrolled);
@@ -393,6 +402,12 @@ export default function Navbar() {
   useEffect(() => {
     if (!menuOpen) return;
     const handleClickOutside = (e) => {
+      // No cerrar si el click fue en un enlace o botón dentro del drawer
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const isLinkOrButton = target.closest('a, button, [role="menuitem"]');
+        if (isLinkOrButton) return;
+      }
       if (navRef.current && !navRef.current.contains(e.target)) {
         setMenuOpen(false);
       }
@@ -400,12 +415,11 @@ export default function Navbar() {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") setMenuOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+    // Usar click en lugar de mousedown para dar prioridad a enlaces
+    document.addEventListener("click", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [menuOpen]);
