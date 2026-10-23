@@ -28,6 +28,43 @@ import {
 
 
 const crearIdConsultaLocal = () => `c_${Date.now()}`;
+const crearIdConversacion = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const THREADS_PREFIX = "chatap.threads.";
+
+function cargarConversaciones(userId) {
+  if (typeof window === "undefined" || !userId) return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(THREADS_PREFIX + userId) || "[]");
+    return Array.isArray(parsed) ? parsed.filter((thread) => thread?.id && Array.isArray(thread.messages)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarConversaciones(userId, conversations) {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    window.localStorage.setItem(
+      THREADS_PREFIX + userId,
+      JSON.stringify(conversations.slice(0, HISTORY_LIMIT))
+    );
+  } catch {
+    // Si el navegador no permite almacenamiento, el chat sigue funcionando en memoria.
+  }
+}
+
+function crearResumenConversacion(id, messages) {
+  const firstQuestion = messages.find((message) => message.type === "user");
+  if (!firstQuestion) return null;
+  return {
+    id,
+    title: firstQuestion.text,
+    text: firstQuestion.text,
+    at: messages[messages.length - 1]?.timestamp || new Date().toISOString(),
+    updatedAt: messages[messages.length - 1]?.timestamp || new Date().toISOString(),
+    messages,
+  };
+}
 
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
@@ -144,10 +181,14 @@ export default function ChatWindow({ initialQuery = null }) {
   const [promoReady, setPromoReady] = useState(false);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [promoLeaving, setPromoLeaving] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
+  const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
+  const [savedThreads, setSavedThreads] = useState(() =>
+    cargarConversaciones(user?.id || "ciudadano_anonimo")
+  );
+  const threadOwnerRef = useRef(user?.id || "ciudadano_anonimo");
 
   // Callbacks estables: junto con React.memo en MessageBubble evitan
   // re-renderizar todo el historial en cada tick del efecto de tipeo.
@@ -280,6 +321,33 @@ export default function ChatWindow({ initialQuery = null }) {
     greetedRef.current = false;
   }, [userId]);
 
+  // Cada conversación se guarda por separado en el navegador para poder retomarla
+  // aunque se inicie otro chat o se recargue la página.
+  useEffect(() => {
+    const effectiveId = userId || "ciudadano_anonimo";
+    if (threadOwnerRef.current !== effectiveId) {
+      threadOwnerRef.current = effectiveId;
+      setSavedThreads(cargarConversaciones(effectiveId));
+      setActiveThreadId(crearIdConversacion());
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const effectiveId = userId || "ciudadano_anonimo";
+    if (threadOwnerRef.current !== effectiveId || messages.length === 0) return;
+    const snapshot = crearResumenConversacion(activeThreadId, messages);
+    if (!snapshot) return;
+    setSavedThreads((previous) => {
+      const next = [
+        snapshot,
+        ...previous.filter((thread) => thread.id !== activeThreadId),
+      ].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at))
+        .slice(0, HISTORY_LIMIT);
+      guardarConversaciones(effectiveId, next);
+      return next;
+    });
+  }, [activeThreadId, messages, userId]);
+
   // Memoria: cargamos el contexto del usuario para personalizar la bienvenida.
   useEffect(() => {
     const effectiveId = userId || "ciudadano_anonimo";
@@ -308,11 +376,24 @@ export default function ChatWindow({ initialQuery = null }) {
     );
   }, [userId, token, consultas, historyVersion]);
 
-  // Historial de consultas: disponible para usuarios con sesión y usuarios locales
+  // El historial prioriza hilos completos; las consultas anteriores se mantienen
+  // como entradas individuales para que los registros previos sigan accesibles.
   const historyQueries = useMemo(() => {
     const effectiveId = userId || "ciudadano_anonimo";
-    if (token && consultas.length > 0) {
-      return consultas.slice(0, HISTORY_LIMIT).map((consulta) => ({
+    const threads = savedThreads.map((thread) => ({
+      ...thread,
+      threadId: thread.id,
+      text: thread.title || thread.text || "Nueva consulta",
+      at: thread.updatedAt || thread.at,
+    }));
+    const includedConsultaIds = new Set(
+      savedThreads.flatMap((thread) =>
+        (thread.messages || []).map((message) => message.consultaId).filter(Boolean)
+      )
+    );
+    const legacyConsultas = consultas
+      .filter((consulta) => !includedConsultaIds.has(consulta.id))
+      .map((consulta) => ({
         id: consulta.id,
         text: consulta.textoConsulta,
         at: consulta.fecha,
@@ -321,26 +402,18 @@ export default function ChatWindow({ initialQuery = null }) {
         tramite: consulta.tramite ?? null,
         estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
       }));
-    }
-    const mem = loadMemory(effectiveId);
-    const memQueries = (mem?.messages ?? []).slice().reverse();
-    if (memQueries.length > 0) {
-      return memQueries;
-    }
-    if (consultas.length > 0) {
-      return consultas.slice(0, HISTORY_LIMIT).map((consulta) => ({
-        id: consulta.id,
-        text: consulta.textoConsulta,
-        at: consulta.fecha,
-        answer: consulta.respuesta,
-        calificacion: consulta.calificacion,
-        tramite: consulta.tramite ?? null,
-        estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
-      }));
-    }
-    return [];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, token, consultas, messages, historyVersion]);
+    const legacyMemory = loadMemory(effectiveId).messages || [];
+    const legacy = token
+      ? legacyConsultas
+      : legacyConsultas.length
+        ? legacyConsultas
+        : legacyMemory.slice().reverse();
+    return [...threads, ...legacy.filter((item) =>
+      !threads.some((thread) => thread.text === item.text && Math.abs(
+        new Date(thread.at).getTime() - new Date(item.at).getTime()
+      ) < 5000)
+    )].slice(0, HISTORY_LIMIT);
+  }, [userId, token, consultas, savedThreads, messages, historyVersion]);
 
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
@@ -558,15 +631,6 @@ export default function ChatWindow({ initialQuery = null }) {
   function sendText(text, image = null, preview = "") {
     const t = (text ?? "").trim();
     if (!t) return;
-
-    // No permitir registrar una quinta conversación en el historial.
-    if (token && consultas.length >= HISTORY_LIMIT) {
-      toast(
-        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una del historial antes de crear otra.`,
-        "error"
-      );
-      return;
-    }
 
     beginChat();
     const userMessageId = addMessage("user", t, image ? {
@@ -852,32 +916,53 @@ export default function ChatWindow({ initialQuery = null }) {
     greetedRef.current = false;
     wizardRef.current = null;
     nearBottomRef.current = true;
+    setActiveThreadId(crearIdConversacion());
     const resetMsg = "Se inició un chat nuevo. Escribí tu consulta cuando quieras.";
     setAnnounce(resetMsg);
   }
 
-  // Los usuarios registrados pueden mantener hasta HISTORY_LIMIT conversaciones.
-  // Antes de iniciar otra, verificamos el límite y mostramos un aviso claro.
+  // Un hilo activo se conserva automáticamente; empezar otro nunca borra el anterior.
   function handleResetRequest() {
-    if (isAuthenticated && historyQueries.length >= HISTORY_LIMIT) {
+    const currentThread = crearResumenConversacion(activeThreadId, messages);
+    const effectiveId = userId || "ciudadano_anonimo";
+    if (currentThread) {
+      const next = [
+        currentThread,
+        ...savedThreads.filter((thread) => thread.id !== activeThreadId),
+      ].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at))
+        .slice(0, HISTORY_LIMIT);
+      guardarConversaciones(effectiveId, next);
+      setSavedThreads(next);
+    }
+
+    if (historyQueries.length >= HISTORY_LIMIT && messages.length === 0) {
       toast(
-        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una del historial antes de crear otra.`,
+        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
         "error"
       );
       return;
     }
-
-    // Si ya hay una conversación activa, pedimos confirmación antes de reiniciarla.
-    if (messages.length > 0) {
-      setConfirmReset(true);
+    if (historyQueries.length >= HISTORY_LIMIT && currentThread &&
+        !savedThreads.some((thread) => thread.id === activeThreadId)) {
+      toast(
+        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
+        "error"
+      );
       return;
     }
     resetConversation();
   }
 
-  // Abrir una consulta guardada sin volver a enviarla al asistente.
+  // Abrir un hilo completo o una consulta antigua sin volver a enviarla al asistente.
   function handleHistorySelect(query) {
     setHistoryOpen(false);
+    if (query.threadId) {
+      setActiveThreadId(query.threadId);
+      openConversation(query.messages || []);
+      startedRef.current = true;
+      setPhase("chat");
+      return;
+    }
     if (token) {
       const timestamp = new Date(query.at).toISOString();
       const conversation = [{
@@ -917,6 +1002,14 @@ export default function ChatWindow({ initialQuery = null }) {
   // Borrar una consulta puntual del historial guardado.
   async function handleDeleteQuery(query) {
     const effectiveId = userId || "ciudadano_anonimo";
+    if (query.threadId) {
+      const next = savedThreads.filter((thread) => thread.id !== query.threadId);
+      guardarConversaciones(effectiveId, next);
+      setSavedThreads(next);
+      if (query.threadId === activeThreadId) resetConversation();
+      setAnnounce("Conversación borrada del historial.");
+      return;
+    }
     const isActiveConversation = messages.some((message) =>
       token
         ? message.consultaId === query.id
@@ -1385,18 +1478,6 @@ export default function ChatWindow({ initialQuery = null }) {
         </div>
       </Modal>
 
-      <Modal
-        open={confirmReset}
-        onClose={() => setConfirmReset(false)}
-        onConfirm={resetConversation}
-        title="¿Iniciar un nuevo chat?"
-        confirmText="Sí, iniciar un nuevo chat"
-        cancelText="Cancelar"
-        confirmDanger
-      >
-        Se va a borrar la conversación actual y esta acción no se puede deshacer.
-        Si necesitás guardar algo, copialo antes de continuar. ¿Querés empezar un chat nuevo?
-      </Modal>
     </div>
   );
 }
