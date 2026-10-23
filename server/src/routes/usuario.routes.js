@@ -8,6 +8,7 @@ import { registroLimiter } from '../config/rateLimit.js';
 const router = Router();
 
 router.patch('/me/perfil', autenticar, asyncHandler(usuarioController.actualizarMiPerfil));
+router.delete('/me', autenticar, asyncHandler(usuarioController.eliminarMiCuenta));
 
 // Alta directa de cuentas desde el panel de superusuario.
 router.post('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.crearUsuarioAdministrativo));
