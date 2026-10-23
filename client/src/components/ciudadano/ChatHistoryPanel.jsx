@@ -1,17 +1,6 @@
 import { HISTORY_LIMIT } from "../../lib/chatMemory";
 import { Link } from "react-router-dom";
 
-function formatWhen(iso) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default function ChatHistoryPanel({
   queries = [],
   onSelect,
@@ -81,7 +70,7 @@ export default function ChatHistoryPanel({
           <div role="status" className="space-y-2">
             <span className="sr-only">Cargando historial…</span>
             {[0, 1, 2].map((item) => (
-              <div key={item} className="history-skeleton h-[4.25rem] animate-pulse rounded-xl bg-mist/70" />
+              <div key={item} className="history-skeleton h-12 animate-pulse rounded-xl bg-mist/70" />
             ))}
           </div>
         ) : visible.length === 0 ? (
@@ -97,47 +86,21 @@ export default function ChatHistoryPanel({
             </p>
           </div>
         ) : (
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          <ul className="m-0 flex list-none flex-col gap-1 p-0">
             {visible.map((query, index) => (
               <li
                 key={query.id ?? `${query.at || ""}-${query.text}`}
-                className="history-item-enter group flex items-stretch gap-1"
+                className="history-item-enter group flex items-center gap-1"
                 style={{ animationDelay: `${Math.min(index, 7) * 35}ms` }}
               >
                 <button
                   type="button"
                   onClick={() => onSelect?.(query)}
-                  className="flex min-w-0 flex-1 items-start gap-2.5 rounded-xl border border-line/70 bg-paper px-3 py-3 text-left shadow-xs transition-all hover:-translate-y-0.5 hover:border-brand/30 hover:bg-mist/60 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand cursor-pointer"
+                  title={query.text}
+                  className="min-w-0 flex-1 rounded-xl border border-transparent bg-transparent px-3 py-3 text-left transition-colors hover:border-line/70 hover:bg-mist/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand cursor-pointer"
                 >
-                  <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand-deep">
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 10h8m-8 4h5m-8 6 1.7-3.4A8 8 0 114 17l-3 3z" />
-                    </svg>
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block line-clamp-2 text-sm font-medium leading-snug text-ink">{query.text}</span>
-                    {query.at && (
-                      <span className="mt-1 block text-[11px] font-medium text-muted">{formatWhen(query.at)}</span>
-                    )}
-                    {(query.estado || query.tramite || query.calificacion === 0 || query.calificacion === 1) && (
-                      <span className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {query.estado && (
-                          <span className="rounded-md bg-mist px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                            {query.estado}
-                          </span>
-                        )}
-                        {query.tramite && (
-                          <span className="rounded-md bg-brand/8 px-1.5 py-0.5 text-[10px] font-medium text-brand-deep">
-                            Trámite: {typeof query.tramite === "string" ? query.tramite : query.tramite.nombre}
-                          </span>
-                        )}
-                        {(query.calificacion === 0 || query.calificacion === 1) && (
-                          <span className="rounded-md bg-mist px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                            {query.calificacion === 1 ? "Te sirvió" : "No te sirvió"}
-                          </span>
-                        )}
-                      </span>
-                    )}
+                  <span className="block line-clamp-2 text-sm font-medium leading-snug text-ink">
+                    {query.text}
                   </span>
                 </button>
                 {onDelete && (
@@ -146,7 +109,7 @@ export default function ChatHistoryPanel({
                     onClick={() => onDelete(query)}
                     aria-label={`Borrar del historial: ${query.text}`}
                     title="Borrar esta consulta"
-                    className="shrink-0 self-center rounded-lg p-2 text-muted transition-colors hover:bg-bad/10 hover:text-bad opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 cursor-pointer"
+                    className="shrink-0 rounded-lg p-2 text-muted transition-colors hover:bg-bad/10 hover:text-bad opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100 cursor-pointer"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 7h12M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0v11a1 1 0 001 1h8a1 1 0 001-1V7M10 11v6m4-6v6" />
