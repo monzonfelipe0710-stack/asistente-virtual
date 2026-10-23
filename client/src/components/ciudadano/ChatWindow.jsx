@@ -185,6 +185,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
+  const activeThreadIdRef = useRef(activeThreadId);
   const [savedThreads, setSavedThreads] = useState(() =>
     cargarConversaciones(user?.id || "ciudadano_anonimo")
   );
@@ -328,7 +329,9 @@ export default function ChatWindow({ initialQuery = null }) {
     if (threadOwnerRef.current !== effectiveId) {
       threadOwnerRef.current = effectiveId;
       setSavedThreads(cargarConversaciones(effectiveId));
-      setActiveThreadId(crearIdConversacion());
+      const nextThreadId = crearIdConversacion();
+      activeThreadIdRef.current = nextThreadId;
+      setActiveThreadId(nextThreadId);
     }
   }, [userId]);
 
@@ -514,6 +517,7 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   async function respondTo(userText, image = null, userMessageId = null, immediateConsultaId = null) {
+    const responseThreadId = activeThreadIdRef.current;
     setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
 
@@ -620,12 +624,45 @@ export default function ChatWindow({ initialQuery = null }) {
     }
     setHistoryVersion((v) => v + 1);
 
-    presentBotMessage(finalText, finalActions, {
+    const responseMetadata = {
       error,
       consultaId: consultationData?.consultaId,
       canRate: Boolean(consultationData?.consultaId && token),
       calificacion: null,
-    });
+    };
+    if (activeThreadIdRef.current !== responseThreadId) {
+      // Si el usuario cambió de hilo mientras el asistente respondía, la respuesta
+      // termina en el hilo original y nunca se mezcla con la conversación nueva.
+      const answerMessage = {
+        id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: "bot",
+        text: finalText,
+        action: finalActions || undefined,
+        timestamp: new Date().toISOString(),
+        consultaId: consultationData?.consultaId,
+        canRate: Boolean(consultationData?.consultaId && token),
+        calificacion: null,
+      };
+      setSavedThreads((previous) => {
+        const target = previous.find((thread) => thread.id === responseThreadId);
+        if (!target) return previous;
+        const next = [
+          {
+            ...target,
+            messages: [...target.messages, answerMessage],
+            updatedAt: answerMessage.timestamp,
+            at: answerMessage.timestamp,
+          },
+          ...previous.filter((thread) => thread.id !== responseThreadId),
+        ].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at))
+          .slice(0, HISTORY_LIMIT);
+        guardarConversaciones(userId || "ciudadano_anonimo", next);
+        return next;
+      });
+      return;
+    }
+
+    presentBotMessage(finalText, finalActions, responseMetadata);
   }
 
   function sendText(text, image = null, preview = "") {
@@ -927,7 +964,9 @@ export default function ChatWindow({ initialQuery = null }) {
     greetedRef.current = false;
     wizardRef.current = null;
     nearBottomRef.current = true;
-    setActiveThreadId(crearIdConversacion());
+    const nextThreadId = crearIdConversacion();
+    activeThreadIdRef.current = nextThreadId;
+    setActiveThreadId(nextThreadId);
     const resetMsg = "Se inició un chat nuevo. Escribí tu consulta cuando quieras.";
     setAnnounce(resetMsg);
   }
@@ -960,6 +999,7 @@ export default function ChatWindow({ initialQuery = null }) {
   function handleHistorySelect(query) {
     setHistoryOpen(false);
     if (query.threadId) {
+      activeThreadIdRef.current = query.threadId;
       setActiveThreadId(query.threadId);
       openConversation(query.messages || []);
       startedRef.current = true;
