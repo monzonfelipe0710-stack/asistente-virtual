@@ -49,13 +49,13 @@ const STEPS = [
     action: null,
   },
   {
-    id: "guided",
+    id: "quick-topics",
     reaction: "happy",
-    kicker: "Asistencias guiadas",
-    title: "Trámites paso a paso",
-    description: "Elegí una asistencia guiada para que ChatAP te acompañe paso a paso. Estas opciones están al comienzo de la pantalla, antes de los temas rápidos.",
+    kicker: "Consultas rápidas",
+    title: "Elegí un tema",
+    description: "Podés tocar uno de estos temas rápidos para empezar una consulta sin tener que escribirla desde cero.",
     route: "/chat",
-    target: ["#chat-guided-assists", "#chat-here"],
+    target: "#chatap-pills-container",
     action: null,
   },
   {
@@ -73,7 +73,7 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Listo!",
     title: "Ya sabés usar ChatAP",
-    description: "¡Ya estás listo! Escribí una consulta, elegí un tema rápido o iniciá una asistencia guiada. ChatAP te acompaña durante el trámite.",
+    description: "¡Ya estás listo! Escribí una consulta o elegí uno de los temas rápidos para empezar. ChatAP te acompaña durante el trámite."
     route: "/chat",
     target: null,
     action: null,
