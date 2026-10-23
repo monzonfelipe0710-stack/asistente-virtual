@@ -210,6 +210,15 @@ export default function ChatWindow({ initialQuery = null }) {
     return () => window.removeEventListener("chatap-open-history-for-tutorial", openHistoryForTutorial);
   }, []);
 
+  // Mientras el drawer está abierto, ocultamos el navbar flotante en móvil
+  // para que no se superponga con el panel ni intercepte sus controles.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (historyOpen) root.setAttribute("data-chat-history-open", "true");
+    else root.removeAttribute("data-chat-history-open");
+    return () => root.removeAttribute("data-chat-history-open");
+  }, [historyOpen]);
+
   // El historial móvil funciona como un drawer lateral accesible, al estilo de
   // las apps de chat: Escape cierra, Tab queda dentro y el foco vuelve al botón.
   useEffect(() => {
@@ -1632,7 +1641,7 @@ export default function ChatWindow({ initialQuery = null }) {
             aria-label="Historial de consultas"
             tabIndex={-1}
             inert={!historyOpen}
-            className={`chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-[100vh] h-[100dvh] w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${historyOpen ? "translate-x-0" : "-translate-x-full"}`}
+            className="chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-[100vh] h-[100dvh] w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl" style={{ transform: historyOpen ? "translate3d(0, 0, 0)" : "translate3d(-105%, 0, 0)" }}
           >
             <ChatHistoryPanel
               queries={displayedHistoryQueries}
