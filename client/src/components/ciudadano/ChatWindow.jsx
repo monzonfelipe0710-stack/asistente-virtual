@@ -18,7 +18,7 @@ import {
   rememberAnswer,
   HISTORY_LIMIT,
   loadMemory,
-  buildReminder
+  buildReminder,
   detectTopic,
   removeMemoryMessage,
   clearMemoryMessages,
