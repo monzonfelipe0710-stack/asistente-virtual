@@ -340,6 +340,8 @@ export default function ChatWindow({ initialQuery = null }) {
     if (threadOwnerRef.current !== effectiveId || messages.length === 0) return;
     const snapshot = crearResumenConversacion(activeThreadId, messages);
     if (!snapshot) return;
+    // Sincronizamos el índice local del historial con el hilo activo.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedThreads((previous) => {
       const next = [
         snapshot,
@@ -416,7 +418,7 @@ export default function ChatWindow({ initialQuery = null }) {
         new Date(thread.at).getTime() - new Date(item.at).getTime()
       ) < 5000)
     )].slice(0, HISTORY_LIMIT);
-  }, [userId, token, consultas, savedThreads, messages, historyVersion]);
+  }, [userId, token, consultas, savedThreads]);
 
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
