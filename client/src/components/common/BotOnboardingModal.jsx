@@ -29,16 +29,6 @@ const STEPS = [
     action: null,
   },
   {
-    id: "pills",
-    reaction: "playful",
-    kicker: "Temas rápidos",
-    title: "Preguntas frecuentes",
-    description: "Usá estos botones para preguntas comunes como recibos de haberes o expedientes.",
-    route: "/chat",
-    target: ["#chatap-pills-container", "#chat-here"],
-    action: null,
-  },
-  {
     id: "input",
     reaction: "happy",
     kicker: "Escribí tu consulta",
@@ -414,11 +404,23 @@ export default function BotOnboardingModal() {
           <div
             className="tour-ring"
             style={{
-              top: Math.max(4, Math.min(spotlight.rect.top - 8, window.innerHeight - 12)),
-              left: Math.max(4, Math.min(spotlight.rect.left - 8, window.innerWidth - 12)),
-              width: Math.min(spotlight.rect.width + 16, window.innerWidth - 8),
-              height: Math.min(spotlight.rect.height + 16, window.innerHeight - 8),
-              borderWidth: "4px",
+              top: Math.max(
+                4,
+                Math.min(
+                  spotlight.rect.top - 6,
+                  window.innerHeight - Math.min(spotlight.rect.height + 12, window.innerHeight - 8) - 4
+                )
+              ),
+              left: Math.max(
+                4,
+                Math.min(
+                  spotlight.rect.left - 6,
+                  window.innerWidth - Math.min(spotlight.rect.width + 12, window.innerWidth - 8) - 4
+                )
+              ),
+              width: Math.min(spotlight.rect.width + 12, window.innerWidth - 8),
+              height: Math.min(spotlight.rect.height + 12, window.innerHeight - 8),
+              borderWidth: "2px",
               opacity: spotlight.opacity ?? 1,
             }}
           />
