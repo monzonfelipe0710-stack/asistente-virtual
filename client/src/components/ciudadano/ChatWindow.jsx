@@ -1574,7 +1574,7 @@ export default function ChatWindow({ initialQuery = null }) {
             tabIndex={historyOpen ? 0 : -1}
             onClick={() => setHistoryOpen(false)}
             aria-label="Cerrar historial"
-            className={`absolute inset-0 h-full w-full bg-slate-950/45 transition-opacity duration-250 motion-reduce:transition-none ${historyOpen ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 h-full w-full bg-slate-950/45 transition-opacity duration-300 motion-reduce:transition-none ${historyOpen ? "opacity-100" : "opacity-0"}`}
           />
           <aside
             ref={historyDrawerRef}
