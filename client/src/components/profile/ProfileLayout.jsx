@@ -126,8 +126,8 @@ export default function ProfileLayout() {
           {renderSection(target.key)}
         </div>
 
-        <section className="mt-12 rounded-2xl border border-red-200 bg-red-50/60 p-5 sm:p-7" aria-labelledby="delete-account-title">
-          <p className="kicker m-0 text-red-700">[ Zona de riesgo ]</p>
+        <section className="mt-12 rounded-2xl border border-red-200 bg-red-50/70 p-5 sm:p-7 dark:border-red-900/70 dark:bg-red-950/30" aria-labelledby="delete-account-title">
+          <p className="kicker m-0 text-red-700 dark:text-red-300">[ Zona de riesgo ]</p>
           <h2 id="delete-account-title" className="mt-3 text-xl font-semibold text-ink">Eliminar mi cuenta</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
             Esta acción es permanente. Vas a cerrar tu sesión y perder el acceso a tu cuenta. Las consultas asociadas dejarán de estar vinculadas a tu perfil.
@@ -135,7 +135,7 @@ export default function ProfileLayout() {
           <button
             type="button"
             onClick={() => { setDeleteConfirmText(""); setDeleteError(""); setDeleteDialogOpen(true); }}
-            className="mt-5 inline-flex items-center justify-center rounded-full border border-red-300 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+            className="mt-5 inline-flex items-center justify-center rounded-full border border-red-300 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/70 dark:focus-visible:outline-red-300"
           >
             Eliminar mi cuenta
           </button>
@@ -169,7 +169,7 @@ export default function ProfileLayout() {
               value={deleteConfirmText}
               onChange={(event) => setDeleteConfirmText(event.target.value)}
               disabled={deletingAccount}
-              className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              className="mt-2 w-full rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink outline-none focus:border-red-500 focus:ring-2 focus:ring-red-200 dark:bg-slate-950 dark:focus:ring-red-950"
             />
             {deleteError && <p role="alert" className="mt-3 text-sm font-medium text-red-700">{deleteError}</p>}
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
