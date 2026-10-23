@@ -738,10 +738,15 @@ export default function ChatWindow({ initialQuery = null }) {
 
     // También protegemos el envío directo (por ejemplo, desde una búsqueda inicial):
     // un hilo nuevo no puede empezar si ya existen cuatro conversaciones.
-    const activeThreadExists = savedThreads.some((thread) => thread.id === activeThreadId) ||
-      historyQueries.some((item) => item.threadId === activeThreadId) ||
-      messages.some((message) => message.type === "user");
-    if (!activeThreadExists && getConversationCount() >= HISTORY_LIMIT) {
+    const activeThreadSaved = savedThreads.some((thread) => thread.id === activeThreadId) ||
+      historyQueries.some((item) => item.threadId === activeThreadId);
+    const currentThread = crearResumenConversacion(activeThreadId, messages);
+    const conversationCount = getConversationCount();
+    // Si el hilo ya está dentro del cupo, puede seguir recibiendo mensajes.
+    // Si sería un quinto hilo, bloqueamos también aunque el estado esté en transición.
+    const activeThreadWithinLimit = activeThreadSaved ||
+      (currentThread && conversationCount <= HISTORY_LIMIT);
+    if (!activeThreadWithinLimit && conversationCount >= HISTORY_LIMIT) {
       const message = "Llegaste al límite de 4 conversaciones. Eliminá una del historial para crear una nueva.";
       setAnnounce(message);
       toast?.(message, "error");
