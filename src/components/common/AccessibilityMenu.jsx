@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { readA11y, saveA11y } from "../../lib/accessibility";
 import useTheme from "../../hooks/useTheme";
@@ -58,11 +58,6 @@ function Switch({ checked, label, hint, onToggle }) {
 export default function AccessibilityMenu() {
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState(() => readA11y());
-  const [panelPosition, setPanelPosition] = useState({
-    top: 0,
-    left: 0,
-    maxHeight: "calc(100dvh - 1.5rem)",
-  });
   const panelRef = useRef(null);
   const btnRef = useRef(null);
   const theme = useTheme();
@@ -70,42 +65,6 @@ export default function AccessibilityMenu() {
   useEffect(() => {
     saveA11y(prefs);
   }, [prefs]);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-
-    function positionPanel() {
-      const trigger = btnRef.current?.getBoundingClientRect();
-      const panel = panelRef.current;
-      if (!trigger || !panel) return;
-
-      const margin = 12;
-      const spaceBelow = window.innerHeight - trigger.bottom - margin - 8;
-      const spaceAbove = trigger.top - margin - 8;
-      const placeAbove = spaceAbove > spaceBelow;
-      const availableHeight = placeAbove ? spaceAbove : spaceBelow;
-      const maxHeight = Math.max(
-        120,
-        Math.min(panel.scrollHeight, availableHeight)
-      );
-      const left = Math.max(
-        margin,
-        Math.min(trigger.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - margin)
-      );
-      const top = placeAbove
-        ? trigger.top - maxHeight - 8
-        : trigger.bottom + 8;
-      setPanelPosition({ top, left, maxHeight: `${maxHeight}px` });
-    }
-
-    positionPanel();
-    window.addEventListener("resize", positionPanel);
-    window.addEventListener("scroll", positionPanel, true);
-    return () => {
-      window.removeEventListener("resize", positionPanel);
-      window.removeEventListener("scroll", positionPanel, true);
-    };
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -135,12 +94,8 @@ export default function AccessibilityMenu() {
     setPrefs((p) => ({ ...p, ...patch }));
   }
 
-  function toggleScreenReader() {
-    update({ screenReader: !prefs.screenReader });
-  }
-
   function reset() {
-    setPrefs({ text: "normal", contrast: false, readable: false, screenReader: false });
+    setPrefs({ text: "normal", contrast: false, readable: false });
   }
 
   function toggleTheme() {
@@ -156,8 +111,7 @@ export default function AccessibilityMenu() {
   const activeCount =
     (prefs.text !== "normal" ? 1 : 0) +
     (prefs.contrast ? 1 : 0) +
-    (prefs.readable ? 1 : 0) +
-    (prefs.screenReader ? 1 : 0);
+    (prefs.readable ? 1 : 0);
   const currentLabel =
     TEXT_OPTIONS.find((o) => o.id === prefs.text)?.label || "Normal";
 
@@ -166,12 +120,7 @@ export default function AccessibilityMenu() {
       ref={panelRef}
       role="dialog"
       aria-label="Opciones de accesibilidad"
-      style={{
-        top: panelPosition.top,
-        left: panelPosition.left,
-        maxHeight: panelPosition.maxHeight,
-      }}
-      className="animate-scale-in fixed z-[80] w-[19rem] max-w-[calc(100vw-2rem)] overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl"
+      className="animate-scale-in fixed bottom-[9.25rem] right-3.5 z-[80] w-[19rem] max-w-[calc(100vw-2rem)] max-h-[calc(100dvh_-_10rem)] origin-bottom-right overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl sm:bottom-[5.25rem] sm:right-6 sm:max-h-[calc(100dvh_-_6rem)]"
     >
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
@@ -225,12 +174,6 @@ export default function AccessibilityMenu() {
           <p className="text-xs text-muted mt-1.5 mb-3">Actual: {currentLabel}</p>
 
           <div className="space-y-2">
-            <Switch
-              checked={prefs.screenReader}
-              label="Modo lector de pantalla"
-              hint="Refuerza avisos y foco para NVDA, JAWS o VoiceOver."
-              onToggle={toggleScreenReader}
-            />
             <Switch
               checked={prefs.contrast}
               label="Alto contraste"

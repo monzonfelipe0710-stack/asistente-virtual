@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "./HomePage.css";
 import Navbar from "../components/common/Navbar";
@@ -159,9 +159,16 @@ function getInstitutionalLogos(isDark) {
 export default function HomePage() {
   const theme = useTheme();
 
-  const isMobile = useMemo(() => {
+  const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.innerWidth < 768;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onChange = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   const particleColors = useMemo(() => (
@@ -181,19 +188,25 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink font-sans relative selection:bg-brand selection:text-white">
-      {/* Fondo de Partículas WebGL sutil */}
-      <Suspense fallback={null}>
-        <div className="home-particles-bg" aria-hidden="true">
-          <Particles
-            className="w-full h-full"
-            particleColors={particleColors}
-            particleCount={isMobile ? 180 : 320}
-            speed={0.05}
-            particleBaseSize={16}
-            moveParticlesOnHover
-          />
-        </div>
-      </Suspense>
+      {/* Fondo de partículas WebGL: solo en pantallas grandes para no
+          castigar el rendimiento de celulares y tablets. En móvil usamos
+          un degradado estático equivalente. */}
+      {isMobile ? (
+        <div className="home-fallback-drift" aria-hidden="true" />
+      ) : (
+        <Suspense fallback={null}>
+          <div className="home-particles-bg" aria-hidden="true">
+            <Particles
+              className="w-full h-full"
+              particleColors={particleColors}
+              particleCount={320}
+              speed={0.05}
+              particleBaseSize={16}
+              moveParticlesOnHover
+            />
+          </div>
+        </Suspense>
+      )}
 
       <Navbar />
 

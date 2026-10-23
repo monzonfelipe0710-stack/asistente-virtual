@@ -25,42 +25,6 @@ const SOPORTE = [
 
 const SOCIAL_LINKS = [
   {
-    name: "Instagram",
-    href: "https://www.instagram.com/",
-    icon: (
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-      </svg>
-    ),
-  },
-  {
-    name: "Facebook",
-    href: "https://www.facebook.com/",
-    icon: (
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-      </svg>
-    ),
-  },
-  {
-    name: "X (Twitter)",
-    href: "https://x.com/",
-    icon: (
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
-    ),
-  },
-  {
-    name: "LinkedIn",
-    href: "https://www.linkedin.com/",
-    icon: (
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-      </svg>
-    ),
-  },
-  {
     name: "Sitio Oficial Formosa",
     href: "https://www.formosa.gob.ar/",
     icon: (
@@ -219,8 +183,8 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Barra inferior característica de Footer 51 con patrón de rayas diagonales a todo lo ancho y al ras del fondo */}
-      <div className="footer-striped-pattern border-t border-line w-full">
+      {/* Barra inferior del footer */}
+      <div className="border-t border-line w-full bg-paper/95">
         <div className="ed-max section-bleed py-4 sm:py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="m-0 text-xs text-muted font-neue-text text-center sm:text-left">
             &copy; {new Date().getFullYear()} ChatAP · Desarrollado en articulación conjunta por la Subsecretaría de Recursos Humanos y el Instituto Politécnico Formosa · Gobierno de Formosa.
@@ -251,109 +215,122 @@ export default function Footer() {
           onClick={() => setShowTeamModal(false)}
         >
           <div
-            className="relative w-full max-w-2xl bg-paper border border-line rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            className="relative w-full max-w-2xl bg-paper border border-line rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cabecera del modal */}
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-brand">
-                  Innovación Pública · Formosa
+            <div className="flex items-start justify-between gap-4 mb-8">
+              <div className="text-center">
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/10 text-brand text-xs font-mono font-bold uppercase tracking-[0.1em] mb-3">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Equipo de desarrollo
                 </span>
-                <h3 id="team-modal-title" className="text-xl sm:text-2xl font-extrabold text-ink tracking-tight font-neue mt-1">
-                  El equipo que hizo posible ChatAP
+                <h3 id="team-modal-title" className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-neue mt-2 leading-tight">
+                  El equipo detrás de ChatAP
                 </h3>
+                <p className="mt-3 text-sm text-muted font-neue-text max-w-md mx-auto">
+                  Una colaboración entre la gestión pública y la educación tecnológica de Formosa.
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowTeamModal(false)}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors border border-line shrink-0 cursor-pointer"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors border border-line shrink-0 cursor-pointer"
                 aria-label="Cerrar modal"
               >
-                ✕
+                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
-            <p className="text-sm text-muted font-neue-text leading-relaxed mb-6">
-              ChatAP nace de la articulación estratégica entre el sector de gestión pública y la educación tecnológica de vanguardia en la provincia, con la misión de acercar la Administración Pública a cada ciudadano y trabajador estatal las 24 horas del día.
-            </p>
-
-            {/* Tarjetas de las instituciones intervinientes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              {/* Tarjeta 1 · Recursos Humanos */}
-              <div className="p-5 rounded-2xl bg-mist/50 border border-line flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-8 h-8 rounded-lg bg-brand/10 text-brand font-bold text-xs flex items-center justify-center font-neue">
-                      RRHH
-                    </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-ink leading-tight m-0">
-                        Subsecretaría de Recursos Humanos
-                      </h4>
-                      <span className="text-[10px] text-muted font-mono">Poder Ejecutivo Provincial</span>
+            <div className="space-y-6">
+              {/* Instituciones */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Tarjeta RRHH */}
+                <article className="p-6 rounded-2xl border border-line bg-mist/50 transition-all hover:border-brand/30 hover:bg-brand/5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-base font-bold text-ink leading-tight m-0">Subsecretaría de Recursos Humanos</h4>
+                      <span className="text-[11px] text-muted font-mono uppercase tracking-[0.05em]">Poder Ejecutivo Provincial</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted font-neue-text leading-normal m-0">
+                  <p className="text-sm text-muted font-neue-text leading-relaxed m-0">
                     Liderazgo funcional, definición de circuitos administrativos, homologación de trámites de haberes (SUAF), licencias reglamentarias y supervisión de normativas públicas oficiales.
                   </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-line/60">
-                  <span className="text-[11px] font-medium text-brand">Gestión y marco institucional</span>
-                </div>
-              </div>
+                  <span className="inline-block mt-4 text-[11px] font-medium text-brand">Gestión y marco institucional</span>
+                </article>
 
-              {/* Tarjeta 2 · Politécnico Formosa */}
-              <div className="p-5 rounded-2xl bg-mist/50 border border-line flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-8 h-8 rounded-lg bg-brand-deep text-white font-bold text-xs flex items-center justify-center font-neue">
-                      IPF
-                    </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-ink leading-tight m-0">
-                        Instituto Politécnico Formosa
-                      </h4>
-                      <span className="text-[10px] text-muted font-mono">Polo Científico y Tecnológico</span>
+                {/* Tarjeta IPF */}
+                <article className="p-6 rounded-2xl border border-line bg-mist/50 transition-all hover:border-brand/30 hover:bg-brand/5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-brand-deep/10 text-brand-deep flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 16l4-16M6 9a2 2 0 01-2-2V4a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 01-2 2h-2.5m-7.5 0l4 8M15 13l4 8M9 13l-4 8m0 0h.01M12 13h.01" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-base font-bold text-ink leading-tight m-0">Instituto Politécnico Formosa</h4>
+                      <span className="text-[11px] text-muted font-mono uppercase tracking-[0.05em]">Polo Científico y Tecnológico</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted font-neue-text leading-normal m-0">
-                    Arquitectura de software, ingeniería de prompts, integración de modelos de inteligencia artificial, desarrollo de interfaces reactivas y optimización de experiencia ciudadana.
+                  <p className="text-sm text-muted font-neue-text leading-relaxed m-0">
+                    Arquitectura de software, ingeniería de prompts, integración de modelos de IA, desarrollo de interfaces reactivas y optimización de la experiencia ciudadana.
                   </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-line/60">
-                  <span className="text-[11px] font-medium text-brand">Desarrollo tecnológico e IA</span>
-                </div>
+                  <span className="inline-block mt-4 text-[11px] font-medium text-brand-deep">Desarrollo tecnológico e IA</span>
+                </article>
               </div>
-            </div>
 
-            {/* Compromiso y pilares */}
-            <div className="p-4 rounded-xl bg-brand/5 border border-brand/20 mb-6">
-              <h5 className="text-xs font-bold text-brand uppercase tracking-wider mb-1">
-                Pilares del proyecto
-              </h5>
-              <ul className="m-0 p-0 list-none space-y-1.5 text-xs text-ink/80 font-neue-text">
-                <li className="flex items-center gap-2">
-                  <span className="text-brand">✦</span> Atención 24/7 sin intermediarios ni traslados físicos.
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-brand">✦</span> Lenguaje claro, accesible y empático para toda la comunidad.
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-brand">✦</span> Interoperabilidad con SIGED, MiPortal y sistemas provinciales.
-                </li>
-              </ul>
-            </div>
+              {/* Pilares del proyecto */}
+              <div className="p-5 rounded-2xl bg-brand/5 border border-brand/20">
+                <h5 className="text-xs font-bold text-brand uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pilares del proyecto
+                </h5>
+                <ul className="m-0 p-0 list-none space-y-3">
+                  <li className="flex items-start gap-3 p-3 rounded-xl bg-paper border border-line/50">
+                    <span className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center shrink-0 text-lg">✦</span>
+                    <div>
+                      <p className="text-sm font-semibold text-ink m-0 mb-1">Atención 24/7 sin intermediarios</p>
+                      <p className="text-xs text-muted font-neue-text m-0">Respuestas inmediatas a cualquier hora, sin filas ni traslados físicos.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3 p-3 rounded-xl bg-paper border border-line/50">
+                    <span className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center shrink-0 text-lg">✦</span>
+                    <div>
+                      <p className="text-sm font-semibold text-ink m-0 mb-1">Lenguaje claro y accesible</p>
+                      <p className="text-xs text-muted font-neue-text m-0">Diseñado para toda la comunidad, con empatía y sin tecnicismos innecesarios.</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3 p-3 rounded-xl bg-paper border border-line/50">
+                    <span className="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center shrink-0 text-lg">✦</span>
+                    <div>
+                      <p className="text-sm font-semibold text-ink m-0 mb-1">Interoperabilidad provincial</p>
+                      <p className="text-xs text-muted font-neue-text m-0">Integración con SIGED, MiPortal y sistemas de la Administración Pública.</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
 
-            {/* Botón de cierre */}
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowTeamModal(false)}
-                className="inline-flex items-center min-h-11 px-6 rounded-xl bg-ink text-paper font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer"
-              >
-                Cerrar
-              </button>
+              {/* Botón de cierre */}
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTeamModal(false)}
+                  className="inline-flex items-center min-h-11 px-8 rounded-xl bg-ink text-paper font-semibold text-sm hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+                >
+                  Entendido
+                </button>
+              </div>
             </div>
           </div>
         </div>

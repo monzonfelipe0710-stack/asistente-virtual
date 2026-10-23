@@ -4,7 +4,7 @@ import { generoLabel } from "../../lib/genero";
 import { getInitials } from "../../lib/profileMeta";
 import { Icon, ICONS } from "./ui";
 import EditProfileModal from "./EditProfileModal";
-import { forceOpenTutorial } from "../common/BotOnboardingModal";
+import { resetTutorialForUser } from "../common/BotOnboardingModal";
 
 const STATUS_TONE = {
   Activo: "bg-ok/10 text-ok border border-ok/20",
@@ -126,7 +126,7 @@ export default function ProfileHeader({ onSaved }) {
         </div>
         <button
           type="button"
-          onClick={forceOpenTutorial}
+          onClick={() => user?.id && resetTutorialForUser(user.id)}
           className="btn-secondary w-full sm:w-auto shrink-0 justify-center"
         >
           <Icon path={ICONS.chat} className="w-4 h-4" />

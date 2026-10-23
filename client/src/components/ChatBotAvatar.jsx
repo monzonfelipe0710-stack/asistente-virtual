@@ -202,8 +202,23 @@ export default function ChatBotAvatar({
   const engineRef = useRef(null);
   const clockRef = useRef(0);
   const colorsRef = useRef({ body: INK, eye: EYE });
+  const visibleRef = useRef(true);
   const [rxClass, setRxClass] = useState("");
   const [autoReaction, setAutoReaction] = useState(null);
+
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting;
+        el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
+      },
+      { rootMargin: "120px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const readColors = () => {
@@ -297,9 +312,23 @@ export default function ChatBotAvatar({
     let raf = 0;
     let clock = 0;
     let last = 0;
+    let lastPaint = 0;
+    // En pantallas chicas limitamos la animación a ~30 fps para ahorrar CPU.
+    const isNarrowScreen =
+      typeof window !== "undefined" &&
+      !!window.matchMedia &&
+      window.matchMedia("(max-width: 767px)").matches;
+    const frameInterval = isNarrowScreen ? 1000 / 30 : 0;
 
     const tick = (ms) => {
       raf = requestAnimationFrame(tick);
+      // Fuera de pantalla no hace falta repintar el SVG: ahorra CPU al scrollear.
+      if (!visibleRef.current) {
+        last = 0;
+        return;
+      }
+      if (frameInterval && ms - lastPaint < frameInterval) return;
+      lastPaint = ms;
       const dt = last ? Math.min((ms - last) / 1000, 0.064) : 0;
       last = ms;
       clock += dt;

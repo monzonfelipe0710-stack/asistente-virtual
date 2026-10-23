@@ -55,7 +55,7 @@ export default function Modal({ open, onClose, title, children, onConfirm, confi
         aria-labelledby={titleId}
         aria-describedby={descId}
         tabIndex={-1}
-        className="relative bg-paper rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 animate-slide-up outline-none"
+        className="relative bg-paper rounded-xl shadow-2xl max-w-md w-full mx-3 sm:mx-4 p-4 sm:p-6 animate-slide-up outline-none max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 id={titleId} className="text-base font-semibold text-primary m-0">{title}</h3>
