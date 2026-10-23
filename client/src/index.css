@@ -4110,3 +4110,76 @@ pre {
     padding-bottom: 1.5rem;
   }
 }
+
+
+/* Tutorial robusto en escritorio, móviles estrechos y ventanas de poca altura. */
+.tour-overlay {
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+.tour-card {
+  box-sizing: border-box;
+  width: min(100%, 34rem);
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(0.875rem, 2.5vw, 1.25rem);
+  border-radius: 1.25rem;
+}
+.tour-card > .flex.items-center {
+  align-items: flex-start;
+}
+.tour-bubble,
+.tour-desc,
+.tour-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tour-controls {
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+.tour-ring {
+  max-width: calc(100vw - 1rem);
+  pointer-events: none;
+}
+@media (max-width: 480px) {
+  .tour-overlay {
+    padding-left: max(0.625rem, env(safe-area-inset-left));
+    padding-right: max(0.625rem, env(safe-area-inset-right));
+  }
+  .tour-card {
+    gap: 0.75rem;
+    max-height: calc(100dvh - 1.25rem);
+    border-radius: 1rem;
+  }
+  .tour-avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.875rem;
+  }
+  .tour-avatar svg {
+    max-width: 2.25rem;
+    max-height: 2.25rem;
+  }
+  .tour-card > .flex.items-center {
+    gap: 0.625rem;
+  }
+  .tour-controls {
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+@media (max-height: 600px) {
+  .tour-overlay {
+    justify-content: flex-start;
+  }
+  .tour-card {
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+}
