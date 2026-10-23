@@ -3768,6 +3768,36 @@ html[data-a11y-readable="true"] label {
 }
 
 
+/* Drawer responsive del historial: transición explícita para evitar saltos
+   en navegadores donde translate-x no coincide con transition-transform. */
+.chat-mobile-history-drawer {
+  transform: translate3d(-105%, 0, 0);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-mobile-history-drawer {
+    transition: none !important;
+    will-change: auto;
+  }
+}
+/* El navbar flotante no debe quedar encima ni recibir interacción mientras
+   el historial móvil está abierto. Solo afecta al viewport responsive. */
+@media (max-width: 1023px) {
+  html[data-chat-history-open="true"] .nav-shell {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: opacity 160ms ease, visibility 160ms linear;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-chat-history-open="true"] .nav-shell {
+    transition: none !important;
+  }
+}
+
 /* El ejemplo del historial solo aparece durante el paso correspondiente del tutorial. */
 .tutorial-history-example {
   display: none;
