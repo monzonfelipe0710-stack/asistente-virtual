@@ -1,6 +1,13 @@
 import { HISTORY_LIMIT } from "../../lib/chatMemory";
 import { Link } from "react-router-dom";
 
+const TUTORIAL_EXAMPLES = [
+  { title: "¿Cómo solicito una licencia médica?", detail: "Pasos y documentación necesaria" },
+  { title: "¿Dónde consulto mi recibo de sueldo?", detail: "Acceso a recibos y haberes" },
+  { title: "¿Cómo sigo el estado de un trámite?", detail: "Seguimiento de una gestión" },
+  { title: "¿Qué documentación necesito para jubilarme?", detail: "Requisitos y formularios" },
+];
+
 export default function ChatHistoryPanel({
   queries = [],
   onSelect,
@@ -79,17 +86,21 @@ export default function ChatHistoryPanel({
           )}
         </div>
 
-        <div className="tutorial-history-example mb-3 flex-col gap-1.5 rounded-xl border border-brand/25 bg-brand/5 p-3">
+        <div className="tutorial-history-example mb-3 flex-col gap-2 rounded-xl border border-brand/25 bg-brand/5 p-3" aria-label="Ejemplos ficticios del tutorial">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-brand">Ejemplo de conversación</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-brand">Así se vería tu historial</span>
             <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[9px] font-semibold text-brand">Demo</span>
           </div>
-          <p className="m-0 text-sm font-semibold leading-snug text-ink">
-            ¿Cómo solicito una licencia médica?
-          </p>
-          <p className="m-0 text-xs leading-relaxed text-muted">
-            ChatAP: Te orienta con los pasos y la documentación que necesitás.
-          </p>
+          {TUTORIAL_EXAMPLES.map((example, index) => (
+            <div key={example.title} className="flex min-w-0 items-start gap-2 rounded-lg border border-line/60 bg-paper/80 p-2.5">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand/10 text-[10px] font-bold text-brand">{index + 1}</span>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold leading-snug text-ink">{example.title}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted">{example.detail}</span>
+              </span>
+            </div>
+          ))}
+          <p className="m-0 text-[10px] leading-relaxed text-muted">Son ejemplos de muestra: no se guardan ni modifican tus conversaciones.</p>
         </div>
 
         {error ? (
