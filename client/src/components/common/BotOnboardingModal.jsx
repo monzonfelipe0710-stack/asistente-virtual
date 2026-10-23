@@ -381,7 +381,6 @@ export default function BotOnboardingModal() {
   if (!isOpen) return null;
 
   const hasSpotlight = !!spotlight && !elementNotFound;
-  const placement = hasSpotlight ? spotlight.placement : null;
   const progress = ((step + 1) / STEPS.length) * 100;
   const current = {
     ...STEPS[step],
@@ -415,10 +414,10 @@ export default function BotOnboardingModal() {
           <div
             className="tour-ring"
             style={{
-              top: spotlight.rect.top - 12,
-              left: spotlight.rect.left - 12,
-              width: spotlight.rect.width + 24,
-              height: spotlight.rect.height + 24,
+              top: Math.max(4, Math.min(spotlight.rect.top - 8, window.innerHeight - 12)),
+              left: Math.max(4, Math.min(spotlight.rect.left - 8, window.innerWidth - 12)),
+              width: Math.min(spotlight.rect.width + 16, window.innerWidth - 8),
+              height: Math.min(spotlight.rect.height + 16, window.innerHeight - 8),
               borderWidth: "4px",
               opacity: spotlight.opacity ?? 1,
             }}
@@ -442,7 +441,7 @@ export default function BotOnboardingModal() {
             </span>
           </div>
 
-          <div className={`tour-bubble ${direction === "next" ? "animate-step-next" : "animate-step-prev"}`} data-placement={placement}>
+          <div className={`tour-bubble ${direction === "next" ? "animate-step-next" : "animate-step-prev"}`}>
             <div>
               <p className="tour-kicker m-0">{current.kicker}</p>
               <h2 className="tour-title m-0">{current.title}</h2>
