@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { readA11y, saveA11y } from "../../lib/accessibility";
 import useTheme from "../../hooks/useTheme";
+import { useAuth } from "../../context/AuthContext";
+import { forceOpenTutorial } from "./BotOnboardingModal";
 
 const TEXT_OPTIONS = [
   { id: "normal", label: "Normal", preview: "0.85rem" },
@@ -61,10 +63,18 @@ export default function AccessibilityMenu() {
   const panelRef = useRef(null);
   const btnRef = useRef(null);
   const theme = useTheme();
+  const { user } = useAuth();
 
   useEffect(() => {
     saveA11y(prefs);
   }, [prefs]);
+
+  // El tutorial puede desplegar este panel para señalar su acceso directo.
+  useEffect(() => {
+    const openForTutorial = () => setOpen(true);
+    window.addEventListener("chatap-open-accessibility-for-tutorial", openForTutorial);
+    return () => window.removeEventListener("chatap-open-accessibility-for-tutorial", openForTutorial);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -186,6 +196,23 @@ export default function AccessibilityMenu() {
               hint="Tipografía clara y más espaciada."
               onToggle={() => update({ readable: !prefs.readable })}
             />
+          </div>
+
+          <div className="border-t border-line pt-3 mt-3">
+            <button
+              id="accessibility-tutorial-button"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (user?.id) forceOpenTutorial();
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-line bg-mist/40 px-3.5 py-3 text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h6a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Tutorial
+            </button>
           </div>
 
           <button
