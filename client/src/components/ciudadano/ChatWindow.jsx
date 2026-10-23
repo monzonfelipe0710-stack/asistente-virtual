@@ -28,6 +28,7 @@ import {
 
 
 const crearIdConsultaLocal = () => `c_${Date.now()}`;
+const crearIdMensajeBot = () => `bot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const crearIdConversacion = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const THREADS_PREFIX = "chatap.threads.";
 
@@ -636,7 +637,7 @@ export default function ChatWindow({ initialQuery = null }) {
       // Si el usuario cambió de hilo mientras el asistente respondía, la respuesta
       // termina en el hilo original y nunca se mezcla con la conversación nueva.
       const answerMessage = {
-        id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: crearIdMensajeBot(),
         type: "bot",
         text: finalText,
         action: finalActions || undefined,
