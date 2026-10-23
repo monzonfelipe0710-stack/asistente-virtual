@@ -69,3 +69,9 @@ export async function actualizarMiPerfil({ nombre, email }) {
   const { data } = await api.patch("/api/usuarios/me/perfil", { nombre, email });
   return data;
 }
+
+/** DELETE /api/usuarios/me — elimina la cuenta autenticada. */
+export async function eliminarMiCuenta() {
+  const { data } = await api.delete("/api/usuarios/me");
+  return data;
+}
