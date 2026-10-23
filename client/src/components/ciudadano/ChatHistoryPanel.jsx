@@ -10,20 +10,37 @@ export default function ChatHistoryPanel({
   loading = false,
   error = "",
   className = "",
+  onClose,
+  closeButtonRef,
 }) {
   const visible = queries.slice(0, HISTORY_LIMIT);
 
   return (
     <div className={`chat-sidebar flex h-full min-h-0 w-full flex-col ${className}`}>
       <div className="shrink-0 border-b border-line/70 p-4">
-        <Link to="/" className="chat-sidebar-brand mb-5 flex items-center gap-3 rounded-xl px-1 py-1 no-underline">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-deep text-xs font-black tracking-tight text-white shadow-sm">
-            AP
-          </span>
-          <span className="text-base font-bold tracking-tight text-ink">
-            ChatAP<span className="text-brand">.</span>
-          </span>
-        </Link>
+        <div className="mb-5 flex min-w-0 items-center justify-between gap-2">
+          <Link to="/" className="chat-sidebar-brand flex min-w-0 items-center gap-3 rounded-xl px-1 py-1 no-underline">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-deep text-xs font-black tracking-tight text-white shadow-sm">
+              AP
+            </span>
+            <span className="text-base font-bold tracking-tight text-ink">
+              ChatAP<span className="text-brand">.</span>
+            </span>
+          </Link>
+          {onClose && (
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={onClose}
+              aria-label="Cerrar historial"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-muted transition-colors hover:bg-mist hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand cursor-pointer"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => onNewChat?.()}
