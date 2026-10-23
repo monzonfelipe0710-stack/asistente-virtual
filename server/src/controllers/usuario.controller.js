@@ -21,6 +21,11 @@ export const actualizarMiPerfil = async (req, res) => {
   res.json({ mensaje: 'Perfil actualizado correctamente.', usuario });
 };
 
+export const eliminarMiCuenta = async (req, res) => {
+  await usuarioService.eliminarCuenta(req.usuario.id);
+  res.json({ mensaje: 'La cuenta se eliminó correctamente.' });
+};
+
 export const registrar = async (req, res) => {
   const datos = registroSchema.parse(req.body);
 
