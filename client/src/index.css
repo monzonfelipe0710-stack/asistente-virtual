@@ -4230,15 +4230,19 @@ pre {
 
 /* Spotlight claro y sin flechas que apunten fuera de la tarjeta. */
 .tour-ring {
+  position: fixed;
+  display: block;
   box-sizing: border-box;
+  border-style: solid;
   border-width: 2px !important;
   border-color: #78a5ff;
-  border-radius: 0.9rem;
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 14%), 0 0 24px rgb(59 130 246 / 28%);
+  border-radius: 0.85rem;
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 13%), 0 0 18px rgb(59 130 246 / 22%);
   animation: none;
+  pointer-events: none;
 }
 .tour-dim {
-  background: rgb(3 8 20 / 58%);
+  background: rgb(31 41 55 / 54%);
 }
 .tour-card {
   color: var(--color-ink);
