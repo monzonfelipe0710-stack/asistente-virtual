@@ -66,6 +66,12 @@ function crearResumenConversacion(id, messages) {
   };
 }
 
+function claveHistorial(query) {
+  if (query?.threadId) return `thread:${query.threadId}`;
+  if (query?.id !== undefined && query?.id !== null) return `consulta:${query.id}`;
+  return `legacy:${query?.at || ""}:${query?.text || ""}`;
+}
+
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
@@ -187,12 +193,22 @@ export default function ChatWindow({ initialQuery = null }) {
   const historyTriggerRef = useRef(null);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
+  const [pendingDeleteKeys, setPendingDeleteKeys] = useState(() => new Set());
   const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
   const activeThreadIdRef = useRef(activeThreadId);
   const [savedThreads, setSavedThreads] = useState(() =>
     cargarConversaciones(user?.id || "ciudadano_anonimo")
   );
   const threadOwnerRef = useRef(user?.id || "ciudadano_anonimo");
+
+  // El tutorial puede abrir el historial móvil para mostrar el ejemplo en contexto.
+  useEffect(() => {
+    const openHistoryForTutorial = () => {
+      if (window.innerWidth < 1024) setHistoryOpen(true);
+    };
+    window.addEventListener("chatap-open-history-for-tutorial", openHistoryForTutorial);
+    return () => window.removeEventListener("chatap-open-history-for-tutorial", openHistoryForTutorial);
+  }, []);
 
   // El historial móvil funciona como un drawer lateral accesible, al estilo de
   // las apps de chat: Escape cierra, Tab queda dentro y el foco vuelve al botón.
@@ -464,6 +480,11 @@ export default function ChatWindow({ initialQuery = null }) {
     )].slice(0, HISTORY_LIMIT);
   }, [userId, token, consultas, savedThreads]);
 
+  const displayedHistoryQueries = useMemo(
+    () => historyQueries.filter((item) => !pendingDeleteKeys.has(claveHistorial(item))),
+    [historyQueries, pendingDeleteKeys]
+  );
+
   // Consulta automática iniciada desde el buscador del Hero
   const initialQueryHandled = useRef(false);
   const sendTextRef = useRef(null);
@@ -718,15 +739,9 @@ export default function ChatWindow({ initialQuery = null }) {
     // También protegemos el envío directo (por ejemplo, desde una búsqueda inicial):
     // un hilo nuevo no puede empezar si ya existen cuatro conversaciones.
     const activeThreadExists = savedThreads.some((thread) => thread.id === activeThreadId) ||
-      historyQueries.some((item) => item.threadId === activeThreadId);
-    const currentThread = crearResumenConversacion(activeThreadId, messages);
-    const currentAlreadyCounted = historyQueries.some(
-      (item) => item.threadId === activeThreadId ||
-        (currentThread && item.text === currentThread.text)
-    );
-    const conversationCount = Math.max(historyQueries.length, savedThreads.length) +
-      (currentThread && !currentAlreadyCounted ? 1 : 0);
-    if (!activeThreadExists && conversationCount >= HISTORY_LIMIT) {
+      historyQueries.some((item) => item.threadId === activeThreadId) ||
+      messages.some((message) => message.type === "user");
+    if (!activeThreadExists && getConversationCount() >= HISTORY_LIMIT) {
       const message = "Llegaste al límite de 4 conversaciones. Eliminá una del historial para crear una nueva.";
       setAnnounce(message);
       toast?.(message, "error");
@@ -1024,16 +1039,21 @@ export default function ChatWindow({ initialQuery = null }) {
     setAnnounce(resetMsg);
   }
 
+  // Cuenta conversaciones por identidad, no por el texto de la pregunta:
+  // dos chats distintos pueden empezar con exactamente la misma consulta.
+  function getConversationCount() {
+    const currentThread = crearResumenConversacion(activeThreadId, messages);
+    const activeThreadSaved = savedThreads.some((thread) => thread.id === activeThreadId) ||
+      historyQueries.some((item) => item.threadId === activeThreadId);
+    return Math.max(historyQueries.length, savedThreads.length) +
+      (currentThread && !activeThreadSaved ? 1 : 0);
+  }
+
   // Nunca se permite crear un quinto hilo. Si ya hay cuatro conversaciones,
   // el usuario debe borrar una antes de iniciar otra.
   function handleResetRequest() {
     const currentThread = crearResumenConversacion(activeThreadId, messages);
-    const currentAlreadyCounted = historyQueries.some(
-      (item) => item.threadId === activeThreadId ||
-        (currentThread && item.text === currentThread.text)
-    );
-    const conversationCount = Math.max(historyQueries.length, savedThreads.length) +
-      (currentThread && !currentAlreadyCounted ? 1 : 0);
+    const conversationCount = getConversationCount();
 
     if (conversationCount >= HISTORY_LIMIT) {
       const message = "Llegaste al límite de 4 conversaciones. Eliminá una del historial para crear una nueva.";
@@ -1117,6 +1137,10 @@ export default function ChatWindow({ initialQuery = null }) {
       setAnnounce("Conversación borrada del historial.");
       return;
     }
+
+    const key = claveHistorial(query);
+    if (pendingDeleteKeys.has(key)) return;
+
     const isActiveConversation = messages.some((message) =>
       token
         ? message.consultaId === query.id
@@ -1127,22 +1151,40 @@ export default function ChatWindow({ initialQuery = null }) {
             (!query.at ||
               Math.abs(new Date(message.timestamp).getTime() - new Date(query.at).getTime()) < 5000)
     );
-    if (token && typeof query.id === "number") {
-      try {
-        await eliminarConsulta(query.id);
-        removeConsulta(query.id);
-      } catch (error) {
-        toast?.(apiErrorMessage(error, "No se pudo borrar esta conversación."), "error");
-        return;
-      }
-    } else {
+
+    // Ocultamos la fila al instante y dejamos la operación remota en segundo
+    // plano para que el historial no parezca trabado.
+    setPendingDeleteKeys((previous) => new Set(previous).add(key));
+    if (!token || typeof query.id !== "number") {
       removeMemoryMessage(effectiveId, query.at);
       removeLocalConversation(query);
       if (query.id) removeConsulta(query.id);
+      if (isActiveConversation) resetConversation();
+      setHistoryVersion((v) => v + 1);
+      setAnnounce("Conversación borrada del historial.");
+      setPendingDeleteKeys((previous) => {
+        const next = new Set(previous);
+        next.delete(key);
+        return next;
+      });
+      return;
     }
-    if (isActiveConversation) resetConversation();
-    setHistoryVersion((v) => v + 1);
-    setAnnounce("Conversación borrada del historial.");
+
+    try {
+      await eliminarConsulta(query.id);
+      removeConsulta(query.id);
+      if (isActiveConversation) resetConversation();
+      setHistoryVersion((v) => v + 1);
+      setAnnounce("Conversación borrada del historial.");
+      // La fila permanece oculta hasta que el estado de consultas se sincronice.
+    } catch (error) {
+      setPendingDeleteKeys((previous) => {
+        const next = new Set(previous);
+        next.delete(key);
+        return next;
+      });
+      toast?.(apiErrorMessage(error, "No se pudo borrar esta conversación."), "error");
+    }
   }
 
   // Vaciar todo el historial guardado.
@@ -1217,7 +1259,7 @@ export default function ChatWindow({ initialQuery = null }) {
         >
           <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
             <ChatHistoryPanel
-              queries={historyQueries}
+              queries={displayedHistoryQueries}
               onSelect={handleHistorySelect}
               onNewChat={handleResetRequest}
               onDelete={handleDeleteQuery}
@@ -1247,9 +1289,9 @@ export default function ChatWindow({ initialQuery = null }) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
                 </svg>
                 <span>Historial</span>
-                {historyQueries.length > 0 && (
+                {displayedHistoryQueries.length > 0 && (
                   <span className="rounded-full bg-brand/10 text-brand-deep px-1.5 py-0.5 text-[10px] font-bold">
-                    {historyQueries.length}
+                    {displayedHistoryQueries.length}
                   </span>
                 )}
               </button>
@@ -1566,7 +1608,7 @@ export default function ChatWindow({ initialQuery = null }) {
       {/* Historial móvil: panel lateral de altura completa, con fondo y cierre suave. */}
       {isAuthenticated && (
         <div
-          className={`fixed inset-0 z-[100] lg:hidden ${historyOpen ? "visible" : "invisible pointer-events-none"}`}
+          className={`fixed inset-0 z-[100] lg:hidden ${historyOpen ? "pointer-events-auto" : "pointer-events-none"}`}
           aria-hidden={!historyOpen}
         >
           <button
@@ -1578,14 +1620,16 @@ export default function ChatWindow({ initialQuery = null }) {
           />
           <aside
             ref={historyDrawerRef}
+            id="chat-history-drawer"
             role="dialog"
             aria-modal="true"
             aria-label="Historial de consultas"
             tabIndex={-1}
-            className={`chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-[100vh] h-[100dvh] w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl transition-transform duration-300 ease-out motion-reduce:transition-none ${historyOpen ? "translate-x-0" : "-translate-x-full"}`}
+            inert={!historyOpen}
+            className={`chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-[100vh] h-[100dvh] w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${historyOpen ? "translate-x-0" : "-translate-x-full"}`}
           >
             <ChatHistoryPanel
-              queries={historyQueries}
+              queries={displayedHistoryQueries}
               onSelect={handleHistorySelect}
               onDelete={handleDeleteQuery}
               onClearAll={!token ? handleClearHistory : undefined}
