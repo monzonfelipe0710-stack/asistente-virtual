@@ -5,7 +5,7 @@ import ChatBotAvatar from "../ChatBotAvatar";
 import ChatHistoryPanel from "./ChatHistoryPanel";
 import Navbar from "../common/Navbar";
 import { BotReactionController } from "./BotReactionController";
-import { wizards, wizardLabels } from "../../data/wizard";
+import { wizards } from "../../data/wizard";
 import { obtenerChecklist, preguntar } from "../../services/chat";
 import { eliminarConsulta } from "../../services/consultas";
 import { useChat } from "../../context/ChatContext";
@@ -1475,8 +1475,6 @@ export default function ChatWindow({ initialQuery = null }) {
             </div>
           </div>
         )}
-
-        {false}
 
         {imageFile && imagePreview && (
           <div className="mx-auto mb-2 flex max-w-2xl items-center gap-3 rounded-xl border border-line bg-paper px-3 py-2">
