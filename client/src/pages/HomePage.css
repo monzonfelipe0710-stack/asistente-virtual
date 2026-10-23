@@ -209,7 +209,14 @@
 
 @media (max-width: 640px) {
   .hero-cinematic__title {
-    font-size: clamp(3.45rem, 16vw, 5.5rem);
+    font-size: clamp(2.25rem, 12vw, 5.5rem);
+    line-height: 1.06;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-cinematic__inner {
+    padding-inline: clamp(1rem, 4vw, 1.5rem);
   }
 }
 
