@@ -133,6 +133,7 @@ export default function BotOnboardingModal() {
   const [elementNotFound, setElementNotFound] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const measureRef = useRef(null);
+  const rafIdRef = useRef(0);
   const lastSuccessfulStep = useRef(0);
 
   const checkShouldOpen = useCallback(() => {
@@ -268,8 +269,6 @@ export default function BotOnboardingModal() {
       let attempts = 0;
       let lastRect = null;
       let stableFrames = 0;
-      let raf = 0;
-
       const measure = () => {
         const targets = Array.isArray(current.target) ? current.target : [current.target];
         const el = targets
@@ -312,7 +311,7 @@ export default function BotOnboardingModal() {
 
         attempts += 1;
         if (attempts < maxAttempts) {
-          raf = requestAnimationFrame(measure);
+          rafIdRef.current = requestAnimationFrame(measure);
         } else {
           measureRef.current = null;
           if (!el) setElementNotFound(true);
@@ -320,15 +319,15 @@ export default function BotOnboardingModal() {
       };
 
       measureRef.current = measure;
-      raf = requestAnimationFrame(measure);
+      rafIdRef.current = requestAnimationFrame(measure);
     };
 
     const timeoutId = setTimeout(startMeasurement, delay);
     
     return () => {
       clearTimeout(timeoutId);
-      const raf = measureRef.current;
-      if (raf) cancelAnimationFrame(raf);
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
       measureRef.current = null;
     };
   }, [step, isOpen, location.pathname]);
@@ -355,7 +354,7 @@ export default function BotOnboardingModal() {
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
 
-  let wrapStyle = null;
+  let wrapStyle;
   // Posicionar la tarjeta cerca del elemento resaltado pero dentro de una zona segura
   // para que el usuario no tenga que mover la vista demasiado
   if (hasSpotlight) {
