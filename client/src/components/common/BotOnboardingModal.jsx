@@ -135,6 +135,8 @@ export default function BotOnboardingModal() {
   const measureRef = useRef(null);
   const rafIdRef = useRef(0);
   const lastSuccessfulStep = useRef(0);
+  const finishTimerRef = useRef(0);
+  const navigationRunRef = useRef(0);
 
   const checkShouldOpen = useCallback(() => {
     if (!user?.id) {
@@ -175,7 +177,14 @@ export default function BotOnboardingModal() {
     };
   }, [checkShouldOpen, forceOpen]);
 
+  useEffect(() => () => {
+    if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
+    navigationRunRef.current += 1;
+  }, []);
+
   const handleFinish = useCallback((destination) => {
+    if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
+    navigationRunRef.current += 1;
     if (user?.id) {
       localStorage.setItem(`${STORAGE_KEY_PREFIX}${user.id}`, "true");
       localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${user.id}`);
@@ -183,23 +192,24 @@ export default function BotOnboardingModal() {
     }
     setIsClosing(true);
     setSpotlight(null);
-    setTimeout(() => {
+    finishTimerRef.current = window.setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
-      if (destination) {
-        navigate(destination);
-      }
+      if (destination) navigate(destination);
+      finishTimerRef.current = 0;
     }, 200);
   }, [user, navigate]);
 
   const goToStep = useCallback(async (newStep) => {
+    const runId = ++navigationRunRef.current;
     const clampedStep = Math.max(0, Math.min(newStep, STEPS.length - 1));
     const targetRoute = STEPS[clampedStep]?.route;
     const isRouteChange = targetRoute && targetRoute !== location.pathname;
     
     // Desvanecer el spotlight suavemente antes de cualquier cambio
     setSpotlight(prev => prev ? { ...prev, opacity: 0 } : null);
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 180));
+    if (runId !== navigationRunRef.current) return;
     
     // Limpiar spotlight y estado
     setSpotlight(null);
@@ -209,8 +219,9 @@ export default function BotOnboardingModal() {
     if (isRouteChange) {
       navigate(targetRoute);
       // Esperar a que la navegación se complete y el DOM se actualice
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
+    if (runId !== navigationRunRef.current) return;
     
     // Actualizar el paso después de la navegación
     setDirection(newStep > step ? "next" : "prev");
@@ -218,21 +229,22 @@ export default function BotOnboardingModal() {
     lastSuccessfulStep.current = clampedStep;
     
     // Esperar un poco más para que el nuevo elemento se renderice
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 80));
+    if (runId !== navigationRunRef.current) return;
   }, [step, location.pathname, navigate]);
 
   const goToNext = useCallback(async () => {
     if (isNavigating) return;
     setIsNavigating(true);
     await goToStep(step + 1);
-    setTimeout(() => setIsNavigating(false), 300);
+    setIsNavigating(false);
   }, [step, goToStep, isNavigating]);
 
   const goToPrev = useCallback(async () => {
     if (isNavigating) return;
     setIsNavigating(true);
     await goToStep(step - 1);
-    setTimeout(() => setIsNavigating(false), 300);
+    setIsNavigating(false);
   }, [step, goToStep, isNavigating]);
 
   useEffect(() => {
@@ -269,7 +281,8 @@ export default function BotOnboardingModal() {
     }
 
     return () => {
-      if (currentId === "history") delete root.dataset.tutorialHistoryDemo;
+      delete root.dataset.tutorialHistoryDemo;
+      delete root.dataset.tutorialAccessibilityDemo;
     };
   }, [isOpen, step]);
 
@@ -377,38 +390,10 @@ export default function BotOnboardingModal() {
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
 
-  let wrapStyle;
-  // Posicionar la tarjeta cerca del elemento resaltado pero dentro de una zona segura
-  // para que el usuario no tenga que mover la vista demasiado
-  if (hasSpotlight) {
-    const elementCenter = spotlight.rect.top + spotlight.rect.height / 2;
-    const safeZone = 80; // píxeles desde los bordes
-    
-    // Si el elemento está en la parte superior, poner la tarjeta abajo
-    if (elementCenter < window.innerHeight * 0.4) {
-      wrapStyle = {
-        marginTop: spotlight.rect.bottom + 20,
-        marginBottom: "auto",
-      };
-    }
-    // Si el elemento está en la parte inferior, poner la tarjeta arriba
-    else if (elementCenter > window.innerHeight * 0.6) {
-      wrapStyle = {
-        marginTop: "auto",
-        marginBottom: Math.max(safeZone, window.innerHeight - spotlight.rect.top + 20),
-      };
-    }
-    // Si está en el centro, poner la tarjeta abajo pero cerca
-    else {
-      wrapStyle = {
-        marginTop: spotlight.rect.bottom + 20,
-        marginBottom: "auto",
-      };
-    }
-  } else {
-    // Si no hay spotlight, centrar en la pantalla
-    wrapStyle = { marginTop: "auto", marginBottom: "auto" };
-  }
+  // La tarjeta del tutorial siempre queda dentro de una zona segura y centrada.
+  // En vez de calcular márgenes a partir del objetivo (que podían empujarla fuera
+  // del viewport en móviles bajos o con zoom), el foco visual se mueve por separado.
+  const wrapStyle = { marginTop: "auto", marginBottom: "auto" };
 
   const currentPath = location.pathname;
   const isOnCorrectRoute = current.route === currentPath || !current.route;
@@ -419,7 +404,7 @@ export default function BotOnboardingModal() {
       aria-modal="true"
       aria-label="Tutorial de bienvenida"
       aria-describedby="tour-description"
-      className={`tour-overlay fixed inset-0 z-50 flex flex-col items-center p-4 sm:p-6 ${hasSpotlight ? "" : "justify-center"} ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
+      className={`tour-overlay fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overscroll-contain p-3 sm:p-6 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
     >
       {hasSpotlight && (
         <>
@@ -443,7 +428,7 @@ export default function BotOnboardingModal() {
 
       <div
         key={step}
-        className={`tour-card relative z-[60] flex flex-col items-center gap-3 w-full ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
+        className={`tour-card relative z-[60] my-auto flex w-full max-w-xl shrink-0 flex-col items-center gap-3 ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
         style={wrapStyle}
         transition="all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
       >
