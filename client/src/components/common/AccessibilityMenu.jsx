@@ -130,7 +130,7 @@ export default function AccessibilityMenu() {
       ref={panelRef}
       role="dialog"
       aria-label="Opciones de accesibilidad"
-      className="animate-scale-in fixed bottom-[9.25rem] right-3.5 z-[80] w-[19rem] max-w-[calc(100vw-2rem)] max-h-[calc(100dvh_-_10rem)] origin-bottom-right overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl sm:bottom-[5.25rem] sm:right-6 sm:max-h-[calc(100dvh_-_6rem)]"
+      className="accessibility-menu-panel animate-scale-in fixed bottom-[9.25rem] right-3.5 z-[80] w-[19rem] max-w-[calc(100vw-2rem)] max-h-[calc(100dvh_-_10rem)] origin-bottom-right overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl sm:bottom-[5.25rem] sm:right-6 sm:max-h-[calc(100dvh_-_6rem)]"
     >
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
