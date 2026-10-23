@@ -1560,7 +1560,7 @@ select {
   /* Spotlight del tutorial */
   .tour-dim {
     position: fixed;
-    background: transparent;
+    background: rgba(7, 14, 32, 0.52);
     z-index: 30;
     pointer-events: none;
   }
@@ -3782,6 +3782,9 @@ html[data-tutorial-history-demo="true"] .tutorial-history-example {
 html[data-tutorial-history-demo="true"] .chat-mobile-history-overlay {
   z-index: 45;
 }
+html[data-tutorial-accessibility-demo="true"] .accessibility-menu-panel {
+  z-index: 45 !important;
+}
 
 /* Historial: entrada escalonada y transiciones suaves, sin animar propiedades costosas. */
 @keyframes history-item-enter {
@@ -3802,7 +3805,8 @@ html[data-tutorial-history-demo="true"] .chat-mobile-history-overlay {
 }
 @media (prefers-reduced-motion: reduce) {
   .history-item-enter,
-  .history-skeleton {
+  .history-skeleton,
+  .tutorial-history-example {
     animation: none !important;
     animation-delay: 0ms !important;
   }
