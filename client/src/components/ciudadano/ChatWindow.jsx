@@ -111,7 +111,6 @@ export default function ChatWindow({ initialQuery = null }) {
     removeLocalConversation,
     clearHistory,
     clearLocalHistory,
-    reloadConsultas,
   } = useChat();
   const { user, isAuthenticated } = useAuth();
   const token = useSessionStore((state) => state.token);
@@ -532,8 +531,8 @@ export default function ChatWindow({ initialQuery = null }) {
       if (immediateConsultaId && immediateConsultaId !== consultationData.consultaId) {
         removeConsulta(immediateConsultaId);
       }
-      // Recargar consultas para actualizar el historial
-      setTimeout(() => reloadConsultas(), 100);
+      // La consulta ya quedó actualizada en el estado local; evitar una recarga
+      // inmediata que pueda sobrescribirla con una respuesta todavía desactualizada.
     } else if (immediateConsultaId) {
       recordConsulta({
         id: immediateConsultaId,
