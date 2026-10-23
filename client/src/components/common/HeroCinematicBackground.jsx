@@ -28,6 +28,20 @@ export default function HeroCinematicBackground() {
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   });
   const timerRef = useRef(null);
+  const containerRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Pausar el Ken Burns y la rotación cuando el hero no está a la vista.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsPaused(!entry.isIntersecting),
+      { rootMargin: "80px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Detección de cambios en prefers-reduced-motion
   useEffect(() => {
@@ -52,7 +66,7 @@ export default function HeroCinematicBackground() {
 
   // Rotación suave entre diapositivas si no hay reduced-motion
   useEffect(() => {
-    if (isReducedMotion) return;
+    if (isReducedMotion || isPaused) return;
 
     timerRef.current = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
@@ -61,10 +75,14 @@ export default function HeroCinematicBackground() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isReducedMotion]);
+  }, [isReducedMotion, isPaused]);
 
   return (
-    <div className="hero-cinematic-bg" aria-hidden="true">
+    <div
+      ref={containerRef}
+      className={`hero-cinematic-bg${isPaused ? " is-paused" : ""}`}
+      aria-hidden="true"
+    >
       {/* ── Layer 1: Visuales con Ken Burns y Crossfade ── */}
       <div className="hero-cinematic-bg__media-stack">
         {SLIDES.map((slide, index) => {

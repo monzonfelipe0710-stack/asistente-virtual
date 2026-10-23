@@ -134,6 +134,11 @@
   background: radial-gradient(ellipse at 50% 0%, rgba(77, 125, 255, 0.18) 0%, transparent 70%);
 }
 
+/* Pausa el movimiento cuando el hero sale de pantalla (ahorro de GPU) */
+.hero-cinematic-bg.is-paused .hero-cinematic-bg__slide.is-active {
+  animation-play-state: paused;
+}
+
 /* ── Soporte de Accesibilidad: Prefers-Reduced-Motion ──────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .hero-cinematic-bg__slide {
@@ -147,9 +152,14 @@
 }
 
 /* ── Adaptación Móvil ──────────────────────────────────────────────────── */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+  /* En móvil el Ken Burns continuo de una imagen a pantalla completa
+     castiga la GPU: dejamos la imagen fija y acortamos el crossfade. */
+  .hero-cinematic-bg__slide {
+    transition-duration: 1200ms;
+  }
   .hero-cinematic-bg__slide.is-active {
-    animation-duration: 28s; /* Movimiento todavía más lento en móviles */
+    animation: none;
     transform: scale(1.04);
   }
   .hero-cinematic-bg__tint {

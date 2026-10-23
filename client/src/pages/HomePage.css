@@ -461,3 +461,37 @@
   font-size: 0.95rem;
   line-height: 1.6;
 }
+
+/* -- Rendimiento en pantallas chicas -----------------------------
+   Evitamos multiples capas de blur durante el scroll en moviles;
+   los fondos semitransparentes se vuelven casi opacos para
+   conservar la legibilidad. */
+@media (max-width: 767px) {
+  .hero-quick-pill,
+  .bento-card,
+  .hero-search-bar,
+  .minimal-feature-card,
+  .faq-item {
+    backdrop-filter: none !important;
+  }
+
+  .bento-card,
+  .minimal-feature-card,
+  .faq-item {
+    background-color: rgba(255, 255, 255, 0.92);
+  }
+
+  .hero-search-bar {
+    background-color: rgba(255, 255, 255, 0.97);
+  }
+
+  .dark .bento-card,
+  .dark .minimal-feature-card,
+  .dark .faq-item {
+    background-color: rgba(13, 23, 48, 0.92);
+  }
+
+  .dark .hero-search-bar {
+    background-color: rgba(13, 23, 48, 0.97);
+  }
+}
