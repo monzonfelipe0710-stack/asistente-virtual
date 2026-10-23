@@ -1,7 +1,7 @@
 import { createContext, useContext, useCallback, useMemo } from "react";
 import { useSessionStore } from "../store/session";
 import { login as loginRequest } from "../services/auth";
-import { registroCiudadano as registroCiudadanoRequest, actualizarMiPerfil as actualizarMiPerfilRequest } from "../services/usuarios";
+import { registroCiudadano as registroCiudadanoRequest, actualizarMiPerfil as actualizarMiPerfilRequest, eliminarMiCuenta as eliminarMiCuentaRequest } from "../services/usuarios";
 import {
   findLocalCitizen,
   verifyLocalCitizen,
@@ -299,6 +299,19 @@ export function AuthProvider({ children }) {
     logoutSession();
   }, [logoutSession]);
 
+  const deleteAccount = useCallback(async () => {
+    const session = useSessionStore.getState();
+    const current = session.usuario || usuario || {};
+    if (session.token) {
+      await eliminarMiCuentaRequest();
+    } else {
+      // Las cuentas de demostración viven únicamente en este navegador.
+      const users = loadUsers();
+      saveUsers(users.filter((candidate) => candidate.id !== current.id));
+    }
+    logoutSession();
+  }, [usuario, logoutSession]);
+
   // Pendientes de backend (secciones 7.1 y 8). La UI se mantiene.
   const pending = useCallback(() => {
     throw new Error(PENDING_MESSAGE);
@@ -320,7 +333,7 @@ export function AuthProvider({ children }) {
         resetPassword: pending,
         updateProfile,
         changePassword: pending,
-        deleteAccount: pending,
+        deleteAccount,
       }}
     >
       {children}
