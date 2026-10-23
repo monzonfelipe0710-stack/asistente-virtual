@@ -3915,3 +3915,149 @@ html[data-a11y-readable="true"] label {
   }
 }
 
+
+
+/* ── Base responsive: teléfonos estrechos, distintas alturas y safe areas ──
+   Reglas conservadoras para que el contenido se adapte al ancho real del
+   viewport sin cambiar el diseño de escritorio ni el layout interno del chat. */
+#root {
+  min-height: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+main,
+section,
+article,
+aside,
+header,
+footer {
+  min-width: 0;
+}
+
+img,
+video,
+iframe {
+  max-width: 100%;
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+}
+
+.nav-shell {
+  max-width: calc(100vw - 1rem);
+  max-width: calc(100dvw - 1rem);
+}
+
+@media (max-width: 380px) {
+  .nav-shell {
+    max-width: calc(100vw - 0.75rem);
+    max-width: calc(100dvw - 0.75rem);
+    padding-top: max(0.4rem, env(safe-area-inset-top));
+  }
+
+  .nav-pill {
+    max-width: 100%;
+    gap: 0.25rem;
+  }
+
+  .nav-brand {
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .nav-brand-name {
+    font-size: 0.8rem;
+  }
+
+  .nav-cta {
+    padding-inline: 0.7rem;
+    font-size: 0.78rem;
+  }
+
+  .nav-icon-btn {
+    flex-shrink: 0;
+  }
+
+  .faq-summary {
+    gap: 0.65rem;
+    padding: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .faq-content {
+    padding: 0 1rem 1rem;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-search-bar {
+    padding-left: 0.85rem;
+    padding-right: 0.35rem;
+  }
+
+  .hero-quick-pill {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 320px) {
+  .nav-brand-mark {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .nav-brand-name {
+    font-size: 0.75rem;
+  }
+
+  .nav-pill {
+    padding: 0.25rem;
+  }
+
+  .chat-conversation {
+    padding-inline: 0.625rem;
+  }
+
+  .chat-main-header {
+    padding-inline: 0.5rem;
+  }
+}
+
+/* Los controles y textos largos no deben forzar el ancho de la pantalla. */
+input,
+textarea,
+select,
+button {
+  max-width: 100%;
+}
+
+pre,
+table {
+  max-width: 100%;
+}
+
+pre {
+  overflow-x: auto;
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .nav-shell {
+    padding-top: max(0.25rem, env(safe-area-inset-top));
+  }
+
+  .nav-pill {
+    padding-block: 0.2rem;
+  }
+
+  .hero-cinematic__inner {
+    padding-top: clamp(4.5rem, 12vh, 6rem);
+    padding-bottom: 1.5rem;
+  }
+}
