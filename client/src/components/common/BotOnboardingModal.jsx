@@ -23,9 +23,9 @@ const STEPS = [
     reaction: "happy",
     kicker: "Tu historial",
     title: "Conversaciones anteriores",
-    description: "En el lado izquierdo ves tus consultas. Tocá «Nueva consulta» arriba para empezar una nueva.",
+    description: "A la izquierda está tu historial. Mirá este ejemplo: cada tarjeta representa una conversación y muestra la pregunta con la que empezó.",
     route: "/chat",
-    target: ["#chat-history-panel", "#chat-history-open-button"],
+    target: ["#chat-history-panel", "#chat-history-drawer", "#chat-history-open-button"],
     action: null,
   },
   {
@@ -72,10 +72,10 @@ const STEPS = [
     id: "a11y",
     reaction: "excited",
     kicker: "Accesibilidad",
-    title: "Personalizar la vista",
-    description: "Abrí el menú de accesibilidad (ícono A11Y abajo a la derecha) para agrandar texto o cambiar colores.",
+    title: "Encontrá el acceso a Tutorial",
+    description: "Abrí el menú de accesibilidad: ya lo desplegué por vos. Acá tenés el botón «Tutorial» para volver a recorrer esta guía cuando quieras.",
     route: "/chat",
-    target: "#accessibility-menu",
+    target: "#accessibility-tutorial-button",
     action: null,
   },
   {
@@ -83,9 +83,9 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Listo!",
     title: "Ya sabés usar ChatAP",
-    description: "Para volver a ver este tutorial, abrí el menú de accesibilidad y elegí «Ver tutorial».",
+    description: "Cuando quieras repasar estos pasos, abrí Accesibilidad y tocá el botón «Tutorial» que está resaltado.",
     route: "/chat",
-    target: "#accessibility-menu",
+    target: "#accessibility-tutorial-button",
     action: null,
   },
 ];
@@ -249,6 +249,26 @@ export default function BotOnboardingModal() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isClosing, step, handleFinish, goToNext, goToPrev]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const currentId = STEPS[step]?.id;
+
+    if (isOpen && currentId === "history") {
+      root.dataset.tutorialHistoryDemo = "true";
+      window.dispatchEvent(new CustomEvent("chatap-open-history-for-tutorial"));
+    } else {
+      delete root.dataset.tutorialHistoryDemo;
+    }
+
+    if (isOpen && (currentId === "a11y" || currentId === "finish")) {
+      window.dispatchEvent(new CustomEvent("chatap-open-accessibility-for-tutorial"));
+    }
+
+    return () => {
+      if (currentId === "history") delete root.dataset.tutorialHistoryDemo;
+    };
+  }, [isOpen, step]);
 
   useEffect(() => {
     if (!isOpen) return;
