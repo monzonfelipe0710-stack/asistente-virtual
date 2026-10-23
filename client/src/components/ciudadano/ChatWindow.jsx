@@ -1074,17 +1074,17 @@ export default function ChatWindow({ initialQuery = null }) {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleResetRequest}
-            id="chat-new-conversation-button"
-            title="Iniciar un nuevo chat"
-            aria-label="Iniciar un nuevo chat"
-            className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+          {!isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleResetRequest}
+              id="chat-new-conversation-button"
+              title="Iniciar un nuevo chat"
+              aria-label="Iniciar un nuevo chat"
+              className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
             </svg>
           </button>
         </header>
@@ -1103,7 +1103,7 @@ export default function ChatWindow({ initialQuery = null }) {
       >
         {phase !== "chat" ? (
           <div
-            className={`welcome-content flex min-h-max flex-1 flex-col items-center justify-center px-4 py-4 text-center transition-all duration-300 ease-out sm:py-6 ${
+            className={`welcome-content flex min-h-max flex-1 flex-col items-center justify-center px-4 py-4 text-center transition-all duration-500 ease-out sm:py-6 ${
               phase === "leaving" ? "opacity-0 scale-95" : "opacity-100 scale-100"
             }`}
           >
