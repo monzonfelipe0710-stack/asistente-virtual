@@ -632,6 +632,17 @@ export default function ChatWindow({ initialQuery = null }) {
     const t = (text ?? "").trim();
     if (!t) return;
 
+    if (
+      !savedThreads.some((thread) => thread.id === activeThreadId) &&
+      savedThreads.length >= HISTORY_LIMIT
+    ) {
+      toast(
+        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
+        "error"
+      );
+      return;
+    }
+
     beginChat();
     const userMessageId = addMessage("user", t, image ? {
       type: "image",
@@ -923,6 +934,14 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Un hilo activo se conserva automáticamente; empezar otro nunca borra el anterior.
   function handleResetRequest() {
+    if (historyQueries.length >= HISTORY_LIMIT) {
+      toast(
+        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
+        "error"
+      );
+      return;
+    }
+
     const currentThread = crearResumenConversacion(activeThreadId, messages);
     const effectiveId = userId || "ciudadano_anonimo";
     if (currentThread) {
@@ -933,22 +952,6 @@ export default function ChatWindow({ initialQuery = null }) {
         .slice(0, HISTORY_LIMIT);
       guardarConversaciones(effectiveId, next);
       setSavedThreads(next);
-    }
-
-    if (historyQueries.length >= HISTORY_LIMIT && messages.length === 0) {
-      toast(
-        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
-        "error"
-      );
-      return;
-    }
-    if (historyQueries.length >= HISTORY_LIMIT && currentThread &&
-        !savedThreads.some((thread) => thread.id === activeThreadId)) {
-      toast(
-        `Llegaste al límite de ${HISTORY_LIMIT} conversaciones. Eliminá una de "Recientes" antes de crear otra.`,
-        "error"
-      );
-      return;
     }
     resetConversation();
   }
