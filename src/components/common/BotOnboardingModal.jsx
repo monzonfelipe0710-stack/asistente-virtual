@@ -262,7 +262,10 @@ export default function BotOnboardingModal() {
     }
 
     if (isOpen && (currentId === "a11y" || currentId === "finish")) {
+      root.dataset.tutorialAccessibilityDemo = "true";
       window.dispatchEvent(new CustomEvent("chatap-open-accessibility-for-tutorial"));
+    } else {
+      delete root.dataset.tutorialAccessibilityDemo;
     }
 
     return () => {
