@@ -1008,8 +1008,11 @@ export default function ChatWindow({ initialQuery = null }) {
       setPhase("chat");
       return;
     }
+    const legacyThreadId = crearIdConversacion();
+    activeThreadIdRef.current = legacyThreadId;
+    setActiveThreadId(legacyThreadId);
     if (token) {
-      const timestamp = new Date(query.at).toISOString();
+      const timestamp = query.at ? new Date(query.at).toISOString() : new Date().toISOString();
       const conversation = [{
         id: `consulta-${query.id}-pregunta`,
         type: "user",
