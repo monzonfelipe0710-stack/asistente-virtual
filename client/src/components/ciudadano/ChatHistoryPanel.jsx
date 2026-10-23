@@ -79,6 +79,19 @@ export default function ChatHistoryPanel({
           )}
         </div>
 
+        <div className="tutorial-history-example mb-3 flex-col gap-1.5 rounded-xl border border-brand/25 bg-brand/5 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-brand">Ejemplo de conversación</span>
+            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[9px] font-semibold text-brand">Demo</span>
+          </div>
+          <p className="m-0 text-sm font-semibold leading-snug text-ink">
+            ¿Cómo solicito una licencia médica?
+          </p>
+          <p className="m-0 text-xs leading-relaxed text-muted">
+            ChatAP: Te orienta con los pasos y la documentación que necesitás.
+          </p>
+        </div>
+
         {error ? (
           <p role="alert" className="m-0 rounded-xl border border-bad/20 bg-bad/5 p-3 text-sm leading-relaxed text-bad">
             No se pudo cargar el historial: {error}
