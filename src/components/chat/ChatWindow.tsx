@@ -22,6 +22,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Plegable } from "@/components/ui/Plegable";
 import { Text } from "@/components/ui/Text";
 import { Motion, Radius, Size, Spacing, Type, Weight, useColors } from "@/constants/theme";
+import { useConversacion } from "@/context/ChatContext";
 import type { ChatMessage } from "@/data/mockMessages";
 import { useChat } from "@/hooks/useChat";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
@@ -55,20 +56,46 @@ function ErrorDeEnvio({ mensaje, onReintentar }: { mensaje: string; onReintentar
  * La conversación. Vacía, muestra la bienvenida con las sugerencias; con
  * mensajes, la lista arranca arriba, ocupa toda la pantalla y pasa por detrás del encabezado,
  * de la barra de escritura y del teclado.
+ *
+ * Al enviar, el mensaje se fija arriba, bajo el encabezado, y el teclado se esconde. La lista
+ * no se mueve sola ni con las respuestas ni con el teclado. El relleno del final deja subir
+ * ese mensaje aunque la respuesta sea corta y se achica a medida que la respuesta crece.
  */
 function ChatWindowBase() {
   const C = useColors();
   const insets = useSafeAreaInsets();
   const alturaDelTeclado = useKeyboardHeight();
   const { reducirAnimaciones } = useAjustes();
-  const { messages, isTyping, send, fallo, reintentar, detener } = useChat();
+  const { activa, obtener, guardar } = useConversacion();
+  const [inicial] = useState(() => obtener(activa)?.mensajes);
+  const alCambiar = useCallback(
+    (mensajes: ChatMessage[]) => guardar(activa, mensajes),
+    [activa, guardar]
+  );
+  const { messages, isTyping, send, fallo, reintentar, detener } = useChat(inicial, alCambiar);
   const [escribiendo, setEscribiendo] = useState(false);
   const [altoDeLaBarra, setAltoDeLaBarra] = useState(Size.composer + 8);
+  const [altoDeLaLista, setAltoDeLaLista] = useState(0);
+  const [altoDelPie, setAltoDelPie] = useState(0);
+  const [alturas, setAlturas] = useState<Record<number, number>>({});
+  const [idFijado, setIdFijado] = useState<number | null>(null);
   const listRef = useRef<FlatList>(null);
+  const ultimosMensajes = useRef(messages);
+  const idMaximoInicial = useRef(Math.max(0, ...(inicial ?? []).map((m) => m.id)));
+  const restaurando = useRef(!!inicial?.length);
 
   const empezo = messages.length > 0 || isTyping || !!fallo;
   const ultimoId = messages[messages.length - 1]?.id;
+  const ultimoTipo = messages[messages.length - 1]?.type;
   const arriba = insets.top + Size.header;
+  const paddingInferior = Math.max(insets.bottom, Spacing[3]) + altoDeLaBarra + Spacing[5];
+
+  const indiceFijado = idFijado === null ? -1 : messages.findIndex((m) => m.id === idFijado);
+  const restante =
+    messages.slice(Math.max(indiceFijado, 0)).reduce((suma, m) => suma + (alturas[m.id] ?? 0), 0) +
+    altoDelPie;
+  const relleno =
+    indiceFijado < 0 ? 0 : Math.max(0, altoDeLaLista - arriba - restante - paddingInferior);
 
   // Con el teclado arriba, el borde inferior lo pone el teclado y no la barra del sistema.
   const espacioInferior =
@@ -85,35 +112,71 @@ function ChatWindowBase() {
     }).start();
   }, [espacioInferior, reducirAnimaciones, espacioAnimado]);
 
-  // requestAnimationFrame: sin esperar al cuadro siguiente, el scroll usa el
-  // layout viejo y se queda corto. El segundo intento llega cuando el teclado
-  // terminó de subir.
-  const irAlFinal = useCallback(() => {
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), Motion.sheet + 60);
-  }, []);
-
-  // keyboardDidShow: llega con el teclado ya arriba y el layout estable.
   useEffect(() => {
-    const alSubir = Keyboard.addListener("keyboardDidShow", () => {
-      setEscribiendo(true);
-      irAlFinal();
-    });
+    const alSubir = Keyboard.addListener("keyboardDidShow", () => setEscribiendo(true));
     // Android puede esconder el teclado con el botón atrás sin soltar el foco.
     const alBajar = Keyboard.addListener("keyboardDidHide", () => setEscribiendo(false));
     return () => {
       alSubir.remove();
       alBajar.remove();
     };
-  }, [irAlFinal]);
+  }, []);
 
-  // Solo el último mensaje se escribe letra a letra: los anteriores ya se leyeron
-  // y la lista puede volver a montarlos al desplazarse.
+  useEffect(() => {
+    ultimosMensajes.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    if (ultimoTipo !== "user" || ultimoId === undefined) return;
+    if (ultimoId <= idMaximoInicial.current) return;
+    setIdFijado(ultimoId);
+  }, [ultimoId, ultimoTipo]);
+
+  useEffect(() => {
+    if (idFijado === null) return;
+    const id = setTimeout(() => {
+      const indice = ultimosMensajes.current.findIndex((m) => m.id === idFijado);
+      if (indice >= 0) {
+        listRef.current?.scrollToIndex({ index: indice, viewOffset: arriba, animated: true });
+      }
+    }, 60);
+    return () => clearTimeout(id);
+  }, [idFijado, arriba]);
+
+  useEffect(() => {
+    if (!restaurando.current) return;
+    const id = setTimeout(() => {
+      restaurando.current = false;
+    }, 800);
+    return () => clearTimeout(id);
+  }, []);
+
+  const alMedir = useCallback((id: number, alto: number) => {
+    setAlturas((anteriores) => (anteriores[id] === alto ? anteriores : { ...anteriores, [id]: alto }));
+  }, []);
+
+  const alFallarElScroll = useCallback(
+    ({ index, averageItemLength }: { index: number; averageItemLength: number }) => {
+      listRef.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({ index, viewOffset: arriba, animated: true });
+      }, 80);
+    },
+    [arriba]
+  );
+
+  // Solo el último mensaje enviado en esta sesión se escribe letra a letra: los anteriores
+  // ya se leyeron y la lista puede volver a montarlos al desplazarse.
   const dibujarMensaje = useCallback(
     ({ item }: ListRenderItemInfo<ChatMessage>) => (
-      <MessageBubble message={item} escribiendo={item.id === ultimoId} />
+      <View onLayout={(e) => alMedir(item.id, e.nativeEvent.layout.height)}>
+        <MessageBubble
+          message={item}
+          escribiendo={item.id === ultimoId && item.id > idMaximoInicial.current}
+        />
+      </View>
     ),
-    [ultimoId]
+    [ultimoId, alMedir]
   );
 
   return (
@@ -127,15 +190,27 @@ function ChatWindowBase() {
           style={styles.lista}
           contentContainerStyle={[
             // El último mensaje queda un poco por encima de la barra, no detrás.
-            { paddingTop: arriba, paddingBottom: espacioInferior + altoDeLaBarra + Spacing[5] },
+            { paddingTop: arriba, paddingBottom: paddingInferior },
           ]}
-          onContentSizeChange={irAlFinal}
+          onLayout={(e) => setAltoDeLaLista(e.nativeEvent.layout.height)}
+          onScrollToIndexFailed={alFallarElScroll}
+          onScrollBeginDrag={() => {
+            restaurando.current = false;
+          }}
+          onContentSizeChange={() => {
+            if (restaurando.current) listRef.current?.scrollToEnd({ animated: false });
+          }}
           ListFooterComponent={
-            isTyping ? (
-              <TypingIndicator />
-            ) : fallo ? (
-              <ErrorDeEnvio mensaje={fallo} onReintentar={reintentar} />
-            ) : null
+            <View>
+              <View onLayout={(e) => setAltoDelPie(e.nativeEvent.layout.height)}>
+                {isTyping ? (
+                  <TypingIndicator />
+                ) : fallo ? (
+                  <ErrorDeEnvio mensaje={fallo} onReintentar={reintentar} />
+                ) : null}
+              </View>
+              <View style={{ height: relleno }} />
+            </View>
           }
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"

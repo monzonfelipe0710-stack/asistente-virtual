@@ -1,15 +1,25 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/data/mockMessages";
 import { consultarChat } from "@/lib/backend";
 
 /** Mensajes de la conversación, cómo enviar uno, reintentar el que falló y detener la espera. */
-export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function useChat(
+  inicial: ChatMessage[] = [],
+  onCambio?: (mensajes: ChatMessage[]) => void
+) {
+  const [messages, setMessages] = useState<ChatMessage[]>(inicial);
   const [isTyping, setIsTyping] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
-  const siguienteId = useRef(1);
+  const siguienteId = useRef(Math.max(0, ...inicial.map((m) => m.id)) + 1);
+  const mensajesIniciales = useRef(messages);
   const ultimaConsulta = useRef("");
   const pedidoActual = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (messages !== mensajesIniciales.current) onCambio?.(messages);
+  }, [messages, onCambio]);
+
+  useEffect(() => () => pedidoActual.current?.abort(), []);
 
   const agregar = useCallback((type: ChatMessage["type"], text: string) => {
     const mensaje: ChatMessage = {

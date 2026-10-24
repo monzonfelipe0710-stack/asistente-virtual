@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useWindowDimensions } from "react-native";
 
 import { cerrarMenu, MenuLateral, type SeccionDeMenu } from "@/components/menu/MenuLateral";
+import { ListaDeChats } from "@/components/menu/ListaDeChats";
 import { opcionesDelMenu } from "@/components/menu/opcionesDelMenu";
 import { PieCiudadano } from "@/components/menu/PieCiudadano";
 import { VentanaAccesibilidad } from "@/components/menu/VentanaAccesibilidad";
 import { useColors } from "@/constants/theme";
+import { useAuth } from "@/context/AuthContext";
 import { ChatProvider, useConversacion } from "@/context/ChatContext";
 
 function MenuCiudadano({
@@ -17,11 +19,10 @@ function MenuCiudadano({
   abrirAccesibilidad: () => void;
 }) {
   const { nuevoChat } = useConversacion();
+  const { user } = useAuth();
   const secciones: SeccionDeMenu[] = [
     {
-      titulo: "Secciones",
       items: [
-        { pantalla: "index", titulo: "Asistente", icono: "chat" },
         { pantalla: "accesos", titulo: "Accesos", icono: "external" },
         {
           titulo: "Accesibilidad",
@@ -38,6 +39,7 @@ function MenuCiudadano({
       nombre="ChatAP"
       descripcion="Subsecretaría de Recursos Humanos"
       secciones={secciones}
+      contenidoDesplazable={user ? <ListaDeChats drawer={drawer} /> : undefined}
       acciones={[
         {
           titulo: "Nuevo chat",

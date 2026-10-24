@@ -36,6 +36,7 @@ export function MenuLateral({
   secciones,
   acciones = [],
   lineaSobrePie = false,
+  contenidoDesplazable,
   children,
 }: {
   drawer: DrawerContentComponentProps;
@@ -46,12 +47,71 @@ export function MenuLateral({
   acciones?: { titulo: string; icono: IconName; onPress: () => void }[];
   /** Dibuja una línea fina entre los ítems y el pie. */
   lineaSobrePie?: boolean;
+  /** Si viene, es lo único que se desplaza: las acciones y las secciones quedan fijas arriba, y una línea lo separa. */
+  contenidoDesplazable?: React.ReactNode;
   /** Pie del menú: preferencias y cuenta. */
   children?: React.ReactNode;
 }) {
   const C = useColors();
   const insets = useSafeAreaInsets();
   const pantallaActiva = drawer.state.routes[drawer.state.index].name;
+
+  const listaDeAcciones = acciones.map((accion) => (
+    <View key={accion.titulo} style={styles.accion}>
+      <Btn
+        label={accion.titulo}
+        icon={accion.icono}
+        variant="secondary"
+        size="md"
+        onPress={accion.onPress}
+      />
+    </View>
+  ));
+
+  const listaDeSecciones = secciones.map((seccion, indice) => (
+    <View key={seccion.titulo ?? indice}>
+      {!!seccion.titulo && (
+        <Text style={[Type.overline, styles.rotulo, { color: C.ink2 }]}>{seccion.titulo}</Text>
+      )}
+
+      <View style={styles.items}>
+        {seccion.items.map((item) => {
+          const activo = !!item.pantalla && item.pantalla === pantallaActiva;
+          return (
+            <Pressable
+              key={item.titulo}
+              onPress={() =>
+                item.onPress ? item.onPress() : drawer.navigation.navigate(item.pantalla!)
+              }
+              accessibilityRole="menuitem"
+              accessibilityState={{ selected: activo }}
+              style={({ pressed }) => [
+                styles.fila,
+                {
+                  backgroundColor: activo ? C.activeBg : pressed ? C.surface2 : "transparent",
+                  borderColor: activo ? C.accent : "transparent",
+                },
+              ]}
+            >
+              <Icon name={item.icono} size={22} color={activo ? C.activeInk : C.ink} />
+              <Text
+                style={[
+                  styles.filaTexto,
+                  {
+                    color: activo ? C.activeInk : C.ink,
+                    fontWeight: activo ? Weight.bold : Weight.medium,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {item.titulo}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  ));
 
   return (
     <View
@@ -68,66 +128,25 @@ export function MenuLateral({
         </View>
       </View>
 
-      <ScrollView style={styles.secciones} showsVerticalScrollIndicator={false}>
-        {acciones.map((accion) => (
-          <View key={accion.titulo} style={styles.accion}>
-            <Btn
-              label={accion.titulo}
-              icon={accion.icono}
-              variant="secondary"
-              size="md"
-              onPress={accion.onPress}
-            />
+      {contenidoDesplazable ? (
+        <>
+          <View style={styles.fijas}>
+            {listaDeAcciones}
+            {listaDeSecciones}
           </View>
-        ))}
-
-        {secciones.map((seccion, indice) => (
-          <View key={seccion.titulo ?? indice}>
-            {!!seccion.titulo && (
-              <Text style={[Type.overline, styles.rotulo, { color: C.ink2 }]}>
-                {seccion.titulo}
-              </Text>
-            )}
-
-            <View style={styles.items}>
-              {seccion.items.map((item) => {
-                const activo = !!item.pantalla && item.pantalla === pantallaActiva;
-                return (
-                  <Pressable
-                    key={item.titulo}
-                    onPress={() =>
-                      item.onPress ? item.onPress() : drawer.navigation.navigate(item.pantalla!)
-                    }
-                    accessibilityRole="menuitem"
-                    accessibilityState={{ selected: activo }}
-                    style={({ pressed }) => [
-                      styles.fila,
-                      {
-                        backgroundColor: activo ? C.activeBg : pressed ? C.surface2 : "transparent",
-                        borderColor: activo ? C.accent : "transparent",
-                      },
-                    ]}
-                  >
-                    <Icon name={item.icono} size={22} color={activo ? C.activeInk : C.ink} />
-                    <Text
-                      style={[
-                        styles.filaTexto,
-                        {
-                          color: activo ? C.activeInk : C.ink,
-                          fontWeight: activo ? Weight.bold : Weight.medium,
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.titulo}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+          <ScrollView
+            style={[styles.secciones, { borderTopWidth: 1, borderTopColor: C.border }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {contenidoDesplazable}
+          </ScrollView>
+        </>
+      ) : (
+        <ScrollView style={styles.secciones} showsVerticalScrollIndicator={false}>
+          {listaDeAcciones}
+          {listaDeSecciones}
+        </ScrollView>
+      )}
 
       <View style={[styles.pie, { borderTopWidth: 1, borderTopColor: C.border }]}>{children}</View>
     </View>
@@ -188,6 +207,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     lineHeight: 21,
+  },
+  fijas: {
+    paddingBottom: Spacing[2],
   },
   pie: {
     gap: Spacing[2],

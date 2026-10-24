@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/Icon";
 import { TextInput } from "@/components/ui/TextInput";
@@ -36,6 +36,7 @@ function ChatInputBase({
     if (!puedeEnviar) return;
     onSend(texto.trim());
     setTexto("");
+    Keyboard.dismiss();
   }
 
   // React Native no tiene box-shadow con spread: el anillo de foco es un borde

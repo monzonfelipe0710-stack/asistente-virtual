@@ -13,8 +13,8 @@ import { useConversacion } from "@/context/ChatContext";
 export default function Asistente() {
   const C = useColors();
 
-  // "Nuevo chat" (en el menú) cambia la key y la conversación se vuelve a montar vacía.
-  const { conversacion } = useConversacion();
+  // Abrir otro chat o crear uno nuevo cambia la key y la conversación se vuelve a montar.
+  const { activa } = useConversacion();
 
   return (
     <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
@@ -28,7 +28,7 @@ export default function Asistente() {
         />
       </Head>
 
-      <ChatWindow key={conversacion} />
+      <ChatWindow key={activa} />
 
       <View style={styles.encabezado}>
         <Encabezado />
