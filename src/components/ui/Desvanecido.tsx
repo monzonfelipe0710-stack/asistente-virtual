@@ -9,7 +9,7 @@ export function Desvanecido({
   solido = 0,
   lado = "arriba",
 }: {
-  alto: number | "100%";
+  alto: number;
   solido?: number;
   lado?: "arriba" | "abajo";
 }) {

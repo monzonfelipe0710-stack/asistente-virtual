@@ -18,7 +18,6 @@ import { QuickReplies } from "./QuickReplies";
 import { SugerenciaDeIngreso } from "./SugerenciaDeIngreso";
 import { TypingIndicator } from "./TypingIndicator";
 import { Btn } from "@/components/ui/Btn";
-import { Desvanecido } from "@/components/ui/Desvanecido";
 import { Icon } from "@/components/ui/Icon";
 import { Plegable } from "@/components/ui/Plegable";
 import { Text } from "@/components/ui/Text";
@@ -244,14 +243,6 @@ function ChatWindowBase() {
         </Animated.View>
       )}
 
-      {empezo && (
-        <Animated.View
-          style={[styles.bajoLaBarra, { height: Animated.add(espacioAnimado, altoDeLaBarra / 2) }]}
-        >
-          <Desvanecido alto="100%" lado="abajo" solido={0.65} />
-        </Animated.View>
-      )}
-
       <Animated.View style={[styles.abajo, { bottom: espacioAnimado }]}>
         <View onLayout={(e) => setAltoDeLaBarra(e.nativeEvent.layout.height)}>
           <ChatInput
@@ -288,13 +279,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-  },
-  bajoLaBarra: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    pointerEvents: "none",
   },
   bienvenida: {
     flex: 1,
