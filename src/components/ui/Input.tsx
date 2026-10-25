@@ -3,7 +3,8 @@ import {
   Pressable,
   StyleSheet,
   View,
-  type TextInput as RNTextInput,
+  type TextInputInstance,
+  type ViewInstance,
   type TextInputProps,
 } from "react-native";
 
@@ -28,8 +29,8 @@ export function Input({
   ...rest
 }: TextInputProps & { invalid?: boolean; soloAlTocar?: boolean }) {
   const C = useColors();
-  const campo = useRef<RNTextInput>(null);
-  const caja = useRef<View>(null);
+  const campo = useRef<TextInputInstance>(null);
+  const caja = useRef<ViewInstance>(null);
   const avisarFoco = useAvisarFoco();
   const [focused, setFocused] = useState(false);
   const [activo, setActivo] = useState(!soloAlTocar);

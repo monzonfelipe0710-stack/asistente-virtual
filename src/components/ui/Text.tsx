@@ -39,7 +39,7 @@ export function withFont(style: TextProps["style"], escala = 1, legible = false)
   const flat = (StyleSheet.flatten(style) ?? {}) as TextStyle;
   const fontFamily = (legible ? undefined : flat.fontFamily) ?? familyFor(flat.fontWeight, legible);
   const factor = flat.fontSize && flat.fontSize >= 20 ? Math.min(escala, TOPE_DE_TITULO) : escala;
-  const tamano: TextStyle = {};
+  const tamano: { fontSize?: number; lineHeight?: number; letterSpacing?: number } = {};
   if (flat.fontSize) tamano.fontSize = flat.fontSize * factor;
   if (flat.lineHeight) tamano.lineHeight = flat.lineHeight * factor;
   if (legible) {

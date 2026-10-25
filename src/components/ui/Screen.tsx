@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef } from "react";
-import { ScrollView, useWindowDimensions, View, type ScrollViewProps } from "react-native";
+import { ScrollView, useWindowDimensions, View, type ScrollViewInstance, type ScrollViewProps, type ViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Spacing, useColors } from "@/constants/theme";
@@ -8,7 +8,7 @@ import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 /** Lo que queda de aire entre el borde de abajo del campo y el borde de arriba del teclado. */
 const AIRE_SOBRE_EL_TECLADO = 12;
 
-type AvisarFoco = (campo: View | null) => void;
+type AvisarFoco = (campo: ViewInstance | null) => void;
 
 const FocoContext = createContext<AvisarFoco>(() => {});
 
@@ -25,9 +25,9 @@ export function useAvisarFoco(): AvisarFoco {
 export function ScrollConTeclado({ children, ...rest }: ScrollViewProps) {
   const teclado = useKeyboardHeight();
   const { height: alturaDeVentana } = useWindowDimensions();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   const desplazamiento = useRef(0);
-  const enfocado = useRef<View | null>(null);
+  const enfocado = useRef<ViewInstance | null>(null);
 
   const subirCampo = useCallback(() => {
     const campo = enfocado.current;
