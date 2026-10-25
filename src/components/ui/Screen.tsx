@@ -21,8 +21,13 @@ export function useAvisarFoco(): AvisarFoco {
  * ScrollView para pantallas con campos de texto. Con el teclado arriba agrega
  * al final un espacio del alto del teclado y desplaza lo justo para que el
  * campo enfocado quede apenas por encima de él; si ya se ve entero, no mueve nada.
+ * `conEspacio={false}` omite el espacio del final, para cuando el contenedor ya sube con el teclado.
  */
-export function ScrollConTeclado({ children, ...rest }: ScrollViewProps) {
+export function ScrollConTeclado({
+  children,
+  conEspacio = true,
+  ...rest
+}: ScrollViewProps & { conEspacio?: boolean }) {
   const teclado = useKeyboardHeight();
   const { height: alturaDeVentana } = useWindowDimensions();
   const scroll = useRef<ScrollViewInstance>(null);
@@ -66,7 +71,7 @@ export function ScrollConTeclado({ children, ...rest }: ScrollViewProps) {
         {...rest}
       >
         {children}
-        {teclado > 0 && <View style={{ height: teclado }} />}
+        {conEspacio && teclado > 0 && <View style={{ height: teclado }} />}
       </ScrollView>
     </FocoContext.Provider>
   );

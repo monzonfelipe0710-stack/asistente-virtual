@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -11,6 +10,7 @@ import { Text } from "./Text";
 
 import { BottomSheet } from "./BottomSheet";
 import { Icon } from "./Icon";
+import { ScrollConTeclado } from "./Screen";
 import { Spacing, Type, useColors } from "@/constants/theme";
 
 /**
@@ -55,14 +55,13 @@ export function Modal({
           </Pressable>
         </View>
 
-        <ScrollView
+        <ScrollConTeclado
+          conEspacio={false}
           style={styles.flexShrink}
           contentContainerStyle={styles.body}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
           {children}
-        </ScrollView>
+        </ScrollConTeclado>
 
         {actions.length > 0 && (
           <View style={styles.footer}>
