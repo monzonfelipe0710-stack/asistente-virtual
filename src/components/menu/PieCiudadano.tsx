@@ -1,26 +1,27 @@
 import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 
 import { cerrarMenu } from "./MenuLateral";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { MenuEmergente, type Ancla, type OpcionDeMenu } from "@/components/ui/MenuEmergente";
 import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Weight, useColors } from "@/constants/theme";
+import { Radius, Size, Spacing, Weight, useColors } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
 
 /**
  * Pie del menú de la app: la cuenta. Sin sesión, una tarjeta lleva al login.
- * Con sesión, tocarla o mantenerla apretada abre un menú emergente con Mi
- * perfil, Administración (si la cuenta es de personal) y Cerrar sesión.
+ * Con sesión, tocar el círculo lleva a Mi perfil y tocar los tres puntos abre un
+ * menú emergente con Mi perfil, Administración (si la cuenta es de personal) y
+ * Cerrar sesión.
  */
 export function PieCiudadano({ drawer }: { drawer: DrawerContentComponentProps }) {
   const C = useColors();
   const router = useRouter();
   const { user, isStaff, logout } = useAuth();
-  const tarjeta = useRef<View>(null);
+  const tarjeta = useRef<ViewInstance>(null);
   const [ancla, setAncla] = useState<Ancla | null>(null);
 
   function ir(ruta: "/login" | "/perfil" | "/admin") {
@@ -35,7 +36,6 @@ export function PieCiudadano({ drawer }: { drawer: DrawerContentComponentProps }
   }
 
   function abrir() {
-    if (!user) return ir("/login");
     tarjeta.current?.measureInWindow((x, y, width, height) => setAncla({ x, y, width, height }));
   }
 
@@ -47,31 +47,65 @@ export function PieCiudadano({ drawer }: { drawer: DrawerContentComponentProps }
     { texto: "Cerrar sesión", icono: "logout", onPress: cerrarSesion, peligro: true },
   ];
 
-  return (
-    <>
+  if (!user) {
+    return (
       <Pressable
-        ref={tarjeta}
-        onPress={abrir}
-        onLongPress={abrir}
+        onPress={() => ir("/login")}
         accessibilityRole="button"
-        accessibilityLabel={user ? `${user.name}, ${user.role}` : "Acceso interno"}
-        accessibilityState={user ? { expanded: !!ancla } : undefined}
+        accessibilityLabel="Acceso interno"
         style={({ pressed }) => [
           styles.tarjeta,
           { backgroundColor: pressed ? C.surface2 : C.surface, borderColor: C.border },
         ]}
       >
-        <Avatar name={user ? user.name || user.email : "?"} />
+        <Avatar name="?" />
         <View style={styles.texto}>
           <Text style={[styles.nombre, { color: C.ink }]} numberOfLines={1}>
-            {user ? user.name : "Acceso interno"}
+            Acceso interno
           </Text>
           <Text style={[styles.detalle, { color: C.ink2 }]} numberOfLines={1}>
-            {user ? user.role : "Para agentes de la provincia"}
+            Para agentes de la provincia
           </Text>
         </View>
-        <Icon name={user ? "more" : "chevronRight"} size={24} color={C.ink} />
+        <Icon name="chevronRight" size={24} color={C.ink} />
       </Pressable>
+    );
+  }
+
+  return (
+    <>
+      <View
+        ref={tarjeta}
+        style={[styles.tarjeta, { backgroundColor: C.surface, borderColor: C.border }]}
+      >
+        <Pressable
+          onPress={() => ir("/perfil")}
+          accessibilityRole="button"
+          accessibilityLabel="Ir a mi perfil"
+          style={styles.circulo}
+        >
+          <Avatar name={user.name || user.email} />
+        </Pressable>
+
+        <View style={styles.texto}>
+          <Text style={[styles.nombre, { color: C.ink }]} numberOfLines={1}>
+            {user.name}
+          </Text>
+          <Text style={[styles.detalle, { color: C.ink2 }]} numberOfLines={1}>
+            {user.role}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={abrir}
+          accessibilityRole="button"
+          accessibilityLabel={`Opciones de la cuenta de ${user.name}`}
+          accessibilityState={{ expanded: !!ancla }}
+          style={({ pressed }) => [styles.mas, pressed && { backgroundColor: C.surface2 }]}
+        >
+          <Icon name="more" size={24} color={C.ink} />
+        </Pressable>
+      </View>
 
       <MenuEmergente ancla={ancla} opciones={opciones} onClose={() => setAncla(null)} />
     </>
@@ -88,6 +122,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: Radius["2xl"],
     borderWidth: 1,
+  },
+  circulo: {
+    borderRadius: Radius.full,
+  },
+  mas: {
+    width: Size.touch,
+    height: Size.touch,
+    marginRight: -Spacing[2],
+    borderRadius: Radius.full,
+    alignItems: "center",
+    justifyContent: "center",
   },
   texto: {
     flex: 1,
