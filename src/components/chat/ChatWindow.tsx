@@ -261,11 +261,13 @@ function ChatWindowBase() {
             disabled={isTyping}
           />
 
-          <Plegable abierto={!escribiendo}>
-            <Text style={[styles.aviso, { color: C.ink2 }]}>
-              ChatAP puede equivocarse. Confirmá en Mesa de Entradas.
-            </Text>
-          </Plegable>
+          <View style={styles.bajarAviso}>
+            <Plegable abierto={!escribiendo && !empezo}>
+              <Text style={[styles.aviso, { color: C.ink2 }]}>
+                ChatAP puede equivocarse. Confirmá en Mesa de Entradas.
+              </Text>
+            </Plegable>
+          </View>
         </View>
       </Animated.View>
     </View>
@@ -319,6 +321,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 19,
     textAlign: "center",
+  },
+  bajarAviso: {
+    transform: [{ translateY: 6 }],
   },
   errorFila: {
     marginTop: Spacing[6],
