@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { BotonVolver } from "@/components/ui/BotonVolver";
 import { Btn } from "@/components/ui/Btn";
+import { Desvanecido } from "@/components/ui/Desvanecido";
 import { KeyValue, KeyValueCard } from "@/components/ui/KeyValue";
 import { Screen } from "@/components/ui/Screen";
 import { Text } from "@/components/ui/Text";
@@ -43,33 +44,36 @@ export default function Perfil() {
         <BotonVolver etiqueta="Volver" onPress={() => router.back()} />
       </View>
 
-      <Screen>
-        <View style={styles.cuenta}>
-          <Avatar name={user.name || user.email} size={80} />
-          <Text style={[styles.nombre, { color: C.ink }]}>{user.name}</Text>
-          <Text style={[Type.lead, { color: C.ink2, textAlign: "center" }]}>{user.email}</Text>
-        </View>
+      <View style={styles.contenido}>
+        <Screen>
+          <View style={styles.cuenta}>
+            <Avatar name={user.name || user.email} size={80} />
+            <Text style={[styles.nombre, { color: C.ink }]}>{user.name}</Text>
+            <Text style={[Type.lead, { color: C.ink2, textAlign: "center" }]}>{user.email}</Text>
+          </View>
 
-        <KeyValueCard>
-          <KeyValue label="Rol" value={user.role} />
-          <KeyValue label="Estado">
-            <Badge label={estado} tone={TONO_DEL_ESTADO[estado] ?? "muted"} />
-          </KeyValue>
-          <KeyValue label="Alta" value={formatDate(user.createdAt) || "Sin dato"} />
-        </KeyValueCard>
+          <KeyValueCard>
+            <KeyValue label="Rol" value={user.role} />
+            <KeyValue label="Estado">
+              <Badge label={estado} tone={TONO_DEL_ESTADO[estado] ?? "muted"} />
+            </KeyValue>
+            <KeyValue label="Alta" value={formatDate(user.createdAt) || "Sin dato"} />
+          </KeyValueCard>
 
-        <Text style={[Type.meta, { color: C.ink2, marginTop: Spacing[4] }]}>
-          Son los datos reales de tu cuenta. Para cambiarlos, hablá con Administración.
-        </Text>
+          <Text style={[Type.meta, { color: C.ink2, marginTop: Spacing[4] }]}>
+            Son los datos reales de tu cuenta. Para cambiarlos, hablá con Administración.
+          </Text>
 
-        <Btn
-          label="Cerrar sesión"
-          variant="danger"
-          icon="logout"
-          onPress={cerrarSesion}
-          style={{ marginTop: Spacing[8] }}
-        />
-      </Screen>
+          <Btn
+            label="Cerrar sesión"
+            variant="danger"
+            icon="logout"
+            onPress={cerrarSesion}
+            style={{ marginTop: Spacing[8] }}
+          />
+        </Screen>
+        <Desvanecido alto={Spacing[4]} />
+      </View>
     </View>
   );
 }
@@ -81,7 +85,11 @@ const styles = StyleSheet.create({
   volver: {
     paddingHorizontal: Spacing[5],
   },
+  contenido: {
+    flex: 1,
+  },
   cuenta: {
+    marginTop: Spacing[4],
     alignItems: "center",
     gap: Spacing[2],
     marginBottom: Spacing[6],

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChatBotAvatar } from "@/components/avatar/ChatBotAvatar";
 import { Btn } from "@/components/ui/Btn";
+import { Desvanecido } from "@/components/ui/Desvanecido";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
 import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
@@ -117,7 +118,7 @@ export function MenuLateral({
     <View
       style={[
         styles.menu,
-        { paddingTop: insets.top + Spacing[2], paddingBottom: Math.max(insets.bottom, Spacing[3]) },
+        { paddingTop: insets.top + Spacing[2], paddingBottom: Math.max(insets.bottom - Spacing[2], Spacing[1]) },
       ]}
     >
       <View style={styles.marca}>
@@ -134,21 +135,29 @@ export function MenuLateral({
             {listaDeAcciones}
             {listaDeSecciones}
           </View>
-          <ScrollView
-            style={[styles.secciones, { borderTopWidth: 1, borderTopColor: C.border }]}
-            showsVerticalScrollIndicator={false}
-          >
-            {contenidoDesplazable}
-          </ScrollView>
+          <View style={styles.secciones}>
+            <ScrollView
+              contentContainerStyle={styles.desplazable}
+              showsVerticalScrollIndicator={false}
+            >
+              {contenidoDesplazable}
+            </ScrollView>
+            <Desvanecido alto={Spacing[4]} />
+            <Desvanecido alto={Spacing[5]} lado="abajo" />
+          </View>
         </>
       ) : (
-        <ScrollView style={styles.secciones} showsVerticalScrollIndicator={false}>
-          {listaDeAcciones}
-          {listaDeSecciones}
-        </ScrollView>
+        <View style={styles.secciones}>
+          <ScrollView contentContainerStyle={styles.desplazable} showsVerticalScrollIndicator={false}>
+            {listaDeAcciones}
+            {listaDeSecciones}
+          </ScrollView>
+          <Desvanecido alto={Spacing[4]} />
+          <Desvanecido alto={Spacing[5]} lado="abajo" />
+        </View>
       )}
 
-      <View style={[styles.pie, { borderTopWidth: 1, borderTopColor: C.border }]}>{children}</View>
+      <View style={styles.pie}>{children}</View>
     </View>
   );
 }
@@ -179,7 +188,12 @@ const styles = StyleSheet.create({
   },
   accion: {
     marginTop: Spacing[3],
+    marginBottom: Spacing[2],
     paddingHorizontal: Spacing[2],
+  },
+  desplazable: {
+    paddingTop: Spacing[2],
+    paddingBottom: Spacing[5],
   },
   secciones: {
     flex: 1,
@@ -208,9 +222,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 21,
   },
-  fijas: {
-    paddingBottom: Spacing[2],
-  },
+  fijas: {},
   pie: {
     gap: Spacing[2],
     marginTop: Spacing[2],

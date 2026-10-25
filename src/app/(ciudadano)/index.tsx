@@ -1,9 +1,11 @@
 import Head from "expo-router/head";
 import { StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { Encabezado } from "@/components/menu/Encabezado";
-import { useColors } from "@/constants/theme";
+import { Desvanecido } from "@/components/ui/Desvanecido";
+import { Size, Spacing, useColors } from "@/constants/theme";
 import { useConversacion } from "@/context/ChatContext";
 
 /**
@@ -12,6 +14,8 @@ import { useConversacion } from "@/context/ChatContext";
  */
 export default function Asistente() {
   const C = useColors();
+  const insets = useSafeAreaInsets();
+  const altoDelDesvanecido = insets.top + Size.header + Spacing[4];
 
   // Abrir otro chat o crear uno nuevo cambia la key y la conversación se vuelve a montar.
   const { activa } = useConversacion();
@@ -29,6 +33,8 @@ export default function Asistente() {
       </Head>
 
       <ChatWindow key={activa} />
+
+      <Desvanecido alto={altoDelDesvanecido} solido={insets.top / altoDelDesvanecido} />
 
       <View style={styles.encabezado}>
         <Encabezado />
