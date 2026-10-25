@@ -42,10 +42,12 @@ export function MenuEmergente({
   ancla,
   opciones,
   onClose,
+  compacto = false,
 }: {
   ancla: Ancla | null;
   opciones: OpcionDeMenu[];
   onClose: () => void;
+  compacto?: boolean;
 }) {
   const C = useColors();
   const { height } = useWindowDimensions();
@@ -72,21 +74,27 @@ export function MenuEmergente({
         accessibilityLabel="Cerrar menú"
       />
 
-      {ancla && (
+      {ancla && (() => {
+        const altoDeFila = compacto ? 46 : 52;
+        const altoTotal = opciones.length * altoDeFila + opciones.length - 1;
+        const debajo = compacto && ancla.y + ancla.height + altoTotal + Spacing[4] < height;
+        return (
         <Animated.View
           accessibilityRole="menu"
           style={[
             styles.tarjeta,
             SombraDeMenu,
             {
-              left: ancla.x,
-              width: ancla.width,
-              bottom: height - ancla.y + Spacing[2],
+              left: compacto ? ancla.x + Spacing[4] : ancla.x,
+              width: compacto ? Math.min(ancla.width - Spacing[6], 236) : ancla.width,
+              ...(debajo
+                ? { top: ancla.y + ancla.height + Spacing[1] }
+                : { bottom: height - ancla.y + Spacing[2] }),
               backgroundColor: C.surface,
               borderColor: C.borderStrong,
               borderRadius: ES_IOS ? Radius.button : 10,
               opacity: entrada,
-              transformOrigin: "bottom left",
+              transformOrigin: debajo ? "top left" : "bottom left",
               transform: [{ scale: entrada.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
             },
           ]}
@@ -101,11 +109,11 @@ export function MenuEmergente({
                   accessibilityRole="menuitem"
                   style={({ pressed }) => [
                     styles.fila,
-                    { flexDirection: ES_IOS ? "row" : "row-reverse" },
+                    { flexDirection: ES_IOS ? "row" : "row-reverse", minHeight: altoDeFila },
                     pressed && { backgroundColor: C.surface2 },
                   ]}
                 >
-                  <Text style={[styles.texto, { color }]} numberOfLines={1}>
+                  <Text style={[styles.texto, compacto && styles.textoCompacto, { color }]} numberOfLines={1}>
                     {opcion.texto}
                   </Text>
                   <Icon name={opcion.icono} size={22} color={color} />
@@ -114,7 +122,8 @@ export function MenuEmergente({
             );
           })}
         </Animated.View>
-      )}
+        );
+      })()}
     </RNModal>
   );
 }
@@ -137,6 +146,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 21,
     fontWeight: Weight.medium,
+  },
+  textoCompacto: {
+    fontSize: 16,
+    lineHeight: 20,
   },
   separador: {
     height: 1,

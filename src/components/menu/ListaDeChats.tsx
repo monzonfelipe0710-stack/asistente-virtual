@@ -8,8 +8,9 @@ import { Field } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { MenuEmergente, type Ancla } from "@/components/ui/MenuEmergente";
-import { Modal } from "@/components/ui/Modal";
+import { Dialogo } from "@/components/ui/Dialogo";
 import { Text } from "@/components/ui/Text";
+import { useToast } from "@/components/ui/Toast";
 import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
 import { useConversacion, type Conversacion } from "@/context/ChatContext";
 
@@ -71,8 +72,10 @@ function FilaDeChat({
  */
 export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }) {
   const C = useColors();
+  const toast = useToast();
   const { conversaciones, activa, abrir, eliminar, renombrar, alternarFijada } = useConversacion();
   const [elegida, setElegida] = useState<{ id: string; ancla: Ancla } | null>(null);
+  const [confirmando, setConfirmando] = useState<{ id: string; titulo: string } | null>(null);
   const [renombrando, setRenombrando] = useState<{ id: string; titulo: string } | null>(null);
   const enElChat = drawer.state.routes[drawer.state.index].name === "index";
   const conversacionElegida = conversaciones.find((c) => c.id === elegida?.id);
@@ -96,9 +99,19 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
     setElegida(null);
   }
 
-  function eliminarElegida() {
-    if (elegida) eliminar(elegida.id);
+  function pedirConfirmacion() {
+    if (conversacionElegida) {
+      setConfirmando({ id: conversacionElegida.id, titulo: conversacionElegida.titulo });
+    }
     setElegida(null);
+  }
+
+  function eliminarConfirmada() {
+    if (confirmando) {
+      eliminar(confirmando.id);
+      toast("Chat eliminado");
+    }
+    setConfirmando(null);
   }
 
   function guardarNombre() {
@@ -127,6 +140,7 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
       )}
 
       <MenuEmergente
+        compacto
         ancla={elegida?.ancla ?? null}
         opciones={[
           {
@@ -135,22 +149,38 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
             onPress: fijar,
           },
           { texto: "Cambiar nombre", icono: "edit", onPress: pedirNombre },
-          { texto: "Eliminar", icono: "trash", onPress: eliminarElegida, peligro: true },
+          { texto: "Eliminar", icono: "trash", onPress: pedirConfirmacion, peligro: true },
         ]}
         onClose={() => setElegida(null)}
       />
 
-      <Modal
+      <Dialogo
+        open={confirmando !== null}
+        title="¿Querés eliminar este chat?"
+        onClose={() => setConfirmando(null)}
+        footer={[
+          <Btn key="no" label="Cancelar" variant="secondary" onPress={() => setConfirmando(null)} />,
+          <Btn key="si" label="Eliminar" variant="dangerFill" onPress={eliminarConfirmada} />,
+        ]}
+      >
+        <Text style={[Type.body, { color: C.ink }]}>
+          {`"${confirmando?.titulo ?? ""}" se va a borrar de tu historial y no se puede recuperar.`}
+        </Text>
+      </Dialogo>
+
+      <Dialogo
         open={renombrando !== null}
         title="Cambiar nombre"
         onClose={() => setRenombrando(null)}
-        footer={
+        footer={[
+          <Btn key="no" label="Cancelar" variant="secondary" onPress={() => setRenombrando(null)} />,
           <Btn
+            key="si"
             label="Guardar"
             onPress={guardarNombre}
             disabled={!renombrando?.titulo.trim()}
-          />
-        }
+          />,
+        ]}
       >
         <Field label="Nombre del chat">
           <Input
@@ -162,14 +192,14 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
             onSubmitEditing={guardarNombre}
           />
         </Field>
-      </Modal>
+      </Dialogo>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   rotulo: {
-    marginTop: 14,
+    marginTop: 8,
     marginBottom: 4,
     marginHorizontal: Spacing[2],
   },
