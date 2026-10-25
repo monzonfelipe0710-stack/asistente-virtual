@@ -13,6 +13,12 @@ import { Text } from "@/components/ui/Text";
 import { useToast } from "@/components/ui/Toast";
 import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
 import { useConversacion, type Conversacion } from "@/context/ChatContext";
+import {
+  vibrarAlAdvertir,
+  vibrarAlConfirmar,
+  vibrarAlElegir,
+  vibrarAlMantener,
+} from "@/lib/haptica";
 
 function FilaDeChat({
   conversacion,
@@ -30,6 +36,7 @@ function FilaDeChat({
   const color = seleccionada ? C.activeInk : C.ink;
 
   function opciones() {
+    vibrarAlMantener();
     fila.current?.measureInWindow((x, y, width, height) => onOpciones({ x, y, width, height }));
   }
 
@@ -88,11 +95,13 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
   }
 
   function fijar() {
+    vibrarAlElegir();
     if (elegida) alternarFijada(elegida.id);
     setElegida(null);
   }
 
   function pedirNombre() {
+    vibrarAlElegir();
     if (conversacionElegida) {
       setRenombrando({ id: conversacionElegida.id, titulo: conversacionElegida.titulo });
     }
@@ -100,6 +109,7 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
   }
 
   function pedirConfirmacion() {
+    vibrarAlAdvertir();
     if (conversacionElegida) {
       setConfirmando({ id: conversacionElegida.id, titulo: conversacionElegida.titulo });
     }
@@ -109,13 +119,17 @@ export function ListaDeChats({ drawer }: { drawer: DrawerContentComponentProps }
   function eliminarConfirmada() {
     if (confirmando) {
       eliminar(confirmando.id);
+      vibrarAlConfirmar();
       toast("Chat eliminado");
     }
     setConfirmando(null);
   }
 
   function guardarNombre() {
-    if (renombrando) renombrar(renombrando.id, renombrando.titulo);
+    if (renombrando) {
+      renombrar(renombrando.id, renombrando.titulo);
+      vibrarAlConfirmar();
+    }
     setRenombrando(null);
   }
 

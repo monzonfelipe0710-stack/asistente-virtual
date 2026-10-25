@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
 import { Radius, Spacing, Type, useColors } from "@/constants/theme";
 import { quickReplies } from "@/data/mockQuickReplies";
+import { vibrarAlElegir } from "@/lib/haptica";
 
 /**
  * Sugerencias de la bienvenida: filas con ícono en un recuadro, título,
@@ -19,7 +20,10 @@ function QuickRepliesBase({ onSelect }: { onSelect: (consulta: string) => void }
       {quickReplies.map((sugerencia, indice) => (
         <Pressable
           key={sugerencia.label}
-          onPress={() => onSelect(sugerencia.query)}
+          onPress={() => {
+            vibrarAlElegir();
+            onSelect(sugerencia.query);
+          }}
           accessibilityRole="button"
           accessibilityLabel={`${sugerencia.label}. ${sugerencia.description}`}
           style={({ pressed }) => [

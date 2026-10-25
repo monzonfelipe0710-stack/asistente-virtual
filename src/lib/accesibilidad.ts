@@ -11,6 +11,7 @@ export interface Ajustes {
   altoContraste: boolean;
   reducirAnimaciones: boolean;
   letraLegible: boolean;
+  vibracion: boolean;
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
@@ -18,6 +19,7 @@ export const AJUSTES_POR_DEFECTO: Ajustes = {
   altoContraste: false,
   reducirAnimaciones: false,
   letraLegible: false,
+  vibracion: true,
 };
 
 const CLAVE = "chatap.accesibilidad";
@@ -35,6 +37,8 @@ function subscribe(escuchar: () => void) {
 }
 
 const getAjustes = () => ajustes;
+
+export const leerAjustes = getAjustes;
 
 export function useAjustes(): Ajustes {
   return useSyncExternalStore(subscribe, getAjustes, getAjustes);

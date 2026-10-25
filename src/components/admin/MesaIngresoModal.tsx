@@ -20,6 +20,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { KeyValue } from "@/components/ui/KeyValue";
 import { Modal } from "@/components/ui/Modal";
+import { vibrarAlConfirmar, vibrarAlElegir } from "@/lib/haptica";
 import { Select } from "@/components/ui/Select";
 import { Text } from "@/components/ui/Text";
 
@@ -56,11 +57,13 @@ export function MesaIngresoModal({
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
   async function pickFiles() {
+    vibrarAlElegir();
     const res = await DocumentPicker.getDocumentAsync({
       multiple: true,
       copyToCacheDirectory: true,
     });
     if (res.canceled) return;
+    vibrarAlConfirmar();
     setAdjuntos((prev) => [
       ...prev,
       ...res.assets.map((a) => ({

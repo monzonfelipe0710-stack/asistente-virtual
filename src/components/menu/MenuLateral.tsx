@@ -1,5 +1,6 @@
 import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { DrawerActions } from "expo-router/react-navigation";
+import { useEffect, useRef } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,6 +10,7 @@ import { Desvanecido } from "@/components/ui/Desvanecido";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
 import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
+import { vibrarSuave } from "@/lib/haptica";
 
 export interface ItemDeMenu {
   /** Nombre de la pantalla del Drawer a la que lleva (el nombre del archivo). */
@@ -56,6 +58,13 @@ export function MenuLateral({
   const C = useColors();
   const insets = useSafeAreaInsets();
   const pantallaActiva = drawer.state.routes[drawer.state.index].name;
+  const abierto = !!drawer.state.history?.some((entrada) => entrada.type === "drawer");
+  const estabaAbierto = useRef(abierto);
+
+  useEffect(() => {
+    if (abierto !== estabaAbierto.current) vibrarSuave();
+    estabaAbierto.current = abierto;
+  }, [abierto]);
 
   const listaDeAcciones = acciones.map((accion) => (
     <View key={accion.titulo} style={styles.accion}>

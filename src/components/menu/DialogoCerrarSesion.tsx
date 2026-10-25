@@ -1,8 +1,11 @@
+import { useEffect } from "react";
+
 import { Btn } from "@/components/ui/Btn";
 import { Dialogo } from "@/components/ui/Dialogo";
 import { Text } from "@/components/ui/Text";
 import { useToast } from "@/components/ui/Toast";
 import { Type, useColors } from "@/constants/theme";
+import { vibrarAlAdvertir } from "@/lib/haptica";
 
 export function DialogoCerrarSesion({
   open,
@@ -15,6 +18,10 @@ export function DialogoCerrarSesion({
 }) {
   const C = useColors();
   const toast = useToast();
+
+  useEffect(() => {
+    if (open) vibrarAlAdvertir();
+  }, [open]);
 
   async function confirmar() {
     onClose();

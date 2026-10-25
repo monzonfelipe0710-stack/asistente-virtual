@@ -5,6 +5,7 @@ import { BottomSheet } from "./BottomSheet";
 import { Icon } from "./Icon";
 import { Text } from "./Text";
 import { Radius, Size, Spacing, Weight, useColors } from "@/constants/theme";
+import { vibrarAlElegir } from "@/lib/haptica";
 
 /**
  * Desplegable. React Native no tiene `<select>`: el valor se ve como un campo
@@ -26,6 +27,7 @@ export function Select<T extends string>({
 
   function choose(option: T) {
     onChange(option);
+    vibrarAlElegir();
     setOpen(false);
   }
 

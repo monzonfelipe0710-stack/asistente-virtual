@@ -4,6 +4,7 @@ import { Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 import { Icon } from "@/components/ui/Icon";
 import { TextInput } from "@/components/ui/TextInput";
 import { Radius, Size, Spacing, useColors } from "@/constants/theme";
+import { vibrarSuave } from "@/lib/haptica";
 
 /**
  * Barra de mensaje: fondo de superficie, radio 22, 56 de alto como mínimo y
@@ -36,6 +37,7 @@ function ChatInputBase({
     if (!puedeEnviar) return;
     onSend(texto.trim());
     setTexto("");
+    vibrarSuave();
     Keyboard.dismiss();
   }
 
@@ -79,7 +81,10 @@ function ChatInputBase({
         />
         {disabled && onStop ? (
           <Pressable
-            onPress={onStop}
+            onPress={() => {
+              onStop();
+              vibrarSuave();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Detener respuesta"
             style={[styles.enviar, { backgroundColor: C.accent }]}

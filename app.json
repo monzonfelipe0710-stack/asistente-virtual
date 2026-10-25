@@ -10,6 +10,9 @@
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE"
       },
+      "permissions": [
+        "VIBRATE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {

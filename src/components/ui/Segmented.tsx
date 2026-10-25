@@ -2,6 +2,7 @@ import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "./Text";
 import { Radius, Spacing, Weight, useColors } from "@/constants/theme";
+import { vibrarAlElegir } from "@/lib/haptica";
 
 const RADIO = Platform.OS === "ios" ? Radius.lg : Radius.full;
 
@@ -26,7 +27,10 @@ export function Segmented<T extends string>({
         return (
           <Pressable
             key={option}
-            onPress={() => onChange(option)}
+            onPress={() => {
+              onChange(option);
+              vibrarAlElegir();
+            }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             style={[styles.segment, active && { backgroundColor: C.accent }]}

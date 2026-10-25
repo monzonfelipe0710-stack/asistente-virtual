@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "./Text";
 import { Radius, Spacing, Weight, useColors } from "@/constants/theme";
+import { vibrarAlElegir } from "@/lib/haptica";
 
 /**
  * Opciones en grilla de 2 columnas (separación 8): cada una es un botón de 52
@@ -24,7 +25,10 @@ export function OptionGrid<T extends string>({
         return (
           <Pressable
             key={option}
-            onPress={() => onChange(option)}
+            onPress={() => {
+              onChange(option);
+              vibrarAlElegir();
+            }}
             accessibilityRole="radio"
             accessibilityState={{ checked }}
             style={[

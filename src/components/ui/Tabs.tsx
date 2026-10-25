@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "./Text";
 import { Size, Spacing, Weight, useColors } from "@/constants/theme";
+import { vibrarAlElegir } from "@/lib/haptica";
 
 interface TabItem<T extends string> {
   id: T;
@@ -38,7 +39,10 @@ export function Tabs<T extends string>({
           return (
             <Pressable
               key={t.id}
-              onPress={() => onChange(t.id)}
+              onPress={() => {
+                onChange(t.id);
+                vibrarAlElegir();
+              }}
               accessibilityRole="tab"
               accessibilityState={{ selected: on }}
               style={[

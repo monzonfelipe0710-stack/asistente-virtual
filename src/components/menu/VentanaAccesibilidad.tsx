@@ -21,18 +21,20 @@ import {
   type Ajustes,
   type TamanoDeTexto,
 } from "@/lib/accesibilidad";
+import { vibrarAlConfirmar, vibrarAlElegir } from "@/lib/haptica";
 
 const TAMANOS = Object.keys(ESCALAS) as TamanoDeTexto[];
 const TAMANO_DE_LA_A = [16, 19, 23, 28];
 
 const INTERRUPTORES: {
-  clave: "altoContraste" | "letraLegible" | "reducirAnimaciones";
+  clave: "altoContraste" | "letraLegible" | "reducirAnimaciones" | "vibracion";
   titulo: string;
   pista: string;
 }[] = [
   { clave: "altoContraste", titulo: "Alto contraste", pista: "Negro y blanco puros, bordes marcados." },
   { clave: "letraLegible", titulo: "Letra más legible", pista: "Tipografía más abierta y espaciada." },
   { clave: "reducirAnimaciones", titulo: "Reducir animaciones", pista: "Sin movimiento ni escritura letra a letra." },
+  { clave: "vibracion", titulo: "Vibración", pista: "Una vibración corta al mantener apretado y al confirmar." },
 ];
 
 function Interruptor({
@@ -49,7 +51,10 @@ function Interruptor({
   const C = useColors();
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        onPress();
+        vibrarAlElegir();
+      }}
       accessibilityRole="switch"
       accessibilityLabel={titulo}
       accessibilityState={{ checked: valor }}
@@ -89,6 +94,7 @@ export function VentanaAccesibilidad({ open, onClose }: { open: boolean; onClose
           onPress={() => {
             cambiarAjustes(AJUSTES_POR_DEFECTO);
             setColorScheme("light");
+            vibrarAlConfirmar();
           }}
         />
       }
@@ -101,7 +107,10 @@ export function VentanaAccesibilidad({ open, onClose }: { open: boolean; onClose
             return (
               <Pressable
                 key={tamano}
-                onPress={() => cambiarAjustes({ tamanoDeTexto: tamano })}
+                onPress={() => {
+                  cambiarAjustes({ tamanoDeTexto: tamano });
+                  vibrarAlElegir();
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`Tamaño del texto: ${tamano}`}
                 accessibilityState={{ selected: activo }}
