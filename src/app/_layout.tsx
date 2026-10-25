@@ -83,7 +83,10 @@ export default function RootLayout() {
               options={{ title: "ChatAP · Restablecer contraseña" }}
             />
             <Stack.Screen name="perfil" options={{ title: "ChatAP · Mi perfil" }} />
-            <Stack.Screen name="admin" options={{ title: "ChatAP · Administración" }} />
+            <Stack.Screen
+              name="admin"
+              options={{ title: "ChatAP · Administración", gestureEnabled: false }}
+            />
           </Stack>
           <StatusBar style={oscuro ? "light" : "dark"} />
           </AvisoNoDisponibleProvider>
