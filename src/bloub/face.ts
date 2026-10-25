@@ -127,10 +127,13 @@ const BLINKS: number[] = (() => {
   return out
 })()
 
+const BLINK_CYCLE = BLINKS[BLINKS.length - 1]! + 3
+
 /** Measured: 1 to 2 frames at 10 fps. */
 const BLINK_DUR = 0.18
 
-function blinkLid(t: number): number {
+function blinkLid(time: number): number {
+  const t = time % BLINK_CYCLE
   for (let i = 0; i < BLINKS.length; i++) {
     const start = BLINKS[i]!
     if (t < start) break
