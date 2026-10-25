@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Pressable, StyleSheet, View, type ViewInstance } from "react-native";
 
+import { DialogoCerrarSesion } from "./DialogoCerrarSesion";
 import { cerrarMenu } from "./MenuLateral";
 import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
@@ -23,14 +24,19 @@ export function PieCiudadano({ drawer }: { drawer: DrawerContentComponentProps }
   const { user, isStaff, logout } = useAuth();
   const tarjeta = useRef<ViewInstance>(null);
   const [ancla, setAncla] = useState<Ancla | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   function ir(ruta: "/login" | "/perfil" | "/admin") {
     setAncla(null);
     cerrarMenu(drawer, () => router.push(ruta));
   }
 
-  async function cerrarSesion() {
+  function pedirConfirmacion() {
     setAncla(null);
+    setConfirmando(true);
+  }
+
+  async function cerrarSesion() {
     cerrarMenu(drawer);
     await logout();
   }
@@ -44,7 +50,7 @@ export function PieCiudadano({ drawer }: { drawer: DrawerContentComponentProps }
     ...(isStaff
       ? [{ texto: "Administración", icono: "shield" as const, onPress: () => ir("/admin") }]
       : []),
-    { texto: "Cerrar sesión", icono: "logout", onPress: cerrarSesion, peligro: true },
+    { texto: "Cerrar sesión", icono: "logout", onPress: pedirConfirmacion, peligro: true },
   ];
 
   if (!user) {
@@ -108,6 +114,12 @@ export function PieCiudadano({ drawer }: { drawer: DrawerContentComponentProps }
       </View>
 
       <MenuEmergente ancla={ancla} opciones={opciones} onClose={() => setAncla(null)} />
+
+      <DialogoCerrarSesion
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        onConfirmar={cerrarSesion}
+      />
     </>
   );
 }

@@ -1,7 +1,9 @@
 import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import { DialogoCerrarSesion } from "./DialogoCerrarSesion";
 import { cerrarMenu } from "./MenuLateral";
 import { FilaDelMenu } from "./FilaDelMenu";
 import { Avatar } from "@/components/ui/Avatar";
@@ -20,9 +22,9 @@ export function PieAdmin({ drawer }: { drawer: DrawerContentComponentProps }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { role } = usePermisos();
+  const [confirmando, setConfirmando] = useState(false);
 
   async function cerrarSesion() {
-    cerrarMenu(drawer);
     router.replace("/");
     await logout();
   }
@@ -50,7 +52,7 @@ export function PieAdmin({ drawer }: { drawer: DrawerContentComponentProps }) {
             </Text>
           </View>
           <Pressable
-            onPress={cerrarSesion}
+            onPress={() => setConfirmando(true)}
             accessibilityRole="button"
             accessibilityLabel="Cerrar sesión"
             style={({ pressed }) => [styles.salir, pressed && { backgroundColor: C.surface2 }]}
@@ -59,6 +61,12 @@ export function PieAdmin({ drawer }: { drawer: DrawerContentComponentProps }) {
           </Pressable>
         </View>
       )}
+
+      <DialogoCerrarSesion
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        onConfirmar={cerrarSesion}
+      />
     </>
   );
 }

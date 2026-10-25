@@ -1,7 +1,9 @@
 import { Redirect, useRouter } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { DialogoCerrarSesion } from "@/components/menu/DialogoCerrarSesion";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { BotonVolver } from "@/components/ui/BotonVolver";
@@ -27,6 +29,7 @@ export default function Perfil() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, loading, logout } = useAuth();
+  const [confirmando, setConfirmando] = useState(false);
 
   if (loading) return null;
   if (!user) return <Redirect href="/login" />;
@@ -68,12 +71,18 @@ export default function Perfil() {
             label="Cerrar sesión"
             variant="danger"
             icon="logout"
-            onPress={cerrarSesion}
+            onPress={() => setConfirmando(true)}
             style={{ marginTop: Spacing[8] }}
           />
         </Screen>
         <Desvanecido alto={Spacing[4]} />
       </View>
+
+      <DialogoCerrarSesion
+        open={confirmando}
+        onClose={() => setConfirmando(false)}
+        onConfirmar={cerrarSesion}
+      />
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { Drawer } from "expo-router/drawer";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
 
+import { DialogoCerrarSesion } from "@/components/menu/DialogoCerrarSesion";
 import { Encabezado } from "@/components/menu/Encabezado";
 import {
   cerrarMenu,
@@ -51,6 +52,7 @@ export default function LayoutAdmin() {
   const { user, isStaff, loading, logout } = useAuth();
   const { can } = usePermisos();
   const [accesibilidadAbierta, setAccesibilidadAbierta] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   // La sesión se lee de forma asíncrona: sin esto, en el primer cuadro se vería
   // el login incluso teniendo una sesión válida.
@@ -72,7 +74,12 @@ export default function LayoutAdmin() {
         texto="Tu cuenta de Ciudadano no tiene permiso para entrar al Acceso Interno."
       >
         <Btn label="Volver al asistente" variant="secondary" onPress={() => router.replace("/")} />
-        <Btn label="Cerrar sesión" variant="ghost" onPress={logout} />
+        <Btn label="Cerrar sesión" variant="ghost" onPress={() => setConfirmando(true)} />
+        <DialogoCerrarSesion
+          open={confirmando}
+          onClose={() => setConfirmando(false)}
+          onConfirmar={logout}
+        />
       </PantallaAviso>
     );
   }
