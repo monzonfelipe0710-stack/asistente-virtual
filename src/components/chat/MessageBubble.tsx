@@ -8,7 +8,10 @@ import type { ChatMessage } from "@/data/mockMessages";
 import { useAjustes } from "@/lib/accesibilidad";
 
 /** Milisegundos entre una letra y la siguiente. */
-const MS_POR_PASO = 18;
+const MS_POR_PASO = 12;
+
+/** Cantidad de pasos que dura como máximo la escritura, sin importar el largo del texto. */
+const PASOS_MAXIMOS = 100;
 
 /**
  * Usuario: burbuja gris a la derecha, radio 20, máximo 80 % del ancho.
@@ -32,8 +35,8 @@ function MessageBubbleBase({
   useEffect(() => {
     if (!escribiendo || letras >= total) return;
 
-    // Los textos largos avanzan de a dos para no tardar más de unos segundos.
-    const paso = total > 200 ? 2 : 1;
+    // Los textos largos avanzan de a más letras para no tardar más de un par de segundos.
+    const paso = Math.max(2, Math.ceil(total / PASOS_MAXIMOS));
     const id = setTimeout(() => setLetras((n) => Math.min(total, n + paso)), MS_POR_PASO);
     return () => clearTimeout(id);
   }, [escribiendo, letras, total]);
