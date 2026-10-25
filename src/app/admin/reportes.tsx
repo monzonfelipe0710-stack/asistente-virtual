@@ -202,7 +202,7 @@ export default function Reportes() {
                 style={[styles.splitValue, { color: C.ink }]}
               />
               <Text style={[styles.splitLabel, { color: C.ink2 }]}>
-                Pendientes o rechazados · {100 - activePct}%
+                Suspendidos · {100 - activePct}%
               </Text>
             </View>
           </View>
