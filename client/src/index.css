@@ -4501,3 +4501,11 @@ html.dark .tour-avatar {
   .welcome-content { padding-top: 0.75rem !important; padding-bottom: 1rem !important; }
   .chat-guided-assists { margin-bottom: 0.65rem; }
 }
+
+
+/* Respeta la preferencia del sistema al navegar entre anclas. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
