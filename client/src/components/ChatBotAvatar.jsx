@@ -203,6 +203,7 @@ export default function ChatBotAvatar({
   const clockRef = useRef(0);
   const colorsRef = useRef({ body: INK, eye: EYE });
   const visibleRef = useRef(true);
+  const animationControlRef = useRef({ start: null, stop: null });
   const [rxClass, setRxClass] = useState("");
   const [autoReaction, setAutoReaction] = useState(null);
 
@@ -213,6 +214,8 @@ export default function ChatBotAvatar({
       ([entry]) => {
         visibleRef.current = entry.isIntersecting;
         el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
+        if (entry.isIntersecting) animationControlRef.current.start?.();
+        else animationControlRef.current.stop?.();
       },
       { rootMargin: "120px" }
     );
@@ -321,12 +324,13 @@ export default function ChatBotAvatar({
     const frameInterval = isNarrowScreen ? 1000 / 30 : 0;
 
     const tick = (ms) => {
-      raf = requestAnimationFrame(tick);
-      // Fuera de pantalla no hace falta repintar el SVG: ahorra CPU al scrollear.
-      if (!visibleRef.current) {
+      raf = 0;
+      // Detenemos el RAF fuera del viewport o con la pestaña oculta.
+      if (!visibleRef.current || document.hidden || (reduceMQ && reduceMQ.matches)) {
         last = 0;
         return;
       }
+      raf = requestAnimationFrame(tick);
       if (frameInterval && ms - lastPaint < frameInterval) return;
       lastPaint = ms;
       const dt = last ? Math.min((ms - last) / 1000, 0.064) : 0;
@@ -337,11 +341,15 @@ export default function ChatBotAvatar({
     };
 
     const start = () => {
-      cancelAnimationFrame(raf);
+      if (!visibleRef.current || document.hidden || (reduceMQ && reduceMQ.matches) || raf) return;
       last = 0;
       raf = requestAnimationFrame(tick);
     };
-    const stop = () => cancelAnimationFrame(raf);
+    const stop = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    animationControlRef.current = { start, stop };
 
     const onReduce = (e) => {
       if (e.matches) {
@@ -357,24 +365,27 @@ export default function ChatBotAvatar({
       else if (!(reduceMQ && reduceMQ.matches)) start();
     };
 
+    let moveFrame = 0;
+    let latestPointer = null;
     const onMove = (e) => {
-      const el = svgRef.current;
-      if (!el || !engineRef.current) return;
-      const r = el.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      const dist = Math.hypot(dx, dy);
-      if (dist === 0) return;
-
-      // Sensibilidad ágil y natural para seguir el cursor en 360° en cualquier dirección
-      const intensity = Math.min(1, dist / 240);
-      // yaw positivo = mira a la derecha (dx > 0); yaw negativo = mira a la izquierda (dx < 0)
-      const yaw = (dx / dist) * MAX_YAW * intensity;
-      // pitch positivo = mira arriba (dy < 0); pitch negativo = mira abajo (dy > 0)
-      const pitch = (-dy / dist) * MAX_PITCH * intensity;
-      engineRef.current.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current, 0.12);
+      if (!visibleRef.current || (reduceMQ && reduceMQ.matches)) return;
+      latestPointer = { x: e.clientX, y: e.clientY };
+      if (moveFrame) return;
+      moveFrame = requestAnimationFrame(() => {
+        moveFrame = 0;
+        const el = svgRef.current;
+        const engine = engineRef.current;
+        if (!el || !engine || !latestPointer || !visibleRef.current) return;
+        const r = el.getBoundingClientRect();
+        const dx = latestPointer.x - (r.left + r.width / 2);
+        const dy = latestPointer.y - (r.top + r.height / 2);
+        const dist = Math.hypot(dx, dy);
+        if (dist === 0) return;
+        const intensity = Math.min(1, dist / 240);
+        const yaw = (dx / dist) * MAX_YAW * intensity;
+        const pitch = (-dy / dist) * MAX_PITCH * intensity;
+        engine.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current, 0.12);
+      });
     };
 
     const onLeave = () => {
@@ -398,6 +409,8 @@ export default function ChatBotAvatar({
 
     return () => {
       stop();
+      if (moveFrame) cancelAnimationFrame(moveFrame);
+      animationControlRef.current = { start: null, stop: null };
       if (followMouse) {
         window.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseleave", onLeave);
