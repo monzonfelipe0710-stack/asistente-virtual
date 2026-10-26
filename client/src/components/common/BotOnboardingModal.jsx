@@ -122,6 +122,7 @@ export default function BotOnboardingModal() {
   const [spotlight, setSpotlight] = useState(null);
   const [elementNotFound, setElementNotFound] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const tutorialActorKey = user?.id || "guest";
   const measureRef = useRef(null);
   const rafIdRef = useRef(0);
   const lastSuccessfulStep = useRef(0);
@@ -129,12 +130,8 @@ export default function BotOnboardingModal() {
   const navigationRunRef = useRef(0);
 
   const checkShouldOpen = useCallback(() => {
-    if (!user?.id) {
-      setIsOpen(false);
-      return;
-    }
-    const isCompleted = localStorage.getItem(`${STORAGE_KEY_PREFIX}${user.id}`) === "true";
-    const isTriggered = localStorage.getItem(`${TRIGGER_KEY_PREFIX}${user.id}`) === "true";
+    const isCompleted = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tutorialActorKey}`) === "true";
+    const isTriggered = localStorage.getItem(`${TRIGGER_KEY_PREFIX}${tutorialActorKey}`) === "true";
 
     if (isTriggered && !isCompleted) {
       setIsOpen(true);
@@ -143,16 +140,15 @@ export default function BotOnboardingModal() {
       setDirection("next");
       lastSuccessfulStep.current = 0;
     }
-  }, [user]);
+  }, [tutorialActorKey]);
 
   const forceOpen = useCallback(() => {
-    if (!user?.id) return;
     setIsOpen(true);
     setIsClosing(false);
     setStep(0);
     setDirection("next");
     lastSuccessfulStep.current = 0;
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => checkShouldOpen());
@@ -175,10 +171,12 @@ export default function BotOnboardingModal() {
   const handleFinish = useCallback((destination) => {
     if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
     navigationRunRef.current += 1;
-    if (user?.id) {
-      localStorage.setItem(`${STORAGE_KEY_PREFIX}${user.id}`, "true");
-      localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${user.id}`);
-      localStorage.removeItem(`${TUTORIAL_STEP_KEY}${user.id}`);
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}${tutorialActorKey}`, "true");
+      localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${tutorialActorKey}`);
+      localStorage.removeItem(`${TUTORIAL_STEP_KEY}${tutorialActorKey}`);
+    } catch {
+      // El tutorial se puede cerrar aunque el almacenamiento esté bloqueado.
     }
     setIsClosing(true);
     setSpotlight(null);
@@ -188,7 +186,7 @@ export default function BotOnboardingModal() {
       if (destination) navigate(destination);
       finishTimerRef.current = 0;
     }, 200);
-  }, [user, navigate]);
+  }, [tutorialActorKey, navigate]);
 
   const goToStep = useCallback(async (newStep) => {
     const runId = ++navigationRunRef.current;
