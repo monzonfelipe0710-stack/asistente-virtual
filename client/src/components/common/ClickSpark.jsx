@@ -16,7 +16,8 @@ export default function ClickSpark({
 }) {
   const canvasRef = useRef(null);
   const sparksRef = useRef([]);
-  const startTimeRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const drawFrameRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,18 +58,12 @@ export default function ClickSpark({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let animationId;
-
+    // El canvas queda inactivo la mayor parte del tiempo. Animamos solo mientras
+    // haya chispas visibles, en vez de mantener un bucle RAF permanente.
     const draw = (timestamp) => {
-      if (!startTimeRef.current) {
-        startTimeRef.current = timestamp;
-      }
+      animationFrameRef.current = null;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (sparksRef.current.length === 0) {
-        animationId = requestAnimationFrame(draw);
-        return;
-      }
+      if (sparksRef.current.length === 0) return;
 
       const isDark =
         typeof document !== 'undefined' &&
@@ -77,16 +72,12 @@ export default function ClickSpark({
 
       sparksRef.current = sparksRef.current.filter((spark) => {
         const elapsed = timestamp - spark.startTime;
-        if (elapsed >= duration) {
-          return false;
-        }
+        if (elapsed >= duration) return false;
 
         const progress = elapsed / duration;
         const eased = easeFunc(progress);
-
         const distance = eased * sparkRadius * extraScale;
         const lineLength = sparkSize * (1 - eased);
-
         const x1 = spark.x + distance * Math.cos(spark.angle);
         const y1 = spark.y + distance * Math.sin(spark.angle);
         const x2 = spark.x + (distance + lineLength) * Math.cos(spark.angle);
@@ -99,17 +90,21 @@ export default function ClickSpark({
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
-
         return true;
       });
 
-      animationId = requestAnimationFrame(draw);
+      if (sparksRef.current.length > 0) {
+        animationFrameRef.current = requestAnimationFrame(draw);
+      }
     };
 
-    animationId = requestAnimationFrame(draw);
-
+    drawFrameRef.current = draw;
     return () => {
-      cancelAnimationFrame(animationId);
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationFrameRef.current = null;
+      drawFrameRef.current = null;
     };
   }, [sparkColor, sparkSize, sparkRadius, duration, easeFunc, extraScale]);
 
@@ -132,6 +127,9 @@ export default function ClickSpark({
       }));
 
       sparksRef.current.push(...newSparks);
+      if (animationFrameRef.current === null && drawFrameRef.current) {
+        animationFrameRef.current = requestAnimationFrame(drawFrameRef.current);
+      }
     };
 
     window.addEventListener('click', handleClick, { passive: true });
