@@ -4,18 +4,18 @@ import "./HeroCinematicBackground.css";
 const SLIDES = [
   {
     id: "civic-architecture",
-    src: "/imagenes/formosa-centro-civico.svg",
-    alt: "Ilustración institucional del centro cívico de Formosa",
+    src: "https://www.argentina.gob.ar/sites/default/files/2023-10-12-jornada_de_capacitacion_en_formosa._gladis_mazza.jpg",
+    alt: "Jornada de capacitación de Recursos Humanos de la Administración Pública en Formosa",
   },
   {
     id: "river-twilight",
-    src: "/imagenes/formosa-rio-paraguay.svg",
-    alt: "Ilustración del río Paraguay y la costanera de Formosa",
+    src: "https://www.formosatuciudad.gob.ar/archivos/SERVICIOS/Transito/2019/CURSOS_PARA_EMPLEADOS_MUNIIPALES_1.jpg",
+    alt: "Personal municipal de Formosa participando en una capacitación de trabajo",
   },
   {
     id: "mist-landscape",
-    src: "/imagenes/administracion-publica.svg",
-    alt: "Ilustración de atención y servicios de la administración pública provincial",
+    src: "https://diarioformosa.eleco.com.ar/media/2024/11/03_13.jpg",
+    alt: "Personal de atención al público trabajando en oficinas de administración pública",
   },
 ];
 
