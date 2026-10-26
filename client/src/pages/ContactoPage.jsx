@@ -4,6 +4,7 @@ import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import { useToast } from "../components/common/Toast";
 import { useAuth } from "../context/AuthContext";
+import "./ContactoPage.css";
 
 const FAQS_RAPIDAS = [
   {
@@ -600,11 +601,3 @@ export default function ContactoPage() {
     </div>
   );
 }
-
-
-/* FAQ de Soporte: altura animada al abrir y cerrar. */
-.support-faq-answer { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows 320ms cubic-bezier(.22,1,.36,1), opacity 220ms ease; }
-.support-faq-answer-inner { min-height:0; overflow:hidden; transform:translateY(-5px); transition:transform 320ms cubic-bezier(.22,1,.36,1); }
-.support-faq-answer.is-open { grid-template-rows:1fr; opacity:1; }
-.support-faq-answer.is-open .support-faq-answer-inner { transform:translateY(0); }
-@media (prefers-reduced-motion:reduce) { .support-faq-answer, .support-faq-answer-inner { transition:none!important; transform:none!important; } }
