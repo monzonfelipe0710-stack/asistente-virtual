@@ -143,6 +143,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const [promoReady, setPromoReady] = useState(false);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [promoLeaving, setPromoLeaving] = useState(false);
+  const promoTimerRef = useRef(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const historyDrawerRef = useRef(null);
   const historyCloseButtonRef = useRef(null);
@@ -494,11 +495,28 @@ export default function ChatWindow({ initialQuery = null }) {
     setTimeout(() => setPhase("chat"), 480);
   }
 
-  /** Cierra la invitación de forma fluida; mantiene el aviso hasta el próximo ingreso. */
+  // La invitación se oculta automáticamente a los 5 segundos de aparecer.
+  useEffect(() => {
+    if (isAuthenticated || !promoReady || promoDismissed) return undefined;
+    promoTimerRef.current = window.setTimeout(() => {
+      setPromoLeaving(true);
+      window.setTimeout(() => {
+        setPromoDismissed(true);
+        setPromoLeaving(false);
+      }, 320);
+    }, 5000);
+    return () => window.clearTimeout(promoTimerRef.current);
+  }, [isAuthenticated, promoReady, promoDismissed]);
+
+  /** Cierra la invitación de forma fluida si el usuario toca la X. */
   function dismissPromo() {
     if (promoDismissed || promoLeaving) return;
+    window.clearTimeout(promoTimerRef.current);
     setPromoLeaving(true);
-    window.setTimeout(() => setPromoDismissed(true), 320);
+    window.setTimeout(() => {
+      setPromoDismissed(true);
+      setPromoLeaving(false);
+    }, 320);
   }
 
   /** Añade el mensaje del bot con efecto de tipeo y reacciones del avatar. */
