@@ -136,7 +136,6 @@ const CHATAP_PILLS = [
 
 // Atajos de trámites concretos: se mantienen separados de las categorías rápidas.
 const TRAMITES_SOLICITADOS = [
-  { id: "acta-siniestral", title: "¿Cómo tramito un acta siniestral?", query: "¿Cómo tramito un acta siniestral?", description: "Requisitos y pasos para iniciar la gestión." },
   { id: "certificado-servicios", title: "¿Cómo solicito el certificado de servicios?", query: "¿Cómo solicito el certificado de servicios?", description: "Cómo pedir la constancia y dónde presentarla." },
   { id: "licencia-medica", title: "¿Cómo tramito una licencia médica?", query: "¿Cómo tramito una licencia médica?", description: "Documentación y procedimiento de presentación." },
   { id: "recibo-haberes", title: "¿Cómo consulto mi recibo de haberes?", query: "¿Cómo consulto o descargo mi recibo de haberes?", description: "Orientación para encontrar tu recibo de sueldo." },
@@ -1408,7 +1407,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
             {/* Categorías rápidas originales: se conservan sin cambios. */}
             <div id="chatap-pills-container" className="chatap-pills-container">
-              {CHATAP_PILLS.map((pill) => (
+              {CHATAP_PILLS.filter((pill) => !/transferencia\s+de\s+tierras|acta\s+siniestral/i.test(`${pill.label} ${pill.query}`)).map((pill) => (
                 <button
                   key={pill.id}
                   type="button"
@@ -1428,7 +1427,7 @@ export default function ChatWindow({ initialQuery = null }) {
                 <p>Elegí una consulta para ver cómo iniciar la gestión.</p>
               </div>
               <div className="chatap-popular-grid">
-                {TRAMITES_SOLICITADOS.map((tramite, index) => (
+                {TRAMITES_SOLICITADOS.filter((tramite) => !/transferencia\s+de\s+tierras|acta\s+siniestral/i.test(`${tramite.title} ${tramite.query}`)).map((tramite, index) => (
                   <button
                     key={tramite.id}
                     type="button"
