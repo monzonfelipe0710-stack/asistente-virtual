@@ -204,6 +204,7 @@ export default function ChatBotAvatar({
   const colorsRef = useRef({ body: INK, eye: EYE });
   const visibleRef = useRef(true);
   const animationControlRef = useRef({ start: null, stop: null });
+  const scrollingRef = useRef(false);
   const [rxClass, setRxClass] = useState("");
   const [autoReaction, setAutoReaction] = useState(null);
 
@@ -341,7 +342,7 @@ export default function ChatBotAvatar({
     };
 
     const start = () => {
-      if (!visibleRef.current || document.hidden || (reduceMQ && reduceMQ.matches) || raf) return;
+      if (!visibleRef.current || scrollingRef.current || document.hidden || (reduceMQ && reduceMQ.matches) || raf) return;
       last = 0;
       raf = requestAnimationFrame(tick);
     };
@@ -366,6 +367,17 @@ export default function ChatBotAvatar({
     };
 
     let moveFrame = 0;
+    let scrollResumeTimer = null;
+    const onScroll = () => {
+      scrollingRef.current = true;
+      stop();
+      if (scrollResumeTimer) clearTimeout(scrollResumeTimer);
+      scrollResumeTimer = setTimeout(() => {
+        scrollingRef.current = false;
+        scrollResumeTimer = null;
+        start();
+      }, 140);
+    };
     let latestPointer = null;
     const onMove = (e) => {
       if (!visibleRef.current || (reduceMQ && reduceMQ.matches)) return;
@@ -400,6 +412,7 @@ export default function ChatBotAvatar({
       start();
     }
 
+    window.addEventListener("scroll", onScroll, { passive: true });
     if (followMouse) {
       window.addEventListener("mousemove", onMove);
       document.addEventListener("mouseleave", onLeave);
@@ -409,6 +422,9 @@ export default function ChatBotAvatar({
 
     return () => {
       stop();
+      if (scrollResumeTimer) clearTimeout(scrollResumeTimer);
+      scrollingRef.current = false;
+      window.removeEventListener("scroll", onScroll);
       if (moveFrame) cancelAnimationFrame(moveFrame);
       animationControlRef.current = { start: null, stop: null };
       if (followMouse) {
