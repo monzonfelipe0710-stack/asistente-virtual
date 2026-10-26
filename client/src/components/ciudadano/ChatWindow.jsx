@@ -31,7 +31,6 @@ const crearIdMensajeBot = () => `bot-${Date.now()}-${Math.random().toString(36).
 const crearIdConversacion = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const THREADS_PREFIX = "chatap.threads.";
 const TRAMITES_CACHE_KEY = "chatap.tramites-publicados.v1";
-const TRAMITES_CACHE_TTL = 6 * 60 * 60 * 1000;
 
 function cargarCacheTramitesPublicados() {
   if (typeof window === "undefined") return [];
