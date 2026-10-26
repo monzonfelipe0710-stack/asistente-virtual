@@ -91,16 +91,15 @@ const REACTION_CONFIG = {
 const GENERATED_TRANSFORMS = [
   null, "rx-tilt", "rx-bounce", "rx-squash", "rx-stretch",
 ];
-const GENERATED_LOOKS = [
-  { yaw: -24, pitch: -12, mix: 1, spin: 0, wander: 0 },
-  { yaw: -18, pitch: 8, mix: 1, spin: 0, wander: 0 },
-  { yaw: -8, pitch: -20, mix: 1, spin: 0, wander: 0 },
-  { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 },
-  { yaw: 8, pitch: 18, mix: 1, spin: 0, wander: 0 },
-  { yaw: 18, pitch: -8, mix: 1, spin: 0, wander: 0 },
-  { yaw: 24, pitch: 12, mix: 1, spin: 0, wander: 0 },
-  { yaw: 0, pitch: -24, mix: 1, spin: 0, wander: 0 },
-];
+const GENERATED_LOOKS = [-24, -12, 0, 12, 24].flatMap((yaw) =>
+  [-20, -10, 0, 10, 20].map((pitch) => ({
+    yaw,
+    pitch,
+    mix: yaw === 0 && pitch === 0 ? 0 : 1,
+    spin: 0,
+    wander: yaw === 0 && pitch === 0 ? 1 : 0,
+  }))
+);
 const GENERATED_EXPRESSIONS = [...EXPRESSION_BY_ID.keys()].filter((id) =>
   !["sleeping"].includes(id)
 );
