@@ -152,7 +152,7 @@ function MessageBubble({
     setRatingBusy(true);
     setRatingError("");
     try {
-      const result = await calificarConsulta(message.consultaId, value);
+      const result = await calificarConsulta(message.consultaId, value, { publico: message.publicRating });
       setRatingSubmitted(true);
       onRate?.(message.id, result?.calificacion ?? value);
     } catch (error) {
