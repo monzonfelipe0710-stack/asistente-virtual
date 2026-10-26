@@ -158,6 +158,7 @@ function getInstitutionalLogos(isDark) {
 
 export default function HomePage() {
   const theme = useTheme();
+  const [openFaq, setOpenFaq] = useState(null);
 
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -466,21 +467,22 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col gap-3 w-full">
-              {FAQ_ITEMS.map((item) => (
-                <details key={item.id} className="faq-item group">
-                  <summary className="faq-summary">
-                    <span className="text-base sm:text-lg font-bold text-ink">{item.question}</span>
-                    <svg className="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </summary>
-                  <div className="faq-content text-sm sm:text-base leading-relaxed text-muted">
-                    <div className="faq-content-inner">
-                      <p className="m-0">{item.answer}</p>
+              {FAQ_ITEMS.map((item) => {
+                const isOpen = openFaq === item.id;
+                return (
+                  <div key={item.id} className={`faq-item group ${isOpen ? "faq-item--open" : ""}`}>
+                    <button type="button" className="faq-summary" aria-expanded={isOpen} aria-controls={`home-faq-answer-${item.id}`} onClick={() => setOpenFaq(isOpen ? null : item.id)}>
+                      <span className="text-base sm:text-lg font-bold text-ink">{item.question}</span>
+                      <svg className="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div id={`home-faq-answer-${item.id}`} className="faq-content text-sm sm:text-base leading-relaxed text-muted" aria-hidden={!isOpen}>
+                      <div className="faq-content-inner"><p className="m-0">{item.answer}</p></div>
                     </div>
                   </div>
-                </details>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
