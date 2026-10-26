@@ -466,8 +466,8 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col gap-3 w-full">
-              {FAQ_ITEMS.map((item, idx) => (
-                <details key={item.id} className="faq-item group" open={idx === 0}>
+              {FAQ_ITEMS.map((item) => (
+                <details key={item.id} className="faq-item group">
                   <summary className="faq-summary">
                     <span className="text-base sm:text-lg font-bold text-ink">{item.question}</span>
                     <svg className="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
