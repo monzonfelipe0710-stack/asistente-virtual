@@ -475,7 +475,9 @@ export default function HomePage() {
                     </svg>
                   </summary>
                   <div className="faq-content text-sm sm:text-base leading-relaxed text-muted">
-                    <p className="m-0">{item.answer}</p>
+                    <div className="faq-content-inner">
+                      <p className="m-0">{item.answer}</p>
+                    </div>
                   </div>
                 </details>
               ))}
