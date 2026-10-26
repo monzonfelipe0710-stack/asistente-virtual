@@ -1386,15 +1386,8 @@ export default function ChatWindow({ initialQuery = null }) {
                           className="chatap-popular-card"
                           aria-label={`Consultar cómo iniciar: ${tramite.nombre}`}
                         >
-                          <span className="chatap-popular-number" aria-hidden="true">{String(tramitesOffset + index + 1 > tramitesPublicados.length ? tramitesOffset + index + 1 - tramitesPublicados.length : tramitesOffset + index + 1).padStart(2, "0")}</span>
                           <span className="chatap-popular-copy">
                             <span className="chatap-popular-card-title">{tramite.nombre}</span>
-                            {tramite.descripcion && (
-                              <span className="chatap-popular-card-description">{tramite.descripcion}</span>
-                            )}
-                            {tramite.sector?.nombre && (
-                              <span className="chatap-popular-card-description">{tramite.sector.nombre}</span>
-                            )}
                           </span>
                           <svg className="chatap-popular-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
