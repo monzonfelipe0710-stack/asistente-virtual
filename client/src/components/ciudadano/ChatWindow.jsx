@@ -536,8 +536,8 @@ export default function ChatWindow({ initialQuery = null }) {
     // pero reduce los renders y el trabajo de scroll durante respuestas largas.
     // El tipeo era el cuello de botella visual: el servidor ya había respondido,
     // pero mostrar una respuesta larga podía tardar muchos segundos.
-    const charStep = finalText.length > 240 ? 18 : finalText.length > 100 ? 12 : 7;
-    const charDelay = 18;
+    const charStep = finalText.length > 240 ? 5 : finalText.length > 100 ? 3 : 2;
+    const charDelay = 30;
 
     speakingRef.current = true;
     speakingIdRef.current = id;
@@ -683,7 +683,8 @@ export default function ChatWindow({ initialQuery = null }) {
     const responseMetadata = {
       error,
       consultaId: consultationData?.consultaId,
-      canRate: Boolean(consultationData?.consultaId && token),
+      canRate: Boolean(consultationData?.consultaId),
+      publicRating: !token,
       calificacion: null,
     };
     if (activeThreadIdRef.current !== responseThreadId) {
@@ -1454,12 +1455,7 @@ export default function ChatWindow({ initialQuery = null }) {
             ))}
             {isTyping && (
               <div className="flex items-start gap-3 py-1" role="status" aria-live="polite">
-                <div className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand" aria-hidden="true">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 3a8.5 8.5 0 1 0 8.5 8.5" strokeWidth="2" strokeLinecap="round" />
-                    <path d="M12 7v5l3 2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
+                <ChatBotAvatar reaction="thinking" size={36} speaking static={false} />
                 <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-line bg-paper px-4 py-3 shadow-sm">
                   <p className="m-0 text-sm text-muted">Estoy buscando información del trámite…</p>
                   <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">
