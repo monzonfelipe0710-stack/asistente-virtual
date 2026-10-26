@@ -166,8 +166,16 @@ export default function Particles({
     }
 
     let targetScrollY = typeof window !== "undefined" ? window.scrollY || 0 : 0;
+    let scrollResumeTimer = null;
     const handleScroll = () => {
       targetScrollY = window.scrollY || 0;
+      if (reducedMotion || !activeRef.current) return;
+      stop();
+      if (scrollResumeTimer) clearTimeout(scrollResumeTimer);
+      scrollResumeTimer = setTimeout(() => {
+        scrollResumeTimer = null;
+        start();
+      }, 140);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
 
@@ -283,6 +291,7 @@ export default function Particles({
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
+      if (scrollResumeTimer) clearTimeout(scrollResumeTimer);
       animationControlRef.current = { start: null, stop: null };
       stop();
       window.removeEventListener("resize", resize);
