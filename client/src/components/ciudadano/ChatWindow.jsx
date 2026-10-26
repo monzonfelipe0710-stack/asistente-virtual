@@ -161,9 +161,7 @@ export default function ChatWindow({ initialQuery = null }) {
   useEffect(() => {
     let active = true;
     const cached = cargarCacheTramitesPublicados();
-    // Si ya hay datos guardados, no ocultamos las tarjetas esperando a la API.
-    if (cached.length === 0) setTramitesPublicadosLoading(true);
-
+    // El estado inicial ya contempla la caché; evitamos un render síncrono extra.
     listarPublicados()
       .then((data) => {
         if (!active) return;
@@ -1409,7 +1407,7 @@ export default function ChatWindow({ initialQuery = null }) {
                           ? tramitesPublicados.slice(0, Math.max(0, tramitesOffset + 4 - tramitesPublicados.length))
                           : []
                       )
-                      .map((tramite, index) => (
+                      .map((tramite) => (
                         <button
                           key={tramite.id}
                           type="button"
