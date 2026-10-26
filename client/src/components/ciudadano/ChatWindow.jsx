@@ -136,11 +136,11 @@ const CHATAP_PILLS = [
 
 // Atajos de trámites concretos: se mantienen separados de las categorías rápidas.
 const TRAMITES_SOLICITADOS = [
-  { id: "acta-siniestral", title: "Acta siniestral", query: "¿Cómo tramito un acta siniestral?", description: "Requisitos y pasos para iniciar la gestión." },
-  { id: "certificado-servicios", title: "Certificado de servicios", query: "¿Cómo solicito el certificado de servicios?", description: "Cómo pedir la constancia y dónde presentarla." },
-  { id: "licencia-medica", title: "Licencia médica", query: "¿Cómo tramito una licencia médica?", description: "Documentación y procedimiento de presentación." },
-  { id: "recibo-haberes", title: "Recibo de haberes", query: "¿Cómo consulto o descargo mi recibo de haberes?", description: "Orientación para encontrar tu recibo de sueldo." },
-  { id: "seguimiento-expediente", title: "Seguimiento de expediente", query: "¿Cómo consulto el estado de mi expediente?", description: "Dónde consultar los movimientos del expediente." },
+  { id: "acta-siniestral", title: "¿Cómo tramito un acta siniestral?", query: "¿Cómo tramito un acta siniestral?", description: "Requisitos y pasos para iniciar la gestión." },
+  { id: "certificado-servicios", title: "¿Cómo solicito el certificado de servicios?", query: "¿Cómo solicito el certificado de servicios?", description: "Cómo pedir la constancia y dónde presentarla." },
+  { id: "licencia-medica", title: "¿Cómo tramito una licencia médica?", query: "¿Cómo tramito una licencia médica?", description: "Documentación y procedimiento de presentación." },
+  { id: "recibo-haberes", title: "¿Cómo consulto mi recibo de haberes?", query: "¿Cómo consulto o descargo mi recibo de haberes?", description: "Orientación para encontrar tu recibo de sueldo." },
+  { id: "seguimiento-expediente", title: "¿Cómo sigo mi expediente?", query: "¿Cómo consulto el estado de mi expediente?", description: "Dónde consultar los movimientos del expediente." },
 ];
 
 const MAX_PREGUNTA = 500;
