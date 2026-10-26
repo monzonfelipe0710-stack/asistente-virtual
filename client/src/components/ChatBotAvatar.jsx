@@ -382,7 +382,7 @@ export default function ChatBotAvatar({
         scrollingRef.current = false;
         scrollResumeTimer = null;
         start();
-      }, 140);
+      }, 70);
     };
     let latestPointer = null;
     const onMove = (e) => {
