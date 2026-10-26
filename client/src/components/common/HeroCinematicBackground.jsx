@@ -4,18 +4,18 @@ import "./HeroCinematicBackground.css";
 const SLIDES = [
   {
     id: "civic-architecture",
-    src: "/assets/hero/hero-bg-1.jpg",
-    alt: "Centro cívico y tecnológico al crepúsculo",
+    src: "/imagenes/formosa-centro-civico.svg",
+    alt: "Ilustración institucional del centro cívico de Formosa",
   },
   {
     id: "river-twilight",
-    src: "/assets/hero/hero-bg-2.jpg",
-    alt: "Costanera y horizonte fluvial de Formosa al atardecer",
+    src: "/imagenes/formosa-rio-paraguay.svg",
+    alt: "Ilustración del río Paraguay y la costanera de Formosa",
   },
   {
     id: "mist-landscape",
-    src: "/assets/hero/hero-bg-3.jpg",
-    alt: "Paisaje natural y bruma matutina",
+    src: "/imagenes/administracion-publica.svg",
+    alt: "Ilustración de atención y servicios de la administración pública provincial",
   },
 ];
 
