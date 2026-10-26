@@ -534,8 +534,7 @@ export default function ChatWindow({ initialQuery = null }) {
       calificacion,
     });
 
-    // La invitación a iniciar sesión aparece de forma fluida tras la primera respuesta.
-    setPromoReady(true);
+    // La invitación se habilita después de que termine el tipeo de la respuesta.
 
     // Anuncio para tecnologías de asistencia: texto completo, una sola vez.
     setAnnounce(finalText);
@@ -585,6 +584,8 @@ export default function ChatWindow({ initialQuery = null }) {
           setSpeakingId(null);
           setTypedText("");
           controllerRef.current?.onEvent(error ? "botError" : "botSuccess");
+          // Pausa breve para que la invitación no compita visualmente con la respuesta.
+          window.setTimeout(() => setPromoReady(true), 900);
         }, 550);
       }
     }, charDelay);
