@@ -100,6 +100,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const [tramitesPublicadosLoading, setTramitesPublicadosLoading] = useState(false);
   const [tramitesPublicadosError, setTramitesPublicadosError] = useState("");
   const [tramitesOffset, setTramitesOffset] = useState(0);
+  const [tramitesPage, setTramitesPage] = useState(0);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [imageError, setImageError] = useState("");
@@ -1348,7 +1349,7 @@ export default function ChatWindow({ initialQuery = null }) {
                 <p className="text-sm text-muted">Por el momento no hay trámites publicados.</p>
               ) : (
                 <>
-                  <div className="chatap-popular-grid">
+                  <div className="chatap-popular-grid" key={tramitesPage} aria-live="polite">
                     {tramitesPublicados
                       .slice(tramitesOffset, tramitesOffset + 4)
                       .concat(
@@ -1377,7 +1378,10 @@ export default function ChatWindow({ initialQuery = null }) {
                     <button
                       type="button"
                       className="chatap-popular-more"
-                      onClick={() => setTramitesOffset((current) => (current + 4) % tramitesPublicados.length)}
+                      onClick={() => {
+                        setTramitesOffset((current) => (current + 4) % tramitesPublicados.length);
+                        setTramitesPage((current) => current + 1);
+                      }}
                       aria-label="Mostrar los siguientes trámites"
                     >
                       Ver otros trámites
