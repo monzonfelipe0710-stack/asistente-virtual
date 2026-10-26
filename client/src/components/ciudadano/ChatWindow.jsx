@@ -1452,6 +1452,24 @@ export default function ChatWindow({ initialQuery = null }) {
                 />
               </div>
             ))}
+            {isTyping && (
+              <div className="flex items-start gap-3 py-1" role="status" aria-live="polite">
+                <div className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand/10 text-brand" aria-hidden="true">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 3a8.5 8.5 0 1 0 8.5 8.5" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M12 7v5l3 2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-line bg-paper px-4 py-3 shadow-sm">
+                  <p className="m-0 text-sm text-muted">Estoy buscando información del trámite…</p>
+                  <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand/70 animate-bounce [animation-delay:-0.24s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand/70 animate-bounce [animation-delay:-0.12s]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand/70 animate-bounce" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
