@@ -215,8 +215,12 @@ export default function ChatBotAvatar({
       ([entry]) => {
         visibleRef.current = entry.isIntersecting;
         el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
-        if (entry.isIntersecting) animationControlRef.current.start?.();
-        else animationControlRef.current.stop?.();
+        if (entry.isIntersecting) {
+          // Repintar un frame válido al volver al viewport evita que el SVG quede vacío
+          // si el navegador suspendió el requestAnimationFrame durante el scroll.
+          drawRef.current?.();
+          animationControlRef.current.start?.();
+        } else animationControlRef.current.stop?.();
       },
       { rootMargin: "120px" }
     );
@@ -297,6 +301,8 @@ export default function ChatBotAvatar({
       paint(engine.sample(POSES[st] ?? 1));
     };
     drawRef.current = drawStatic;
+    // Pintado inicial síncrono: el avatar no depende del primer RAF para ser visible.
+    drawStatic();
 
     const themeObserver = new MutationObserver(() => {
       readColors();
