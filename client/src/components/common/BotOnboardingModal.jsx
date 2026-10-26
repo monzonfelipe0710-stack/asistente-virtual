@@ -73,7 +73,7 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Listo!",
     title: "Ya sabés usar ChatAP",
-    description: "¡Ya estás listo! Escribí una consulta o elegí uno de los temas rápidos para empezar. ChatAP te acompaña durante el trámite."
+    description: "¡Ya estás listo! Escribí una consulta o elegí uno de los temas rápidos para empezar. ChatAP te acompaña durante el trámite.",
     route: "/chat",
     target: null,
     action: null,
