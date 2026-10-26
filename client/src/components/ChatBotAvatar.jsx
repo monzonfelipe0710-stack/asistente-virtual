@@ -39,6 +39,7 @@ const REACTION_CONFIG = {
   bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   squash:      { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   stretch:     { transform: "rx-stretch", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
+  bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   microBounce: { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   microSquash: { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   wink:        { state: "wink" },
@@ -85,18 +86,44 @@ const REACTION_CONFIG = {
   alert:       { state: "alert" },
 };
 
+// Banco combinatorio: mezcla expresiones, miradas y microgestos para generar
+// más de mil variaciones sin crear componentes, timers ni nodos SVG adicionales.
+const GENERATED_TRANSFORMS = [
+  null, "rx-tilt", "rx-bounce", "rx-squash", "rx-stretch",
+];
+const GENERATED_LOOKS = [
+  { yaw: -24, pitch: -12, mix: 1, spin: 0, wander: 0 },
+  { yaw: -18, pitch: 8, mix: 1, spin: 0, wander: 0 },
+  { yaw: -8, pitch: -20, mix: 1, spin: 0, wander: 0 },
+  { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 },
+  { yaw: 8, pitch: 18, mix: 1, spin: 0, wander: 0 },
+  { yaw: 18, pitch: -8, mix: 1, spin: 0, wander: 0 },
+  { yaw: 24, pitch: 12, mix: 1, spin: 0, wander: 0 },
+  { yaw: 0, pitch: -24, mix: 1, spin: 0, wander: 0 },
+];
+const GENERATED_EXPRESSIONS = [...EXPRESSION_BY_ID.keys()].filter((id) =>
+  !["sleeping"].includes(id)
+);
+for (const expr of GENERATED_EXPRESSIONS) {
+  for (let ti = 0; ti < GENERATED_TRANSFORMS.length; ti++) {
+    for (let li = 0; li < GENERATED_LOOKS.length; li++) {
+      const id = `mix_${expr}_${ti}_${li}`;
+      if (REACTION_CONFIG[id]) continue;
+      REACTION_CONFIG[id] = {
+        expr,
+        look: GENERATED_LOOKS[li],
+        ...(GENERATED_TRANSFORMS[ti] ? { transform: GENERATED_TRANSFORMS[ti] } : {}),
+      };
+    }
+  }
+}
+// Incluye reacciones originales y combinaciones. El shuffle-bag evita repetir
+// una reacción hasta recorrer el lote completo.
+const AUTO_REACTIONS_POOL = Object.keys(REACTION_CONFIG).filter((id) => id !== "idle");
+
 const DOT_POOL = 6;
 const MAX_YAW = 35;
 const MAX_PITCH = 28;
-
-const AUTO_REACTIONS_POOL = [
-  "blink", "wink", "happy", "excited", "surprised", "thinking", "curious",
-  "proud", "shy", "relieved", "playful", "hilare", "giggle", "bounce",
-  "microBounce", "squash", "microSquash", "stretch", "tiltLeft", "tiltRight",
-  "attention", "confus", "suspicious", "exclaim", "notify", "cheer", "peek",
-  "intrigued", "glee", "smug", "amazed", "nod", "shake", "celebrate", "play",
-  "orbit", "swirl", "burst", "egg", "hexagon", "comet", "alert",
-];
 
 function createShuffleBag(pool) {
   let deck = [];
