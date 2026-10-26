@@ -92,12 +92,16 @@ export default function Particles({
   cameraDistance = 18,
   disableRotation = false,
   pixelRatio = 1,
+  active = true,
   className = "",
 }) {
   const containerRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
   const meshRef = useRef(null);
   const colorsRef = useRef(particleColors);
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const animationControlRef = useRef({ start: null, stop: null });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -130,8 +134,6 @@ export default function Particles({
     gl.canvas.style.width = "100%";
     gl.canvas.style.height = "100%";
     gl.canvas.style.pointerEvents = "none";
-    gl.canvas.style.transform = "translateZ(0)";
-    gl.canvas.style.willChange = "transform";
     container.appendChild(gl.canvas);
     gl.clearColor(0, 0, 0, 0);
 
@@ -223,11 +225,9 @@ export default function Particles({
     let currentScrollY = targetScrollY;
 
     const update = (t) => {
-      if (document.hidden) {
+      animationFrameId = 0;
+      if (document.hidden || (!activeRef.current && !reducedMotion)) {
         lastTime = t;
-        if (!reducedMotion) {
-          animationFrameId = requestAnimationFrame(update);
-        }
         return;
       }
       if (!reducedMotion) {
@@ -262,13 +262,30 @@ export default function Particles({
       renderer.render({ scene: particles, camera });
     };
 
-    if (reducedMotion) {
-      update(performance.now());
-    } else {
+    const start = () => {
+      if (reducedMotion || !activeRef.current || document.hidden || animationFrameId) return;
+      lastTime = performance.now();
       animationFrameId = requestAnimationFrame(update);
-    }
+    };
+    const stop = () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = 0;
+    };
+    animationControlRef.current = { start, stop };
+
+    if (reducedMotion) update(performance.now());
+    else start();
+
+    const handleVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      animationControlRef.current = { start: null, stop: null };
+      stop();
       window.removeEventListener("resize", resize);
       if (moveParticlesOnHover) {
         window.removeEventListener("mousemove", handleMouseMove);
@@ -292,6 +309,12 @@ export default function Particles({
     disableRotation,
     pixelRatio,
   ]);
+
+  // Pausa el render sin destruir el contexto ni recrear la geometría al cambiar de sección.
+  useEffect(() => {
+    if (active) animationControlRef.current.start?.();
+    else animationControlRef.current.stop?.();
+  }, [active]);
 
   // Actualización ultra-fluida de la paleta en el buffer GPU sin destruir el contexto WebGL
   useEffect(() => {
