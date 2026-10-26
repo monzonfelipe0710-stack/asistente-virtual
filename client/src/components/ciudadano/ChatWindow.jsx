@@ -71,77 +71,6 @@ function claveHistorial(query) {
   return `legacy:${query?.at || ""}:${query?.text || ""}`;
 }
 
-const CHATAP_PILLS = [
-  {
-    id: "haberes",
-    label: "Recibo de haberes",
-    query: "¿Dónde puedo ver mi recibo de sueldo?",
-    icon: (
-      <svg className="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    id: "siged",
-    label: "Expedientes SIGED",
-    query: "¿Cómo puedo seguir mi expediente?",
-    icon: (
-      <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
-  },
-  {
-    id: "licencias",
-    label: "Licencias médicas",
-    query: "¿Cómo solicito una licencia médica?",
-    icon: (
-      <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-  },
-  {
-    id: "mesa-entradas",
-    label: "Mesa de Entradas",
-    query: "¿Cómo inicio un trámite en Mesa de Entradas?",
-    icon: (
-      <svg className="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    id: "formularios",
-    label: "Formularios y notas",
-    query: "¿Dónde descargo los formularios oficiales?",
-    icon: (
-      <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-      </svg>
-    ),
-  },
-  {
-    id: "mas",
-    label: "Más consultas",
-    query: "¿Cuáles son los trámites más consultados?",
-    icon: (
-      <svg className="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 2l2.4 7.2h7.6l-6.2 4.5 2.4 7.3-6.2-4.5-6.2 4.5 2.4-7.3-6.2-4.5h7.6z" />
-      </svg>
-    ),
-  },
-];
-
-// Atajos de trámites concretos: se mantienen separados de las categorías rápidas.
-const TRAMITES_SOLICITADOS = [
-  { id: "certificado-servicios", title: "¿Cómo solicito el certificado de servicios?", query: "¿Cómo solicito el certificado de servicios?", description: "Cómo pedir la constancia y dónde presentarla." },
-  { id: "licencia-medica", title: "¿Cómo tramito una licencia médica?", query: "¿Cómo tramito una licencia médica?", description: "Documentación y procedimiento de presentación." },
-  { id: "recibo-haberes", title: "¿Cómo consulto mi recibo de haberes?", query: "¿Cómo consulto o descargo mi recibo de haberes?", description: "Orientación para encontrar tu recibo de sueldo." },
-  { id: "seguimiento-expediente", title: "¿Cómo sigo mi expediente?", query: "¿Cómo consulto el estado de mi expediente?", description: "Dónde consultar los movimientos del expediente." },
-];
-
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
@@ -1405,46 +1334,10 @@ export default function ChatWindow({ initialQuery = null }) {
               Estoy para ayudarte con tus gestiones y trámites provinciales. Elegí una de las opciones o escribí directamente lo que necesitás.
             </p>
 
-            {/* Categorías rápidas originales: se conservan sin cambios. */}
-            <div id="chatap-pills-container" className="chatap-pills-container">
-              {CHATAP_PILLS.filter((pill) => !/transferencia\s+de\s+tierras|acta\s+siniestral/i.test(`${pill.label} ${pill.query}`)).map((pill) => (
-                <button
-                  key={pill.id}
-                  type="button"
-                  onClick={() => handleQuickReply(pill.query)}
-                  className="chatap-pill-btn"
-                >
-                  <span className="shrink-0">{pill.icon}</span>
-                  <span>{pill.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Trámites concretos, visibles en tarjetas claras y adaptables. */}
             <section className="chatap-popular-procedures" aria-labelledby="chatap-popular-title">
               <div className="chatap-popular-heading">
                 <h2 id="chatap-popular-title">Trámites más solicitados</h2>
                 <p>Elegí una consulta para ver cómo iniciar la gestión.</p>
-              </div>
-              <div className="chatap-popular-grid">
-                {TRAMITES_SOLICITADOS.filter((tramite) => !/transferencia\s+de\s+tierras|acta\s+siniestral/i.test(`${tramite.title} ${tramite.query}`)).map((tramite, index) => (
-                  <button
-                    key={tramite.id}
-                    type="button"
-                    onClick={() => handleQuickReply(tramite.query)}
-                    className="chatap-popular-card"
-                    aria-label={tramite.query}
-                  >
-                    <span className="chatap-popular-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-                    <span className="chatap-popular-copy">
-                      <span className="chatap-popular-card-title">{tramite.title}</span>
-                      <span className="chatap-popular-card-description">{tramite.description}</span>
-                    </span>
-                    <svg className="chatap-popular-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                ))}
               </div>
             </section>
           </div>
