@@ -500,7 +500,7 @@ export default function ContactoPage() {
                           <button
                             type="button"
                             onClick={() => setOpenFaq(isOpen ? null : idx)}
-                            className="w-full p-3.5 text-left flex items-start justify-between gap-3 cursor-pointer bg-transparent border-0"
+                            className="w-full p-3.5 text-left flex items-start justify-between gap-3 cursor-pointer bg-transparent border-0" aria-expanded={isOpen} aria-controls={`support-faq-answer-${idx}`}
                           >
                             <span className="text-xs sm:text-[13px] font-bold text-ink leading-snug">
                               {item.q}
@@ -516,11 +516,11 @@ export default function ContactoPage() {
                             </span>
                           </button>
 
-                          {isOpen && (
-                            <div className="px-3.5 pb-3.5 pt-1 text-xs text-muted leading-relaxed border-t border-line/50 animate-fade-in">
-                              {item.a}
+                          <div id={`support-faq-answer-${idx}`} className={`support-faq-answer ${isOpen ? "is-open" : ""}`} aria-hidden={!isOpen}>
+                            <div className="support-faq-answer-inner">
+                              <p className="px-3.5 pb-3.5 pt-3 text-xs text-muted leading-relaxed border-t border-line/50 m-0">{item.a}</p>
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
@@ -600,3 +600,13 @@ export default function ContactoPage() {
     </div>
   );
 }
+
+
+/* FAQ de Soporte: altura animada al abrir y cerrar. */
+.support-faq-answer { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows 320ms cubic-bezier(.22,1,.36,1), opacity 220ms ease; }
+.support-faq-answer-inner { min-height:0; overflow:hidden; transform:translateY(-5px); transition:transform 320ms cubic-bezier(.22,1,.36,1); }
+.support-faq-answer.is-open { grid-template-rows:1fr; opacity:1; }
+.support-faq-answer.is-open .support-faq-answer-inner { transform:translateY(0); }
+.support-faq-answer[aria-hidden="true"] .support-faq-answer-inner { visibility:hidden; }
+.support-faq-answer.is-open[aria-hidden="false"] .support-faq-answer-inner { visibility:visible; }
+@media (prefers-reduced-motion:reduce) { .support-faq-answer, .support-faq-answer-inner { transition:none!important; transform:none!important; } }
