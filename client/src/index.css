@@ -707,6 +707,154 @@ select {
     margin: 0 auto;
   }
 
+  .chatap-popular-procedures {
+    width: min(100%, 48rem);
+    margin: 0.25rem auto 0;
+    text-align: left;
+  }
+
+  .chatap-popular-heading {
+    margin-bottom: 0.7rem;
+    text-align: center;
+  }
+
+  .chatap-popular-heading h2 {
+    margin: 0;
+    color: var(--color-ink);
+    font-size: 0.95rem;
+    font-weight: 750;
+    letter-spacing: -0.015em;
+  }
+
+  .chatap-popular-heading p {
+    margin: 0.25rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .chatap-popular-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .chatap-popular-card {
+    display: flex;
+    min-width: 0;
+    min-height: 4.25rem;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid var(--color-line);
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--color-paper) 96%, transparent);
+    color: var(--color-ink);
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+
+  .dark .chatap-popular-card {
+    background: rgba(255, 255, 255, 0.035);
+    border-color: rgba(255, 255, 255, 0.11);
+  }
+
+  .chatap-popular-card:hover {
+    background: color-mix(in srgb, var(--color-mist) 72%, var(--color-paper));
+    border-color: color-mix(in srgb, var(--color-brand) 55%, var(--color-line));
+    transform: translateY(-1px);
+  }
+
+  .dark .chatap-popular-card:hover {
+    background: rgba(255, 255, 255, 0.075);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .chatap-popular-card:focus-visible,
+  .chatap-pill-btn:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 3px;
+  }
+
+  .chatap-popular-number {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 2rem;
+    place-items: center;
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color: var(--color-brand);
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chatap-popular-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.2rem;
+  }
+
+  .chatap-popular-card-title {
+    overflow-wrap: anywhere;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .chatap-popular-card-description {
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .chatap-popular-arrow {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 1rem;
+    margin-left: auto;
+    color: var(--color-muted);
+    transition: transform 160ms ease, color 160ms ease;
+  }
+
+  .chatap-popular-card:hover .chatap-popular-arrow {
+    color: var(--color-brand);
+    transform: translateX(2px);
+  }
+
+  @media (max-width: 560px) {
+    .chatap-popular-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.45rem;
+    }
+
+    .chatap-popular-card {
+      min-height: 3.75rem;
+      padding: 0.65rem 0.75rem;
+    }
+
+    .chatap-popular-card-description {
+      font-size: 0.74rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chatap-popular-card,
+    .chatap-popular-arrow,
+    .chatap-pill-btn {
+      transition: none;
+    }
+
+    .chatap-popular-card:hover,
+    .chatap-popular-card:hover .chatap-popular-arrow,
+    .chatap-pill-btn:hover,
+    .chatap-pill-btn:active {
+      transform: none;
+    }
+  }
+
   .chatap-pill-btn {
     display: inline-flex;
     align-items: center;
@@ -721,7 +869,7 @@ select {
     font-weight: 600;
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
     user-select: none;
     text-decoration: none;
   }
