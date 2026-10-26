@@ -37,9 +37,12 @@ export const listarSectoresDeUsuario = async (usuarioId) => {
   return filas.map((f) => f.sector);
 };
 
-export const usuarioTieneSector = async (usuarioId, sectorId) => {
+// El SUPERUSUARIO tiene acceso a todos los sectores.
+export const usuarioTieneSector = async (usuario, sectorId) => {
+  if (usuario.rol === 'SUPERUSUARIO') return true;
+
   const fila = await prisma.usuarioSector.findUnique({
-    where: { usuarioId_sectorId: { usuarioId, sectorId } },
+    where: { usuarioId_sectorId: { usuarioId: usuario.id, sectorId } },
   });
   return fila !== null;
 };

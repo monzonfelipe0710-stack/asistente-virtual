@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loginSchema } from '../src/validators/auth.validators.js';
-import { registroSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
+import { registroCiudadanoSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
 import { crearSectorSchema, actualizarSectorSchema } from '../src/validators/sector.validator.js';
 import { crearTramiteSchema, actualizarTramiteSchema } from '../src/validators/tramite.validator.js';
 
@@ -22,15 +22,25 @@ describe('loginSchema', () => {
   });
 });
 
-describe('registroSchema', () => {
+describe('registroCiudadanoSchema', () => {
+  const base = { dni: '12345678', genero: 'F', email: 'a@b.com', password: '12345678' };
+
   it('exige al menos 8 caracteres de contraseña', () => {
-    const m = mensaje(registroSchema, { nombre: 'Ana', email: 'a@b.com', password: 'corta' });
+    const m = mensaje(registroCiudadanoSchema, { ...base, password: 'corta' });
     assert.equal(m, 'La contraseña debe tener al menos 8 caracteres.');
   });
 
+  it('exige un DNI de 7 u 8 dígitos', () => {
+    assert.equal(mensaje(registroCiudadanoSchema, { ...base, dni: '123' }), 'El DNI debe tener 7 u 8 dígitos.');
+    assert.equal(registroCiudadanoSchema.safeParse({ ...base, dni: '1234567' }).success, true);
+  });
+
+  it('rechaza un género distinto de M o F', () => {
+    assert.equal(mensaje(registroCiudadanoSchema, { ...base, genero: 'X' }), 'El género debe ser M o F.');
+  });
+
   it('acepta un registro completo', () => {
-    const r = registroSchema.safeParse({ nombre: 'Ana', email: 'a@b.com', password: '12345678' });
-    assert.equal(r.success, true);
+    assert.equal(registroCiudadanoSchema.safeParse(base).success, true);
   });
 });
 

@@ -6,6 +6,8 @@ export const autorizar = (...rolesPermitidos) => {
       throw error;
     }
 
+    if (req.usuario.rol === 'SUPERUSUARIO') return next();
+
     if (!rolesPermitidos.includes(req.usuario.rol)) {
       const error = new Error('No cuentas con los permisos necesarios para esta acción.');
       error.statusCode = 403;
