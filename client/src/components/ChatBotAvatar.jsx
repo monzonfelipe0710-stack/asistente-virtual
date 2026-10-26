@@ -90,54 +90,17 @@ const MAX_YAW = 35;
 const MAX_PITCH = 28;
 
 const AUTO_REACTIONS_POOL = [
-  "blink",
-  "wink",
-  "happy",
-  "excited",
-  "surprised",
-  "thinking",
-  "curious",
-  "proud",
-  "shy",
-  "relieved",
-  "playful",
-  "hilare",
-  "giggle",
-  "bounce",
-  "microBounce",
-  "squash",
-  "microSquash",
-  "stretch",
-  "tiltLeft",
-  "tiltRight",
-  "attention",
-  "confus",
-  "suspicious",
-  "exclaim",
-  "notify",
-  "cheer",
-  "peek",
-  "intrigued",
-  "glee",
-  "smug",
-  "amazed",
-  "nod",
-  "shake",
-  "celebrate",
-  "play",
-  "orbit",
-  "swirl",
-  "burst",
-  "egg",
-  "hexagon",
-  "comet",
-  "alert",
+  "blink", "wink", "happy", "excited", "surprised", "thinking", "curious",
+  "proud", "shy", "relieved", "playful", "hilare", "giggle", "bounce",
+  "microBounce", "squash", "microSquash", "stretch", "tiltLeft", "tiltRight",
+  "attention", "confus", "suspicious", "exclaim", "notify", "cheer", "peek",
+  "intrigued", "glee", "smug", "amazed", "nod", "shake", "celebrate", "play",
+  "orbit", "swirl", "burst", "egg", "hexagon", "comet", "alert",
 ];
 
 function createShuffleBag(pool) {
   let deck = [];
   let lastPicked = null;
-
   return function getNext() {
     if (deck.length === 0) {
       deck = [...pool];
@@ -161,11 +124,8 @@ function applyConfig(engine, cfg, t, isFollowing = false) {
     return;
   }
   if (cfg.state) engine.setState(cfg.state, t);
-  if (cfg.customExpr) {
-    engine.setExpression(cfg.customExpr, t);
-  } else if (cfg.expr) {
-    engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
-  }
+  if (cfg.customExpr) engine.setExpression(cfg.customExpr, t);
+  else if (cfg.expr) engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, t);
   if (cfg.look && !isFollowing) engine.setLook(cfg.look, t);
 }
 
@@ -173,11 +133,7 @@ function ZzzOverlay({ size }) {
   const s = size || 44;
   const base = s * 0.38;
   return (
-    <span
-      className="absolute z-10 pointer-events-none select-none"
-      style={{ top: -s * 0.15, right: -s * 0.1 }}
-      aria-hidden="true"
-    >
+    <span className="absolute z-10 pointer-events-none select-none" style={{ top: -s * 0.15, right: -s * 0.1 }} aria-hidden="true">
       <span className="zzz-letter" style={{ fontSize: base, animationDelay: "0s" }}>Z</span>
       <span className="zzz-letter" style={{ fontSize: base * 0.8, animationDelay: "0.6s", top: -base * 0.3, left: base * 0.4 }}>z</span>
       <span className="zzz-letter" style={{ fontSize: base * 0.6, animationDelay: "1.2s", top: -base * 0.7, left: base * 0.8 }}>z</span>
@@ -204,26 +160,22 @@ export default function ChatBotAvatar({
   const colorsRef = useRef({ body: INK, eye: EYE });
   const visibleRef = useRef(true);
   const animationControlRef = useRef({ start: null, stop: null });
-  const scrollingRef = useRef(false);
   const [rxClass, setRxClass] = useState("");
   const [autoReaction, setAutoReaction] = useState(null);
 
   useEffect(() => {
     const el = svgRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        visibleRef.current = entry.isIntersecting;
-        el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
-        if (entry.isIntersecting) {
-          // Repintar un frame válido al volver al viewport evita que el SVG quede vacío
-          // si el navegador suspendió el requestAnimationFrame durante el scroll.
-          drawRef.current?.();
-          animationControlRef.current.start?.();
-        } else animationControlRef.current.stop?.();
-      },
-      { rootMargin: "120px" }
-    );
+    const observer = new IntersectionObserver(([entry]) => {
+      visibleRef.current = entry.isIntersecting;
+      el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
+      if (entry.isIntersecting) {
+        drawRef.current?.();
+        animationControlRef.current.start?.();
+      } else {
+        animationControlRef.current.stop?.();
+      }
+    }, { rootMargin: "120px" });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -238,12 +190,7 @@ export default function ChatBotAvatar({
     };
     readColors();
 
-    const engine = new BotEngine(
-      R,
-      "idle",
-      SHAPE_BY_ID.get(DEFAULT_SHAPE)?.radii ?? null,
-      null
-    );
+    const engine = new BotEngine(R, "idle", SHAPE_BY_ID.get(DEFAULT_SHAPE)?.radii ?? null, null);
     engineRef.current = engine;
     clockRef.current = 0;
 
@@ -263,9 +210,7 @@ export default function ChatBotAvatar({
           el.setAttribute("opacity", String(e.alpha));
           el.setAttribute("fill", eye);
           el.style.display = "";
-        } else {
-          el.style.display = "none";
-        }
+        } else el.style.display = "none";
       });
       for (let i = 0; i < DOT_POOL; i++) {
         const el = dotRefs.current[i];
@@ -278,30 +223,23 @@ export default function ChatBotAvatar({
           el.setAttribute("opacity", String(d.opacity));
           el.setAttribute("fill", body);
           el.style.display = "";
-        } else {
-          el.style.display = "none";
-        }
+        } else el.style.display = "none";
       }
     };
 
     const reduceMQ = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
-
     const drawStatic = () => {
       const cfg = REACTION_CONFIG[reactionRef.current] || REACTION_CONFIG.idle;
       const st = cfg.state || "idle";
       if (!cfg.blink) {
         if (cfg.state) engine.setState(cfg.state, 0);
-        if (cfg.customExpr) {
-          engine.setExpression(cfg.customExpr, 0);
-        } else if (cfg.expr) {
-          engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, 0);
-        }
+        if (cfg.customExpr) engine.setExpression(cfg.customExpr, 0);
+        else if (cfg.expr) engine.setExpression(EXPRESSION_BY_ID.get(cfg.expr) ?? null, 0);
         if (cfg.look) engine.setLook(cfg.look, 0);
       }
       paint(engine.sample(POSES[st] ?? 1));
     };
     drawRef.current = drawStatic;
-    // Pintado inicial síncrono: el avatar no depende del primer RAF para ser visible.
     drawStatic();
 
     const themeObserver = new MutationObserver(() => {
@@ -311,7 +249,6 @@ export default function ChatBotAvatar({
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
     if (isStatic) {
-      drawStatic();
       return () => {
         themeObserver.disconnect();
         engineRef.current = null;
@@ -323,32 +260,30 @@ export default function ChatBotAvatar({
     let clock = 0;
     let last = 0;
     let lastPaint = 0;
-    // En pantallas chicas limitamos la animación a ~30 fps para ahorrar CPU.
-    const isNarrowScreen =
-      typeof window !== "undefined" &&
-      !!window.matchMedia &&
-      window.matchMedia("(max-width: 767px)").matches;
-    const frameInterval = isNarrowScreen ? 1000 / 30 : 0;
+    // Limitar a 30 fps evita competir con el scroll y las animaciones de la interfaz.
+    const frameInterval = 1000 / 30;
 
     const tick = (ms) => {
       raf = 0;
-      // Detenemos el RAF fuera del viewport o con la pestaña oculta.
       if (!visibleRef.current || document.hidden || (reduceMQ && reduceMQ.matches)) {
         last = 0;
         return;
       }
-      raf = requestAnimationFrame(tick);
-      if (frameInterval && ms - lastPaint < frameInterval) return;
+      if (frameInterval && ms - lastPaint < frameInterval) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       lastPaint = ms;
       const dt = last ? Math.min((ms - last) / 1000, 0.064) : 0;
       last = ms;
       clock += dt;
       clockRef.current = clock;
       paint(engine.sample(clock));
+      raf = requestAnimationFrame(tick);
     };
 
     const start = () => {
-      if (!visibleRef.current || scrollingRef.current || document.hidden || (reduceMQ && reduceMQ.matches) || raf) return;
+      if (!visibleRef.current || document.hidden || (reduceMQ && reduceMQ.matches) || raf) return;
       last = 0;
       raf = requestAnimationFrame(tick);
     };
@@ -362,65 +297,44 @@ export default function ChatBotAvatar({
       if (e.matches) {
         stop();
         drawStatic();
-      } else if (!document.hidden) {
-        start();
-      }
+      } else if (!document.hidden) start();
     };
-
     const onVis = () => {
       if (document.hidden) stop();
       else if (!(reduceMQ && reduceMQ.matches)) start();
     };
 
+    const latestPointer = { current: null };
     let moveFrame = 0;
-    let scrollResumeTimer = null;
-    const onScroll = () => {
-      scrollingRef.current = true;
-      stop();
-      if (scrollResumeTimer) clearTimeout(scrollResumeTimer);
-      scrollResumeTimer = setTimeout(() => {
-        scrollingRef.current = false;
-        scrollResumeTimer = null;
-        start();
-      }, 70);
-    };
-    let latestPointer = null;
     const onMove = (e) => {
       if (!visibleRef.current || (reduceMQ && reduceMQ.matches)) return;
-      latestPointer = { x: e.clientX, y: e.clientY };
+      latestPointer.current = { x: e.clientX, y: e.clientY };
       if (moveFrame) return;
       moveFrame = requestAnimationFrame(() => {
         moveFrame = 0;
         const el = svgRef.current;
-        const engine = engineRef.current;
-        if (!el || !engine || !latestPointer || !visibleRef.current) return;
+        const currentEngine = engineRef.current;
+        if (!el || !currentEngine || !latestPointer.current || !visibleRef.current) return;
         const r = el.getBoundingClientRect();
-        const dx = latestPointer.x - (r.left + r.width / 2);
-        const dy = latestPointer.y - (r.top + r.height / 2);
+        const dx = latestPointer.current.x - (r.left + r.width / 2);
+        const dy = latestPointer.current.y - (r.top + r.height / 2);
         const dist = Math.hypot(dx, dy);
         if (dist === 0) return;
         const intensity = Math.min(1, dist / 240);
-        const yaw = (dx / dist) * MAX_YAW * intensity;
-        const pitch = (-dy / dist) * MAX_PITCH * intensity;
-        engine.setLook({ yaw, pitch, mix: 1, spin: 0, wander: 0 }, clockRef.current, 0.12);
+        currentEngine.setLook({
+          yaw: (dx / dist) * MAX_YAW * intensity,
+          pitch: (-dy / dist) * MAX_PITCH * intensity,
+          mix: 1, spin: 0, wander: 0,
+        }, clockRef.current, 0.12);
       });
     };
+    const onLeave = () => engineRef.current?.setLook(null, clockRef.current, 0.35);
 
-    const onLeave = () => {
-      if (engineRef.current) {
-        engineRef.current.setLook(null, clockRef.current, 0.35);
-      }
-    };
+    if (reduceMQ && reduceMQ.matches) drawStatic();
+    else start();
 
-    if (reduceMQ && reduceMQ.matches) {
-      drawStatic();
-    } else {
-      start();
-    }
-
-    window.addEventListener("scroll", onScroll, { passive: true });
     if (followMouse) {
-      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mousemove", onMove, { passive: true });
       document.addEventListener("mouseleave", onLeave);
     }
     reduceMQ?.addEventListener("change", onReduce);
@@ -428,15 +342,10 @@ export default function ChatBotAvatar({
 
     return () => {
       stop();
-      if (scrollResumeTimer) clearTimeout(scrollResumeTimer);
-      scrollingRef.current = false;
-      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("mousemove", onMove);
       if (moveFrame) cancelAnimationFrame(moveFrame);
       animationControlRef.current = { start: null, stop: null };
-      if (followMouse) {
-        window.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseleave", onLeave);
-      }
+      if (followMouse) document.removeEventListener("mouseleave", onLeave);
       reduceMQ?.removeEventListener("change", onReduce);
       document.removeEventListener("visibilitychange", onVis);
       themeObserver.disconnect();
@@ -451,44 +360,34 @@ export default function ChatBotAvatar({
     const engine = engineRef.current;
     if (!engine) return;
     const cfg = REACTION_CONFIG[eff] || REACTION_CONFIG.idle;
-    const t = clockRef.current;
-    applyConfig(engine, cfg, t, followMouse);
+    applyConfig(engine, cfg, clockRef.current, followMouse);
 
     const reduce = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false;
-    const transform = cfg.transform && !speaking && !reduce ? cfg.transform : "";
-    setRxClass(transform);
-
+    setRxClass(cfg.transform && !speaking && !reduce ? cfg.transform : "");
     if (reduce || isStatic) drawRef.current?.();
   }, [reaction, autoReaction, speaking, isStatic, followMouse]);
 
   useEffect(() => {
     if (isStatic || reaction !== "idle") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-
     let timer = null;
     const getNextReaction = createShuffleBag(AUTO_REACTIONS_POOL);
-
     const clear = () => {
       if (timer) {
         clearTimeout(timer);
         timer = null;
       }
     };
-
     const schedule = () => {
       clear();
       timer = setTimeout(() => {
-        const pick = getNextReaction();
-        setAutoReaction(pick);
-        const activeDuration = 1100 + Math.random() * 800;
+        setAutoReaction(getNextReaction());
         timer = setTimeout(() => {
           setAutoReaction(null);
-          const interval = 2200 + Math.random() * 1800;
-          timer = setTimeout(schedule, interval);
-        }, activeDuration);
+          timer = setTimeout(schedule, 2200 + Math.random() * 1800);
+        }, 1100 + Math.random() * 800);
       }, 1500 + Math.random() * 1800);
     };
-
     schedule();
     return () => {
       clear();
@@ -497,44 +396,15 @@ export default function ChatBotAvatar({
   }, [isStatic, reaction]);
 
   const isSleeping = reaction === "sleep";
-
   const svg = (
-    <svg
-      ref={svgRef}
-      width={size}
-      height={size}
-      viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`}
-      role="img"
-      aria-label="Avatar animado del asistente ChatAP"
-      className={`block ${speaking ? "animate-speak" : ""} ${rxClass} ${isSleeping ? "opacity-70" : ""}`}
-    >
-      {/* Silueta de respaldo: el avatar nunca queda vacío si el primer frame del motor falla. */}
-      <path
-        ref={bodyRef}
-        fill={INK}
-        d={`M 0 ${-R} C ${R * 0.58} ${-R} ${R} ${-R * 0.52} ${R} 0 C ${R} ${R * 0.62} ${R * 0.56} ${R} 0 ${R} C ${-R * 0.62} ${R} ${-R} ${R * 0.56} ${-R} 0 C ${-R} ${-R * 0.58} ${-R * 0.55} ${-R} 0 ${-R} Z`}
-      />
+    <svg ref={svgRef} width={size} height={size} viewBox={`${-VB} ${-VB} ${VB * 2} ${VB * 2}`} role="img" aria-label="Avatar animado del asistente ChatAP" className={`block ${speaking ? "animate-speak" : ""} ${rxClass} ${isSleeping ? "opacity-70" : ""}`}>
+      <path ref={bodyRef} fill={INK} d={`M 0 ${-R} C ${R * 0.58} ${-R} ${R} ${-R * 0.52} ${R} 0 C ${R} ${R * 0.62} ${R * 0.56} ${R} 0 ${R} C ${-R * 0.62} ${R} ${-R} ${R * 0.56} ${-R} 0 C ${-R} ${-R * 0.58} ${-R * 0.55} ${-R} 0 ${-R} Z`} />
       <path ref={eyeARef} fill={EYE} d={`M ${-R * 0.42} ${-R * 0.12} a ${R * 0.1} ${R * 0.15} 0 1 0 ${R * 0.2} 0 a ${R * 0.1} ${R * 0.15} 0 1 0 ${-R * 0.2} 0`} />
       <path ref={eyeBRef} fill={EYE} d={`M ${R * 0.22} ${-R * 0.12} a ${R * 0.1} ${R * 0.15} 0 1 0 ${R * 0.2} 0 a ${R * 0.1} ${R * 0.15} 0 1 0 ${-R * 0.2} 0`} />
-      {Array.from({ length: DOT_POOL }).map((_, i) => (
-        <circle
-          key={i}
-          ref={(el) => (dotRefs.current[i] = el)}
-          fill={INK}
-          style={{ display: "none" }}
-        />
-      ))}
+      {Array.from({ length: DOT_POOL }).map((_, i) => <circle key={i} ref={(el) => (dotRefs.current[i] = el)} fill={INK} style={{ display: "none" }} />)}
     </svg>
   );
 
-  if (isSleeping) {
-    return (
-      <div className="relative inline-flex">
-        <ZzzOverlay size={size} />
-        {svg}
-      </div>
-    );
-  }
-
+  if (isSleeping) return <div className="relative inline-flex"><ZzzOverlay size={size} />{svg}</div>;
   return svg;
 }
