@@ -4377,14 +4377,22 @@ pre {
 }
 
 /* Spotlight claro y sin flechas que apunten fuera de la tarjeta. */
+.tour-spotlight-mask {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 49;
+}
 .tour-ring {
   position: fixed;
   display: block;
   box-sizing: border-box;
   border: 2px solid #78a5ff !important;
   border-radius: 0.85rem;
-  /* Una sola sombra crea el foco sin cuatro paneles que dejan costuras. */
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 13%), 0 0 18px rgb(59 130 246 / 22%), 0 0 0 100vmax rgb(3 8 22 / 64%);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 13%), 0 0 18px rgb(59 130 246 / 22%);
   animation: none;
   pointer-events: none;
 }
