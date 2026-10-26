@@ -17,6 +17,11 @@ export const crear = async (req, res) => {
   res.status(201).json(tramite);
 };
 
+export const listarPublicados = async (req, res) => {
+  const tramites = await tramiteService.listarTramitesPublicados();
+  res.json(tramites);
+};
+
 export const listar = async (req, res) => {
   const tramites = await tramiteService.listarTramites();
   res.json(tramites);
