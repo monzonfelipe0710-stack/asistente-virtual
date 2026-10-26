@@ -13,6 +13,12 @@ import { api } from "../lib/api";
  * `costo` viaja como STRING; al crear/editar se manda como número.
  */
 
+/** GET /api/tramites/publicados — catálogo público para la bienvenida del chat. */
+export async function listarPublicados() {
+  const { data } = await api.get("/api/tramites/publicados", { skipAuthHandler: true });
+  return data;
+}
+
 /** GET /api/tramites — auth. */
 export async function listar() {
   const { data } = await api.get("/api/tramites");
