@@ -88,6 +88,42 @@ function ChecklistButton({ action, onChecklist }) {
   );
 }
 
+function renderInline(text, keyPrefix = "inline") {
+  const parts = String(text).split(/(\*\*[^*]+\*\*|https?:\/\/[^\s)]+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={keyPrefix + index} className="font-semibold text-ink">{part.slice(2, -2)}</strong>;
+    if (/^https?:\/\//i.test(part)) {
+      const cleanUrl = part.replace(/[.,;!?]+$/, "");
+      return <a key={keyPrefix + index} href={cleanUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-deep underline decoration-brand/40 underline-offset-2 break-words hover:decoration-brand">{cleanUrl}</a>;
+    }
+    return part;
+  });
+}
+
+function FormattedAnswer({ text }) {
+  const lines = String(text || "").split("\n");
+  const blocks = [];
+  let items = [];
+  let kind = null;
+  const flush = () => {
+    if (!items.length) return;
+    const Tag = kind === "ordered" ? "ol" : "ul";
+    blocks.push(<Tag key={"list" + blocks.length} className={"my-3 space-y-2.5 pl-5 marker:text-brand-deep " + (kind === "ordered" ? "list-decimal" : "list-disc")}>{items.map((item, i) => <li key={i} className="pl-1 leading-7">{renderInline(item, "item" + i)}</li>)}</Tag>);
+    items = []; kind = null;
+  };
+  lines.forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line) { flush(); return; }
+    const number = line.match(/^\d+[.)]\s+(.+)$/);
+    const bullet = line.match(/^[-•*]\s+(.+)$/);
+    if (number || bullet) { const next = number ? "ordered" : "unordered"; if (kind && kind !== next) flush(); kind = next; items.push((number || bullet)[1]); return; }
+    flush();
+    if (/^#{1,3}\s+/.test(line)) blocks.push(<h4 key={"heading" + i} className="mb-2 mt-4 text-base font-bold tracking-tight text-ink first:mt-0">{renderInline(line.replace(/^#{1,3}\s+/, ""), "heading" + i)}</h4>);
+    else blocks.push(<p key={"paragraph" + i} className="my-2 leading-7 text-[0.9375rem] first:mt-0 last:mb-0">{renderInline(line, "paragraph" + i)}</p>);
+  });
+  flush();
+  return <div className="chat-answer-content">{blocks}</div>;
+}
 function MessageBubble({
   message,
   speaking = false,
@@ -142,16 +178,11 @@ function MessageBubble({
       )}
       <div className={`chat-msg ${isBot ? "" : "chat-msg--user"}`}>
         <div className="chat-msg__body">
-          <p className="m-0 whitespace-pre-wrap">
-            {shown}
-            {typing && (
-              <span
-                className={`inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 align-middle animate-pulse-soft ${
-                  isBot ? "bg-brand-deep" : "bg-[#070E20]"
-                }`}
-              />
-            )}
-          </p>
+          {isBot ? (
+            <div><FormattedAnswer text={shown} />{typing && <span className="inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 align-middle animate-pulse-soft bg-brand-deep" />}</div>
+          ) : (
+            <p className="m-0 whitespace-pre-wrap">{shown}{typing && <span className="inline-block w-0.5 h-[1.05em] -mb-0.5 ml-0.5 align-middle animate-pulse-soft bg-[#070E20]" />}</p>
+          )}
         </div>
         {!typing &&
           actionList.map((action, index) => {
