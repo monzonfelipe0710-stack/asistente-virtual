@@ -13,10 +13,11 @@ export async function resumenConsultas() {
 }
 
 /** PATCH /api/consultas/:id/calificar — calificación propia de la respuesta. */
-export async function calificarConsulta(id, calificacion) {
-  const { data } = await api.patch(`/api/consultas/${id}/calificar`, {
-    calificacion,
-  });
+export async function calificarConsulta(id, calificacion, { publico = false } = {}) {
+  const endpoint = publico
+    ? `/api/consultas/${id}/calificar-publica`
+    : `/api/consultas/${id}/calificar`;
+  const { data } = await api.patch(endpoint, { calificacion });
   return data;
 }
 
