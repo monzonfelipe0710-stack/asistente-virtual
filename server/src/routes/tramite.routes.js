@@ -8,6 +8,7 @@ import documentoRoutes from './documento.routes.js';
 
 const router = Router();
 
+router.get('/publicados', asyncHandler(tramiteController.listarPublicados));
 router.post('/', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(tramiteController.crear));
 router.get('/', autenticar, asyncHandler(tramiteController.listar));
 router.get('/:id', autenticar, asyncHandler(tramiteController.obtener));
