@@ -555,6 +555,4 @@
 .faq-item .faq-content-inner { min-height:0; overflow:hidden; transform:translateY(-6px); transition:transform 340ms cubic-bezier(.22,1,.36,1); }
 .faq-item--open .faq-content { grid-template-rows:1fr; padding-bottom:1.35rem; opacity:1; }
 .faq-item--open .faq-content-inner { transform:translateY(0); }
-.faq-content[aria-hidden="true"] .faq-content-inner { visibility:hidden; }
-.faq-item--open .faq-content[aria-hidden="false"] .faq-content-inner { visibility:visible; }
 @media (prefers-reduced-motion:reduce) { .faq-item .faq-content, .faq-item .faq-content-inner { transition:none!important; transform:none!important; } }
