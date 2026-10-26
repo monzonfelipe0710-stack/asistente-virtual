@@ -139,9 +139,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
   const activeThreadIdRef = useRef(activeThreadId);
   const [savedThreads, setSavedThreads] = useState(() =>
-    cargarConversaciones(user?.id || "ciudadano_anonimo")
+    user?.id ? cargarConversaciones(user.id) : []
   );
-  const threadOwnerRef = useRef(user?.id || "ciudadano_anonimo");
+  const threadOwnerRef = useRef(user?.id || null);
 
   useEffect(() => {
     let active = true;
@@ -363,10 +363,10 @@ export default function ChatWindow({ initialQuery = null }) {
   // Cada conversación se guarda por separado en el navegador para poder retomarla
   // aunque se inicie otro chat o se recargue la página.
   useEffect(() => {
-    const effectiveId = userId || "ciudadano_anonimo";
+    const effectiveId = userId || null;
     if (threadOwnerRef.current !== effectiveId) {
       threadOwnerRef.current = effectiveId;
-      setSavedThreads(cargarConversaciones(effectiveId));
+      setSavedThreads(effectiveId ? cargarConversaciones(effectiveId) : []);
       setPendingDeleteKeys(new Set());
       const nextThreadId = crearIdConversacion();
       activeThreadIdRef.current = nextThreadId;
@@ -375,8 +375,8 @@ export default function ChatWindow({ initialQuery = null }) {
   }, [userId]);
 
   useEffect(() => {
-    const effectiveId = userId || "ciudadano_anonimo";
-    if (threadOwnerRef.current !== effectiveId || messages.length === 0) return;
+    const effectiveId = userId || null;
+    if (!effectiveId || !isAuthenticated || threadOwnerRef.current !== effectiveId || messages.length === 0) return;
     const snapshot = crearResumenConversacion(activeThreadId, messages);
     if (!snapshot) return;
     // Sincronizamos el índice local del historial con el hilo activo.
@@ -390,7 +390,7 @@ export default function ChatWindow({ initialQuery = null }) {
       guardarConversaciones(effectiveId, next);
       return next;
     });
-  }, [activeThreadId, messages, userId]);
+  }, [activeThreadId, messages, userId, isAuthenticated]);
 
   // Memoria: cargamos el contexto del usuario para personalizar la bienvenida.
   useEffect(() => {
@@ -423,7 +423,8 @@ export default function ChatWindow({ initialQuery = null }) {
   // El historial prioriza hilos completos; las consultas anteriores se mantienen
   // como entradas individuales para que los registros previos sigan accesibles.
   const historyQueries = useMemo(() => {
-    const effectiveId = userId || "ciudadano_anonimo";
+    if (!isAuthenticated || !userId) return [];
+    const effectiveId = userId;
     const threads = savedThreads.map((thread) => ({
       ...thread,
       threadId: thread.id,
@@ -457,7 +458,7 @@ export default function ChatWindow({ initialQuery = null }) {
         new Date(thread.at).getTime() - new Date(item.at).getTime()
       ) < 5000)
     )].slice(0, HISTORY_LIMIT);
-  }, [userId, token, consultas, savedThreads]);
+  }, [userId, token, consultas, savedThreads, isAuthenticated]);
 
   const displayedHistoryQueries = useMemo(
     () => historyQueries.filter((item) => !pendingDeleteKeys.has(claveHistorial(item))),
@@ -1047,14 +1048,14 @@ export default function ChatWindow({ initialQuery = null }) {
       return;
     }
 
-    const effectiveId = userId || "ciudadano_anonimo";
-    if (currentThread) {
+    const effectiveId = userId;
+    if (currentThread && isAuthenticated && effectiveId) {
       const next = [
         currentThread,
         ...savedThreads.filter((thread) => thread.id !== activeThreadId),
       ].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at))
         .slice(0, HISTORY_LIMIT);
-      guardarConversaciones(effectiveId, next);
+      if (effectiveId && isAuthenticated) guardarConversaciones(effectiveId, next);
       setSavedThreads(next);
     }
     setHistoryOpen(false);
@@ -1174,7 +1175,8 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Vaciar todo el historial guardado.
   function handleClearHistory() {
-    const effectiveId = userId || "ciudadano_anonimo";
+    if (!isAuthenticated || !userId) return;
+    const effectiveId = userId;
     clearMemoryMessages(effectiveId);
     clearLocalHistory();
     setHistoryVersion((v) => v + 1);
