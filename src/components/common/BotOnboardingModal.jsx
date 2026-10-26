@@ -312,6 +312,18 @@ export default function BotOnboardingModal() {
         if (el) {
           const r = el.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) {
+            // Llevar el objetivo al viewport antes de dibujar el foco, sin
+            // resaltar encabezados cercanos cuando el objetivo son las tarjetas.
+            if (r.top < 24 || r.bottom > window.innerHeight - 24) {
+              el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+              lastRect = null;
+              stableFrames = 0;
+              attempts += 1;
+              if (attempts < maxAttempts) {
+                rafIdRef.current = requestAnimationFrame(measure);
+                return;
+              }
+            }
             const rect = { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom, right: r.right };
             if (
               lastRect &&
