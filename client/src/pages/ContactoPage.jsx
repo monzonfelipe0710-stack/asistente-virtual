@@ -607,6 +607,4 @@ export default function ContactoPage() {
 .support-faq-answer-inner { min-height:0; overflow:hidden; transform:translateY(-5px); transition:transform 320ms cubic-bezier(.22,1,.36,1); }
 .support-faq-answer.is-open { grid-template-rows:1fr; opacity:1; }
 .support-faq-answer.is-open .support-faq-answer-inner { transform:translateY(0); }
-.support-faq-answer[aria-hidden="true"] .support-faq-answer-inner { visibility:hidden; }
-.support-faq-answer.is-open[aria-hidden="false"] .support-faq-answer-inner { visibility:visible; }
 @media (prefers-reduced-motion:reduce) { .support-faq-answer, .support-faq-answer-inner { transition:none!important; transform:none!important; } }
