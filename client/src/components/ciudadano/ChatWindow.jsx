@@ -134,6 +134,15 @@ const CHATAP_PILLS = [
   },
 ];
 
+// Atajos de trámites concretos: se mantienen separados de las categorías rápidas.
+const TRAMITES_SOLICITADOS = [
+  { id: "acta-siniestral", title: "Acta siniestral", query: "¿Cómo tramito un acta siniestral?", description: "Requisitos y pasos para iniciar la gestión." },
+  { id: "certificado-servicios", title: "Certificado de servicios", query: "¿Cómo solicito el certificado de servicios?", description: "Cómo pedir la constancia y dónde presentarla." },
+  { id: "licencia-medica", title: "Licencia médica", query: "¿Cómo tramito una licencia médica?", description: "Documentación y procedimiento de presentación." },
+  { id: "recibo-haberes", title: "Recibo de haberes", query: "¿Cómo consulto o descargo mi recibo de haberes?", description: "Orientación para encontrar tu recibo de sueldo." },
+  { id: "seguimiento-expediente", title: "Seguimiento de expediente", query: "¿Cómo consulto el estado de mi expediente?", description: "Dónde consultar los movimientos del expediente." },
+];
+
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
@@ -555,9 +564,10 @@ export default function ChatWindow({ initialQuery = null }) {
       return;
     }
 
-    const long = finalText.length > 240;
-    const charStep = long ? 2 : 1;
-    const charDelay = long ? 16 : 24;
+    // Agrupamos varios caracteres por actualización: conserva el efecto de tipeo,
+    // pero reduce los renders y el trabajo de scroll durante respuestas largas.
+    const charStep = finalText.length > 240 ? 5 : finalText.length > 100 ? 3 : 2;
+    const charDelay = 30;
 
     speakingRef.current = true;
     speakingIdRef.current = id;
@@ -1386,7 +1396,7 @@ export default function ChatWindow({ initialQuery = null }) {
               Estoy para ayudarte con tus gestiones y trámites provinciales. Elegí una de las opciones o escribí directamente lo que necesitás.
             </p>
 
-            {/* Temas de consulta rápida */}
+            {/* Categorías rápidas originales: se conservan sin cambios. */}
             <div id="chatap-pills-container" className="chatap-pills-container">
               {CHATAP_PILLS.map((pill) => (
                 <button
@@ -1400,6 +1410,34 @@ export default function ChatWindow({ initialQuery = null }) {
                 </button>
               ))}
             </div>
+
+            {/* Trámites concretos, visibles en tarjetas claras y adaptables. */}
+            <section className="chatap-popular-procedures" aria-labelledby="chatap-popular-title">
+              <div className="chatap-popular-heading">
+                <h2 id="chatap-popular-title">Trámites más solicitados</h2>
+                <p>Elegí una consulta para ver cómo iniciar la gestión.</p>
+              </div>
+              <div className="chatap-popular-grid">
+                {TRAMITES_SOLICITADOS.map((tramite, index) => (
+                  <button
+                    key={tramite.id}
+                    type="button"
+                    onClick={() => handleQuickReply(tramite.query)}
+                    className="chatap-popular-card"
+                    aria-label={tramite.query}
+                  >
+                    <span className="chatap-popular-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="chatap-popular-copy">
+                      <span className="chatap-popular-card-title">{tramite.title}</span>
+                      <span className="chatap-popular-card-description">{tramite.description}</span>
+                    </span>
+                    <svg className="chatap-popular-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         ) : (
           <div className="chat-conversation mx-auto w-full max-w-3xl space-y-6 px-4 py-6 animate-fade-up">
