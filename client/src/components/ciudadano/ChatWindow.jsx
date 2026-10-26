@@ -178,6 +178,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const [reaction, setReaction] = useState("idle");
   const [announce, setAnnounce] = useState("");
   const messagesRef = useRef(null);
+  const scrollFrameRef = useRef(0);
   const imageInputRef = useRef(null);
   const imageReadRef = useRef(0);
   const nearBottomRef = useRef(true);
@@ -323,15 +324,24 @@ export default function ChatWindow({ initialQuery = null }) {
     };
   }, [phase]);
 
-  // Auto-scroll: solo en el chat y si el usuario ya estaba cerca del final.
-  // No arrebata el scroll mientras lee mensajes anteriores.
+  // Auto-scroll alineado al siguiente frame. Durante el tipeo usamos scrollTop
+  // directo para no reiniciar una animación smooth ni competir con el render de cada bloque.
+  // Si la persona está leyendo mensajes anteriores, nunca le movemos el scroll.
   useEffect(() => {
-    if (phase !== "chat") return;
-    if (!nearBottomRef.current) return;
-    const el = messagesRef.current;
-    // Durante el tipeo avanzamos de forma instantánea: reiniciar un scroll
-    // suave en cada carácter provoca tirones y compite con el hilo principal.
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: typedText ? "auto" : "smooth" });
+    if (phase !== "chat" || !nearBottomRef.current || !messagesRef.current) return undefined;
+    if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = 0;
+      const el = messagesRef.current;
+      if (!el || !nearBottomRef.current) return;
+      const top = el.scrollHeight;
+      if (speakingRef.current || typedText) el.scrollTop = top;
+      else el.scrollTo({ top, behavior: "smooth" });
+    });
+    return () => {
+      if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = 0;
+    };
   }, [messages, isTyping, phase, typedText]);
 
   function handleMessagesScroll() {
