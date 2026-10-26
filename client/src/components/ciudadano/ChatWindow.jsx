@@ -99,6 +99,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const [tramitesPublicados, setTramitesPublicados] = useState([]);
   const [tramitesPublicadosLoading, setTramitesPublicadosLoading] = useState(false);
   const [tramitesPublicadosError, setTramitesPublicadosError] = useState("");
+  const [tramitesOffset, setTramitesOffset] = useState(0);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [imageError, setImageError] = useState("");
@@ -1368,31 +1369,51 @@ export default function ChatWindow({ initialQuery = null }) {
               ) : tramitesPublicados.length === 0 ? (
                 <p className="text-sm text-muted">Por el momento no hay trámites publicados.</p>
               ) : (
-                <div className="chatap-popular-grid">
-                  {tramitesPublicados.map((tramite, index) => (
+                <>
+                  <div className="chatap-popular-grid">
+                    {tramitesPublicados
+                      .slice(tramitesOffset, tramitesOffset + 4)
+                      .concat(
+                        tramitesOffset + 4 > tramitesPublicados.length
+                          ? tramitesPublicados.slice(0, Math.max(0, tramitesOffset + 4 - tramitesPublicados.length))
+                          : []
+                      )
+                      .map((tramite, index) => (
+                        <button
+                          key={tramite.id}
+                          type="button"
+                          onClick={() => handleQuickReply(`Quiero iniciar el trámite "${tramite.nombre}". ¿Cómo debo hacer la gestión?`)}
+                          className="chatap-popular-card"
+                          aria-label={`Consultar cómo iniciar: ${tramite.nombre}`}
+                        >
+                          <span className="chatap-popular-number" aria-hidden="true">{String(tramitesOffset + index + 1 > tramitesPublicados.length ? tramitesOffset + index + 1 - tramitesPublicados.length : tramitesOffset + index + 1).padStart(2, "0")}</span>
+                          <span className="chatap-popular-copy">
+                            <span className="chatap-popular-card-title">{tramite.nombre}</span>
+                            {tramite.descripcion && (
+                              <span className="chatap-popular-card-description">{tramite.descripcion}</span>
+                            )}
+                            {tramite.sector?.nombre && (
+                              <span className="chatap-popular-card-description">{tramite.sector.nombre}</span>
+                            )}
+                          </span>
+                          <svg className="chatap-popular-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      ))}
+                  </div>
+                  {tramitesPublicados.length > 4 && (
                     <button
-                      key={tramite.id}
                       type="button"
-                      onClick={() => handleQuickReply(`Quiero iniciar el trámite "${tramite.nombre}". ¿Cómo debo hacer la gestión?`)}
-                      className="chatap-popular-card"
-                      aria-label={`Consultar cómo iniciar: ${tramite.nombre}`}
+                      className="chatap-popular-more"
+                      onClick={() => setTramitesOffset((current) => (current + 4) % tramitesPublicados.length)}
+                      aria-label="Mostrar los siguientes trámites"
                     >
-                      <span className="chatap-popular-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-                      <span className="chatap-popular-copy">
-                        <span className="chatap-popular-card-title">{tramite.nombre}</span>
-                        {tramite.descripcion && (
-                          <span className="chatap-popular-card-description">{tramite.descripcion}</span>
-                        )}
-                        {tramite.sector?.nombre && (
-                          <span className="chatap-popular-card-description">{tramite.sector.nombre}</span>
-                        )}
-                      </span>
-                      <svg className="chatap-popular-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      Ver otros trámites
+                      <span aria-hidden="true"> →</span>
                     </button>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </section>
           </div>
