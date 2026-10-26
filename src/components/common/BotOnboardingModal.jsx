@@ -130,17 +130,25 @@ export default function BotOnboardingModal() {
   const navigationRunRef = useRef(0);
 
   const checkShouldOpen = useCallback(() => {
-    const isCompleted = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tutorialActorKey}`) === "true";
-    const isTriggered = localStorage.getItem(`${TRIGGER_KEY_PREFIX}${tutorialActorKey}`) === "true";
+    let isCompleted = false;
+    let isTriggered = false;
+    try {
+      isCompleted = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tutorialActorKey}`) === "true";
+      isTriggered = localStorage.getItem(`${TRIGGER_KEY_PREFIX}${tutorialActorKey}`) === "true";
+    } catch {
+      // El tutorial sigue siendo utilizable si el navegador bloquea storage.
+    }
 
     if (isTriggered && !isCompleted) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      if (location.pathname !== "/") navigate("/");
       setIsOpen(true);
       setIsClosing(false);
       setStep(0);
       setDirection("next");
       lastSuccessfulStep.current = 0;
     }
-  }, [tutorialActorKey]);
+  }, [tutorialActorKey, location.pathname, navigate]);
 
   const forceOpen = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -298,6 +306,7 @@ export default function BotOnboardingModal() {
       let attempts = 0;
       let lastRect = null;
       let stableFrames = 0;
+      let scrollRequested = false;
       const measure = () => {
         const targets = Array.isArray(current.target) ? current.target : [current.target];
         const el = targets
@@ -315,7 +324,13 @@ export default function BotOnboardingModal() {
             // Llevar el objetivo al viewport antes de dibujar el foco, sin
             // resaltar encabezados cercanos cuando el objetivo son las tarjetas.
             if (r.top < 24 || r.bottom > window.innerHeight - 24) {
-              el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+              // Pedir el scroll una sola vez. Repetir scrollIntoView en cada
+              // frame reinicia la animación y puede impedir que el objetivo
+              // llegue a estabilizarse, mostrando el mensaje de objetivo ausente.
+              if (!scrollRequested) {
+                scrollRequested = true;
+                el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+              }
               lastRect = null;
               stableFrames = 0;
               attempts += 1;
