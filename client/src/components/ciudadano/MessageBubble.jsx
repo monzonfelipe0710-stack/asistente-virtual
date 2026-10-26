@@ -113,7 +113,20 @@ function FormattedAnswer({ text }) {
   };
   lines.forEach((raw, i) => {
     const line = raw.trim();
-    if (!line) { flush(); return; }
+    if (!line) {
+      // Markdown permite líneas vacías entre elementos de una lista. No vaciamos
+      // la lista si el siguiente elemento continúa con el mismo tipo, así el
+      // navegador mantiene la numeración 1, 2, 3… en lugar de reiniciarla.
+      let nextIndex = i + 1;
+      while (nextIndex < lines.length && !lines[nextIndex].trim()) nextIndex++;
+      const nextLine = (lines[nextIndex] || "").trim();
+      const nextNumber = /^\d+[.)]\s+.+$/.test(nextLine);
+      const nextBullet = /^[-•*]\s+.+$/.test(nextLine);
+      const nextKind = nextNumber ? "ordered" : nextBullet ? "unordered" : null;
+      if (items.length && nextKind === kind) return;
+      flush();
+      return;
+    }
     const number = line.match(/^\d+[.)]\s+(.+)$/);
     const bullet = line.match(/^[-•*]\s+(.+)$/);
     if (number || bullet) { const next = number ? "ordered" : "unordered"; if (kind && kind !== next) flush(); kind = next; items.push((number || bullet)[1]); return; }
