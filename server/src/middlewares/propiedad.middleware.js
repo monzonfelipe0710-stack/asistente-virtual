@@ -11,7 +11,7 @@ export const puedeGestionarTramite = async (req, res, next) => {
     throw error;
   }
 
-  const tieneAcceso = await usuarioTieneSector(req.usuario, tramite.sectorId);
+  const tieneAcceso = await usuarioTieneSector(req.usuario.id, tramite.sectorId);
   if (!tieneAcceso) {
     const error = new Error('No tenés asignado el sector de este trámite.');
     error.statusCode = 403;

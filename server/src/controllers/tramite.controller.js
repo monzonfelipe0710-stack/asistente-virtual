@@ -6,7 +6,7 @@ export const crear = async (req, res) => {
   const datos = crearTramiteSchema.parse(req.body);
   const encargadoId = req.usuario.id;
 
-  const tieneAcceso = await usuarioService.usuarioTieneSector(req.usuario, datos.sectorId);
+  const tieneAcceso = await usuarioService.usuarioTieneSector(req.usuario.id, datos.sectorId);
   if (!tieneAcceso) {
     const error = new Error('No tenés asignado el sector indicado para el trámite.');
     error.statusCode = 403;
@@ -40,7 +40,7 @@ export const actualizar = async (req, res) => {
   const datos = actualizarTramiteSchema.parse(req.body);
 
   if (datos.sectorId !== undefined) {
-    const tieneAcceso = await usuarioService.usuarioTieneSector(req.usuario, datos.sectorId);
+    const tieneAcceso = await usuarioService.usuarioTieneSector(req.usuario.id, datos.sectorId);
     if (!tieneAcceso) {
       const error = new Error('No podés mover el trámite a un sector que no tenés asignado.');
       error.statusCode = 403;
