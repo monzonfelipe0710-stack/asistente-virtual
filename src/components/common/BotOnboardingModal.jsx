@@ -143,6 +143,7 @@ export default function BotOnboardingModal() {
   }, [tutorialActorKey]);
 
   const forceOpen = useCallback(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     setIsOpen(true);
     setIsClosing(false);
     setStep(0);
@@ -190,6 +191,9 @@ export default function BotOnboardingModal() {
 
   const goToStep = useCallback(async (newStep) => {
     const runId = ++navigationRunRef.current;
+    // Al comenzar o volver atrás, la guía arranca desde la parte superior
+    // para que el objetivo señalado no quede fuera del viewport.
+    if (newStep <= step) window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
     const clampedStep = Math.max(0, Math.min(newStep, STEPS.length - 1));
     const targetRoute = STEPS[clampedStep]?.route;
     const isRouteChange = targetRoute && targetRoute !== location.pathname;
@@ -393,33 +397,21 @@ export default function BotOnboardingModal() {
       aria-describedby="tour-description"
       className={`tour-overlay fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overscroll-contain p-3 sm:p-6 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
     >
-      {hasSpotlight && (
-        <>
-          <div
-            className="tour-ring"
-            style={{
-              top: Math.max(
-                4,
-                Math.min(
-                  spotlight.rect.top - 6,
-                  window.innerHeight - Math.min(spotlight.rect.height + 12, window.innerHeight - 8) - 4
-                )
-              ),
-              left: Math.max(
-                4,
-                Math.min(
-                  spotlight.rect.left - 6,
-                  window.innerWidth - Math.min(spotlight.rect.width + 12, window.innerWidth - 8) - 4
-                )
-              ),
-              width: Math.min(spotlight.rect.width + 12, window.innerWidth - 8),
-              height: Math.min(spotlight.rect.height + 12, window.innerHeight - 8),
-              borderWidth: "2px",
-              opacity: spotlight.opacity ?? 1,
-            }}
-          />
-        </>
-      )}
+      {hasSpotlight && (() => {
+        const left = Math.max(4, Math.min(spotlight.rect.left - 6, window.innerWidth - Math.min(spotlight.rect.width + 12, window.innerWidth - 8) - 4));
+        const top = Math.max(4, Math.min(spotlight.rect.top - 6, window.innerHeight - Math.min(spotlight.rect.height + 12, window.innerHeight - 8) - 4));
+        const width = Math.min(spotlight.rect.width + 12, window.innerWidth - 8);
+        const height = Math.min(spotlight.rect.height + 12, window.innerHeight - 8);
+        // Un único SVG con hueco real: evita las costuras de paneles superpuestos.
+        return (
+          <>
+            <svg className="tour-spotlight-mask" width="100%" height="100%" viewBox={`0 0 ${window.innerWidth} ${window.innerHeight}`} preserveAspectRatio="none" aria-hidden="true">
+              <path d={`M0 0H${window.innerWidth}V${window.innerHeight}H0Z M${left} ${top}H${left + width}V${top + height}H${left}Z`} fill="rgba(3,8,22,0.64)" fillRule="evenodd" />
+            </svg>
+            <div className="tour-ring" style={{ top, left, width, height, opacity: spotlight.opacity ?? 1 }} />
+          </>
+        );
+      })()}
 
       <div
         key={step}
