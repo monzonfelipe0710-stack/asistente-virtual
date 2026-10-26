@@ -171,6 +171,19 @@ export default function HomePage() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
+  // El fondo WebGL solo anima mientras la sección principal está visible.
+  const [heroVisible, setHeroVisible] = useState(true);
+  useEffect(() => {
+    const hero = document.getElementById("inicio");
+    if (!hero || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroVisible(entry.isIntersecting),
+      { threshold: 0.01 }
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
   const particleColors = useMemo(() => (
     theme === "light"
       ? ["#1E40AF", "#2563EB", "#0284C7", "#3B82F6", "#1D4ED8", "#0369A1"]
@@ -199,9 +212,10 @@ export default function HomePage() {
             <Particles
               className="w-full h-full"
               particleColors={particleColors}
-              particleCount={320}
+              particleCount={220}
               speed={0.05}
               particleBaseSize={16}
+              active={heroVisible}
               moveParticlesOnHover
             />
           </div>
