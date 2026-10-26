@@ -30,6 +30,20 @@ const crearIdConsultaLocal = () => `c_${Date.now()}`;
 const crearIdMensajeBot = () => `bot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 const crearIdConversacion = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const THREADS_PREFIX = "chatap.threads.";
+const TRAMITES_CACHE_KEY = "chatap.tramites-publicados.v1";
+const TRAMITES_CACHE_TTL = 6 * 60 * 60 * 1000;
+
+function cargarCacheTramitesPublicados() {
+  if (typeof window === "undefined") return [];
+  try {
+    const cache = JSON.parse(window.localStorage.getItem(TRAMITES_CACHE_KEY) || "null");
+    if (!cache || !Array.isArray(cache.data)) return [];
+    // El catálogo es público: mostramos el último snapshot al instante y lo actualizamos en segundo plano.
+    return cache.data.filter((tramite) => tramite && tramite.id != null && typeof tramite.nombre === "string");
+  } catch {
+    return [];
+  }
+}
 
 function cargarConversaciones(userId) {
   if (typeof window === "undefined" || !userId) return [];
@@ -96,8 +110,8 @@ export default function ChatWindow({ initialQuery = null }) {
   const token = useSessionStore((state) => state.token);
   const toast = useToast();
   const [input, setInput] = useState("");
-  const [tramitesPublicados, setTramitesPublicados] = useState([]);
-  const [tramitesPublicadosLoading, setTramitesPublicadosLoading] = useState(false);
+  const [tramitesPublicados, setTramitesPublicados] = useState(cargarCacheTramitesPublicados);
+  const [tramitesPublicadosLoading, setTramitesPublicadosLoading] = useState(() => cargarCacheTramitesPublicados().length === 0);
   const [tramitesPublicadosError, setTramitesPublicadosError] = useState("");
   const [tramitesOffset, setTramitesOffset] = useState(0);
   const [tramitesPage, setTramitesPage] = useState(0);
@@ -146,13 +160,29 @@ export default function ChatWindow({ initialQuery = null }) {
 
   useEffect(() => {
     let active = true;
-    setTramitesPublicadosLoading(true);
+    const cached = cargarCacheTramitesPublicados();
+    // Si ya hay datos guardados, no ocultamos las tarjetas esperando a la API.
+    if (cached.length === 0) setTramitesPublicadosLoading(true);
+
     listarPublicados()
       .then((data) => {
-        if (active) setTramitesPublicados(Array.isArray(data) ? data : []);
+        if (!active) return;
+        const publicados = Array.isArray(data) ? data : [];
+        setTramitesPublicados(publicados);
+        setTramitesPublicadosError("");
+        try {
+          window.localStorage.setItem(
+            TRAMITES_CACHE_KEY,
+            JSON.stringify({ savedAt: Date.now(), data: publicados })
+          );
+        } catch {
+          // Si el almacenamiento está lleno o bloqueado, el catálogo sigue funcionando en memoria.
+        }
       })
       .catch(() => {
-        if (active) setTramitesPublicadosError("No se pudieron cargar los trámites. Intentá recargar la página.");
+        if (active && cached.length === 0) {
+          setTramitesPublicadosError("No se pudieron cargar los trámites. Intentá recargar la página.");
+        }
       })
       .finally(() => {
         if (active) setTramitesPublicadosLoading(false);
@@ -505,8 +535,10 @@ export default function ChatWindow({ initialQuery = null }) {
 
     // Agrupamos varios caracteres por actualización: conserva el efecto de tipeo,
     // pero reduce los renders y el trabajo de scroll durante respuestas largas.
-    const charStep = finalText.length > 240 ? 5 : finalText.length > 100 ? 3 : 2;
-    const charDelay = 30;
+    // El tipeo era el cuello de botella visual: el servidor ya había respondido,
+    // pero mostrar una respuesta larga podía tardar muchos segundos.
+    const charStep = finalText.length > 240 ? 18 : finalText.length > 100 ? 12 : 7;
+    const charDelay = 18;
 
     speakingRef.current = true;
     speakingIdRef.current = id;
