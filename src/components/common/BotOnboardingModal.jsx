@@ -395,10 +395,6 @@ export default function BotOnboardingModal() {
     >
       {hasSpotlight && (
         <>
-          <div className="tour-dim" style={{ top: 0, left: 0, width: "100%", height: spotlight.rect.top, opacity: spotlight.opacity ?? 1, transition: "opacity 0.3s ease" }} />
-          <div className="tour-dim" style={{ top: 0, left: 0, height: "100%", width: spotlight.rect.left, opacity: spotlight.opacity ?? 1, transition: "opacity 0.3s ease" }} />
-          <div className="tour-dim" style={{ top: spotlight.rect.bottom, left: 0, width: "100%", height: `calc(100% - ${spotlight.rect.bottom}px)`, opacity: spotlight.opacity ?? 1, transition: "opacity 0.3s ease" }} />
-          <div className="tour-dim" style={{ top: 0, left: spotlight.rect.right, height: "100%", width: `calc(100% - ${spotlight.rect.right}px)`, opacity: spotlight.opacity ?? 1, transition: "opacity 0.3s ease" }} />
           <div
             className="tour-ring"
             style={{
