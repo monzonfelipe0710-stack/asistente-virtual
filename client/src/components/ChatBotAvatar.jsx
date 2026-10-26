@@ -170,7 +170,8 @@ export default function ChatBotAvatar({
       visibleRef.current = entry.isIntersecting;
       el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
       if (entry.isIntersecting) {
-        drawRef.current?.();
+        // No reiniciar la pose al volver a entrar en pantalla: hacerlo pisaba
+        // la mirada actual y podía dar la impresión de que el avatar se congelaba.
         animationControlRef.current.start?.();
       } else {
         animationControlRef.current.stop?.();
@@ -307,7 +308,7 @@ export default function ChatBotAvatar({
     const latestPointer = { current: null };
     let moveFrame = 0;
     const onMove = (e) => {
-      if (!visibleRef.current || (reduceMQ && reduceMQ.matches)) return;
+      if (!visibleRef.current) return;
       latestPointer.current = { x: e.clientX, y: e.clientY };
       if (moveFrame) return;
       moveFrame = requestAnimationFrame(() => {
@@ -326,6 +327,9 @@ export default function ChatBotAvatar({
           pitch: (-dy / dist) * MAX_PITCH * intensity,
           mix: 1, spin: 0, wander: 0,
         }, clockRef.current, 0.12);
+        // Con movimiento reducido el ciclo continuo se pausa, pero la mirada
+        // debe seguir respondiendo al puntero y actualizarse en ese mismo frame.
+        if (reduceMQ?.matches) paint(currentEngine.sample(clockRef.current));
       });
     };
     const onLeave = () => engineRef.current?.setLook(null, clockRef.current, 0.35);
