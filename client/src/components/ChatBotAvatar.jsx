@@ -363,7 +363,18 @@ export default function ChatBotAvatar({
         }
       });
     };
-    const onLeave = () => engineRef.current?.setLook(null, clockRef.current, 0.35);
+    const onLeave = () => {
+      const currentEngine = engineRef.current;
+      if (!currentEngine) return;
+      currentEngine.setLook(null, clockRef.current, 0.35);
+      // Con movimiento reducido no hay RAF continuo; repintar la pose neutra
+      // evita que los ojos queden congelados mirando hacia el último puntero.
+      if (reduceMQ?.matches) {
+        const reducedMotionTime = clockRef.current + 0.2;
+        clockRef.current = reducedMotionTime;
+        paint(currentEngine.sample(reducedMotionTime));
+      }
+    };
 
     if (reduceMQ && reduceMQ.matches) drawStatic();
     else start();
