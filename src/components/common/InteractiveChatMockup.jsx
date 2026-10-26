@@ -20,21 +20,19 @@ export default function InteractiveChatMockup() {
   const [count, setCount] = useState(1);
   const [typing, setTyping] = useState(false);
   const [rating, setRating] = useState(null);
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
   const scrollRef = useRef(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(media.matches);
-    update();
+    const update = (event) => setReduced(event.matches);
     media.addEventListener?.("change", update);
     return () => media.removeEventListener?.("change", update);
   }, []);
 
   useEffect(() => {
-    if (reduced) { setCount(MESSAGES.length); setTyping(false); return undefined; }
-    if (count >= MESSAGES.length) return undefined;
+    if (reduced || count >= MESSAGES.length) return undefined;
     timerRef.current = window.setTimeout(() => {
       if (count === 1 || count === 3) {
         setTyping(true);
@@ -56,8 +54,10 @@ export default function InteractiveChatMockup() {
     window.clearTimeout(timerRef.current);
     setRating(null);
     setTyping(false);
-    setCount(reduced ? MESSAGES.length : 1);
+    setCount(1);
   }
+
+  const visibleCount = reduced ? MESSAGES.length : count;
 
   return (
     <section className="mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-line bg-paper shadow-xl" aria-label="Ejemplo de conversación de ChatAP">
@@ -79,7 +79,7 @@ export default function InteractiveChatMockup() {
       </header>
 
       <div ref={scrollRef} className="flex min-h-[310px] max-h-[460px] flex-col gap-4 overflow-y-auto px-3 py-5 sm:min-h-[350px] sm:px-5" aria-live="polite">
-        {MESSAGES.slice(0, count).map((m) => (
+        {MESSAGES.slice(0, visibleCount).map((m) => (
           <article key={m.id} className={`flex gap-2.5 ${m.type === "user" ? "justify-end" : "justify-start"} animate-fade-up`}>
             {m.type === "bot" && <div className="mt-1 shrink-0"><ChatBotAvatar size={30} static /></div>}
             <div className={`flex max-w-[88%] flex-col sm:max-w-[80%] ${m.type === "user" ? "items-end" : "items-start"}`}>
@@ -87,7 +87,7 @@ export default function InteractiveChatMockup() {
                 <p className={`m-0 whitespace-pre-wrap text-sm leading-6 ${m.type === "user" ? "text-white" : "text-ink"}`}>{m.type === "bot" ? <AnswerText text={m.text} /> : m.text}</p>
               </div>
               <span className="mt-1.5 px-1 text-[10px] text-muted">{m.type === "user" ? "Vos" : "ChatAP"} · Ejemplo</span>
-              {m.id === "b2" && count === MESSAGES.length && (
+              {m.id === "b2" && visibleCount === MESSAGES.length && (
                 <div className="mt-3 w-full border-t border-line/70 pt-2.5">
                   <div className="flex flex-wrap items-center gap-2"><span className="text-xs text-muted">¿Te sirvió esta respuesta?</span>
                     {[{ value: 1, label: "Sí", icon: "👍" }, { value: 0, label: "No", icon: "👎" }].map((o) => <button key={o.value} type="button" onClick={() => setRating(o.value)} aria-pressed={rating === o.value} className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold ${rating === o.value ? "border-brand-deep bg-brand-deep text-white" : "border-line text-muted hover:bg-mist hover:text-ink"}`}><span aria-hidden="true">{o.icon}</span>{o.label}</button>)}
