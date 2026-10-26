@@ -90,6 +90,36 @@ export const calificarConsulta = async (req, res) => {
   res.json(actualizada);
 };
 
+export const calificarConsultaPublica = async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    const error = new Error('El identificador de la consulta no es válido.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const { calificacion } = calificacionSchema.parse(req.body);
+  // Este endpoint solo permite calificar consultas anónimas; no expone consultas de cuentas.
+  const consulta = await prisma.consulta.findFirst({
+    where: { id, usuarioId: null },
+    select: { id: true },
+  });
+
+  if (!consulta) {
+    const error = new Error('Consulta anónima no encontrada.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const actualizada = await prisma.consulta.update({
+    where: { id },
+    data: { calificacion },
+    select: { id, calificacion: true },
+  });
+
+  res.json(actualizada);
+};
+
 export const eliminarConsulta = async (req, res) => {
   const { id } = req.params;
 
