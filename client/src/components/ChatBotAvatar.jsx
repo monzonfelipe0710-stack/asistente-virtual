@@ -39,7 +39,6 @@ const REACTION_CONFIG = {
   bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   squash:      { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   stretch:     { transform: "rx-stretch", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
-  bounce:      { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   microBounce: { transform: "rx-bounce", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   microSquash: { transform: "rx-squash", state: "idle", look: { yaw: 0, pitch: 0, mix: 0, spin: 0, wander: 1 } },
   wink:        { state: "wink" },
@@ -355,7 +354,13 @@ export default function ChatBotAvatar({
         }, clockRef.current, 0.12);
         // Con movimiento reducido el ciclo continuo se pausa, pero la mirada
         // debe seguir respondiendo al puntero y actualizarse en ese mismo frame.
-        if (reduceMQ?.matches) paint(currentEngine.sample(clockRef.current));
+        if (reduceMQ?.matches) {
+          // Sin el loop de animación, avanzamos un instante lógico para que
+          // el morph de la mirada termine y siga respondiendo al puntero.
+          const reducedMotionTime = clockRef.current + 0.2;
+          clockRef.current = reducedMotionTime;
+          paint(currentEngine.sample(reducedMotionTime));
+        }
       });
     };
     const onLeave = () => engineRef.current?.setLook(null, clockRef.current, 0.35);
