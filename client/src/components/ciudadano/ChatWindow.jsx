@@ -11,6 +11,7 @@ import { eliminarConsulta } from "../../services/consultas";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSessionStore } from "../../store/session";
+import { listarPublicados } from "../../services/tramites";
 import { apiErrorMessage } from "../../lib/api";
 import { useToast } from "../common/Toast";
 import {
@@ -95,6 +96,9 @@ export default function ChatWindow({ initialQuery = null }) {
   const token = useSessionStore((state) => state.token);
   const toast = useToast();
   const [input, setInput] = useState("");
+  const [tramitesPublicados, setTramitesPublicados] = useState([]);
+  const [tramitesPublicadosLoading, setTramitesPublicadosLoading] = useState(false);
+  const [tramitesPublicadosError, setTramitesPublicadosError] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [imageError, setImageError] = useState("");
@@ -137,6 +141,24 @@ export default function ChatWindow({ initialQuery = null }) {
     cargarConversaciones(user?.id || "ciudadano_anonimo")
   );
   const threadOwnerRef = useRef(user?.id || "ciudadano_anonimo");
+
+  useEffect(() => {
+    let active = true;
+    setTramitesPublicadosLoading(true);
+    listarPublicados()
+      .then((data) => {
+        if (active) setTramitesPublicados(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (active) setTramitesPublicadosError("No se pudieron cargar los trámites. Intentá recargar la página.");
+      })
+      .finally(() => {
+        if (active) setTramitesPublicadosLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // El tutorial puede abrir el historial móvil para mostrar el ejemplo en contexto.
   useEffect(() => {
@@ -1339,6 +1361,39 @@ export default function ChatWindow({ initialQuery = null }) {
                 <h2 id="chatap-popular-title">Trámites más solicitados</h2>
                 <p>Elegí una consulta para ver cómo iniciar la gestión.</p>
               </div>
+              {tramitesPublicadosLoading ? (
+                <p role="status" className="text-sm text-muted">Cargando trámites disponibles…</p>
+              ) : tramitesPublicadosError ? (
+                <p role="status" className="text-sm text-muted">{tramitesPublicadosError}</p>
+              ) : tramitesPublicados.length === 0 ? (
+                <p className="text-sm text-muted">Por el momento no hay trámites publicados.</p>
+              ) : (
+                <div className="chatap-popular-grid">
+                  {tramitesPublicados.map((tramite, index) => (
+                    <button
+                      key={tramite.id}
+                      type="button"
+                      onClick={() => handleQuickReply(`Quiero iniciar el trámite "${tramite.nombre}". ¿Cómo debo hacer la gestión?`)}
+                      className="chatap-popular-card"
+                      aria-label={`Consultar cómo iniciar: ${tramite.nombre}`}
+                    >
+                      <span className="chatap-popular-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="chatap-popular-copy">
+                        <span className="chatap-popular-card-title">{tramite.nombre}</span>
+                        {tramite.descripcion && (
+                          <span className="chatap-popular-card-description">{tramite.descripcion}</span>
+                        )}
+                        {tramite.sector?.nombre && (
+                          <span className="chatap-popular-card-description">{tramite.sector.nombre}</span>
+                        )}
+                      </span>
+                      <svg className="chatap-popular-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         ) : (
