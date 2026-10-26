@@ -508,9 +508,14 @@ export default function ChatBotAvatar({
       aria-label="Avatar animado del asistente ChatAP"
       className={`block ${speaking ? "animate-speak" : ""} ${rxClass} ${isSleeping ? "opacity-70" : ""}`}
     >
-      <path ref={bodyRef} fill={INK} />
-      <path ref={eyeARef} fill={EYE} />
-      <path ref={eyeBRef} fill={EYE} />
+      {/* Silueta de respaldo: el avatar nunca queda vacío si el primer frame del motor falla. */}
+      <path
+        ref={bodyRef}
+        fill={INK}
+        d={`M 0 ${-R} C ${R * 0.58} ${-R} ${R} ${-R * 0.52} ${R} 0 C ${R} ${R * 0.62} ${R * 0.56} ${R} 0 ${R} C ${-R * 0.62} ${R} ${-R} ${R * 0.56} ${-R} 0 C ${-R} ${-R * 0.58} ${-R * 0.55} ${-R} 0 ${-R} Z`}
+      />
+      <path ref={eyeARef} fill={EYE} d={`M ${-R * 0.42} ${-R * 0.12} a ${R * 0.1} ${R * 0.15} 0 1 0 ${R * 0.2} 0 a ${R * 0.1} ${R * 0.15} 0 1 0 ${-R * 0.2} 0`} />
+      <path ref={eyeBRef} fill={EYE} d={`M ${R * 0.22} ${-R * 0.12} a ${R * 0.1} ${R * 0.15} 0 1 0 ${R * 0.2} 0 a ${R * 0.1} ${R * 0.15} 0 1 0 ${-R * 0.2} 0`} />
       {Array.from({ length: DOT_POOL }).map((_, i) => (
         <circle
           key={i}
