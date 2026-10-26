@@ -100,7 +100,6 @@ export default function Particles({
   const meshRef = useRef(null);
   const colorsRef = useRef(particleColors);
   const activeRef = useRef(active);
-  activeRef.current = active;
   const animationControlRef = useRef({ start: null, stop: null });
 
   useEffect(() => {
@@ -312,6 +311,7 @@ export default function Particles({
 
   // Pausa el render sin destruir el contexto ni recrear la geometría al cambiar de sección.
   useEffect(() => {
+    activeRef.current = active;
     if (active) animationControlRef.current.start?.();
     else animationControlRef.current.stop?.();
   }, [active]);
