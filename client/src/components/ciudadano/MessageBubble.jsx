@@ -129,7 +129,16 @@ function FormattedAnswer({ text }) {
     }
     const number = line.match(/^\d+[.)]\s+(.+)$/);
     const bullet = line.match(/^[-•*]\s+(.+)$/);
-    if (number || bullet) { const next = number ? "ordered" : "unordered"; if (kind && kind !== next) flush(); kind = next; items.push((number || bullet)[1]); return; }
+    if (number || bullet) {
+      const next = number ? "ordered" : "unordered";
+      if (kind && kind !== next) flush();
+      kind = next;
+      // El <ol> ya agrega su propio número visual. Quitar numeración duplicada
+      // que algunos modelos incluyen dentro del texto de cada elemento.
+      const itemText = (number || bullet)[1].replace(/^\d+[.)]\s+/, "");
+      items.push(itemText);
+      return;
+    }
     flush();
     if (/^#{1,3}\s+/.test(line)) blocks.push(<h4 key={"heading" + i} className="mb-2 mt-4 text-base font-bold tracking-tight text-ink first:mt-0">{renderInline(line.replace(/^#{1,3}\s+/, ""), "heading" + i)}</h4>);
     else blocks.push(<p key={"paragraph" + i} className="my-2 leading-7 text-[0.9375rem] first:mt-0 last:mb-0">{renderInline(line, "paragraph" + i)}</p>);
