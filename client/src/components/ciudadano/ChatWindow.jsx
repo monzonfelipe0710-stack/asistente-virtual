@@ -422,43 +422,19 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // El historial prioriza hilos completos; las consultas anteriores se mantienen
   // como entradas individuales para que los registros previos sigan accesibles.
+  // El historial muestra conversaciones (hilos), no consultas individuales del backend.
+  // Así, al borrar un hilo no reaparecen consultas antiguas como si fueran otros chats.
   const historyQueries = useMemo(() => {
     if (!isAuthenticated || !userId) return [];
-    const effectiveId = userId;
-    const threads = savedThreads.map((thread) => ({
-      ...thread,
-      threadId: thread.id,
-      text: thread.title || thread.text || "Nueva consulta",
-      at: thread.updatedAt || thread.at,
-    }));
-    const includedConsultaIds = new Set(
-      savedThreads.flatMap((thread) =>
-        (thread.messages || []).map((message) => message.consultaId).filter(Boolean)
-      )
-    );
-    const legacyConsultas = consultas
-      .filter((consulta) => !includedConsultaIds.has(consulta.id))
-      .map((consulta) => ({
-        id: consulta.id,
-        text: consulta.textoConsulta,
-        at: consulta.fecha,
-        answer: consulta.respuesta,
-        calificacion: consulta.calificacion,
-        tramite: consulta.tramite ?? null,
-        estado: consulta.encontrado ? "Resultado disponible" : "Sin coincidencia",
-      }));
-    const legacyMemory = loadMemory(effectiveId).messages || [];
-    const legacy = token
-      ? legacyConsultas
-      : legacyConsultas.length
-        ? legacyConsultas
-        : legacyMemory.slice().reverse();
-    return [...threads, ...legacy.filter((item) =>
-      !threads.some((thread) => thread.text === item.text && Math.abs(
-        new Date(thread.at).getTime() - new Date(item.at).getTime()
-      ) < 5000)
-    )].slice(0, HISTORY_LIMIT);
-  }, [userId, token, consultas, savedThreads, isAuthenticated]);
+    return savedThreads
+      .map((thread) => ({
+        ...thread,
+        threadId: thread.id,
+        text: thread.title || thread.text || "Nueva consulta",
+        at: thread.updatedAt || thread.at,
+      }))
+      .slice(0, HISTORY_LIMIT);
+  }, [userId, savedThreads, isAuthenticated]);
 
   const displayedHistoryQueries = useMemo(
     () => historyQueries.filter((item) => !pendingDeleteKeys.has(claveHistorial(item))),
