@@ -532,6 +532,7 @@ export default function ChatWindow({ initialQuery = null }) {
       consultaId,
       canRate,
       calificacion,
+      publicRating: !token,
     });
 
     // La invitación se habilita después de que termine el tipeo de la respuesta.
