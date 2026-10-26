@@ -13,9 +13,9 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Bienvenido!",
     title: (user) => `Hola, ${user?.name ? user.name.split(" ")[0] : "amigo/a"}`,
-    description: "Te mostraré cómo usar ChatAP paso a paso. Tocá «Siguiente» para avanzar.",
-    route: "/chat",
-    target: null,
+    description: "Primero, conocé la página de inicio: acá te contamos qué es ChatAP y cómo puede ayudarte. Después vamos a entrar al asistente para recorrer sus herramientas.",
+    route: "/",
+    target: "#inicio",
     action: null,
   },
   {
@@ -33,7 +33,7 @@ const STEPS = [
     reaction: "happy",
     kicker: "Escribí tu consulta",
     title: "Campo de texto",
-    description: "Escribí acá lo que necesitás saber. Ej: «¿Cómo solicito una licencia?» y enviá con la flecha.",
+    description: "Escribí tu consulta con tus propias palabras —por ejemplo, «¿Cómo solicito una licencia?»— y enviála con la flecha.",
     route: "/chat",
     target: "#chat-here",
     action: null,
@@ -43,7 +43,7 @@ const STEPS = [
     reaction: "playful",
     kicker: "Adjuntar archivos",
     title: "Botón de clip",
-    description: "Usá el ícono de clip para adjuntar imágenes relacionadas con tu consulta (máx 8 MB).",
+    description: "Si necesitás aportar contexto, usá el clip para adjuntar una imagen relacionada con tu consulta (máximo 8 MB).",
     route: "/chat",
     target: "#chat-image-button",
     action: null,
@@ -52,10 +52,10 @@ const STEPS = [
     id: "quick-topics",
     reaction: "happy",
     kicker: "Trámites más solicitados",
-    title: "Elegí una consulta",
-    description: "Elegí uno de los trámites disponibles para ver cómo iniciar la gestión.",
+    title: "Elegí un trámite",
+    description: "Estas tarjetas son los trámites más solicitados. Seleccioná una para preguntarle a ChatAP cómo iniciar esa gestión.",
     route: "/chat",
-    target: ".chatap-popular-heading",
+    target: ".chatap-popular-grid",
     action: null,
   },
   {
@@ -73,7 +73,7 @@ const STEPS = [
     reaction: "excited",
     kicker: "¡Listo!",
     title: "Ya sabés usar ChatAP",
-    description: "¡Ya estás listo! Escribí una consulta o elegí uno de los temas rápidos para empezar. ChatAP te acompaña durante el trámite.",
+    description: "¡Ya estás listo! Escribí una consulta o elegí uno de los trámites destacados. Podés volver a abrir este tutorial desde Accesibilidad cuando lo necesites.",
     route: "/chat",
     target: null,
     action: null,
@@ -144,12 +144,13 @@ export default function BotOnboardingModal() {
 
   const forceOpen = useCallback(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (location.pathname !== "/") navigate("/");
     setIsOpen(true);
     setIsClosing(false);
     setStep(0);
     setDirection("next");
     lastSuccessfulStep.current = 0;
-  }, []);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => checkShouldOpen());
