@@ -13,8 +13,8 @@ router.get('/', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHan
 router.get('/:id', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(tramiteController.obtener));
 router.patch('/:id', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.actualizar));
 router.delete('/:id', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.eliminar));
-router.patch('/:id/publicar', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.publicar));
-router.patch('/:id/despublicar', autenticar, autorizar('ADMINISTRADOR'), asyncHandler(puedeGestionarTramite), asyncHandler(tramiteController.despublicar));
+router.patch('/:id/publicar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(tramiteController.publicar));
+router.patch('/:id/despublicar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(tramiteController.despublicar));
 router.use('/:id/documentos', documentoRoutes);
 
 export default router;
