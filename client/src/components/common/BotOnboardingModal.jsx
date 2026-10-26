@@ -51,11 +51,11 @@ const STEPS = [
   {
     id: "quick-topics",
     reaction: "happy",
-    kicker: "Consultas rápidas",
-    title: "Elegí un tema",
-    description: "Podés tocar uno de estos temas rápidos para empezar una consulta sin tener que escribirla desde cero.",
+    kicker: "Trámites más solicitados",
+    title: "Elegí una consulta",
+    description: "Elegí uno de los trámites disponibles para ver cómo iniciar la gestión.",
     route: "/chat",
-    target: "#chatap-pills-container",
+    target: ".chatap-popular-heading",
     action: null,
   },
   {
