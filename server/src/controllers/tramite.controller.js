@@ -17,11 +17,6 @@ export const crear = async (req, res) => {
   res.status(201).json(tramite);
 };
 
-export const listarPublicados = async (req, res) => {
-  const tramites = await tramiteService.listarTramitesPublicados();
-  res.json(tramites);
-};
-
 export const listar = async (req, res) => {
   const tramites = await tramiteService.listarTramites();
   res.json(tramites);
@@ -63,14 +58,27 @@ export const eliminar = async (req, res) => {
   res.status(204).send();
 };
 
+// Publicar y despublicar no pasan por puedeGestionarTramite (el supervisor aprueba
+// trámites de cualquier sector), así que el 404 se resuelve acá.
+const verificarExistencia = async (id) => {
+  const tramite = await tramiteService.obtenerTramitePorId(id);
+  if (!tramite) {
+    const error = new Error('Trámite no encontrado.');
+    error.statusCode = 404;
+    throw error;
+  }
+};
+
 export const publicar = async (req, res) => {
   const id = Number(req.params.id);
+  await verificarExistencia(id);
   const tramite = await tramiteService.cambiarPublicacion(id, true);
   res.json({ mensaje: 'Trámite publicado', tramite });
 };
 
 export const despublicar = async (req, res) => {
   const id = Number(req.params.id);
+  await verificarExistencia(id);
   const tramite = await tramiteService.cambiarPublicacion(id, false);
   res.json({ mensaje: 'Trámite despublicado', tramite });
 };
