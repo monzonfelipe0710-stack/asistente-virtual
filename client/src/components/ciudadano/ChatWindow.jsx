@@ -314,9 +314,10 @@ export default function ChatWindow({ initialQuery = null }) {
       scrollFrameRef.current = 0;
       const el = messagesRef.current;
       if (!el || !nearBottomRef.current) return;
-      const top = el.scrollHeight;
-      if (speakingRef.current || typedText) el.scrollTop = top;
-      else el.scrollTo({ top, behavior: "smooth" });
+      // El contenido puede cambiar muchas veces durante el tipeo. Un scroll
+      // smooth por render reinicia la animación continuamente y provoca tirones;
+      // al estar cerca del final, el ajuste directo mantiene el seguimiento estable.
+      el.scrollTop = el.scrollHeight;
     });
     return () => {
       if (scrollFrameRef.current) cancelAnimationFrame(scrollFrameRef.current);
