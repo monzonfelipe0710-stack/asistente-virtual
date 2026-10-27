@@ -13,13 +13,28 @@ const SLIDES = [
     alt: "Personal municipal de Formosa participando en una capacitación de trabajo",
   },
   {
-    id: "mist-landscape",
+    id: "public-service",
     src: "https://diarioformosa.eleco.com.ar/media/2024/11/03_13.jpg",
     alt: "Personal de atención al público trabajando en oficinas de administración pública",
   },
+  {
+    id: "teamwork-office",
+    src: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=2000&q=85",
+    alt: "Equipo de trabajo colaborando en una oficina",
+  },
+  {
+    id: "modern-workspace",
+    src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85",
+    alt: "Espacio de trabajo moderno y luminoso",
+  },
+  {
+    id: "team-meeting",
+    src: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=2000&q=85",
+    alt: "Personas reunidas para coordinar tareas de trabajo",
+  },
 ];
 
-const SLIDE_DURATION = 10000; // 10 segundos por diapositiva
+const SLIDE_DURATION = 7500; // 7,5 segundos por diapositiva
 
 export default function HeroCinematicBackground() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -56,13 +71,8 @@ export default function HeroCinematicBackground() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  // Precargar imágenes para transiciones sin parpadeos
-  useEffect(() => {
-    SLIDES.forEach((slide) => {
-      const img = new Image();
-      img.src = slide.src;
-    });
-  }, []);
+  // Las imágenes se cargan con loading/decoding para evitar descargar
+  // todas las fotos de alta resolución de golpe al abrir la página.
 
   // Rotación suave entre diapositivas si no hay reduced-motion
   useEffect(() => {
