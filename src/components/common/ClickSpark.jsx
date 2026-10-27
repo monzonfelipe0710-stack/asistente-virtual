@@ -147,7 +147,7 @@ export default function ClickSpark({
       if (sparksRef.current.length > MAX_ACTIVE_SPARKS) {
         sparksRef.current.splice(0, sparksRef.current.length - MAX_ACTIVE_SPARKS);
       }
-      if (animationFrameRef.current === null && drawFrameRef.current)
+      if (animationFrameRef.current === null && drawFrameRef.current) {
         animationFrameRef.current = requestAnimationFrame(drawFrameRef.current);
       }
     };
