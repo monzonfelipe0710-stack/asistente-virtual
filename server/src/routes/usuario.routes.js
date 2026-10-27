@@ -7,27 +7,18 @@ import { registroLimiter } from '../config/rateLimit.js';
 
 const router = Router();
 
-router.patch('/me/perfil', autenticar, asyncHandler(usuarioController.actualizarMiPerfil));
-router.delete('/me', autenticar, asyncHandler(usuarioController.eliminarMiCuenta));
-
-// Alta directa de cuentas desde el panel de superusuario.
-router.post('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.crearUsuarioAdministrativo));
-
 // Pública: registro de solicitud
-router.post('/registro', registroLimiter, asyncHandler(usuarioController.registrar));
 router.post('/registro-ciudadano', registroLimiter, asyncHandler(usuarioController.registrarCiudadano));
 
 // Solo superusuario: gestión de solicitudes  
 router.get('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listar));
-router.get('/pendientes', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listarPendientes));
 router.get('/me/sectores', autenticar, autorizar('SUPERUSUARIO', 'ADMINISTRADOR'), asyncHandler(usuarioController.misSectores));
 router.get('/:id/sectores', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.listarSectores));
 router.put('/:id/sectores', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.asignarSectores));
-router.patch('/:id/aprobar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.aprobar));
-router.patch('/:id/rechazar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.rechazar));
 
 // Solo superusuario: baja y reingreso de cuentas ya aprobadas
 router.patch('/:id/suspender', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.suspender));
 router.patch('/:id/reactivar', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.reactivar));
+router.post('/', autenticar, autorizar('SUPERUSUARIO'), asyncHandler(usuarioController.crearEmpleado));
 
 export default router;
