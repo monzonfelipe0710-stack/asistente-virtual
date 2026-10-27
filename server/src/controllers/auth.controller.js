@@ -4,7 +4,7 @@ import prisma from '../config/prisma.js';
 import crypto from 'crypto';
 import * as usuarioService from '../services/usuario.service.js';
 import * as correoService from '../services/correo.service.js';
-import { loginSchema, recuperarSchema, restablecerSchema } from '../validators/auth.validators.js';
+import { loginSchema, recuperarSchema, restablecerSchema, cambiarPasswordSchema } from '../validators/auth.validators.js';
 
 const MENSAJES_ESTADO = {
   PENDIENTE: 'Tu solicitud todavía está pendiente de aprobación.',
@@ -13,25 +13,12 @@ const MENSAJES_ESTADO = {
 };
 
 export const login = async (req, res) => {
-  const { email, dni, password } = loginSchema.parse(req.body);
+  const { email, password } = loginSchema.parse(req.body);
 
-  const candidatos = email
-    ? [await prisma.usuario.findUnique({ where: { email } })].filter(Boolean)
-    : await prisma.usuario.findMany({
-        where: { dni },
-        orderBy: { id: 'asc' },
-      });
+  const usuario = await prisma.usuario.findUnique({ where: { email } });
 
-  let usuario = null;
-  for (const candidato of candidatos) {
-    if (await bcrypt.compare(password, candidato.passwordHash)) {
-      usuario = candidato;
-      break;
-    }
-  }
-
-  // Mensaje genérico para no revelar si existe el email o DNI.
-  if (!usuario) {
+  // 1. Identidad: email existe + contraseña correcta (mensaje genérico a propósito)
+  if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
     const error = new Error('Credenciales inválidas');
     error.statusCode = 401;
     throw error;
@@ -45,30 +32,28 @@ export const login = async (req, res) => {
   }
 
   const token = jwt.sign(
-    { id: usuario.id, rol: usuario.rol },
+    { id: usuario.id, rol: usuario.rol, pwd: usuario.passwordCambiadaEn?.getTime() ?? 0 },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
   );
 
-  res.json({
+    res.json({
     token,
-    usuario: {
-      id: usuario.id,
-      nombre: usuario.nombre,
-      email: usuario.email,
-      rol: usuario.rol,
-      dni: usuario.dni,
-      genero: usuario.genero,
-    },
+    usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol, debeCambiarPassword: usuario.debeCambiarPassword },
   });
 };
 
 export const solicitarRecuperacion = async (req, res) => {
   const { email } = recuperarSchema.parse(req.body);
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
+  // Respondemos ya, igual exista o no el email (anti-enumeración + anti-timing).
+  res.json({ mensaje: 'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.' });
 
-  if (usuario && usuario.estado === 'APROBADO') {
+  // El trabajo real va en segundo plano; el try/catch evita que un error intente responder de nuevo.
+  try {
+    const usuario = await prisma.usuario.findUnique({ where: { email } });
+    if (!usuario || usuario.estado !== 'APROBADO') return;
+
     const tokenCrudo = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(tokenCrudo).digest('hex');
     const expira = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
@@ -76,11 +61,10 @@ export const solicitarRecuperacion = async (req, res) => {
     await usuarioService.guardarTokenRecuperacion(usuario.id, tokenHash, expira);
 
     const link = `${process.env.FRONTEND_URL}/restablecer?token=${tokenCrudo}`;
-    correoService.enviarRecuperacion(usuario.email, usuario.nombre, link)
-      .catch((err) => console.error('Error enviando mail de recuperación:', err.message));
+    await correoService.enviarRecuperacion(usuario.email, usuario.nombre, link);
+  } catch (err) {
+    console.error('Error en recuperación de contraseña:', err.message);
   }
-
-  res.json({ mensaje: 'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.' });
 };
 
 export const restablecer = async (req, res) => {
@@ -98,4 +82,30 @@ export const restablecer = async (req, res) => {
   await usuarioService.cambiarPassword(usuario.id, password);
 
   res.json({ mensaje: 'Tu contraseña fue actualizada. Ya podés iniciar sesión.' });
+};
+
+export const cambiarPassword = async (req, res) => {
+  const { passwordActual, passwordNueva } = cambiarPasswordSchema.parse(req.body);
+
+  const usuario = await prisma.usuario.findUnique({ where: { id: req.usuario.id } });
+  if (!usuario || !(await bcrypt.compare(passwordActual, usuario.passwordHash))) {
+    const error = new Error('La contraseña actual es incorrecta.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const actualizado = await usuarioService.cambiarPassword(usuario.id, passwordNueva);
+
+  // Token nuevo con el pwd actualizado: el anterior queda invalidado.
+  const token = jwt.sign(
+    { id: usuario.id, rol: usuario.rol, pwd: actualizado.passwordCambiadaEn?.getTime() ?? 0 },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '2h' }
+  );
+
+  res.json({
+    mensaje: 'Contraseña actualizada.',
+    token,
+    usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol, debeCambiarPassword: false },
+  });
 };
