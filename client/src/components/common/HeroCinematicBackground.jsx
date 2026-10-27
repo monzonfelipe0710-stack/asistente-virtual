@@ -3,34 +3,24 @@ import "./HeroCinematicBackground.css";
 
 const SLIDES = [
   {
-    id: "civic-architecture",
-    src: "https://www.argentina.gob.ar/sites/default/files/2023-10-12-jornada_de_capacitacion_en_formosa._gladis_mazza.jpg",
-    alt: "Jornada de capacitación de Recursos Humanos de la Administración Pública en Formosa",
+    id: "capacitacion-publica",
+    src: "/imagenes/capacitacion-publica.svg",
+    alt: "Equipo de la administración pública participando en una capacitación",
   },
   {
-    id: "river-twilight",
-    src: "https://www.formosatuciudad.gob.ar/archivos/SERVICIOS/Transito/2019/CURSOS_PARA_EMPLEADOS_MUNIIPALES_1.jpg",
-    alt: "Personal municipal de Formosa participando en una capacitación de trabajo",
+    id: "equipo-recursos-humanos",
+    src: "/imagenes/equipo-recursos-humanos.svg",
+    alt: "Equipo de Recursos Humanos colaborando en una oficina",
   },
   {
-    id: "public-service",
-    src: "https://diarioformosa.eleco.com.ar/media/2024/11/03_13.jpg",
-    alt: "Personal de atención al público trabajando en oficinas de administración pública",
+    id: "atencion-ciudadana",
+    src: "/imagenes/atencion-ciudadana.svg",
+    alt: "Personal brindando atención y orientación a la ciudadanía",
   },
   {
-    id: "teamwork-office",
-    src: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=2000&q=85",
-    alt: "Equipo de trabajo colaborando en una oficina",
-  },
-  {
-    id: "modern-workspace",
-    src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85",
-    alt: "Espacio de trabajo moderno y luminoso",
-  },
-  {
-    id: "team-meeting",
-    src: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=2000&q=85",
-    alt: "Personas reunidas para coordinar tareas de trabajo",
+    id: "asistente-digital",
+    src: "/imagenes/asistente-digital.svg",
+    alt: "Asistente digital institucional en una interfaz de chat",
   },
 ];
 
@@ -71,8 +61,7 @@ export default function HeroCinematicBackground() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  // Las imágenes se cargan con loading/decoding para evitar descargar
-  // todas las fotos de alta resolución de golpe al abrir la página.
+  // Las ilustraciones SVG locales son livianas y no dependen de servidores externos.
 
   // Rotación suave entre diapositivas si no hay reduced-motion
   useEffect(() => {
