@@ -4642,7 +4642,8 @@ html.dark .tour-avatar {
     background-image:
       radial-gradient(ellipse at 8% 0%, rgba(49, 95, 232, 0.055), transparent 34rem),
       radial-gradient(ellipse at 96% 12%, rgba(98, 126, 190, 0.045), transparent 30rem);
-    background-attachment: fixed;
+    /* Evita repintar los gradientes de fondo durante cada desplazamiento.
+       El fondo del body ya cubre la página sin necesitar attachment fijo. */
   }
 
   :root:not(.dark) button,
