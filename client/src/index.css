@@ -4617,3 +4617,105 @@ html.dark .tour-avatar {
     will-change: auto;
   }
 }
+
+
+/* ── Pulido del tema claro por defecto: profundidad, contraste y estados ── */
+:root:not(.dark) {
+  --color-paper: #F7F9FD;
+  --color-mist: #EDF2FA;
+  --color-soft: #E1E9F6;
+  --color-line: rgba(22, 43, 82, 0.12);
+  --color-muted: #52617D;
+  --color-faint: #7887A3;
+  --color-brand: #315FE8;
+  --color-brand-dark: #244BC4;
+  --color-brand-deep: #1D3C9E;
+  --color-primary-light: #EAF0FF;
+  --color-primary-lighter: #F4F7FF;
+  --color-accent-light: #EAF0FF;
+  --shadow-soft: 0 2px 8px rgba(29, 54, 105, 0.045), 0 12px 32px rgba(29, 54, 105, 0.055);
+  --shadow-hover: 0 6px 18px rgba(29, 54, 105, 0.08), 0 18px 42px rgba(29, 54, 105, 0.09);
+}
+
+@layer base {
+  :root:not(.dark) body {
+    background-image:
+      radial-gradient(ellipse at 8% 0%, rgba(49, 95, 232, 0.055), transparent 34rem),
+      radial-gradient(ellipse at 96% 12%, rgba(98, 126, 190, 0.045), transparent 30rem);
+    background-attachment: fixed;
+  }
+
+  :root:not(.dark) button,
+  :root:not(.dark) a,
+  :root:not(.dark) input,
+  :root:not(.dark) textarea,
+  :root:not(.dark) select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :root:not(.dark) input:not([type="checkbox"]):not([type="radio"]),
+  :root:not(.dark) textarea,
+  :root:not(.dark) select {
+    border-color: rgba(37, 62, 112, 0.18);
+    background-color: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 2px rgba(21, 42, 85, 0.025);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  }
+
+  :root:not(.dark) input:not([type="checkbox"]):not([type="radio"]):hover,
+  :root:not(.dark) textarea:hover,
+  :root:not(.dark) select:hover {
+    border-color: rgba(49, 95, 232, 0.4);
+  }
+
+  :root:not(.dark) input:not([type="checkbox"]):not([type="radio"]):focus,
+  :root:not(.dark) textarea:focus,
+  :root:not(.dark) select:focus {
+    border-color: var(--color-brand);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(49, 95, 232, 0.12);
+    outline: none;
+  }
+}
+
+@layer components {
+  :root:not(.dark) .card,
+  :root:not(.dark) .card-interactive {
+    border-color: var(--color-line);
+    background-color: rgba(255, 255, 255, 0.88);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(10px);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+  }
+
+  :root:not(.dark) .card-interactive:hover {
+    border-color: rgba(49, 95, 232, 0.3);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  :root:not(.dark) .quick-reply-card {
+    border-color: rgba(37, 62, 112, 0.12);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 3px 12px rgba(29, 54, 105, 0.035);
+  }
+
+  :root:not(.dark) .quick-reply-card:hover,
+  :root:not(.dark) .quick-reply-card:focus-visible {
+    border-color: rgba(49, 95, 232, 0.48);
+    background: linear-gradient(135deg, #fff 0%, #F3F6FF 100%);
+    box-shadow: 0 8px 22px rgba(49, 95, 232, 0.1);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not(.dark) *,
+  :root:not(.dark) *::before,
+  :root:not(.dark) *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
