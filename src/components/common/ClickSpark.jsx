@@ -140,8 +140,14 @@ export default function ClickSpark({
         startTime: now,
       }));
 
+      // Evita que clics repetidos acumulen cientos de partículas y alarguen
+      // innecesariamente el trabajo por fotograma.
+      const MAX_ACTIVE_SPARKS = 96;
       sparksRef.current.push(...newSparks);
-      if (animationFrameRef.current === null && drawFrameRef.current) {
+      if (sparksRef.current.length > MAX_ACTIVE_SPARKS) {
+        sparksRef.current.splice(0, sparksRef.current.length - MAX_ACTIVE_SPARKS);
+      }
+      if (animationFrameRef.current === null && drawFrameRef.current)
         animationFrameRef.current = requestAnimationFrame(drawFrameRef.current);
       }
     };
