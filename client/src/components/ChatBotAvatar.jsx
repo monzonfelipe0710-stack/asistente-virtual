@@ -286,8 +286,9 @@ export default function ChatBotAvatar({
     let clock = 0;
     let last = 0;
     let lastPaint = 0;
-    // Limitar a 30 fps evita competir con el scroll y las animaciones de la interfaz.
-    const frameInterval = 1000 / 30;
+    // Mantener una cadencia fluida sin renderizar a 60 fps cada avatar.
+    // El movimiento del puntero se procesa aparte y también está limitado.
+    const frameInterval = 1000 / 45;
 
     const tick = (ms) => {
       raf = 0;
@@ -304,8 +305,14 @@ export default function ChatBotAvatar({
       last = ms;
       clock += dt;
       clockRef.current = clock;
-      paint(engine.sample(clock));
-      raf = requestAnimationFrame(tick);
+      // Un error puntual de dibujo no debe matar el RAF y dejar el avatar congelado.
+      try {
+        paint(engine.sample(clock));
+      } catch (error) {
+        console.error("[ChatBotAvatar] Error al dibujar el avatar; se reintentará en el próximo frame.", error);
+      } finally {
+        raf = requestAnimationFrame(tick);
+      }
     };
 
     const start = () => {
@@ -332,13 +339,18 @@ export default function ChatBotAvatar({
 
     const latestPointer = { current: null };
     let moveFrame = 0;
+    let lastMovePaint = 0;
+    const MOVE_INTERVAL = 1000 / 30;
     const onMove = (e) => {
       // El puntero también sirve como recuperación si IntersectionObserver dejó
       // el avatar marcado como invisible y el RAF se detuvo sin reiniciarse.
       latestPointer.current = { x: e.clientX, y: e.clientY };
       if (moveFrame) return;
-      moveFrame = requestAnimationFrame(() => {
+      moveFrame = requestAnimationFrame((moveTime) => {
         moveFrame = 0;
+        // Evita medir el layout y recalcular la mirada en cada evento de alta frecuencia.
+        if (moveTime - lastMovePaint < MOVE_INTERVAL) return;
+        lastMovePaint = moveTime;
         const el = svgRef.current;
         const currentEngine = engineRef.current;
         if (!el || !currentEngine || !latestPointer.current) return;
