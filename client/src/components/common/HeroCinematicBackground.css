@@ -73,7 +73,7 @@
 }
 
 .dark .hero-cinematic-bg__tint {
-  background: linear-gradient(180deg, rgba(7, 14, 32, 0.48) 0%, rgba(7, 14, 32, 0.68) 100%);
+  background: linear-gradient(180deg, rgba(7, 14, 32, 0.36) 0%, rgba(7, 14, 32, 0.58) 100%);
 }
 
 /* 2. Gradiente focal: maximiza la legibilidad del texto en el tercio central */
@@ -85,7 +85,7 @@
 }
 
 .dark .hero-cinematic-bg__focal {
-  background: radial-gradient(ellipse 78% 66% at 50% 40%, rgba(7, 14, 32, 0.78) 0%, rgba(7, 14, 32, 0.42) 48%, transparent 100%);
+  background: radial-gradient(ellipse 78% 66% at 50% 40%, rgba(7, 14, 32, 0.68) 0%, rgba(7, 14, 32, 0.34) 48%, transparent 100%);
 }
 
 /* 3. Vignette cinematográfica muy suave */
@@ -113,7 +113,7 @@
 }
 
 .dark .hero-cinematic-bg__bottom-fade {
-  background: linear-gradient(to bottom, transparent 0%, rgba(7, 14, 32, 0.62) 65%, #070E20 100%);
+  background: linear-gradient(to bottom, transparent 0%, rgba(7, 14, 32, 0.56) 65%, #070E20 100%);
 }
 
 /* 5. Iluminación ambiental sutil superior (Azul de Estado #2F6BFF) */
@@ -166,13 +166,13 @@
     background: linear-gradient(180deg, rgba(240, 244, 249, 0.48) 0%, rgba(240, 244, 249, 0.66) 100%);
   }
   .dark .hero-cinematic-bg__tint {
-    background: linear-gradient(180deg, rgba(7, 14, 32, 0.58) 0%, rgba(7, 14, 32, 0.76) 100%);
+    background: linear-gradient(180deg, rgba(7, 14, 32, 0.46) 0%, rgba(7, 14, 32, 0.66) 100%);
   }
   .hero-cinematic-bg__focal {
     background: radial-gradient(ellipse 88% 70% at 50% 42%, rgba(240, 244, 249, 0.82) 0%, rgba(240, 244, 249, 0.38) 58%, transparent 100%);
   }
   .dark .hero-cinematic-bg__focal {
-    background: radial-gradient(ellipse 88% 70% at 50% 42%, rgba(7, 14, 32, 0.82) 0%, rgba(7, 14, 32, 0.46) 58%, transparent 100%);
+    background: radial-gradient(ellipse 88% 70% at 50% 42%, rgba(7, 14, 32, 0.72) 0%, rgba(7, 14, 32, 0.38) 58%, transparent 100%);
   }
   .hero-cinematic-bg__ambient-glow {
     height: 180px;
