@@ -2,29 +2,9 @@ import prisma from '../config/prisma.js';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
-export const registrarSolicitud = async (datos) => {
-  const passwordHash = await bcrypt.hash(datos.password, 10);
-
-  return prisma.usuario.create({
-    data: {
-      nombre: datos.nombre,
-      email: datos.email,
-      passwordHash,
-      rol: 'ADMINISTRADOR',
-    },
-  });
-};
 
 export const buscarPorEmail = async (email) => {
   return prisma.usuario.findUnique({ where: {email} });
-};
-
-export const listarPendientes = async () => {
-  return prisma.usuario.findMany({
-    where: {estado: 'PENDIENTE'},
-    select: { id: true, nombre: true, email: true, estado: true, createdAt: true},
-    orderBy: { createdAt: 'asc'},
-  });
 };
 
 export const cambiarEstado = async (id, nuevoEstado) => {
@@ -129,89 +109,28 @@ export const cambiarPassword = async (id, passwordNueva) => {
   const passwordHash = await bcrypt.hash(passwordNueva, 10);
   return prisma.usuario.update({
     where: { id },
-    data: { passwordHash, resetTokenHash: null, resetTokenExpira: null },
+    data: {
+      passwordHash,
+      resetTokenHash: null,
+      resetTokenExpira: null,
+      debeCambiarPassword: false,
+      passwordCambiadaEn: new Date(),
+    },
   });
 };
 
-export const buscarPorDniCualquiera = async (dni) => {
-  return prisma.usuario.findFirst({ where: { dni } });
-};
-
-export const buscarPorCuil = async (cuil) => {
-  return prisma.usuario.findUnique({ where: { cuil } });
-};
-
-export const crearUsuarioAdministrado = async (datos) => {
-  const passwordHash = await bcrypt.hash(datos.password, 10);
-  const sectorIds = datos.rol === 'ADMINISTRADOR' ? datos.sectorIds : [];
-
-  return prisma.$transaction(async (tx) => {
-    const usuario = await tx.usuario.create({
-      data: {
-        nombre: datos.nombre,
-        email: datos.email,
-        passwordHash,
-        rol: datos.rol,
-        estado: 'APROBADO',
-        dni: datos.dni ?? null,
-        cuil: datos.cuil ?? null,
-      },
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        rol: true,
-        estado: true,
-        dni: true,
-        cuil: true,
-      },
-    });
-
-    if (sectorIds.length > 0) {
-      await tx.usuarioSector.createMany({
-        data: sectorIds.map((sectorId) => ({
-          usuarioId: usuario.id,
-          sectorId,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    return usuario;
-  });
-};
-
-
-export const actualizarPerfil = async (id, datos) => {
-  return prisma.usuario.update({
-    where: { id },
-    data: { nombre: datos.nombre, email: datos.email },
-    select: { id: true, nombre: true, email: true, rol: true, estado: true, dni: true, cuil: true, genero: true, createdAt: true },
-  });
-};
-
-export const eliminarCuenta = async (id) => {
-  return prisma.$transaction(async (tx) => {
-    const usuario = await tx.usuario.findUnique({ where: { id }, select: { id: true, rol: true } });
-    if (!usuario) {
-      const error = new Error('La cuenta ya no existe.');
-      error.statusCode = 404;
-      throw error;
-    }
-    if (usuario.rol === 'SUPERUSUARIO') {
-      const error = new Error('La cuenta de superusuario no se puede eliminar desde Mi perfil.');
-      error.statusCode = 409;
-      throw error;
-    }
-    const tramitesACargo = await tx.tramite.count({ where: { encargadoId: id } });
-    if (tramitesACargo > 0) {
-      const error = new Error('No se puede eliminar esta cuenta porque tiene trámites a cargo. Transferí esos trámites a otro administrador antes de continuar.');
-      error.statusCode = 409;
-      throw error;
-    }
-    await tx.usuarioSector.deleteMany({ where: { usuarioId: id } });
-    await tx.consulta.updateMany({ where: { usuarioId: id }, data: { usuarioId: null } });
-    await tx.usuario.delete({ where: { id } });
-    return { eliminado: true };
+export const crearEmpleado = async ({ nombre, email, password, sectorIds = [] }) => {
+  const passwordHash = await bcrypt.hash(password, 10);
+  return prisma.usuario.create({
+    data: {
+      nombre,
+      email,
+      passwordHash,
+      rol: 'ADMINISTRADOR',
+      estado: 'APROBADO',
+      debeCambiarPassword: true,
+      sectores: { create: sectorIds.map((sectorId) => ({ sectorId })) },
+    },
+    select: { id: true, nombre: true, email: true, rol: true, estado: true },
   });
 };
