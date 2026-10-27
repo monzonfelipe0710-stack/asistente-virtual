@@ -333,17 +333,34 @@ export default function ChatBotAvatar({
     const latestPointer = { current: null };
     let moveFrame = 0;
     const onMove = (e) => {
-      if (!visibleRef.current) return;
+      // El puntero también sirve como recuperación si IntersectionObserver dejó
+      // el avatar marcado como invisible y el RAF se detuvo sin reiniciarse.
       latestPointer.current = { x: e.clientX, y: e.clientY };
       if (moveFrame) return;
       moveFrame = requestAnimationFrame(() => {
         moveFrame = 0;
         const el = svgRef.current;
         const currentEngine = engineRef.current;
-        if (!el || !currentEngine || !latestPointer.current || !visibleRef.current) return;
+        if (!el || !currentEngine || !latestPointer.current) return;
         const r = el.getBoundingClientRect();
-        const dx = latestPointer.current.x - (r.left + r.width / 2);
-        const dy = latestPointer.current.y - (r.top + r.height / 2);
+        if (r.width <= 0 || r.height <= 0) return;
+
+        const px = latestPointer.current.x;
+        const py = latestPointer.current.y;
+        const overAvatar =
+          px >= r.left - 24 && px <= r.right + 24 &&
+          py >= r.top - 24 && py <= r.bottom + 24;
+
+        // No mantener animaciones de avatares fuera de pantalla: solo forzar
+        // recuperación cuando el puntero realmente pasa cerca de este avatar.
+        if (!visibleRef.current && !overAvatar) return;
+        if (overAvatar && !visibleRef.current) {
+          visibleRef.current = true;
+          animationControlRef.current.start?.();
+        }
+
+        const dx = px - (r.left + r.width / 2);
+        const dy = py - (r.top + r.height / 2);
         const dist = Math.hypot(dx, dy);
         if (dist === 0) return;
         const intensity = Math.min(1, dist / 240);
@@ -352,11 +369,14 @@ export default function ChatBotAvatar({
           pitch: (-dy / dist) * MAX_PITCH * intensity,
           mix: 1, spin: 0, wander: 0,
         }, clockRef.current, 0.12);
-        // Con movimiento reducido el ciclo continuo se pausa, pero la mirada
-        // debe seguir respondiendo al puntero y actualizarse en ese mismo frame.
+
+        // Si el loop se había detenido por una condición de visibilidad obsoleta,
+        // el movimiento del puntero lo vuelve a arrancar.
+        if (!document.hidden && !(reduceMQ && reduceMQ.matches)) {
+          animationControlRef.current.start?.();
+        }
+        // Con movimiento reducido no hay RAF continuo; repintamos la mirada.
         if (reduceMQ?.matches) {
-          // Sin el loop de animación, avanzamos un instante lógico para que
-          // el morph de la mirada termine y siga respondiendo al puntero.
           const reducedMotionTime = clockRef.current + 0.2;
           clockRef.current = reducedMotionTime;
           paint(currentEngine.sample(reducedMotionTime));
