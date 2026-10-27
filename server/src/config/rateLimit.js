@@ -17,3 +17,9 @@ export const registroLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Demasiadas solicitudes de registro. Probá de nuevo más tarde.' },
 });
+
+export const recuperarLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Demasiados pedidos de recuperacion. Esperá unos minutos e intentá de nuevo.' },
+});
