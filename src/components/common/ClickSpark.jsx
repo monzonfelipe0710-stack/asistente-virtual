@@ -23,9 +23,21 @@ export default function ClickSpark({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Limita la resolución interna del canvas: un backing store 2x/3x en
+    // pantallas HiDPI multiplica memoria y coste de limpieza sin mejorar mucho
+    // un efecto decorativo de líneas tan finas.
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     window.addEventListener('resize', resizeCanvas, { passive: true });
@@ -62,7 +74,9 @@ export default function ClickSpark({
     // haya chispas visibles, en vez de mantener un bucle RAF permanente.
     const draw = (timestamp) => {
       animationFrameRef.current = null;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Las coordenadas del efecto están en píxeles CSS; el transform del
+      // contexto escala el dibujo al backing store limitado por DPR.
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       if (sparksRef.current.length === 0) return;
 
       const isDark =
