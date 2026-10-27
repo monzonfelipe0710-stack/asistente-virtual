@@ -29,9 +29,7 @@
   height: 100%;
   opacity: 0;
   transition: opacity 2200ms cubic-bezier(0.4, 0, 0.2, 1);
-  /* Solo la opacidad cambia en las diapositivas inactivas. Evitamos pedir
-     una capa GPU con transform para las cuatro imágenes simultáneamente. */
-  will-change: opacity;
+  /* Las diapositivas inactivas no necesitan una capa GPU permanente. */
   transform: scale(1.03) translate3d(0, 0, 0);
   z-index: 0;
 }
