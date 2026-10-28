@@ -14,7 +14,7 @@ export const crearTramite = async (datos, encargadoId) => {
           create: requisitos,
         },
         mesas: {
-          create: mesaIds.map((mesaId) => ({ mesaId })),
+          create: [...new Set(mesaIds)].map((mesaId) => ({ mesaId })),
         },
       },
       include: {
@@ -62,6 +62,16 @@ export const obtenerTramitePorId = async (id) => {
   });
 };
 
+export const obtenerSectorIdDeTramite = async (id) => {
+  const tramite = await prisma.tramite.findUnique({ where: { id }, select: { sectorId: true } });
+  return tramite?.sectorId ?? null;
+};
+
+export const obtenerMesaIdsDeTramite = async (id) => {
+  const filas = await prisma.tramiteMesa.findMany({ where: { tramiteId: id }, select: { mesaId: true } });
+  return filas.map((f) => f.mesaId);
+};
+
 export const eliminarTramite = async (id) => {
   // La cascada de la base borra los registros de documentos, pero no los archivos
   // en R2: hay que leer las keys antes de borrar y limpiarlas después.
@@ -106,9 +116,10 @@ export const actualizarTramite = async (id, datos) => {
 
     if (mesaIds !== undefined) {
       await tx.tramiteMesa.deleteMany({ where: { tramiteId: id } });
-      if (mesaIds.length > 0) {
+      const unicos = [...new Set(mesaIds)];
+      if (unicos.length > 0) {
         await tx.tramiteMesa.createMany({
-          data: mesaIds.map((mesaId) => ({ tramiteId: id, mesaId })),
+          data: unicos.map((mesaId) => ({ tramiteId: id, mesaId })),
         });
       }
     }

@@ -104,6 +104,7 @@ model MesaEntrada {
   nombre    String
   direccion String?
   localidad String?
+  horario   String?
   esGeneral Boolean @default(false) @map("es_general")
 
   sectorId  Int? @map("sector_id")

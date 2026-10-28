@@ -10,6 +10,7 @@ import tramiteRoutes from './src/routes/tramite.routes.js';
 import chatRoutes from './src/routes/chat.routes.js';
 import metricaRoutes from './src/routes/metrica.routes.js';
 import consultaRoutes from './src/routes/consulta.routes.js';
+import mesaRoutes from './src/routes/mesa.routes.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/tramites', tramiteRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/metricas', metricaRoutes);
 app.use('/api/consultas', consultaRoutes);
+app.use('/api/mesas', mesaRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {
