@@ -3,7 +3,7 @@ import { generarEmbedding } from './embedding.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
 
-export const buscarTramites = async (pregunta, limite = 5) => {
+export const buscarTramites = async (pregunta, limite = 3) => {
   const embedding = await generarEmbedding(pregunta);
   const vectorSql = `[${embedding.join(',')}]`;
 

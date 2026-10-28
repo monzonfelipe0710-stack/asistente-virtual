@@ -1,6 +1,7 @@
 import prisma from '../config/prisma.js';
 import { indexarTramite } from './embedding.service.js';
 import { eliminarArchivos } from './documento.service.js';
+import * as cache from './cache.service.js';
 
 export const crearTramite = async (datos, encargadoId) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
@@ -28,6 +29,7 @@ export const crearTramite = async (datos, encargadoId) => {
     console.error(`Error al indexar el trámite ${tramite.id}`, err.message);
   });
 
+  cache.limpiar();
   return tramite;
 };
 
@@ -86,14 +88,17 @@ export const eliminarTramite = async (id) => {
     await eliminarArchivos(documentos.map((d) => d.archivo));
   }
 
+  cache.limpiar();
   return eliminado;
 };
 
 export const cambiarPublicacion = async (id, publicado) => {
-  return prisma.tramite.update({
+  const tramite = await prisma.tramite.update({
     where: { id },
     data: { publicado },
   });
+  cache.limpiar();
+  return tramite;
 };
 
 export const actualizarTramite = async (id, datos) => {
@@ -135,9 +140,12 @@ export const actualizarTramite = async (id, datos) => {
     });
   });
 
-  indexarTramite(id).catch((err) => {
-    console.error(`Error al reindexar el trámite ${id}`, err.message);
-  });
+  indexarTramite(id)
+    .then(cache.limpiar)
+    .catch((err) => {
+      console.error(`Error al reindexar el trámite ${id}`, err.message);
+    });
 
+  cache.limpiar();
   return tramiteActualizado;
 };

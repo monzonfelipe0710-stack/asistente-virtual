@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import * as cache from './cache.service.js';
 
 export const listarMesas = async () => {
   return prisma.mesaEntrada.findMany({
@@ -19,11 +20,15 @@ export const crearMesa = async (datos) => {
 };
 
 export const actualizarMesa = async (id, datos) => {
-  return prisma.mesaEntrada.update({ where: { id }, data: datos });
+  const mesa = await prisma.mesaEntrada.update({ where: { id }, data: datos });
+  cache.limpiar();
+  return mesa;
 };
 
 export const eliminarMesa = async (id) => {
-  return prisma.mesaEntrada.delete({ where: { id } });
+  const mesa = await prisma.mesaEntrada.delete({ where: { id } });
+  cache.limpiar();
+  return mesa;
 };
 
 export const sectorExiste = async (sectorId) => {
