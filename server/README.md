@@ -58,7 +58,7 @@ sectores con los nombres definidos en [`prisma/seed-demo.js`](prisma/seed-demo.j
 Necesita `OPENAI_API_KEY`, porque genera un embedding por trámite.
 
 > Después de cambiar `prisma/schema.prisma` (o de hacer pull de cambios que lo toquen)
-> hay que correr `npx prisma generate`. Un cliente viejo apunta a tablas y columnas que
+> hay que correr `npx prisma generate` (`npm run dev` ya lo corre antes de arrancar). Un cliente viejo apunta a tablas y columnas que
 > ya no existen y los endpoints responden 400/500 sin una causa obvia.
 
 ## Variables de entorno
@@ -83,7 +83,7 @@ commitean valores reales.
 
 | Comando | Qué hace |
 |---|---|
-| `npm run dev` | Levanta el server con recarga automática (nodemon) |
+| `npm run dev` | Regenera el cliente de Prisma y levanta el server con recarga automática (nodemon) |
 | `npm start` | Levanta el server |
 | `npm test` | Corre la suite con el runner nativo de Node |
 | `npx prisma migrate deploy` | Aplica las migraciones pendientes |
