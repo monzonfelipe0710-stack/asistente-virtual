@@ -1,7 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import { crearOpcionesCors } from './src/config/cors.js';
 import morgan from 'morgan';
 import authRoutes from './src/routes/auth.routes.js'
 import { errorHandler } from './src/middlewares/error.middleware.js';
@@ -12,6 +11,12 @@ import chatRoutes from './src/routes/chat.routes.js';
 import metricaRoutes from './src/routes/metrica.routes.js';
 
 const app = express();
+
+// Orígenes permitidos, separados por coma en CORS_ORIGIN.
+const origenes = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 // Detrás de un reverse proxy (nginx, Railway, Render) Express ve la IP del proxy
 // y el rate limiter termina limitando a todos los clientes en conjunto.
@@ -24,7 +29,7 @@ if (process.env.TRUST_PROXY) {
 }
 
 app.use(helmet());
-app.use(cors(crearOpcionesCors()));
+app.use(cors({ origin: origenes }));
 app.use(morgan('dev'));
 app.use(express.json());
 

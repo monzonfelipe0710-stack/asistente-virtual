@@ -148,7 +148,6 @@ export default function EmployeeApprovals() {
                           <div className="min-w-0">
                             <div className="font-semibold text-ink truncate">{s.nombre}</div>
                             <div className="text-xs text-faint truncate">{s.email}</div>
-                            <div className="text-xs text-faint">CUIL: {s.cuil || "No informado"}</div>
                           </div>
                         </div>
                       </td>

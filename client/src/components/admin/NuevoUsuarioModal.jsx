@@ -35,7 +35,6 @@ export default function NuevoUsuarioModal({ onClose, onSaved }) {
   const [password, setPassword] = useState("");
   const [rol, setRol] = useState("ADMINISTRADOR");
   const [dni, setDni] = useState("");
-  const [cuil, setCuil] = useState("");
   const [sectores, setSectores] = useState([]);
   const [sectorIds, setSectorIds] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -69,7 +68,6 @@ export default function NuevoUsuarioModal({ onClose, onSaved }) {
     e.preventDefault();
 
     const dniLimpio = soloDigitos(dni);
-    const cuilLimpio = soloDigitos(cuil);
 
     if (!nombre.trim()) {
       addToast("Ingresá el nombre del usuario.", "error");
@@ -87,10 +85,6 @@ export default function NuevoUsuarioModal({ onClose, onSaved }) {
       addToast("El DNI debe tener 7 u 8 dígitos.", "error");
       return;
     }
-    if (cuilLimpio && !/^\d{11}$/.test(cuilLimpio)) {
-      addToast("El CUIL debe tener 11 dígitos.", "error");
-      return;
-    }
 
     setSaving(true);
     try {
@@ -100,7 +94,6 @@ export default function NuevoUsuarioModal({ onClose, onSaved }) {
         password,
         rol,
         dni: dniLimpio,
-        cuil: cuilLimpio,
         sectorIds,
       });
       addToast(data?.mensaje || "Cuenta creada", "success");
@@ -202,7 +195,7 @@ export default function NuevoUsuarioModal({ onClose, onSaved }) {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="nuevo-usuario-rol" className="text-xs font-medium text-muted mb-1 block">
                 Rol
@@ -229,19 +222,6 @@ export default function NuevoUsuarioModal({ onClose, onSaved }) {
                 inputMode="numeric"
                 value={dni}
                 onChange={(e) => setDni(soloDigitos(e.target.value).slice(0, 8))}
-                className="input-field"
-                placeholder="Opcional"
-              />
-            </div>
-            <div>
-              <label htmlFor="nuevo-usuario-cuil" className="text-xs font-medium text-muted mb-1 block">
-                CUIL
-              </label>
-              <input
-                id="nuevo-usuario-cuil"
-                inputMode="numeric"
-                value={cuil}
-                onChange={(e) => setCuil(soloDigitos(e.target.value).slice(0, 11))}
                 className="input-field"
                 placeholder="Opcional"
               />

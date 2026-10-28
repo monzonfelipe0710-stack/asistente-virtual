@@ -118,7 +118,6 @@ export default function EditProfileModal({ open, onClose, saved }) {
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Field label="DNI" value={user.dni} mono />
             <Field label="Género registrado" value={generoLabel(user.genero) || "—"} />
-            {isStaff && <Field label="CUIL" value={user.cuil} mono />}
           </dl>
           <p className="mt-3 mb-0 text-[11px] leading-relaxed text-muted">
             Estos datos se mantienen protegidos porque están vinculados a la verificación de tu identidad.

@@ -147,11 +147,10 @@ export default function UserTable() {
           type="button"
           onClick={() => downloadCsv(
             "usuarios.csv",
-            ["Nombre", "Correo", "CUIL/DNI", "Rol", "Estado", "Registrado"],
+            ["Nombre", "Correo", "Rol", "Estado", "Registrado"],
             filtrados.map((usuario) => [
               usuario.nombre,
               usuario.email,
-              usuario.cuil || usuario.dni || "",
               roleLabel(usuario.rol),
               usuario.estado,
               formatDate(usuario.createdAt),
@@ -237,9 +236,9 @@ export default function UserTable() {
                       <td className="px-4 py-3">
                         <p className="text-xs font-medium text-ink m-0">{u.nombre}</p>
                         <p className="text-[11px] text-muted m-0 mt-0.5">{u.email}</p>
-                        {(u.cuil || u.dni) && (
+                        {u.dni && (
                           <p className="text-[11px] text-faint m-0 mt-0.5 font-mono">
-                            {u.cuil ? `CUIL ${u.cuil}` : `DNI ${u.dni}`}
+                            DNI {u.dni}
                           </p>
                         )}
                       </td>

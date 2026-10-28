@@ -98,7 +98,6 @@ export default function Solicitudes() {
                 )}
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <Field label="CUIL" value={detail.cuil} mono />
                 <Field label="Teléfono" value={detail.phone} />
                 <Field label="Dependencia" value={detail.department} />
                 <Field label="Puesto" value={detail.position} />

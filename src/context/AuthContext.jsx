@@ -75,7 +75,6 @@ function toFrontUser(usuario) {
     phone: meta?.phone || usuario.phone || "",
     department: usuario.department || "",
     position: usuario.position || "",
-    cuil: usuario.cuil || "",
     createdAt: usuario.createdAt || null,
     lastAccessAt: usuario.lastAccessAt || null,
     status: usuario.estado || usuario.status || "Activo",
