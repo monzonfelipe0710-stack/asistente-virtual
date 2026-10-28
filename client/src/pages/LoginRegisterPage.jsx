@@ -362,7 +362,19 @@ export default function LoginRegisterPage() {
                       </p>
                     </div>
 
-                    <div className="pt-2 border-t border-line/60">
+                    <a
+                      href="https://mail.google.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-sky-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+                    >
+                      <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm-.4 3.25-7.1 5.32a.83.83 0 01-1 0L4.4 7.25a.5.5 0 01.6-.8l7 5.25 7-5.25a.5.5 0 01.6.8z" />
+                      </svg>
+                      Abrir Gmail y buscar el mensaje
+                    </a>
+
+                    <div className="pt-3 border-t border-line/60">
                       <button
                         type="button"
                         onClick={() => setRecoveryPending(false)}
