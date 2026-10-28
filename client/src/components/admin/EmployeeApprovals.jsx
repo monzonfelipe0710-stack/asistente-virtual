@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { pendientes, aprobar, rechazar } from "../../services/usuarios";
+import { listar, aprobar, rechazar } from "../../services/usuarios";
 import { apiErrorMessage } from "../../lib/api";
 import { useToast } from "../common/Toast";
 import Modal from "../common/Modal";
@@ -38,7 +38,7 @@ export default function EmployeeApprovals() {
     setLoading(true);
     setError("");
     try {
-      const data = await pendientes();
+      const data = await listar({ estado: "PENDIENTE" });
       setSolicitudes(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(apiErrorMessage(err));
@@ -51,7 +51,7 @@ export default function EmployeeApprovals() {
     let active = true;
     (async () => {
       try {
-        const data = await pendientes();
+        const data = await listar({ estado: "PENDIENTE" });
         if (!active) return;
         setSolicitudes(Array.isArray(data) ? data : []);
       } catch (err) {

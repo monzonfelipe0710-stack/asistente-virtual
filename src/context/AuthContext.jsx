@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useMemo } from "react";
 import { useSessionStore } from "../store/session";
-import { login as loginRequest } from "../services/auth";
+import { login as loginRequest, solicitarRecuperacion, restablecer, cambiarPassword as cambiarPasswordRequest } from "../services/auth";
 import { registroCiudadano as registroCiudadanoRequest, actualizarMiPerfil as actualizarMiPerfilRequest, eliminarMiCuenta as eliminarMiCuentaRequest } from "../services/usuarios";
 import {
   findLocalCitizen,
@@ -28,8 +28,6 @@ export function useAuth() {
 }
 
 // Roles del backend: SUPERUSUARIO, ADMINISTRADOR y CIUDADANO.
-const PENDING_MESSAGE =
-  "Esta función estará disponible próximamente (pendiente de backend).";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -312,10 +310,33 @@ export function AuthProvider({ children }) {
     logoutSession();
   }, [usuario, logoutSession]);
 
-  // Pendientes de backend (secciones 7.1 y 8). La UI se mantiene.
-  const pending = useCallback(() => {
-    throw new Error(PENDING_MESSAGE);
+  // Flujo de recuperación de contraseña contra el backend real
+  // (POST /api/auth/recuperar y POST /api/auth/restablecer).
+  const requestPasswordReset = useCallback(async (email) => {
+    const data = await solicitarRecuperacion({ email });
+    return data?.mensaje || "Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.";
   }, []);
+
+  const resetPassword = useCallback(async (token, password) => {
+    const data = await restablecer({ token, password });
+    return data?.mensaje || "Tu contraseña fue actualizada. Ya podés iniciar sesión.";
+  }, []);
+
+  const changePassword = useCallback(
+    async (current, next) => {
+      const session = useSessionStore.getState();
+      const usuarioActual = session.usuario || usuario || {};
+      if (!session.token) {
+        throw new Error("El cambio de contraseña está disponible solo para cuentas registradas en el backend.");
+      }
+      const data = await cambiarPasswordRequest({ passwordActual: current, passwordNueva: next });
+      const token = data?.token || session.token;
+      const mergedUser = { ...usuarioActual, ...(data?.usuario || {}) };
+      setSession({ token, usuario: mergedUser });
+      return toFrontUser(mergedUser);
+    },
+    [usuario, setSession]
+  );
 
   return (
     <AuthContext.Provider
@@ -329,10 +350,10 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
-        requestPasswordReset: pending,
-        resetPassword: pending,
+        requestPasswordReset,
+        resetPassword,
         updateProfile,
-        changePassword: pending,
+        changePassword,
         deleteAccount,
       }}
     >

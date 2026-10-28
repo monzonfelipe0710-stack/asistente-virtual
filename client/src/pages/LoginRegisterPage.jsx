@@ -6,6 +6,7 @@ import ChatBotAvatar from "../components/ChatBotAvatar";
 import { Kicker, DisplayTitle, Lead } from "../components/common/editorial";
 import { triggerOnboardingForUser } from "../components/common/BotOnboardingModal";
 import { promptSaveCredentials } from "../lib/credentialManager";
+import { apiErrorMessage } from "../lib/api";
 
 function formatDni(value) {
   return value.replace(/\D/g, "").slice(0, 8);
@@ -73,7 +74,7 @@ function Collapse({ open, children, className = "" }) {
 }
 
 export default function LoginRegisterPage() {
-  const { login, register } = useAuth();
+  const { login, register, requestPasswordReset } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -158,15 +159,19 @@ export default function LoginRegisterPage() {
     setRecovery(true);
   }
 
-  function handleRecovery(e) {
+  async function handleRecovery(e) {
     e.preventDefault();
     if (!email || !email.includes("@")) {
       toast("Ingresá un correo electrónico válido.", "error");
       return;
     }
     // El reseteo lo hace el backend (genera y valida un token por mail).
-    // No se implementa con EmailJS.
-    setRecoveryPending(true);
+    try {
+      await requestPasswordReset(email);
+      setRecoveryPending(true);
+    } catch (err) {
+      toast(apiErrorMessage(err, "No se pudo enviar el enlace de recuperación."), "error");
+    }
   }
 
   return (
