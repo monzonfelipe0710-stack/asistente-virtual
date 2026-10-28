@@ -17,6 +17,9 @@ dist-ssr
 .env.*.local
 server/env
 
+# Carpeta IA (documentación interna)
+IA/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
