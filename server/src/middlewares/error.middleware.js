@@ -5,15 +5,9 @@ export const errorHandler = (err, req, res, next) => {
 
   // Errores propios de multer (tamaño excedido, campo de archivo inesperado, etc.).
   if (err.name === 'MulterError') {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      const esImagen = req.originalUrl?.startsWith('/api/chat');
-      return res.status(413).json({
-        error: esImagen
-          ? 'La imagen no puede superar los 8 MB.'
-          : 'El archivo supera el tamaño máximo de 10 MB.',
-      });
-    }
-    return res.status(400).json({ error: 'Archivo inválido o enviado en un campo incorrecto.' });
+    return err.code === 'LIMIT_FILE_SIZE'
+      ? res.status(413).json({ error: 'El archivo supera el tamaño máximo de 10 MB.' })
+      : res.status(400).json({ error: 'Archivo inválido o enviado en un campo incorrecto.' });
   }
 
   if (err.statusCode) {

@@ -98,8 +98,6 @@ export default function ProfileHeader() {
           <InfoItem label="Correo electrónico" value={user.email} mono />
           <InfoItem label="DNI" value={user.dni || "—"} mono />
           <InfoItem label="Género" value={generoLabel(user.genero) || "—"} />
-          {isStaff && <InfoItem label="CUIL" value={user.cuil || "—"} mono />}
-          {isStaff && <InfoItem label="Puesto" value={user.position || "—"} />}
         </div>
       </header>
     </>

@@ -31,19 +31,6 @@ export const crearTramite = async (datos, encargadoId) => {
   return tramite;
 };
 
-export const listarTramitesPublicados = async () => {
-  return prisma.tramite.findMany({
-    where: { publicado: true },
-    orderBy: { nombre: 'asc' },
-    select: {
-      id: true,
-      nombre: true,
-      descripcion: true,
-      sector: { select: { nombre: true } },
-    },
-  });
-};
-
 export const listarTramites = async () => {
   return prisma.tramite.findMany({
     orderBy: { nombre: 'asc' },
