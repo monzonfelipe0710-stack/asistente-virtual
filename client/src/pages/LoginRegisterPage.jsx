@@ -338,22 +338,27 @@ export default function LoginRegisterPage() {
                     </button>
                   </form>
                 ) : (
-                  <div className="p-5 rounded-2xl border border-line bg-mist/50 dark:bg-slate-900/60 text-center space-y-4 animate-scale-in">
-                    <div className="w-12 h-12 mx-auto rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 grid place-items-center">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <div className="p-5 rounded-2xl border border-sky-200/80 dark:border-sky-900/70 bg-sky-50/80 dark:bg-slate-900/60 text-center space-y-4 animate-scale-in shadow-sm">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 grid place-items-center ring-4 ring-white/70 dark:ring-slate-800/70">
+                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.75 6.75A2.25 2.25 0 016 4.5h12a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0118 19.5H6a2.25 2.25 0 01-2.25-2.25V6.75z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="m4.5 6 7.5 6 7.5-6" />
                       </svg>
                     </div>
 
-                    <div className="space-y-1">
-                      <h3 className="text-sm font-bold text-ink dark:text-white m-0">
-                        Pendiente de backend
+                    <div className="space-y-2">
+                      <h3 className="text-base font-bold text-ink dark:text-white m-0">
+                        ¡Revisá tu correo!
                       </h3>
+                      <p className="text-sm text-muted m-0 leading-relaxed">
+                        Si hay una cuenta asociada a{" "}
+                        <strong className="break-all text-ink dark:text-white">{email}</strong>,
+                        te enviaremos un enlace para crear una contraseña nueva.
+                      </p>
                       <p className="text-xs text-muted m-0 leading-relaxed">
-                        La recuperación de contraseña la gestiona el backend: genera un
-                        enlace seguro y lo envía por correo a{" "}
-                        <strong className="text-ink dark:text-white">{email}</strong>. Va a
-                        estar disponible cuando se habilite el endpoint.
+                        Dale una mirada a tu bandeja de entrada y, si no lo encontrás,
+                        revisá también la carpeta de correo no deseado. Por tu seguridad,
+                        no podemos confirmar si una dirección está registrada.
                       </p>
                     </div>
 
