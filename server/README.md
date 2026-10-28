@@ -197,6 +197,7 @@ Body: `{ nombre, tipo: "MINISTERIO" | "SUBSECRETARIA" | "DEPARTAMENTO", parentId
 | Método | Ruta | Acceso |
 |---|---|---|
 | `POST` | `/api/tramites` | Administrador. El usuario queda como encargado |
+| `GET` | `/api/tramites/publicados` | Público. Solo trámites publicados, con `id` y `nombre` (60 pedidos por minuto) |
 | `GET` | `/api/tramites` | Autenticado. Incluye publicados y no publicados |
 | `GET` | `/api/tramites/:id` | Autenticado. Incluye requisitos, mesas, sector y encargado |
 | `PATCH` | `/api/tramites/:id` | Dueño. Si vienen `requisitos` o `mesaIds`, reemplazan a los actuales |
@@ -339,6 +340,5 @@ Pendiente:
 - CRUD de mesas de entrada (hoy los trámites referencian mesas por id, pero no hay
   endpoints para crearlas).
 - Asignación de sectores a usuarios (`UsuarioSector` está modelado, sin endpoints).
-- Listado público de trámites publicados (hoy `GET /api/tramites` requiere sesión).
 - Tests de integración contra una base propia.
 - Migrar la configuración de `package.json#prisma` a `prisma.config.ts` antes de Prisma 7.

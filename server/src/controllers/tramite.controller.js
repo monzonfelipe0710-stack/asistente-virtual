@@ -22,6 +22,11 @@ export const listar = async (req, res) => {
   res.json(tramites);
 }
 
+export const listarPublicados = async (req, res) => {
+  const tramites = await tramiteService.listarPublicados();
+  res.json(tramites);
+};
+
 export const obtener = async (req, res) => {
   const id = Number(req.params.id);
   const tramite = await tramiteService.obtenerTramitePorId(id);

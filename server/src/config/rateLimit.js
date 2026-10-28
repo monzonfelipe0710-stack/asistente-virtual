@@ -27,6 +27,15 @@ export const recuperarLimiter = rateLimit({
   message: { error: 'Demasiados pedidos de recuperación. Esperá unos minutos e intentá de nuevo.' },
 });
 
+// Rutas públicas de solo lectura: frena el scraping sin molestar a un uso normal.
+export const publicoLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Esperá un momento e intentá de nuevo.' },
+});
+
 // Protege el restablecimiento contra la prueba masiva de tokens.
 // Contador propio: no comparte intentos con el login.
 export const restablecerLimiter = rateLimit({
