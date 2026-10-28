@@ -58,7 +58,7 @@ sectores con los nombres definidos en [`prisma/seed-demo.js`](prisma/seed-demo.j
 Necesita `OPENAI_API_KEY`, porque genera un embedding por trámite.
 
 > Después de cambiar `prisma/schema.prisma` (o de hacer pull de cambios que lo toquen)
-> hay que correr `npx prisma generate`. Un cliente viejo apunta a tablas y columnas que
+> hay que correr `npx prisma generate` (`npm run dev` ya lo corre antes de arrancar). Un cliente viejo apunta a tablas y columnas que
 > ya no existen y los endpoints responden 400/500 sin una causa obvia.
 
 ## Variables de entorno
@@ -83,7 +83,7 @@ commitean valores reales.
 
 | Comando | Qué hace |
 |---|---|
-| `npm run dev` | Levanta el server con recarga automática (nodemon) |
+| `npm run dev` | Regenera el cliente de Prisma y levanta el server con recarga automática (nodemon) |
 | `npm start` | Levanta el server |
 | `npm test` | Corre la suite con el runner nativo de Node |
 | `npx prisma migrate deploy` | Aplica las migraciones pendientes |
@@ -197,6 +197,7 @@ Body: `{ nombre, tipo: "MINISTERIO" | "SUBSECRETARIA" | "DEPARTAMENTO", parentId
 | Método | Ruta | Acceso |
 |---|---|---|
 | `POST` | `/api/tramites` | Administrador. El usuario queda como encargado |
+| `GET` | `/api/tramites/publicados` | Público. Solo trámites publicados, con `id` y `nombre` (60 pedidos por minuto) |
 | `GET` | `/api/tramites` | Autenticado. Incluye publicados y no publicados |
 | `GET` | `/api/tramites/:id` | Autenticado. Incluye requisitos, mesas, sector y encargado |
 | `PATCH` | `/api/tramites/:id` | Dueño. Si vienen `requisitos` o `mesaIds`, reemplazan a los actuales |
@@ -339,6 +340,5 @@ Pendiente:
 - CRUD de mesas de entrada (hoy los trámites referencian mesas por id, pero no hay
   endpoints para crearlas).
 - Asignación de sectores a usuarios (`UsuarioSector` está modelado, sin endpoints).
-- Listado público de trámites publicados (hoy `GET /api/tramites` requiere sesión).
 - Tests de integración contra una base propia.
 - Migrar la configuración de `package.json#prisma` a `prisma.config.ts` antes de Prisma 7.

@@ -41,6 +41,15 @@ export const listarTramites = async () => {
   });
 };
 
+// Catálogo público: solo publicados y solo id + nombre, sin datos de gestión.
+export const listarPublicados = async () => {
+  return prisma.tramite.findMany({
+    where: { publicado: true },
+    select: { id: true, nombre: true },
+    orderBy: { nombre: 'asc' },
+  });
+};
+
 export const obtenerTramitePorId = async (id) => {
   return prisma.tramite.findUnique({
     where: { id },
