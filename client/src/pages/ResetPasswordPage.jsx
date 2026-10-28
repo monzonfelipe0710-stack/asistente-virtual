@@ -60,7 +60,7 @@ export default function ResetPasswordPage() {
               style={{ animationDelay: "80ms" }}
             >
               {hasToken
-                ? "Este flujo estará disponible próximamente."
+                ? "Ingresá tu nueva contraseña para restablecer el acceso."
                 : "Ese enlace venció o no es válido."}
             </p>
           </div>
