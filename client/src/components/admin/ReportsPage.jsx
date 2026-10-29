@@ -140,7 +140,7 @@ export default function ReportsPage() {
       <section aria-label="Resumen de actividad" className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Metric label="Trámites registrados" value={loading ? "—" : errors.tramites ? "—" : tramites.length} hint="Datos del catálogo administrativo" />
         <Metric label="Consultas contabilizadas" value={loading ? "—" : errors.porTramite ? "—" : totalConsultas} hint="Suma de las consultas agrupadas por trámite" />
-        <Metric label="Consultas sin respuesta" value={loading ? "—" : errors.sinRespuesta ? "—" : sinRespuestaData.length} hint="Registros devueltos por el sistema" />
+        <Metric label="Consultas sin respuesta" value={loading ? "—" : errors.sinRespuesta ? "—" : sinRespuestaData.length} hint="Registros devueltos (máximo 50)" />
       </section>
 
       <section className="mt-8 overflow-hidden rounded-2xl border border-line bg-paper">
@@ -177,7 +177,7 @@ export default function ReportsPage() {
       <section className="mt-8 overflow-hidden rounded-2xl border border-line bg-paper">
         <div className="border-b border-line px-5 py-4 md:px-6">
           <h2 className="m-0 text-lg font-bold text-ink">Consultas sin respuesta</h2>
-          <p className="mt-1 mb-0 text-sm text-muted">Consultas que el sistema identificó como no resueltas.</p>
+          <p className="mt-1 mb-0 text-sm text-muted">Últimos registros que el sistema identificó como no resueltos (hasta 50).</p>
         </div>
         {loading ? (
           <SectionMessage>Cargando consultas…</SectionMessage>
