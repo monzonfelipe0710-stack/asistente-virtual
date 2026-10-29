@@ -17,9 +17,9 @@ const respuestaFalsa = () => {
   return res;
 };
 
-const manejar = (err, method = 'GET') => {
+const manejar = (err, method = 'GET', req = { body: {} }) => {
   const res = respuestaFalsa();
-  errorHandler(err, { method }, res, () => {});
+  errorHandler(err, { method, ...req }, res, () => {});
   return res;
 };
 
@@ -32,6 +32,21 @@ describe('errorHandler', () => {
     const res = manejar(err);
     assert.equal(res.codigo, 400);
     assert.ok(res.cuerpo.error);
+  });
+
+  it('traduce el JSON mal formado de express.json() a un 400 en español', () => {
+    const err = Object.assign(new SyntaxError('Unexpected token'), { type: 'entity.parse.failed', statusCode: 400 });
+    const res = manejar(err, 'POST');
+    assert.deepEqual([res.codigo, res.cuerpo], [400, { error: 'El cuerpo de la solicitud no es un JSON válido.' }]);
+  });
+
+  it('avisa que falta el body cuando llega sin JSON', () => {
+    const err = z.object({ a: z.string() }).safeParse(undefined).error;
+    const res = manejar(err, 'POST', { body: undefined });
+    assert.deepEqual(
+      [res.codigo, res.cuerpo],
+      [400, { error: 'El cuerpo de la solicitud es obligatorio y debe enviarse como JSON.' }]
+    );
   });
 
   it('respeta el statusCode de los errores propios', () => {
