@@ -76,6 +76,12 @@ const sections = [
         perm: "reportes",
         icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
       },
+      {
+        to: "/admin/calificacion",
+        label: "Calificación",
+        perm: "reportes",
+        icon: "M7 10h10M7 14h6m-8 6 3.5-3H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v11a3 3 0 003 3z",
+      },
     ],
   },
 ];
