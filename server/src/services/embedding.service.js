@@ -1,16 +1,7 @@
-import { openai } from '../config/openai.js';
+import { ia } from '../nucleo/ia/index.js';
 import prisma from '../config/prisma.js';
 
-const MODELO_EMBEDDING = 'text-embedding-3-small';
-
-export const generarEmbedding = async (texto) => {
-  const respuesta = await openai.embeddings.create({
-    model: MODELO_EMBEDDING,
-    input: texto,
-  });
-
-  return respuesta.data[0].embedding;
-};
+export const generarEmbedding = (texto) => ia.generarEmbedding(texto);
 
 export const textoDeTramite = (tramite) => {
   const partes = [

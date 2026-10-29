@@ -1,10 +1,8 @@
-import { openai } from "../config/openai.js";
+import { ia } from "../nucleo/ia/index.js";
 import prisma from "../config/prisma.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import * as cache from "./cache.service.js";
-
-const MODELO_CHAT = "gpt-4o-mini";
 
 const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
@@ -192,47 +190,28 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
     ? `${SYSTEM_PROMPT_MULTIVUELTA}\n${INSTRUCCION_TOPE}`
     : SYSTEM_PROMPT_MULTIVUELTA;
 
-  const completion = await openai.chat.completions.create({
-    model: MODELO_CHAT,
-    temperature: 0.3,
-    messages: [
-      {
-        role: "system",
-        content: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
-      },
-      ...mensajes.map((m) => ({
-        role: m.rol === "usuario" ? "user" : "assistant",
-        content: m.texto,
-      })),
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "respuesta_chat",
-        strict: true,
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            tipo: { type: "string", enum: ["respuesta", "aclaracion"] },
-            respuesta: { type: "string" },
-            encontrado: { type: "boolean" },
-            tramitesUsados: { type: "array", items: { type: "integer" } },
-            opciones: { type: "array", items: { type: "integer" } },
-          },
-          required: [
-            "tipo",
-            "respuesta",
-            "encontrado",
-            "tramitesUsados",
-            "opciones",
-          ],
+  const salidaRaw = await ia.generarRespuesta({
+    instruccionSistema: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
+    turnos: mensajes,
+    esquema: {
+      name: "respuesta_chat",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          tipo: { type: "string", enum: ["respuesta", "aclaracion"] },
+          respuesta: { type: "string" },
+          encontrado: { type: "boolean" },
+          tramitesUsados: { type: "array", items: { type: "integer" } },
+          opciones: { type: "array", items: { type: "integer" } },
         },
+        required: ["tipo", "respuesta", "encontrado", "tramitesUsados", "opciones"],
       },
     },
   });
 
-  const salida = JSON.parse(completion.choices[0].message.content);
+  const salida = JSON.parse(salidaRaw);
 
   // ACLARACIÓN (solo si no llegamos al tope).
   if (salida.tipo === "aclaracion" && !topeAlcanzado) {
@@ -357,20 +336,9 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
     ? `${SYSTEM_PROMPT_STREAM_MULTIVUELTA}\n${INSTRUCCION_TOPE}`
     : SYSTEM_PROMPT_STREAM_MULTIVUELTA;
 
-  const stream = await openai.chat.completions.create({
-    model: MODELO_CHAT,
-    temperature: 0.3,
-    stream: true,
-    messages: [
-      {
-        role: "system",
-        content: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
-      },
-      ...mensajes.map((m) => ({
-        role: m.rol === "usuario" ? "user" : "assistant",
-        content: m.texto,
-      })),
-    ],
+  const deltas = ia.generarRespuestaStream({
+    instruccionSistema: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
+    turnos: mensajes,
   });
 
   let buffer = "";
@@ -378,8 +346,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
   let fullAnswer = "";
   let respuestaIniciada = false;
 
-  for await (const chunk of stream) {
-    let delta = chunk.choices[0]?.delta?.content ?? "";
+  for await (let delta of deltas) {
     if (!delta) continue;
 
     if (meta === null) {
