@@ -23,6 +23,7 @@ const TramiteDetail = lazy(() => import("../components/admin/TramiteDetail"));
 const SectoresManager = lazy(() => import("../components/admin/SectoresManager"));
 const ChatbotSettings = lazy(() => import("../components/admin/ChatbotSettings"));
 const ReportsPage = lazy(() => import("../components/admin/ReportsPage"));
+const CalificacionPage = lazy(() => import("../components/admin/CalificacionPage"));
 const MesaDeEntrada = lazy(() => import("../components/admin/MesaDeEntrada"));
 
 function PageFallback() {
@@ -110,6 +111,7 @@ export default function AppRoutes({ location }) {
           </Route>
           <Route element={<PermissionRoute permission="reportes" />}>
             <Route path="reportes" element={<Lazy><ReportsPage /></Lazy>} />
+            <Route path="calificacion" element={<Lazy><CalificacionPage /></Lazy>} />
           </Route>
         </Route>
       </Route>
