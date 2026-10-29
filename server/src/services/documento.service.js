@@ -5,10 +5,19 @@ import { r2, R2_BUCKET } from '../config/r2.js';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as cache from './cache.service.js';
 
+// Sin el campo archivo: la key de R2 no sale del server.
 export const listarPorTramite = async (tramiteId) => {
   return prisma.documento.findMany({
     where: { tramiteId },
+    select: { id: true, nombre: true, tipo: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
+  });
+};
+
+export const obtenerTramite = async (id) => {
+  return prisma.tramite.findUnique({
+    where: { id },
+    select: { id: true, publicado: true, sectorId: true },
   });
 };
 
@@ -34,6 +43,7 @@ export const subirDocumento = async (archivo, datos) => {
       tipo: archivo.mimetype,
       tramiteId: datos.tramiteId,
     },
+    select: { id: true, nombre: true, tipo: true, createdAt: true, tramiteId: true },
   });
   cache.limpiar();
   return documento;
