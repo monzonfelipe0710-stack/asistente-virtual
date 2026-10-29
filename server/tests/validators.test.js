@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { TipoSector, EstadoUsuario, Genero } from '@prisma/client';
 
 import { loginSchema } from '../src/validators/auth.validators.js';
 import { registroCiudadanoSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
@@ -35,8 +36,14 @@ describe('registroCiudadanoSchema', () => {
     assert.equal(registroCiudadanoSchema.safeParse({ ...base, dni: '1234567' }).success, true);
   });
 
-  it('rechaza un género distinto de M o F', () => {
-    assert.equal(mensaje(registroCiudadanoSchema, { ...base, genero: 'X' }), 'El género debe ser M o F.');
+  it('acepta todos los géneros del enum de Prisma', () => {
+    for (const genero of Object.values(Genero)) {
+      assert.equal(registroCiudadanoSchema.safeParse({ ...base, genero }).success, true, genero);
+    }
+  });
+
+  it('rechaza un género fuera del enum con mensaje propio', () => {
+    assert.match(mensaje(registroCiudadanoSchema, { ...base, genero: 'Z' }), /El género debe ser uno de/);
   });
 
   it('acepta un registro completo', () => {
@@ -48,11 +55,12 @@ describe('crearSectorSchema', () => {
   it('devuelve el mensaje propio cuando el tipo es inválido', () => {
     // Regresión: con `errorMap` (Zod v3) este mensaje se ignoraba en silencio.
     const m = mensaje(crearSectorSchema, { nombre: 'X', tipo: 'OTRO' });
-    assert.match(m, /El tipo debe ser uno de los especificados/);
+    assert.match(m, /El tipo debe ser uno de/);
   });
 
-  it('acepta los tres tipos válidos', () => {
-    for (const tipo of ['MINISTERIO', 'SUBSECRETARIA', 'DEPARTAMENTO']) {
+  it('acepta todos los tipos del enum de Prisma, incluido ORGANISMO', () => {
+    assert.ok(Object.values(TipoSector).includes('ORGANISMO'));
+    for (const tipo of Object.values(TipoSector)) {
       assert.equal(crearSectorSchema.safeParse({ nombre: 'X', tipo }).success, true, tipo);
     }
   });
@@ -107,9 +115,9 @@ describe('actualizarTramiteSchema', () => {
 });
 
 describe('filtroUsuariosSchema', () => {
-  it('acepta los cuatro estados y la ausencia de filtro', () => {
+  it('acepta todos los estados del enum y la ausencia de filtro', () => {
     assert.equal(filtroUsuariosSchema.safeParse({}).success, true);
-    for (const estado of ['PENDIENTE', 'APROBADO', 'RECHAZADO', 'SUSPENDIDO']) {
+    for (const estado of Object.values(EstadoUsuario)) {
       assert.equal(filtroUsuariosSchema.safeParse({ estado }).success, true, estado);
     }
   });
