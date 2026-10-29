@@ -16,12 +16,15 @@ export const buscarTramites = async (pregunta, limite = 3) => {
       (
         0.6 * (1 - (embedding <=> ${vectorSql}::vector))
         +
-        0.4 * ts_rank(search_vector, plainto_tsquery('spanish', ${pregunta}))
+        0.4 * ts_rank(search_vector, replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery)
       ) AS score
     FROM tramites
     WHERE publicado = true
       AND embedding IS NOT NULL
-      AND (embedding <=> ${vectorSql}::vector) < ${UMBRAL_DISTANCIA}
+      AND (
+        (embedding <=> ${vectorSql}::vector) < ${UMBRAL_DISTANCIA}
+        OR search_vector @@ replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery
+      )
     ORDER BY score DESC
     LIMIT ${limite}
   `;

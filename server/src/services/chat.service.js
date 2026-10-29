@@ -9,40 +9,66 @@ const MODELO_CHAT = "gpt-4o-mini";
 const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
 
-const SYSTEM_PROMPT = `
+const SYSTEM_PROMPT_MULTIVUELTA = `
 Sos el asistente virtual de la administración pública de Formosa.
-Tu única función es informar sobre trámites, usando EXCLUSIVAMENTE la información que te paso en el contexto.
+Tu única función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites candidatos del contexto.
 
-Reglas de contenido:
+Podés hacer dos cosas:
+1) RESPONDER: si queda claro a qué trámite se refiere la persona, respondé con la info del contexto.
+2) PEDIR ACLARACIÓN: solo si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere (ej. "certificado" → de antecedentes, de residencia, de nacimiento). Hacé UNA pregunta corta para que elija.
+
+Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
-- Si preguntan qué se necesita para un trámite, listá TODOS sus requisitos, indicando dónde se consigue y cuánto cuesta cada uno cuando el contexto lo diga.
-- Si el contexto indica dónde se presenta el trámite o qué formularios tiene para descargar, mencionalo cuando sea útil para la consulta.
-- Sé claro, amable y conciso. Usá un lenguaje simple.
+- Un candidato "corresponde" solo si es lo que la persona pide. Si NINGÚN candidato corresponde, no pidas aclaración: devolvé tipo:"respuesta" con encontrado:false (ej.: piden "licencia de conducir" y los candidatos son licencias de pesca o laborales → ninguno corresponde → encontrado:false).
+- Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
+- No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
+- No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
+- En el texto para el ciudadano nombrá los trámites por su nombre; NUNCA muestres los ids. Los ids van solo en "tramitesUsados" y "opciones".
+- Si listás requisitos, hacelo conciso, con dónde se consigue y cuánto cuesta cuando el contexto lo diga.
+- Sé claro, amable y breve. Lenguaje simple (el público incluye adultos mayores).
+- Usá siempre voseo rioplatense (tenés, podés, acercate, fijate), nunca tuteo (tienes, debes, acércate).
+- Escribí en texto plano, sin markdown: nada de negritas, asteriscos (*), viñetas ni almohadillas (#).
 - No respondas sobre temas ajenos a los trámites.
 
-Formato de salida (obligatorio): devolvés un objeto JSON con estos campos:
-- "respuesta": el texto para el ciudadano.
-- "encontrado": true SOLO si algún trámite del contexto responde realmente la consulta; false si ninguno sirve (incluidos saludos o preguntas fuera de tema).
-- "tramitesUsados": lista con los IDs (el número que aparece como "Trámite (id N)") de los trámites del contexto que efectivamente usaste para responder. Vacía si ninguno sirve.
+Formato de salida (JSON):
+- "tipo": "respuesta" o "aclaracion".
+- "respuesta": el texto para el ciudadano (la respuesta, o la pregunta aclaratoria si tipo=aclaracion).
+- "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso.
+- "tramitesUsados": IDs de los trámites que usaste para responder (vacío si no respondiste).
+- "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío si tipo=respuesta).`;
 
-Si ningún trámite del contexto responde la consulta, poné "encontrado": false, "tramitesUsados": [] y en "respuesta" indicá que no encontraste información y sugerí reformular o consultar en una mesa de entrada.`;
+const INSTRUCCION_TOPE = `
+IMPORTANTE: ya se pidió aclaración el máximo de veces. En este turno "tipo" DEBE ser "respuesta": respondé con el trámite más probable del contexto, o si no hay forma de saberlo, indicá que la persona consulte en una mesa de entrada.`;
 
-const SYSTEM_PROMPT_STREAM = `
+const SYSTEM_PROMPT_STREAM_MULTIVUELTA = `
 Sos el asistente virtual de la administración pública de Formosa.
-Tu única función es informar sobre trámites, usando EXCLUSIVAMENTE la información del contexto.
+Tu única función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites candidatos del contexto.
 
-Reglas de contenido:
+Podés hacer dos cosas:
+1) RESPONDER: si queda claro a qué trámite se refiere la persona, respondé con la info del contexto.
+2) PEDIR ACLARACIÓN: solo si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere (ej. "certificado" → de antecedentes, de residencia, de nacimiento). Hacé UNA pregunta corta para que elija.
+
+Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
-- Si preguntan qué se necesita para un trámite, listá sus requisitos de forma concisa, indicando dónde se consigue y cuánto cuesta cada uno cuando el contexto lo diga.
-- Sé claro, amable y breve (máximo 4-6 oraciones; los requisitos, en lista corta).
+- Un candidato "corresponde" solo si es lo que la persona pide. Si NINGÚN candidato corresponde, no pidas aclaración: usá tipo:"respuesta" con encontrado:false.
+- Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
+- No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
+- No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
+- En el texto para el ciudadano nombrá los trámites por su nombre; NUNCA muestres los ids.
+- Si listás requisitos, hacelo conciso, con dónde se consigue y cuánto cuesta cuando el contexto lo diga.
+- Sé claro, amable y breve (máximo 4-6 oraciones; los requisitos, en lista corta). Lenguaje simple (el público incluye adultos mayores).
+- Usá siempre voseo rioplatense (tenés, podés, acercate, fijate), nunca tuteo (tienes, debes, acércate).
+- Escribí en texto plano, sin markdown: nada de negritas, asteriscos (*), viñetas ni almohadillas (#).
 - No respondas sobre temas ajenos a los trámites.
 
 Formato de salida (OBLIGATORIO):
-- La PRIMERA línea debe ser únicamente un objeto JSON en una sola línea, sin texto antes: {"encontrado": <true|false>, "tramitesUsados": [<ids>]}
-  - "encontrado": true SOLO si algún trámite del contexto responde realmente la consulta; false si ninguno sirve (incluidos saludos o preguntas fuera de tema).
-  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que efectivamente usaste. Vacía si ninguno sirve.
-- A partir de la SEGUNDA línea, escribí la respuesta para el ciudadano en texto plano (sin JSON ni marcadores).
-- Si ningún trámite responde, poné {"encontrado": false, "tramitesUsados": []} y no escribas nada más.`;
+- La PRIMERA línea debe ser únicamente un objeto JSON en una sola línea, sin texto antes: {"tipo": "<respuesta|aclaracion>", "encontrado": <true|false>, "tramitesUsados": [<ids>], "opciones": [<ids>]}
+  - "tipo": "aclaracion" si pedís que elija entre varios trámites; "respuesta" en cualquier otro caso.
+  - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso (incluida una aclaracion, saludos o temas fuera de tema).
+  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder. Vacío si no respondiste.
+  - "opciones": los IDs de los trámites que ofrecés como opción. Solo si tipo=aclaracion; vacío si tipo=respuesta.
+- A partir de la SEGUNDA línea, escribí en texto plano (sin JSON ni marcadores) la respuesta para el ciudadano, o la pregunta aclaratoria si tipo=aclaracion.
+- Si ningún trámite responde, poné {"tipo": "respuesta", "encontrado": false, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
 
 const formatearCosto = (costo) =>
   costo == null || Number(costo) === 0 ? "sin costo" : `$${costo}`;
@@ -110,14 +136,26 @@ const registrarConsultaCacheada = (pregunta, cacheado, usuarioId) => {
   }).catch((err) => console.error("Error al registrar consulta:", err.message));
 };
 
-export const responderConsulta = async (pregunta, usuarioId = null) => {
-  const cacheado = cache.obtener(pregunta);
-  if (cacheado) {
-    registrarConsultaCacheada(pregunta, cacheado, usuarioId);
-    return cacheado;
+export const responderConsulta = async (mensajes, usuarioId = null) => {
+  const esUnTurno = mensajes.length === 1;
+  const preguntaActual = mensajes[mensajes.length - 1].texto;
+
+  // Caché solo para un solo turno (las conversaciones dependen del contexto).
+  if (esUnTurno) {
+    const cacheado = cache.obtener(preguntaActual);
+    if (cacheado) {
+      registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      // Las entradas que guarda el streaming no traen tipo ni opciones.
+      return { tipo: "respuesta", opciones: [], ...cacheado };
+    }
   }
 
-  const encontrados = await buscarTramites(pregunta);
+  // La búsqueda usa el contexto acumulado (junta los turnos del usuario).
+  const consultaBusqueda = mensajes
+    .filter((m) => m.rol === "usuario")
+    .map((m) => m.texto)
+    .join(" ");
+  const encontrados = await buscarTramites(consultaBusqueda);
   const tramites =
     encontrados.length > 0
       ? await cargarDetalle(encontrados.map((t) => t.id))
@@ -125,7 +163,7 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
 
   if (tramites.length === 0) {
     registrarConsulta({
-      textoConsulta: pregunta,
+      textoConsulta: preguntaActual,
       tramiteId: null,
       encontrado: false,
       usuarioId,
@@ -134,40 +172,61 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
     );
 
     const resultado = {
+      tipo: "respuesta",
       respuesta: MENSAJE_SIN_RESPUESTA,
       tramitesEncontrados: [],
       encontrado: false,
+      opciones: [],
     };
-    cache.guardar(pregunta, resultado);
+    if (esUnTurno) cache.guardar(preguntaActual, resultado);
     return resultado;
   }
 
   const contexto = tramites.map(formatearTramite).join("\n\n");
+  const idsDelContexto = new Set(tramites.map((t) => t.id));
+
+  // Tope: contamos las aclaraciones previas (turnos del asistente).
+  const topeAlcanzado =
+    mensajes.filter((m) => m.rol === "asistente").length >= 2;
+  const system = topeAlcanzado
+    ? `${SYSTEM_PROMPT_MULTIVUELTA}\n${INSTRUCCION_TOPE}`
+    : SYSTEM_PROMPT_MULTIVUELTA;
 
   const completion = await openai.chat.completions.create({
     model: MODELO_CHAT,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      {
-        role: "user",
-        content: `Contexto:\n${contexto}\n\nPregunta del ciudadano: ${pregunta}`,
-      },
-    ],
     temperature: 0.3,
+    messages: [
+      {
+        role: "system",
+        content: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
+      },
+      ...mensajes.map((m) => ({
+        role: m.rol === "usuario" ? "user" : "assistant",
+        content: m.texto,
+      })),
+    ],
     response_format: {
       type: "json_schema",
       json_schema: {
-        name: "respuesta_tramite",
+        name: "respuesta_chat",
         strict: true,
         schema: {
           type: "object",
           additionalProperties: false,
           properties: {
+            tipo: { type: "string", enum: ["respuesta", "aclaracion"] },
             respuesta: { type: "string" },
             encontrado: { type: "boolean" },
             tramitesUsados: { type: "array", items: { type: "integer" } },
+            opciones: { type: "array", items: { type: "integer" } },
           },
-          required: ["respuesta", "encontrado", "tramitesUsados"],
+          required: [
+            "tipo",
+            "respuesta",
+            "encontrado",
+            "tramitesUsados",
+            "opciones",
+          ],
         },
       },
     },
@@ -175,7 +234,25 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
 
   const salida = JSON.parse(completion.choices[0].message.content);
 
-  const idsDelContexto = new Set(tramites.map((t) => t.id));
+  // ACLARACIÓN (solo si no llegamos al tope).
+  if (salida.tipo === "aclaracion" && !topeAlcanzado) {
+    const opciones = (salida.opciones ?? [])
+      .filter((id) => idsDelContexto.has(id))
+      .map((id) => {
+        const t = tramites.find((x) => x.id === id);
+        return { id, nombre: t.nombre };
+      });
+    // No registramos consulta: una aclaración no es una consulta resuelta.
+    return {
+      tipo: "aclaracion",
+      respuesta: salida.respuesta,
+      opciones,
+      encontrado: false,
+      tramitesEncontrados: [],
+    };
+  }
+
+  // RESPUESTA.
   const idsUsados = (salida.tramitesUsados ?? []).filter((id) =>
     idsDelContexto.has(id),
   );
@@ -189,18 +266,20 @@ export const responderConsulta = async (pregunta, usuarioId = null) => {
     : [];
 
   registrarConsulta({
-    textoConsulta: pregunta,
+    textoConsulta: preguntaActual,
     tramiteId: encontrado ? idsUsados[0] : null,
     encontrado,
     usuarioId,
   }).catch((err) => console.error("Error al registrar consulta:", err.message));
 
   const resultado = {
+    tipo: "respuesta",
     respuesta: encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA,
     tramitesEncontrados,
     encontrado,
+    opciones: [],
   };
-  cache.guardar(pregunta, resultado);
+  if (esUnTurno) cache.guardar(preguntaActual, resultado);
   return resultado;
 };
 
@@ -212,20 +291,31 @@ const leerMeta = (linea) => {
   }
 };
 
-export async function* responderConsultaStream(pregunta, usuarioId = null) {
-  const cacheado = cache.obtener(pregunta);
-  if (cacheado) {
-    registrarConsultaCacheada(pregunta, cacheado, usuarioId);
-    yield { tipo: "delta", texto: cacheado.respuesta };
-    yield {
-      tipo: "fin",
-      encontrado: cacheado.encontrado,
-      tramitesEncontrados: cacheado.tramitesEncontrados,
-    };
-    return;
+export async function* responderConsultaStream(mensajes, usuarioId = null) {
+  const esUnTurno = mensajes.length === 1;
+  const preguntaActual = mensajes[mensajes.length - 1].texto;
+
+  if (esUnTurno) {
+    const cacheado = cache.obtener(preguntaActual);
+    if (cacheado) {
+      registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      yield { tipo: "delta", texto: cacheado.respuesta };
+      yield {
+        tipo: "fin",
+        tipoRespuesta: "respuesta",
+        encontrado: cacheado.encontrado,
+        tramitesEncontrados: cacheado.tramitesEncontrados,
+        opciones: [],
+      };
+      return;
+    }
   }
 
-  const encontrados = await buscarTramites(pregunta);
+  const consultaBusqueda = mensajes
+    .filter((m) => m.rol === "usuario")
+    .map((m) => m.texto)
+    .join(" ");
+  const encontrados = await buscarTramites(consultaBusqueda);
   const tramites =
     encontrados.length > 0
       ? await cargarDetalle(encontrados.map((t) => t.id))
@@ -233,37 +323,54 @@ export async function* responderConsultaStream(pregunta, usuarioId = null) {
 
   if (tramites.length === 0) {
     registrarConsulta({
-      textoConsulta: pregunta,
+      textoConsulta: preguntaActual,
       tramiteId: null,
       encontrado: false,
       usuarioId,
     }).catch((err) =>
       console.error("Error al registrar consulta:", err.message),
     );
-    cache.guardar(pregunta, {
-      respuesta: MENSAJE_SIN_RESPUESTA,
-      tramitesEncontrados: [],
-      encontrado: false,
-    });
+    if (esUnTurno) {
+      cache.guardar(preguntaActual, {
+        respuesta: MENSAJE_SIN_RESPUESTA,
+        tramitesEncontrados: [],
+        encontrado: false,
+      });
+    }
     yield { tipo: "delta", texto: MENSAJE_SIN_RESPUESTA };
-    yield { tipo: "fin", encontrado: false, tramitesEncontrados: [] };
+    yield {
+      tipo: "fin",
+      tipoRespuesta: "respuesta",
+      encontrado: false,
+      tramitesEncontrados: [],
+      opciones: [],
+    };
     return;
   }
 
   const contexto = tramites.map(formatearTramite).join("\n\n");
   const idsDelContexto = new Set(tramites.map((t) => t.id));
 
+  const topeAlcanzado =
+    mensajes.filter((m) => m.rol === "asistente").length >= 2;
+  const system = topeAlcanzado
+    ? `${SYSTEM_PROMPT_STREAM_MULTIVUELTA}\n${INSTRUCCION_TOPE}`
+    : SYSTEM_PROMPT_STREAM_MULTIVUELTA;
+
   const stream = await openai.chat.completions.create({
     model: MODELO_CHAT,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT_STREAM },
-      {
-        role: "user",
-        content: `Contexto:\n${contexto}\n\nPregunta del ciudadano: ${pregunta}`,
-      },
-    ],
     temperature: 0.3,
     stream: true,
+    messages: [
+      {
+        role: "system",
+        content: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
+      },
+      ...mensajes.map((m) => ({
+        role: m.rol === "usuario" ? "user" : "assistant",
+        content: m.texto,
+      })),
+    ],
   });
 
   let buffer = "";
@@ -275,7 +382,6 @@ export async function* responderConsultaStream(pregunta, usuarioId = null) {
     let delta = chunk.choices[0]?.delta?.content ?? "";
     if (!delta) continue;
 
-    // Primero juntamos y parseamos la línea META; recién después streameamos la respuesta.
     if (meta === null) {
       buffer += delta;
       const nl = buffer.indexOf("\n");
@@ -285,13 +391,26 @@ export async function* responderConsultaStream(pregunta, usuarioId = null) {
       const idsUsados = (parsed?.tramitesUsados ?? []).filter((id) =>
         idsDelContexto.has(id),
       );
+      const esAclaracion = parsed?.tipo === "aclaracion" && !topeAlcanzado;
+      const opciones = esAclaracion
+        ? (parsed?.opciones ?? [])
+            .filter((id) => idsDelContexto.has(id))
+            .map((id) => {
+              const t = tramites.find((x) => x.id === id);
+              return { id, nombre: t.nombre };
+            })
+        : [];
+
       meta = {
         valida: parsed !== null,
-        encontrado: parsed?.encontrado === true && idsUsados.length > 0,
+        tipo: esAclaracion ? "aclaracion" : "respuesta",
+        encontrado:
+          !esAclaracion && parsed?.encontrado === true && idsUsados.length > 0,
         idsUsados,
+        opciones,
       };
 
-      if (!meta.encontrado) break;
+      if (meta.tipo === "respuesta" && !meta.encontrado) break;
 
       delta = buffer.slice(nl + 1);
     }
@@ -303,8 +422,10 @@ export async function* responderConsultaStream(pregunta, usuarioId = null) {
     yield { tipo: "delta", texto };
   }
 
+  const esAclaracion = meta?.tipo === "aclaracion";
   const encontrado = meta?.encontrado === true;
   const idsUsados = meta?.idsUsados ?? [];
+  const opciones = meta?.opciones ?? [];
   const tramitesEncontrados = encontrado
     ? idsUsados.map((id) => {
         const t = tramites.find((x) => x.id === id);
@@ -312,24 +433,33 @@ export async function* responderConsultaStream(pregunta, usuarioId = null) {
       })
     : [];
 
-  const metaValida = meta ? meta.valida : leerMeta(buffer) !== null;
-  if (metaValida) {
-    cache.guardar(pregunta, {
-      respuesta: encontrado ? fullAnswer.trim() : MENSAJE_SIN_RESPUESTA,
-      tramitesEncontrados,
+  if (!esAclaracion) {
+    const metaValida = meta ? meta.valida : leerMeta(buffer) !== null;
+    if (esUnTurno && metaValida) {
+      cache.guardar(preguntaActual, {
+        respuesta: encontrado ? fullAnswer.trim() : MENSAJE_SIN_RESPUESTA,
+        tramitesEncontrados,
+        encontrado,
+      });
+    }
+    registrarConsulta({
+      textoConsulta: preguntaActual,
+      tramiteId: encontrado ? idsUsados[0] : null,
       encontrado,
-    });
+      usuarioId,
+    }).catch((err) =>
+      console.error("Error al registrar consulta:", err.message),
+    );
+    if (!encontrado) {
+      yield { tipo: "delta", texto: MENSAJE_SIN_RESPUESTA };
+    }
   }
 
-  registrarConsulta({
-    textoConsulta: pregunta,
-    tramiteId: encontrado ? idsUsados[0] : null,
-    encontrado,
-    usuarioId,
-  }).catch((err) => console.error("Error al registrar consulta:", err.message));
-
-  if (!encontrado) {
-    yield { tipo: "delta", texto: MENSAJE_SIN_RESPUESTA };
-  }
-  yield { tipo: "fin", encontrado, tramitesEncontrados };
+  yield {
+    tipo: "fin",
+    tipoRespuesta: esAclaracion ? "aclaracion" : "respuesta",
+    encontrado: esAclaracion ? false : encontrado,
+    tramitesEncontrados,
+    opciones,
+  };
 }
