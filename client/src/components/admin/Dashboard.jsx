@@ -185,7 +185,7 @@ export default function Dashboard() {
           <>
             <Metric label="Trámites publicados" value={publicados} hint={`de ${tramites.length} en total`} />
             <Metric label="Consultas registradas" value={metricasPendientes ? "—" : totalConsultas} hint={metricasPendientes ? "Dato no disponible" : "agrupadas por trámite"} />
-            <Metric label="Consultas sin respuesta" value={metricasPendientes ? "—" : sinRespuestaData.length} hint={metricasPendientes ? "Dato no disponible" : "requieren revisión"} />
+            <Metric label="Consultas sin respuesta" value={metricasPendientes ? "—" : sinRespuestaData.length} hint={metricasPendientes ? "Dato no disponible" : "registros recientes (máximo 50)"} />
             <Metric label="Usuarios aprobados" value={usuariosNoDisponibles ? "—" : usuariosAprobados} hint={usuariosNoDisponibles ? "Dato no disponible" : `${usuariosPendientes} pendientes`} />
           </>
         ) : (
@@ -245,7 +245,7 @@ export default function Dashboard() {
             <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
               <h2 className="display-3 text-ink m-0 uppercase">Consultas sin respuesta</h2>
               <span className="text-xs text-faint font-semibold uppercase tracking-wider">
-                Últimas {sinRespuestaRecientes.length}
+                {sinRespuestaRecientes.length} de hasta 50
               </span>
             </div>
             {sinRespuestaRecientes.length === 0 ? (
