@@ -1,8 +1,12 @@
 import { openai } from '../../config/openai.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
-const MODELO_EMBEDDING = process.env.OPENAI_MODELO_EMBEDDING ?? 'text-embedding-3-small';
 const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
+
+// El modelo de embeddings queda fijo: cambiarlo invalida los vectores ya guardados
+// (otro espacio vectorial) y rompe la búsqueda sin dar error. Se cambia solo con una
+// migración + re-embeddear todo, no por configuración.
+const MODELO_EMBEDDING = 'text-embedding-3-small';
 const DIMENSIONES_EMBEDDING = 1536;
 
 const construirMensajes = (instruccionSistema, turnos) => [
