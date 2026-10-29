@@ -32,6 +32,9 @@ export default function ReportsPage() {
     async function load() {
       setLoading(true);
       setErrors({});
+      setTramites([]);
+      setPorTramiteData([]);
+      setSinRespuestaData([]);
       const results = await Promise.allSettled([
         listarTramites(),
         porTramite(),
@@ -40,20 +43,26 @@ export default function ReportsPage() {
       if (!active) return;
 
       const nextErrors = {};
-      if (results[0].status === "fulfilled") {
-        setTramites(Array.isArray(results[0].value) ? results[0].value : []);
+      if (results[0].status === "fulfilled" && Array.isArray(results[0].value)) {
+        setTramites(results[0].value);
       } else {
-        nextErrors.tramites = apiErrorMessage(results[0].reason, "No se pudieron cargar los trámites.");
+        nextErrors.tramites = results[0].status === "rejected"
+          ? apiErrorMessage(results[0].reason, "No se pudieron cargar los trámites.")
+          : "El servidor devolvió un formato inesperado.";
       }
-      if (results[1].status === "fulfilled") {
-        setPorTramiteData(Array.isArray(results[1].value) ? results[1].value : []);
+      if (results[1].status === "fulfilled" && Array.isArray(results[1].value)) {
+        setPorTramiteData(results[1].value);
       } else {
-        nextErrors.porTramite = apiErrorMessage(results[1].reason, "No se pudieron cargar las métricas por trámite.");
+        nextErrors.porTramite = results[1].status === "rejected"
+          ? apiErrorMessage(results[1].reason, "No se pudieron cargar las métricas por trámite.")
+          : "El servidor devolvió un formato inesperado.";
       }
-      if (results[2].status === "fulfilled") {
-        setSinRespuestaData(Array.isArray(results[2].value) ? results[2].value : []);
+      if (results[2].status === "fulfilled" && Array.isArray(results[2].value)) {
+        setSinRespuestaData(results[2].value);
       } else {
-        nextErrors.sinRespuesta = apiErrorMessage(results[2].reason, "No se pudieron cargar las consultas sin respuesta.");
+        nextErrors.sinRespuesta = results[2].status === "rejected"
+          ? apiErrorMessage(results[2].reason, "No se pudieron cargar las consultas sin respuesta.")
+          : "El servidor devolvió un formato inesperado.";
       }
       setErrors(nextErrors);
       setLoading(false);
@@ -104,8 +113,8 @@ export default function ReportsPage() {
       </header>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="m-0 text-xs text-muted" aria-live="polite">
-          {loading ? "Actualizando información…" : "Información consultada desde el sistema"}
+        <p className="m-0 text-xs text-muted" aria-live="polite" role="status">
+          {loading ? "Actualizando información…" : Object.keys(errors).length > 0 ? "Actualización finalizada con información incompleta" : "Datos actualizados desde el sistema"}
         </p>
         <button
           type="button"
@@ -181,8 +190,10 @@ export default function ReportsPage() {
             {sinRespuestaData.slice(0, 20).map((item) => (
               <li key={item.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-start sm:justify-between md:px-6">
                 <p className="m-0 min-w-0 whitespace-pre-wrap break-words text-sm text-ink">{item.textoConsulta || "Consulta sin texto disponible"}</p>
-                <time className="shrink-0 text-xs text-muted" dateTime={item.fecha || undefined}>
-                  {item.fecha ? new Date(item.fecha).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" }) : "Fecha no disponible"}
+                <time className="shrink-0 text-xs text-muted" dateTime={item.fecha && !Number.isNaN(Date.parse(item.fecha)) ? item.fecha : undefined}>
+                  {item.fecha && !Number.isNaN(Date.parse(item.fecha))
+                    ? new Date(item.fecha).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" })
+                    : "Fecha no disponible"}
                 </time>
               </li>
             ))}
