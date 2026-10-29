@@ -1,4 +1,4 @@
-import { ia } from "../nucleo/ia/index.js";
+import { ia } from "../core/ia/index.js";
 import prisma from "../config/prisma.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
