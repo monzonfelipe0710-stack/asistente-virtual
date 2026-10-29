@@ -3,11 +3,16 @@ import { generarEmbedding } from './embedding.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
 
+const normalizarNombre = (nombre) =>
+  nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+
 export const buscarTramites = async (pregunta, limite = 3) => {
   const embedding = await generarEmbedding(pregunta);
   const vectorSql = `[${embedding.join(',')}]`;
 
-  const resultados = await prisma.$queryRaw`
+  // Se piden de más porque el catálogo tiene trámites repetidos (mismo nombre en
+  // distintos organismos) que, si no, ocupan todos los lugares del contexto.
+  const candidatos = await prisma.$queryRaw`
     SELECT
       id,
       nombre,
@@ -26,8 +31,18 @@ export const buscarTramites = async (pregunta, limite = 3) => {
         OR search_vector @@ replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery
       )
     ORDER BY score DESC
-    LIMIT ${limite}
+    LIMIT ${limite * 4}
   `;
 
-  return resultados;
+  // Vienen ordenados por score: el primero de cada nombre es el de mejor puntaje.
+  const vistos = new Set();
+  const unicos = [];
+  for (const t of candidatos) {
+    const clave = normalizarNombre(t.nombre);
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    unicos.push(t);
+    if (unicos.length === limite) break;
+  }
+  return unicos;
 };
