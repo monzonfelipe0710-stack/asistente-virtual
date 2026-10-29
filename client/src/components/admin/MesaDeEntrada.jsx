@@ -91,14 +91,14 @@ export default function MesaDeEntrada() {
     const entry = createMesaEntrada(values);
     setItems((prev) => [entry, ...prev]);
     setJustAdded(entry.id);
-    push(`Ingreso ${entry.id} registrado en Mesa de Entradas.`, "success");
+    push(`Ejemplo ${entry.id} creado solo en esta vista. No es un registro oficial.`, "info");
     setTimeout(() => setJustAdded(null), 2000);
   }
 
   function changeStatus(id, estado) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, estado } : it)));
     setDetail((prev) => (prev && prev.id === id ? { ...prev, estado } : prev));
-    push(`Ingreso ${id} → estado "${estado}".`, "info");
+    push(`Estado de ejemplo actualizado en pantalla. No se modificó ningún expediente oficial.`, "info");
   }
 
   return (
@@ -110,7 +110,7 @@ export default function MesaDeEntrada() {
         <button
           type="button"
           onClick={() => downloadCsv(
-            "mesa-de-entradas.csv",
+            "mesa-de-entradas-demostracion.csv",
             ["Expediente", "Trámite", "Descripción", "Encargado", "Sector", "Mesa", "Estado", "Prioridad", "Fecha"],
             filtered.map((item) => [
               item.id,
@@ -127,17 +127,17 @@ export default function MesaDeEntrada() {
           disabled={filtered.length === 0}
           className="btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Exportar CSV
+          Exportar ejemplos CSV
         </button>
         <button className="btn-primary" onClick={() => setFormOpen(true)}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Registrar ingreso
+          Crear ejemplo
         </button>
       </PageHeader>
 
-      <PendingBackend description="La Mesa de Entradas todavía no tiene endpoints en el backend. El registro y seguimiento de expedientes se guardan solo en pantalla hasta que la API esté disponible." />
+      <PendingBackend title="Modo demostración · Sin registros oficiales" description="Los ingresos que ves son ejemplos. Crear un ingreso o cambiar su estado solo modifica esta vista temporalmente: no se registra un expediente oficial ni se guarda en el sistema. Los cambios se perderán al recargar la página." />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger-children">
         <StatCard
@@ -371,8 +371,8 @@ function MesaFormModal({ onClose, onSubmit }) {
               </svg>
             </div>
             <div>
-              <h2 className="text-sm font-bold text-ink m-0 leading-tight">Registrar ingreso</h2>
-              <p className="text-[10px] text-muted mt-0.5 m-0">Completá los datos del trámite</p>
+              <h2 className="text-sm font-bold text-ink m-0 leading-tight">Crear ejemplo de ingreso</h2>
+              <p className="text-[10px] text-muted mt-0.5 m-0">Probá el formulario con datos de ejemplo; no se enviarán al sistema.</p>
             </div>
           </div>
           <button className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink hover:bg-mist transition-colors" onClick={handleClose} aria-label="Cerrar">
