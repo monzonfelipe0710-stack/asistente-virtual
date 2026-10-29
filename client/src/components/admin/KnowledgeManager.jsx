@@ -1,180 +1,42 @@
-import { useState } from "react";
-import { knowledgeBase, knowledgeCategories } from "../../data/mockKnowledge";
 import PendingBackend from "./PendingBackend";
 
 export default function KnowledgeManager() {
-  const [activeCategory, setActiveCategory] = useState("Todas");
-  const [editingId, setEditingId] = useState(null);
-  const [localKnowledge, setLocalKnowledge] = useState(knowledgeBase);
-
-  const filtered =
-    activeCategory === "Todas"
-      ? localKnowledge
-      : localKnowledge.filter((k) => k.category === activeCategory);
-
-  function toggleActive(id) {
-    setLocalKnowledge((prev) =>
-      prev.map((k) => (k.id === id ? { ...k, active: !k.active } : k))
-    );
-  }
-
-  function deleteArticle(id) {
-    setLocalKnowledge((prev) => prev.filter((k) => k.id !== id));
-  }
-
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold uppercase tracking-wide text-ink m-0">
-            Administración del Conocimiento
-          </h1>
-          <p className="text-xs uppercase tracking-wide text-muted m-0 mt-2">
-            Preguntas y respuestas de la base de conocimiento
-          </p>
+    <div className="max-w-5xl">
+      <header className="border-b border-line/70 pb-8">
+        <p className="m-0 text-[11px] font-bold uppercase tracking-[0.22em] text-muted">
+          [ Administración · ChatAP ]
+        </p>
+        <h1 className="mt-4 mb-0 text-3xl font-extrabold tracking-tight text-ink md:text-4xl">
+          Administración del conocimiento
+        </h1>
+        <p className="mt-4 mb-0 max-w-2xl text-base leading-relaxed text-muted">
+          Gestión de las respuestas y contenidos que utiliza el asistente para orientar a la ciudadanía.
+        </p>
+      </header>
+
+      <section className="mt-8 rounded-2xl border border-line bg-paper p-6 md:p-8">
+        <div className="flex items-start gap-4">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand-deep" aria-hidden="true">
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 6.5a8.5 8.5 0 100 17 8.5 8.5 0 000-17zM12 10v5m0 3h.01M8.5 2.5h7" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <h2 className="m-0 text-lg font-bold text-ink">Gestión de contenidos no conectada</h2>
+            <p className="mt-2 mb-0 text-sm leading-relaxed text-muted">
+              Esta pantalla todavía no está conectada a una API de gestión de conocimiento. Para proteger la información, no mostramos artículos ficticios ni ofrecemos acciones que aparenten guardar cambios.
+            </p>
+          </div>
         </div>
-        <button
-          className="px-6 py-3 bg-brand-deep text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5 self-start"
-          onClick={() => alert("Formulario para nuevo artículo")}
-        >
-          + Nuevo Artículo
-        </button>
-      </div>
-
-      <PendingBackend description="La edición de artículos es de muestra. El backend todavía no expone endpoints para la base de conocimiento; cuando existan, esta pantalla se conectará a ellos." />
-
-      <div className="flex flex-wrap gap-2 mb-6">
-        {knowledgeCategories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors ${
-              activeCategory === cat
-                ? "bg-brand-deep text-paper"
-                : "bg-paper text-ink border border-line hover:border-brand"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        {filtered.map((article) => (
-          <div
-            key={article.id}
-            className="bg-paper border border-line"
-          >
-            <div className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-sm font-bold uppercase tracking-wide text-ink m-0">
-                      {article.question}
-                    </h3>
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted bg-mist px-2 py-0.5 shrink-0">
-                      {article.category}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted m-0 leading-relaxed">
-                    {article.answer}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => toggleActive(article.id)}
-                    className={`px-3 py-2 text-[10px] font-bold uppercase tracking-wide cursor-pointer transition-colors ${
-                      article.active
-                        ? "bg-ok text-paper"
-                        : "bg-mist text-muted"
-                    }`}
-                  >
-                    {article.active ? "Activo" : "Inactivo"}
-                  </button>
-                  <button
-                    onClick={() => setEditingId(article.id)}
-                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-brand-deep cursor-pointer hover:bg-brand-dark transition duration-200 hover:-translate-y-0.5"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => deleteArticle(article.id)}
-                    className="px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-paper bg-bad cursor-pointer hover:opacity-80 transition-opacity"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {filtered.length === 0 && (
-          <p className="text-sm text-muted text-center py-8 m-0">
-            No hay artículos en esta categoría.
-          </p>
-        )}
-      </div>
-
-      <div className="mt-8 p-6 bg-paper border border-line">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-ink m-0 mb-5">
-          {editingId ? "Editar Artículo" : "Agregar Nuevo Artículo"}
-        </h2>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wide text-muted mb-2">
-              Pregunta
-            </label>
-            <input
-              type="text"
-              defaultValue={editingId ? localKnowledge.find((k) => k.id === editingId)?.question : ""}
-              placeholder="Escribí la pregunta..."
-              className="w-full px-4 py-3 text-sm border border-line outline-none bg-paper text-ink placeholder:text-muted focus:border-brand transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wide text-muted mb-2">
-              Respuesta
-            </label>
-            <textarea
-              rows={3}
-              defaultValue={editingId ? localKnowledge.find((k) => k.id === editingId)?.answer : ""}
-              placeholder="Escribí la respuesta..."
-              className="w-full px-4 py-3 text-sm border border-line outline-none bg-paper text-ink placeholder:text-muted focus:border-brand transition-colors resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold uppercase tracking-wide text-muted mb-2">
-              Categoría
-            </label>
-            <select className="w-full px-4 py-3 text-sm border border-line outline-none bg-paper text-ink focus:border-brand transition-colors">
-              {knowledgeCategories.filter((c) => c !== "Todas").map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={() => {
-              setEditingId(null);
-              alert("Artículo guardado (simulado)");
-            }}
-            className="px-6 py-3 bg-ink text-paper text-xs font-bold uppercase tracking-wide hover:bg-brand transition-colors"
-          >
-            {editingId ? "Guardar Cambios" : "Agregar Artículo"}
-          </button>
-          {editingId && (
-            <button
-              onClick={() => setEditingId(null)}
-              className="px-6 py-3 text-xs font-bold uppercase tracking-wide text-brand-deep border border-brand hover:bg-brand hover:text-paper transition-colors ml-2"
-            >
-              Cancelar
-            </button>
-          )}
+        <div className="mt-6">
+          <PendingBackend
+            title="Edición temporalmente no disponible"
+            description="Cuando la integración esté habilitada, vas a poder consultar, crear, editar y desactivar respuestas guardadas desde este panel."
+            className="mb-0"
+          />
         </div>
-      </div>
+      </section>
     </div>
   );
 }
