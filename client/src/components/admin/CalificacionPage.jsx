@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 function Metric({ label, value, hint }) {
   return (
     <div className="rounded-xl border border-line bg-paper p-5 md:p-6">
@@ -11,7 +9,6 @@ function Metric({ label, value, hint }) {
 }
 
 export default function CalificacionPage() {
-  const [period, setPeriod] = useState("30");
   return (
     <div className="max-w-6xl">
       <header className="border-b border-line/70 pb-8">
@@ -26,16 +23,8 @@ export default function CalificacionPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="m-0 text-lg font-bold text-ink">Valoraciones de las respuestas</h2>
-            <p className="mt-1 mb-0 text-sm text-muted">Elegí un período para revisar los resultados cuando la recepción de valoraciones esté conectada.</p>
+            <p className="mt-1 mb-0 text-sm text-muted">Los indicadores se habilitarán cuando el sistema registre y exponga valoraciones reales.</p>
           </div>
-          <label className="flex items-center gap-3 text-sm font-medium text-ink">
-            Período
-            <select value={period} onChange={(event) => setPeriod(event.target.value)} className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">
-              <option value="7">Últimos 7 días</option>
-              <option value="30">Últimos 30 días</option>
-              <option value="90">Últimos 90 días</option>
-            </select>
-          </label>
         </div>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Metric label="Valoraciones recibidas" value="—" hint="Dato aún no disponible" />
