@@ -2,23 +2,28 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Icon } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
-import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
 import { Fonts, Radius, Spacing, Weight, useColors } from "@/constants/theme";
-import type { MockDocument } from "@/data/mockDocuments";
+import type { DocumentoApi } from "@/lib/backend";
 
 /**
  * Fila de descarga: tarjeta gris de radio 16, ícono de documento en una caja de
- * 40 del color del fondo, nombre, y formato y peso en Geist Mono.
+ * 40 del color del fondo, nombre, y tipo de archivo en Geist Mono.
  */
-export function TarjetaDeDocumento({ documento }: { documento: MockDocument }) {
+export function TarjetaDeDocumento({
+  documento,
+  onPress,
+}: {
+  documento: DocumentoApi;
+  onPress: () => void;
+}) {
   const C = useColors();
-  const avisarNoDisponible = useAvisoNoDisponible();
+  const tipo = documento.tipo?.split("/").pop()?.toUpperCase() ?? "ARCHIVO";
 
   return (
     <Pressable
-      onPress={() => avisarNoDisponible()}
+      onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Descargar ${documento.title}, ${documento.format}, ${documento.fileSize}`}
+      accessibilityLabel={`Descargar ${documento.nombre}, ${tipo}`}
       style={({ pressed }) => [
         styles.tarjeta,
         { backgroundColor: pressed ? C.surface2 : C.surface },
@@ -30,10 +35,10 @@ export function TarjetaDeDocumento({ documento }: { documento: MockDocument }) {
 
       <View style={styles.texto}>
         <Text style={[styles.titulo, { color: C.ink }]} numberOfLines={2}>
-          {documento.title}
+          {documento.nombre}
         </Text>
         <Text style={[styles.detalle, { color: C.ink3 }]} numberOfLines={1}>
-          {documento.format} · {documento.fileSize}
+          {tipo}
         </Text>
       </View>
 

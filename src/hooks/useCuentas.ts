@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import { usuarioDesdeApi, type AuthUser } from "@/lib/auth";
-import { cambiarEstadoDeUsuario, pedirUsuarios } from "@/lib/backend";
+import { cambiarEstadoDeUsuario, crearEmpleado, pedirUsuarios, type EmpleadoDatos } from "@/lib/backend";
 
 export type AccionDeCuenta = "aprobar" | "rechazar" | "suspender" | "reactivar";
 
@@ -45,10 +45,19 @@ export function useCuentas() {
     [recargar]
   );
 
+  const crear = useCallback(
+    async (datos: EmpleadoDatos) => {
+      const respuesta = await crearEmpleado(datos);
+      recargar();
+      return respuesta;
+    },
+    [recargar]
+  );
+
   const cuentas = useMemo(
     () => usuarios.filter((u) => u.status === "Activo" || u.status === "Suspendido"),
     [usuarios]
   );
 
-  return { usuarios, cuentas, cargando, error, recargar, cambiarEstado };
+  return { usuarios, cuentas, cargando, error, recargar, cambiarEstado, crear };
 }

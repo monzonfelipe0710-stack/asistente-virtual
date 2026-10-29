@@ -30,12 +30,11 @@ const PANTALLAS: {
   permiso: Permission;
 }[] = [
   { pantalla: "index", titulo: "Panel general", icono: "home", grupo: "Principal", permiso: "dashboard" },
+  { pantalla: "solicitudes", titulo: "Solicitudes", icono: "checkCircle", grupo: "Principal", permiso: "solicitudes" },
   { pantalla: "mesa-de-entrada", titulo: "Mesa de Entradas", icono: "box", grupo: "Principal", permiso: "mesa_entrada" },
-  { pantalla: "solicitudes", titulo: "Solicitudes", icono: "checkCircle", grupo: "Gestión", permiso: "solicitudes" },
+  { pantalla: "tramites", titulo: "Trámites", icono: "files", grupo: "Principal", permiso: "tramites" },
   { pantalla: "usuarios", titulo: "Usuarios", icono: "users", grupo: "Gestión", permiso: "usuarios" },
-  { pantalla: "conocimiento", titulo: "Conocimiento", icono: "bulb", grupo: "Gestión", permiso: "conocimiento" },
   { pantalla: "documentos", titulo: "Documentos", icono: "folder", grupo: "Gestión", permiso: "documentos" },
-  { pantalla: "siged", titulo: "Integración SIGED", icono: "terminal", grupo: "Sistema", permiso: "siged" },
   { pantalla: "configuracion", titulo: "Configuración", icono: "settings", grupo: "Sistema", permiso: "configuracion" },
   { pantalla: "reportes", titulo: "Reportes", icono: "chart", grupo: "Sistema", permiso: "reportes" },
 ];
@@ -65,6 +64,8 @@ export default function LayoutAdmin() {
   }
 
   if (!user) return <Redirect href="/login" />;
+
+  if (user.debeCambiarPassword) return <Redirect href="/cambiar-password" />;
 
   if (!isStaff) {
     return (

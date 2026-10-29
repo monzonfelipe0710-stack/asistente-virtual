@@ -15,11 +15,13 @@ export interface AuthUser {
   role: AuthRole;
   status?: AuthStatus;
   createdAt: string;
+  debeCambiarPassword: boolean;
 }
 
 const ROL_DESDE_API: Record<UsuarioApi["rol"], AuthRole> = {
   SUPERUSUARIO: "Administración",
   ADMINISTRADOR: "Empleado",
+  CIUDADANO: "Ciudadano",
 };
 
 const ESTADO_DESDE_API: Record<EstadoApi, AuthStatus> = {
@@ -37,6 +39,7 @@ export function usuarioDesdeApi(u: UsuarioApi): AuthUser {
     role: ROL_DESDE_API[u.rol],
     status: u.estado ? ESTADO_DESDE_API[u.estado] : "Activo",
     createdAt: u.createdAt ?? "",
+    debeCambiarPassword: u.debeCambiarPassword ?? false,
   };
 }
 

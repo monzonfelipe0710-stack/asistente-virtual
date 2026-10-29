@@ -1,20 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { DonutChart, type Segment } from "@/components/reportes/DonutChart";
 import { HBarRow } from "@/components/reportes/HBarRow";
 import { RankRow } from "@/components/reportes/RankRow";
-import { VBars } from "@/components/reportes/VBars";
 import { Text } from "@/components/ui/Text";
 import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
-import type { MockDocument } from "@/data/mockDocuments";
-import { knowledgeCategories, type KnowledgeEntry } from "@/data/mockKnowledge";
-import type { SigedRecord } from "@/data/mockSiged";
-import { departments } from "@/data/departments";
 import { useCuentas } from "@/hooks/useCuentas";
+import { useMetricas } from "@/hooks/useMetricas";
+import { useTramites } from "@/hooks/useTramites";
 import { rolesDePersonal } from "@/lib/auth";
+import { formatDate } from "@/utils/date";
 import { Screen } from "@/components/ui/Screen";
-import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { CountUp } from "@/components/ui/CountUp";
@@ -24,67 +21,30 @@ import { StatGrid } from "@/components/ui/StatGrid";
 export default function Reportes() {
   const C = useColors();
   const { cuentas } = useCuentas();
-  const [documents] = useState<MockDocument[]>([]);
-  const [knowledgeBase] = useState<KnowledgeEntry[]>([]);
-  const [sigedRecords] = useState<SigedRecord[]>([]);
+  const { tramites } = useTramites();
+  const { porTramite, sinRespuesta, error: errorMetricas } = useMetricas();
 
   const stats = useMemo(() => {
     const activeUsers = cuentas.filter((u) => (u.status ?? "Activo") === "Activo").length;
-    const activeArticles = knowledgeBase.filter((k) => k.active).length;
-    const totalViews = knowledgeBase.reduce((s, k) => s + (k.views || 0), 0);
-    const totalDownloads = documents.reduce((s, d) => s + d.downloads, 0);
 
     return {
       activeUsers,
-      activeArticles,
-      totalViews,
-      totalDownloads,
       inactiveUsers: cuentas.length - activeUsers,
-      byCategory: knowledgeCategories
-        .filter((c) => c !== "Todas")
-        .map((cat) => ({
-          label: cat,
-          count: knowledgeBase.filter((k) => k.category === cat).length,
-        })),
-      byDept: departments.map((d) => ({
-        label: d,
-        value: sigedRecords.filter((r) => r.department === d).length,
-      })),
+      consultasRespondidas: porTramite.reduce((suma, t) => suma + t.cantidad, 0),
       usersByRole: rolesDePersonal.map((r) => ({
         label: r,
         count: cuentas.filter((u) => u.role === r).length,
       })),
-      topArticles: [...knowledgeBase]
-        .sort((a, b) => (b.views || 0) - (a.views || 0))
-        .slice(0, 5),
-      topDocs: [...documents].sort((a, b) => b.downloads - a.downloads).slice(0, 5),
+      topTramites: porTramite.slice(0, 5),
     };
-  }, [cuentas, documents, knowledgeBase, sigedRecords]);
+  }, [cuentas, porTramite]);
 
-  const sigedSegments: Segment[] = [
-    {
-      label: "Ingresado",
-      value: sigedRecords.filter((r) => r.status === "Ingresado").length,
-      color: C.info,
-    },
-    {
-      label: "En proceso",
-      value: sigedRecords.filter((r) => r.status === "En proceso").length,
-      color: C.warn,
-    },
-    {
-      label: "Observado",
-      value: sigedRecords.filter((r) => r.status === "Observado").length,
-      color: C.bad,
-    },
-    {
-      label: "Finalizado",
-      value: sigedRecords.filter((r) => r.status === "Finalizado").length,
-      color: C.ok,
-    },
+  const tramitesAceptados = tramites.filter((t) => t.publicado).length;
+  const tramiteSegments: Segment[] = [
+    { label: "Aceptados", value: tramitesAceptados, color: C.ok },
+    { label: "Rechazados", value: tramites.length - tramitesAceptados, color: C.bad },
   ];
 
-  const maxCat = Math.max(...stats.byCategory.map((c) => c.count), 1);
   const maxRole = Math.max(...stats.usersByRole.map((r) => r.count), 1);
   const activePct = cuentas.length ? Math.round((stats.activeUsers / cuentas.length) * 100) : 0;
 
@@ -95,69 +55,51 @@ export default function Reportes() {
         description="Métricas del sistema y del contenido."
       />
 
-      <AvisoDeEjemplo texto="Datos de ejemplo, salvo usuarios por rol." />
+      {!!errorMetricas && (
+        <Text style={[Type.meta, { color: C.danger, marginBottom: Spacing[3] }]}>{errorMetricas}</Text>
+      )}
 
       <StatGrid>
         <StatCard
-          label="Vistas totales"
-          value={stats.totalViews}
-          hint="en artículos"
+          label="Consultas respondidas"
+          value={stats.consultasRespondidas}
+          hint="en el asistente"
           icon="eye"
           tone="info"
         />
         <StatCard
-          label="Descargas"
-          value={stats.totalDownloads}
-          hint="de documentos"
-          icon="download"
-          tone="ok"
+          label="Sin respuesta"
+          value={sinRespuesta.length}
+          hint="últimas consultas"
+          icon="bulb"
+          tone="brand"
         />
         <StatCard
-          label="Expedientes"
-          value={sigedRecords.length}
-          hint="gestionados"
+          label="Trámites"
+          value={tramites.length}
+          hint="en el sistema"
           icon="files"
           tone="warn"
         />
         <StatCard
-          label="Artículos activos"
-          value={stats.activeArticles}
-          hint={`de ${knowledgeBase.length} en base`}
-          icon="bulb"
-          tone="brand"
+          label="Publicados"
+          value={tramitesAceptados}
+          hint="visibles al público"
+          icon="download"
+          tone="ok"
         />
       </StatGrid>
 
       <SectionTitle>Gráficos</SectionTitle>
 
       <View style={styles.block}>
-        <Text style={[Type.cardTitle, { color: C.ink }]}>Estado de expedientes</Text>
+        <Text style={[Type.cardTitle, { color: C.ink }]}>Revisión de trámites</Text>
         <Text style={[styles.cardSub, { color: C.ink2 }]}>
-          Distribución actual por etapa del trámite
+          Trámites aceptados y rechazados por el Administrador
         </Text>
         <View style={{ marginTop: Spacing[4] }}>
-          <DonutChart segments={sigedSegments} />
+          <DonutChart segments={tramiteSegments} />
         </View>
-      </View>
-
-      <View style={[styles.block, styles.blockNext]}>
-        <Text style={[Type.cardTitle, { color: C.ink }]}>Expedientes por área</Text>
-        <View style={{ marginTop: Spacing[4] }}>
-          <VBars data={stats.byDept} />
-        </View>
-      </View>
-
-      <View style={[styles.block, styles.blockNext, { gap: Spacing[3] }]}>
-        <Text style={[Type.cardTitle, { color: C.ink }]}>Artículos por categoría</Text>
-        {stats.byCategory.map((c) => (
-          <HBarRow
-            key={c.label}
-            label={c.label}
-            value={c.count}
-            max={maxCat}
-            color={C.accent}
-          />
-        ))}
       </View>
 
       <View style={[styles.block, styles.blockNext, { gap: Spacing[3] }]}>
@@ -215,30 +157,33 @@ export default function Reportes() {
         <Text style={[Type.cardTitle, { color: C.ink }]}>
           Preguntas más frecuentes
         </Text>
-        {stats.topArticles.map((a, i) => (
+        {stats.topTramites.map((t, i) => (
           <RankRow
-            key={a.id}
+            key={t.tramiteId}
             index={i}
-            title={a.question}
-            subtitle={`${a.category} · ${a.views} vistas`}
-            value={a.views}
+            title={t.nombre ?? `Trámite #${t.tramiteId}`}
+            subtitle={`${t.sector?.nombre ?? "Sin sector"} · ${t.cantidad} consultas`}
+            value={t.cantidad}
           />
         ))}
+        {stats.topTramites.length === 0 && (
+          <Text style={[Type.meta, { color: C.ink2 }]}>Todavía no hay consultas respondidas.</Text>
+        )}
       </View>
 
       <View style={[styles.block, styles.blockNext, { gap: Spacing[2] }]}>
         <Text style={[Type.cardTitle, { color: C.ink }]}>
-          Documentos más descargados
+          Consultas sin respuesta
         </Text>
-        {stats.topDocs.map((d, i) => (
-          <RankRow
-            key={d.id}
-            index={i}
-            title={d.title}
-            subtitle={`${d.category} · ${d.format} · ${d.fileSize}`}
-            value={d.downloads}
-          />
+        {sinRespuesta.slice(0, 10).map((c) => (
+          <View key={c.id} style={styles.consultaSin}>
+            <Text style={[Type.body, { color: C.ink }]}>{c.textoConsulta}</Text>
+            <Text style={[Type.meta, { color: C.ink2 }]}>{formatDate(c.fecha)}</Text>
+          </View>
         ))}
+        {sinRespuesta.length === 0 && (
+          <Text style={[Type.meta, { color: C.ink2 }]}>No hay consultas sin respuesta.</Text>
+        )}
       </View>
     </Screen>
   );
@@ -250,6 +195,10 @@ const styles = StyleSheet.create({
   },
   blockNext: {
     marginTop: Spacing[3],
+  },
+  consultaSin: {
+    gap: 2,
+    paddingVertical: Spacing[2],
   },
   splitBar: {
     flexDirection: "row",

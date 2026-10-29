@@ -1,282 +1,197 @@
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import { Text } from "@/components/ui/Text";
+import { StyleSheet, View } from "react-native";
 
-import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
-import { useCuentas } from "@/hooks/useCuentas";
-import type { AuthStatus, AuthUser } from "@/lib/auth";
+import { Spacing, Type, useColors } from "@/constants/theme";
+import { usePagination } from "@/hooks/usePagination";
+import { useTramites } from "@/hooks/useTramites";
+import type { TramiteApi } from "@/lib/backend";
 import { formatDate } from "@/utils/date";
-import { Modal } from "@/components/ui/Modal";
-import { Tabs } from "@/components/ui/Tabs";
-import { useToast } from "@/components/ui/Toast";
-import { Badge, type Tone } from "@/components/ui/Badge";
+import { TramiteDetalle, formatearCosto } from "@/components/admin/TramiteDetalle";
+import { Badge } from "@/components/ui/Badge";
 import { Btn } from "@/components/ui/Btn";
-import { SearchInput } from "@/components/ui/SearchInput";
-import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { KeyValue, KeyValueCard } from "@/components/ui/KeyValue";
-import { SkeletonList } from "@/components/ui/SkeletonList";
-import { Screen } from "@/components/ui/Screen";
+import { Icon } from "@/components/ui/Icon";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
+import { Row } from "@/components/ui/Row";
+import { Screen } from "@/components/ui/Screen";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { SkeletonList } from "@/components/ui/SkeletonList";
+import { Tabs } from "@/components/ui/Tabs";
+import { Text } from "@/components/ui/Text";
+import { useToast } from "@/components/ui/Toast";
 
-type Pestana = "Pendiente" | "Activo" | "Rechazado";
+type Filtro = "todos" | "aceptados" | "rechazados";
 
-const TABS: { id: Pestana; label: string }[] = [
-  { id: "Pendiente", label: "Pendientes" },
-  { id: "Activo", label: "Aprobadas" },
-  { id: "Rechazado", label: "Rechazadas" },
-];
-
-const STATUS_LABEL: Record<AuthStatus, string> = {
-  Pendiente: "Pendiente",
-  Activo: "Aprobada",
-  Suspendido: "Aprobada",
-  Rechazado: "Rechazada",
-};
-
-const STATUS_TONE: Record<AuthStatus, Tone> = {
-  Pendiente: "warn",
-  Activo: "ok",
-  Suspendido: "ok",
-  Rechazado: "bad",
-};
-
-function pestanaDe(status: AuthStatus | undefined): Pestana {
-  if (status === "Pendiente" || status === "Rechazado") return status;
-  return "Activo";
-}
-
-interface Confirm {
-  id: string;
-  name: string;
-  action: "aprobar" | "rechazar";
-}
-
-export default function EmployeeApprovals() {
+export default function Solicitudes() {
   const C = useColors();
   const push = useToast();
-  const { usuarios: requests, cargando, error, cambiarEstado } = useCuentas();
+  const { tramites, cargando, error, recargar, cambiarPublicacion } = useTramites();
 
-  const [tab, setTab] = useState<Pestana>("Pendiente");
-  const [query, setQuery] = useState("");
-  const [detail, setDetail] = useState<AuthUser | null>(null);
-  const [confirm, setConfirm] = useState<Confirm | null>(null);
-  const [guardando, setGuardando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [verId, setVerId] = useState<number | null>(null);
+  const [versionDetalle, setVersionDetalle] = useState(0);
+  const [trabajando, setTrabajando] = useState(false);
 
-  const counts = useMemo(
-    () => ({
-      Pendiente: requests.filter((r) => pestanaDe(r.status) === "Pendiente").length,
-      Activo: requests.filter((r) => pestanaDe(r.status) === "Activo").length,
-      Rechazado: requests.filter((r) => pestanaDe(r.status) === "Rechazado").length,
-    }),
-    [requests]
-  );
+  const aceptados = tramites.filter((t) => t.publicado).length;
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return requests.filter(
-      (r) =>
-        pestanaDe(r.status) === tab &&
-        (!q || r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q))
-    );
-  }, [requests, tab, query]);
-
-  function openConfirm(req: AuthUser, action: Confirm["action"]) {
-    setDetail(null);
-    setConfirm({ id: req.id, name: req.name, action });
-  }
-
-  async function applyDecision() {
-    if (!confirm) return;
-    setGuardando(true);
-    try {
-      await cambiarEstado(confirm.id, confirm.action);
-      push(
-        confirm.action === "aprobar"
-          ? `Solicitud de "${confirm.name}" aprobada.`
-          : `Solicitud de "${confirm.name}" rechazada.`
+  const filtrados = useMemo(() => {
+    let lista = tramites;
+    if (filtro !== "todos") lista = lista.filter((t) => (filtro === "aceptados" ? t.publicado : !t.publicado));
+    const q = busqueda.trim().toLowerCase();
+    if (q) {
+      lista = lista.filter(
+        (t) =>
+          t.nombre.toLowerCase().includes(q) ||
+          t.sector.nombre.toLowerCase().includes(q) ||
+          t.encargado.nombre.toLowerCase().includes(q)
       );
-      setConfirm(null);
+    }
+    return [...lista].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  }, [tramites, filtro, busqueda]);
+
+  const { page, totalPages, paginatedItems, setPage } = usePagination(filtrados, 8);
+
+  async function revisar(t: { id: number }, aceptar: boolean) {
+    setTrabajando(true);
+    try {
+      await cambiarPublicacion(t.id, aceptar);
+      push(aceptar ? "Trámite aceptado" : "Trámite rechazado");
+      setVersionDetalle((v) => v + 1);
     } catch (e) {
-      push(e instanceof Error ? e.message : "No se pudo guardar la decisión.");
+      push(e instanceof Error ? e.message : "No se pudo guardar la revisión.");
     } finally {
-      setGuardando(false);
+      setTrabajando(false);
     }
   }
 
-  if (cargando && requests.length === 0) {
-    return (
-      <Screen>
-        <View>
-          <SkeletonList rows={5} />
-        </View>
-      </Screen>
-    );
+  function textoVacio() {
+    if (busqueda.trim()) return "No hay trámites que coincidan con la búsqueda.";
+    if (filtro === "aceptados") return "No hay trámites aceptados.";
+    if (filtro === "rechazados") return "No hay trámites rechazados.";
+    return "Todavía no hay trámites propuestos por los empleados.";
   }
 
   return (
     <Screen>
       <PageHeader
         title="Solicitudes"
-        description="Revisá los pedidos de alta y definí quién ingresa al panel interno."
+        description="Revisá los trámites que proponen los empleados. Solo los aceptados aparecen en el chat."
       />
 
-      <Tabs
-        items={TABS.map((t) => ({ ...t, count: counts[t.id] }))}
-        value={tab}
-        onChange={setTab}
+      {!!error && (
+        <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
+          <Text style={[Type.meta, { color: C.danger }]}>{error}</Text>
+          <Btn label="Reintentar" variant="secondary" size="md" onPress={recargar} />
+        </View>
+      )}
+
+      <SearchInput
+        value={busqueda}
+        onChangeText={(texto) => {
+          setBusqueda(texto);
+          setPage(1);
+        }}
+        placeholder="Buscar por nombre, sector o encargado…"
+        autoCapitalize="none"
       />
 
-      <View style={{ gap: Spacing[3], marginTop: Spacing[4] }}>
-        <SearchInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Buscar por nombre o correo"
-          autoCapitalize="none"
+      <View style={{ marginTop: Spacing[3] }}>
+        <Tabs
+          items={[
+            { id: "todos" as const, label: "Todos", count: tramites.length },
+            { id: "aceptados" as const, label: "Aceptados", count: aceptados },
+            { id: "rechazados" as const, label: "Rechazados", count: tramites.length - aceptados },
+          ]}
+          value={filtro}
+          onChange={(f) => {
+            setFiltro(f);
+            setPage(1);
+          }}
         />
       </View>
 
-      {!!error && (
-        <Text style={[Type.meta, { color: C.danger, marginTop: Spacing[3] }]}>{error}</Text>
-      )}
+      <View style={{ marginTop: Spacing[3] }}>
+        {cargando && <SkeletonList />}
 
-      <View style={{ marginTop: Spacing[4], gap: Spacing[3] }}>
-        {filtered.map((req) => (
-          <Pressable
-            key={req.id}
-            onPress={() => setDetail(req)}
-            accessibilityRole="button"
-            accessibilityLabel={`Ver solicitud de ${req.name}`}
-            style={[styles.tarjeta, { backgroundColor: C.surface, borderColor: C.border }]}
-          >
-            <View style={styles.line}>
-              <Avatar name={req.name} />
-              <View style={styles.body}>
-                <Text style={[styles.nombre, { color: C.ink }]} numberOfLines={1}>
-                  {req.name}
-                </Text>
-                <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
-                  {req.email}
-                </Text>
-                <Text style={[Type.mono, { color: C.ink2 }]}>{formatDate(req.createdAt)}</Text>
+        {!cargando &&
+          paginatedItems.map((t: TramiteApi) => (
+            <Row
+              key={t.id}
+              onPress={() => setVerId(t.id)}
+              accessibilityLabel={`Ver ${t.nombre}`}
+              style={{ paddingVertical: 14 }}
+            >
+              <View style={styles.linea}>
+                <View style={styles.cuerpo}>
+                  <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
+                    {t.nombre}
+                  </Text>
+                  <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
+                    {[t.sector.nombre, t.encargado.nombre, formatearCosto(t.costo)].join(" · ")}
+                  </Text>
+                  <View style={styles.etiquetas}>
+                    <Badge label={t.publicado ? "Aceptado" : "Rechazado"} tone={t.publicado ? "ok" : "bad"} />
+                    <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(t.updatedAt)}</Text>
+                  </View>
+                  <View style={styles.etiquetas}>
+                    <Btn
+                      label="Rechazar"
+                      variant="danger"
+                      size="md"
+                      onPress={() => revisar(t, false)}
+                      disabled={trabajando || !t.publicado}
+                    />
+                    <Btn
+                      label="Aceptar"
+                      size="md"
+                      onPress={() => revisar(t, true)}
+                      disabled={trabajando || t.publicado}
+                    />
+                  </View>
+                </View>
+                <Icon name="chevronRight" size={20} color={C.ink2} />
               </View>
-            </View>
+            </Row>
+          ))}
 
-            {req.status !== "Pendiente" && (
-              <Badge
-                label={STATUS_LABEL[req.status ?? "Activo"]}
-                tone={STATUS_TONE[req.status ?? "Activo"]}
-              />
-            )}
+        {!cargando && !error && filtrados.length === 0 && <EmptyState title="Sin trámites" detalle={textoVacio()} />}
 
-            {req.status === "Pendiente" && (
-              <View style={styles.actions}>
-                <Btn
-                  label="Rechazar"
-                  variant="danger"
-                  size="md"
-                  onPress={() => openConfirm(req, "rechazar")}
-                  style={{ flex: 1 }}
-                />
-                <Btn
-                  label="Aprobar"
-                  size="md"
-                  onPress={() => openConfirm(req, "aprobar")}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            )}
-          </Pressable>
-        ))}
-
-        {filtered.length === 0 && (
-          <EmptyState title="No hay solicitudes en esta categoría." />
-        )}
+        {!cargando && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />}
       </View>
 
-      <Modal
-        open={detail !== null}
-        title={detail?.name ?? ""}
-        onClose={() => setDetail(null)}
-        footer={
-          detail?.status === "Pendiente" ? (
-            <>
-              <Btn
-                label="Rechazar"
-                variant="danger"
-                onPress={() => detail && openConfirm(detail, "rechazar")}
-              />
-              <Btn
-                label="Aprobar"
-                onPress={() => detail && openConfirm(detail, "aprobar")}
-              />
-            </>
-          ) : undefined
-        }
-      >
-        {!!detail && (
-          <>
-            <Badge
-              label={STATUS_LABEL[detail.status ?? "Activo"]}
-              tone={STATUS_TONE[detail.status ?? "Activo"]}
-            />
-
-            <KeyValueCard>
-              <KeyValue label="Solicitud" value={detail.id} />
-              <KeyValue label="Correo" value={detail.email} />
-              <KeyValue label="Rol solicitado" value={detail.role} />
-              <KeyValue label="Fecha" value={formatDate(detail.createdAt)} />
-            </KeyValueCard>
-          </>
-        )}
-      </Modal>
-
-      <Modal
-        open={confirm !== null}
-        title={confirm?.action === "aprobar" ? "Aprobar solicitud" : "Rechazar solicitud"}
-        onClose={() => setConfirm(null)}
-        footer={
-          <Btn
-            label={confirm?.action === "aprobar" ? "Aprobar" : "Rechazar"}
-            variant={confirm?.action === "aprobar" ? "primary" : "dangerFill"}
-            onPress={applyDecision}
-            loading={guardando}
-          />
-        }
-      >
-        <Text style={[Type.body, { color: C.ink2 }]}>
-          {confirm?.action === "aprobar"
-            ? `${confirm?.name} pasa a rol Empleado y entra al panel interno.`
-            : `${confirm?.name} no podrá entrar al panel interno.`}
-        </Text>
-      </Modal>
+      {verId !== null && (
+        <TramiteDetalle
+          tramiteId={verId}
+          version={versionDetalle}
+          puedeGestionar={false}
+          trabajando={trabajando}
+          onClose={() => setVerId(null)}
+          onAceptar={(t) => revisar(t, true)}
+          onRechazar={(t) => revisar(t, false)}
+        />
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  tarjeta: {
-    gap: Spacing[3],
-    padding: Spacing[4],
-    borderRadius: Radius["2xl"],
-    borderWidth: 1,
-  },
-  nombre: {
-    fontSize: 18,
-    lineHeight: 23,
-    fontWeight: Weight.bold,
-  },
-  line: {
+  linea: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing[3],
+    gap: Spacing[4],
   },
-  body: {
+  cuerpo: {
     flex: 1,
     minWidth: 0,
+    gap: 2,
   },
-  actions: {
+  etiquetas: {
     flexDirection: "row",
-    gap: Spacing[3],
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: Spacing[2],
+    marginTop: 4,
   },
 });

@@ -1,19 +1,9 @@
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import { View } from "react-native";
-
-import { Spacing } from "@/constants/theme";
-import type { KnowledgeEntry } from "@/data/mockKnowledge";
-import type { SigedRecord } from "@/data/mockSiged";
 import { useCuentas } from "@/hooks/useCuentas";
-import { formatDate } from "@/utils/date";
+import { useMetricas } from "@/hooks/useMetricas";
+import { useTramites } from "@/hooks/useTramites";
 import { type Tone } from "@/components/ui/Badge";
-import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
-import { Btn } from "@/components/ui/Btn";
 import { type IconName } from "@/components/ui/Icon";
-import { RecordRow } from "@/components/ui/RecordRow";
 import { Screen } from "@/components/ui/Screen";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatGrid } from "@/components/ui/StatGrid";
 import { StatCard } from "@/components/ui/StatCard";
@@ -28,10 +18,11 @@ interface Stat {
 }
 
 export default function Dashboard() {
-  const router = useRouter();
   const { cuentas } = useCuentas();
-  const [knowledgeBase] = useState<KnowledgeEntry[]>([]);
-  const [sigedRecords] = useState<SigedRecord[]>([]);
+  const { tramites } = useTramites();
+  const { sinRespuesta } = useMetricas();
+
+  const aceptados = tramites.filter((t) => t.publicado).length;
 
   const stats: Stat[] = [
     {
@@ -42,30 +33,25 @@ export default function Dashboard() {
       hint: "Dato real",
     },
     {
-      title: "Artículos publicados",
-      value: knowledgeBase.filter((k) => k.active).length,
+      title: "Consultas sin respuesta",
+      value: sinRespuesta.length,
       icon: "bulb",
       tone: "info",
-      hint: "Ejemplo",
-      ejemplo: true,
+      hint: "Dato real",
     },
     {
-      title: "Expedientes SIGED",
-      value: sigedRecords.length,
+      title: "Trámites aceptados",
+      value: aceptados,
       icon: "files",
-      tone: "info",
-      hint: "Ejemplo",
-      ejemplo: true,
+      tone: "ok",
+      hint: "Dato real",
     },
     {
-      title: "Pendientes",
-      value: sigedRecords.filter(
-        (r) => r.status === "En proceso" || r.status === "Ingresado"
-      ).length,
+      title: "Trámites rechazados",
+      value: tramites.length - aceptados,
       icon: "clock",
-      tone: "info",
-      hint: "Ejemplo",
-      ejemplo: true,
+      tone: "bad",
+      hint: "Dato real",
     },
   ];
 
@@ -75,8 +61,6 @@ export default function Dashboard() {
         title="Panel general"
         description="Resumen de la actividad del acceso interno."
       />
-
-      <AvisoDeEjemplo texto="Solo los usuarios activos vienen del servidor. El resto es de ejemplo." />
 
       <StatGrid>
         {stats.map((stat) => (
@@ -91,34 +75,6 @@ export default function Dashboard() {
           />
         ))}
       </StatGrid>
-
-      <View style={{ marginTop: Spacing[8] }}>
-        <SectionHeader
-          title="Últimos movimientos"
-          subtitle="Sistema de Gestión Documental"
-          right={
-            <Btn
-              label="Ver todos"
-              variant="ghost"
-              size="md"
-              onPress={() => router.push("/admin/siged")}
-            />
-          }
-        />
-        {sigedRecords.slice(0, 4).map((rec) => (
-          <RecordRow
-            key={rec.id}
-            title={rec.type}
-            status={rec.status}
-            who={rec.applicant}
-            area={rec.department}
-            priority={rec.priority}
-            id={rec.id}
-            date={formatDate(rec.date)}
-            note={rec.lastMovement}
-          />
-        ))}
-      </View>
     </Screen>
   );
 }

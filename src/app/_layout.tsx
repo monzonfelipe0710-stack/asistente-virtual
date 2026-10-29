@@ -82,6 +82,10 @@ export default function RootLayout() {
               name="(publico)/restablecer"
               options={{ title: "ChatAP · Restablecer contraseña" }}
             />
+            <Stack.Screen
+              name="(publico)/cambiar-password"
+              options={{ title: "ChatAP · Cambiar contraseña", gestureEnabled: false }}
+            />
             <Stack.Screen name="perfil" options={{ title: "ChatAP · Mi perfil" }} />
             <Stack.Screen
               name="admin"

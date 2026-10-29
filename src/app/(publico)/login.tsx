@@ -130,7 +130,10 @@ export default function LoginRegisterScreen() {
   }
 
   // Con una sesión abierta no hay nada que hacer acá: staff al panel, el resto al asistente.
-  if (user) return <Redirect href={isStaff ? "/admin" : "/"} />;
+  if (user) {
+    const destino = user.debeCambiarPassword ? "/cambiar-password" : isStaff ? "/admin" : "/";
+    return <Redirect href={destino} />;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: C.canvas }}>

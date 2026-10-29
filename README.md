@@ -33,10 +33,9 @@ src/
     admin/
       _layout.tsx           Guard de entrada + Drawer del panel + permisos por pantalla
       index.tsx             /admin       Panel general
-      mesa-de-entrada.tsx · solicitudes.tsx · usuarios.tsx · conocimiento.tsx
-      documentos.tsx · siged.tsx · configuracion.tsx · reportes.tsx
+      mesa-de-entrada.tsx · usuarios.tsx
+      documentos.tsx · configuracion.tsx · reportes.tsx
   components/
-    admin/                  Formularios del panel: usuarios y alta de Mesa de Entradas
     auth/                   Campos de la solicitud de empleado del registro
     avatar/                 ChatBotAvatar (se dibuja con el motor de src/bloub)
     chat/                   Piezas del chat

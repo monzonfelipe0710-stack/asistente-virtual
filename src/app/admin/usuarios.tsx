@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCuentas } from "@/hooks/useCuentas";
 import { rolesDePersonal, type AuthRole, type AuthUser } from "@/lib/auth";
 import { formatDate } from "@/utils/date";
+import { NuevoEmpleadoModal } from "@/components/admin/NuevoEmpleadoModal";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { Btn } from "@/components/ui/Btn";
 import { Icon } from "@/components/ui/Icon";
@@ -40,7 +41,8 @@ export default function UserTable() {
   const [roleFilter, setRoleFilter] = useState<"todos" | AuthRole>("todos");
   const [selected, setSelected] = useState<AuthUser | null>(null);
   const [guardando, setGuardando] = useState(false);
-  const { cuentas, cargando, error, cambiarEstado } = useCuentas();
+  const [creando, setCreando] = useState(false);
+  const { cuentas, cargando, error, cambiarEstado, crear } = useCuentas();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -73,6 +75,17 @@ export default function UserTable() {
       <PageHeader
         title="Usuarios"
         description={`${cuentas.length} cuentas registradas.`}
+      >
+        <Btn label="Nuevo empleado" size="md" onPress={() => setCreando(true)} />
+      </PageHeader>
+
+      <NuevoEmpleadoModal
+        open={creando}
+        onClose={() => setCreando(false)}
+        onCrear={async (datos) => {
+          const { mensaje } = await crear(datos);
+          push(mensaje);
+        }}
       />
 
       <SearchInput

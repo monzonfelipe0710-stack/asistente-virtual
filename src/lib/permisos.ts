@@ -3,10 +3,9 @@ import type { AuthRole } from "@/lib/auth";
 export type Permission =
   | "dashboard"
   | "mesa_entrada"
-  | "usuarios"
+  | "tramites"
   | "solicitudes"
-  | "conocimiento"
-  | "siged"
+  | "usuarios"
   | "documentos"
   | "configuracion"
   | "reportes";
@@ -14,21 +13,17 @@ export type Permission =
 export const PERMISSIONS: Record<AuthRole, Permission[]> = {
   "Administración": [
     "dashboard",
+    "solicitudes",
     "mesa_entrada",
     "usuarios",
-    "solicitudes",
-    "conocimiento",
-    "siged",
     "documentos",
     "configuracion",
     "reportes",
   ],
-  // Sin "usuarios" ni "solicitudes": el backend los reserva al superusuario.
+  // Sin "usuarios": el backend lo reserva al superusuario.
   Empleado: [
     "dashboard",
-    "mesa_entrada",
-    "conocimiento",
-    "siged",
+    "tramites",
     "documentos",
     "configuracion",
     "reportes",

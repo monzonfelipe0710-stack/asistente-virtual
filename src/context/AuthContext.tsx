@@ -10,10 +10,12 @@ import {
 } from "@/lib/auth";
 import {
   alVencerSesion,
+  cambiarPassword as cambiarPasswordApi,
   enviarSolicitudDeAcceso,
-  faltaBackend,
   fijarToken,
   iniciarSesion,
+  restablecerPassword,
+  solicitarRecuperacion,
   type UsuarioApi,
 } from "@/lib/backend";
 import { readJSON, writeJSON } from "@/lib/storage";
@@ -42,6 +44,7 @@ interface AuthValue {
   requestPasswordReset: (email: string) => Promise<void>;
   validateResetToken: (token: string) => Promise<{ ok: boolean }>;
   resetPassword: (token: string, newPassword: string) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<AuthUser>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -65,12 +68,17 @@ async function register(input: RegisterInput): Promise<string> {
 async function requestPasswordReset(email: string): Promise<void> {
   if (!isValidEmail(normalizeEmail(email)))
     throw new Error("Ingresá un correo electrónico válido.");
-  return faltaBackend();
+  await solicitarRecuperacion(normalizeEmail(email));
+}
+
+async function validateResetToken(token: string): Promise<{ ok: boolean }> {
+  return { ok: token.trim().length > 0 };
 }
 
 async function resetPassword(token: string, newPassword: string): Promise<boolean> {
   assertValidPassword(newPassword);
-  return faltaBackend();
+  await restablecerPassword(token.trim(), newPassword);
+  return true;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -115,6 +123,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return autenticado;
   }
 
+  async function changePassword(currentPassword: string, newPassword: string): Promise<AuthUser> {
+    if (!currentPassword) throw new Error("Ingresá tu contraseña actual.");
+    assertValidPassword(newPassword);
+    const { token, usuario } = await cambiarPasswordApi(currentPassword, newPassword);
+    const autenticado = usuarioDesdeApi(usuario);
+    fijarToken(token);
+    setUser(autenticado);
+    await writeJSON(CLAVE_SESION, { token, usuario } satisfies SesionGuardada);
+    return autenticado;
+  }
+
   const userRole = user?.role ?? null;
 
   return (
@@ -128,8 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         requestPasswordReset,
-        validateResetToken: faltaBackend,
+        validateResetToken,
         resetPassword,
+        changePassword,
       }}
     >
       {children}
