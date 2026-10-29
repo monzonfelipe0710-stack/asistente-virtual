@@ -39,3 +39,13 @@ export const indexarTramite = async (tramiteId) => {
   const embedding = await generarEmbedding(texto);
   await guardarEmbedding(tramiteId, embedding);
 };
+
+export const indexarSiFalta = async (tramiteId) => {
+  const [fila] = await prisma.$queryRaw`
+    SELECT embedding IS NULL AS falta FROM tramites WHERE id = ${tramiteId}
+  `;
+  if (!fila?.falta) return false;
+
+  await indexarTramite(tramiteId);
+  return true;
+};
