@@ -145,6 +145,10 @@ export default function ChatWindow({ initialQuery = null }) {
   const [promoLeaving, setPromoLeaving] = useState(false);
   const promoTimerRef = useRef(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [isTutorialHistory, setIsTutorialHistory] = useState(() => {
+    if (typeof document === "undefined") return false;
+    return document.documentElement.dataset.tutorialHistoryDemo === "true";
+  });
   const historyDrawerRef = useRef(null);
   const historyCloseButtonRef = useRef(null);
   const historyTriggerRef = useRef(null);
@@ -190,13 +194,22 @@ export default function ChatWindow({ initialQuery = null }) {
     };
   }, []);
 
-  // El tutorial puede abrir el historial móvil para mostrar el ejemplo en contexto.
+  // El tutorial puede abrir el historial para mostrar el ejemplo en contexto (tengas o no cuenta).
   useEffect(() => {
     const openHistoryForTutorial = () => {
+      setIsTutorialHistory(true);
       if (window.innerWidth < 1024) setHistoryOpen(true);
     };
+    const closeHistoryForTutorial = () => {
+      setIsTutorialHistory(false);
+      setHistoryOpen(false);
+    };
     window.addEventListener("chatap-open-history-for-tutorial", openHistoryForTutorial);
-    return () => window.removeEventListener("chatap-open-history-for-tutorial", openHistoryForTutorial);
+    window.addEventListener("chatap-close-history-for-tutorial", closeHistoryForTutorial);
+    return () => {
+      window.removeEventListener("chatap-open-history-for-tutorial", openHistoryForTutorial);
+      window.removeEventListener("chatap-close-history-for-tutorial", closeHistoryForTutorial);
+    };
   }, []);
 
   // Mientras el drawer está abierto, ocultamos el navbar flotante en móvil
@@ -1263,17 +1276,17 @@ export default function ChatWindow({ initialQuery = null }) {
   return (
     <div className="chat-window-shell relative flex h-full bg-paper">
       {/* Apartado lateral de historial (pantallas grandes).
-          Solo visible para usuarios autenticados. */}
-      {isAuthenticated && (
+          Visible para usuarios autenticados o durante el tutorial. */}
+      {(isAuthenticated || isTutorialHistory) && (
         <aside
           id="chat-history-panel"
           aria-label="Historial de consultas"
-          aria-hidden={historyCollapsed}
+          aria-hidden={historyCollapsed && !isTutorialHistory}
           className={`hidden lg:block shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-out motion-reduce:transition-none ${
-            historyCollapsed ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
+            historyCollapsed && !isTutorialHistory ? "w-0 opacity-0" : "w-72 xl:w-80 opacity-100"
           }`}
         >
-          <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed}>
+          <div className="chat-sidebar-frame h-full w-72 border-r border-line xl:w-80" inert={historyCollapsed && !isTutorialHistory}>
             <ChatHistoryPanel
               queries={displayedHistoryQueries}
               onSelect={handleHistorySelect}
@@ -1291,8 +1304,8 @@ export default function ChatWindow({ initialQuery = null }) {
         <Navbar />
         <header className="chat-main-header flex h-14 shrink-0 items-center justify-between gap-2 px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            {/* Pantallas chicas: el historial se abre como diálogo. Solo para autenticados. */}
-            {isAuthenticated && (
+            {/* Pantallas chicas: el historial se abre como diálogo. Solo para autenticados o durante el tutorial. */}
+            {(isAuthenticated || isTutorialHistory) && (
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
@@ -1313,8 +1326,8 @@ export default function ChatWindow({ initialQuery = null }) {
               </button>
             )}
 
-            {/* Pantallas grandes: oculta y muestra el panel lateral. Solo para autenticados. */}
-            {isAuthenticated && (
+            {/* Pantallas grandes: oculta y muestra el panel lateral. */}
+            {(isAuthenticated || isTutorialHistory) && (
               <button
                 type="button"
                 onClick={() => setHistoryCollapsed((v) => !v)}
@@ -1332,7 +1345,7 @@ export default function ChatWindow({ initialQuery = null }) {
             )}
           </div>
 
-          {!isAuthenticated && (
+          {!isAuthenticated && !isTutorialHistory && (
             <button
               type="button"
               onClick={handleResetRequest}
@@ -1636,7 +1649,7 @@ export default function ChatWindow({ initialQuery = null }) {
       </div>
 
       {/* Historial móvil: panel lateral de altura completa, con fondo y cierre suave. */}
-      {isAuthenticated && (
+      {(isAuthenticated || isTutorialHistory) && (
         <div
           className={`chat-mobile-history-overlay fixed inset-0 z-[100] lg:hidden ${historyOpen ? "pointer-events-auto" : "pointer-events-none"}`}
           aria-hidden={!historyOpen}

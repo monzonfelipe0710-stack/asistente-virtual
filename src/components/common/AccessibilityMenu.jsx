@@ -67,11 +67,16 @@ export default function AccessibilityMenu() {
     saveA11y(prefs);
   }, [prefs]);
 
-  // El tutorial puede desplegar este panel para señalar su acceso directo.
+  // El tutorial puede desplegar o replegar este panel para señalar su acceso directo.
   useEffect(() => {
     const openForTutorial = () => setOpen(true);
+    const closeForTutorial = () => setOpen(false);
     window.addEventListener("chatap-open-accessibility-for-tutorial", openForTutorial);
-    return () => window.removeEventListener("chatap-open-accessibility-for-tutorial", openForTutorial);
+    window.addEventListener("chatap-close-accessibility-for-tutorial", closeForTutorial);
+    return () => {
+      window.removeEventListener("chatap-open-accessibility-for-tutorial", openForTutorial);
+      window.removeEventListener("chatap-close-accessibility-for-tutorial", closeForTutorial);
+    };
   }, []);
 
   useEffect(() => {
@@ -83,6 +88,9 @@ export default function AccessibilityMenu() {
       }
     }
     function onPointer(e) {
+      if (document.documentElement.dataset.tutorialAccessibilityDemo === "true") {
+        return;
+      }
       if (
         !panelRef.current?.contains(e.target) &&
         !btnRef.current?.contains(e.target)
