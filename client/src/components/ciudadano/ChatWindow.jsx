@@ -855,11 +855,11 @@ export default function ChatWindow({ initialQuery = null }) {
     }
   }
 
-  function handleRate(messageId, calificacion) {
-    updateMessage(messageId, { calificacion });
+  function handleRate(messageId, calificacion, motivoCalificacion = null) {
+    updateMessage(messageId, { calificacion, motivoCalificacion });
     const message = messages.find((item) => item.id === messageId);
     const consulta = consultas.find((item) => item.id === message?.consultaId);
-    if (consulta) recordConsulta({ ...consulta, calificacion }, userId);
+    if (consulta) recordConsulta({ ...consulta, calificacion, motivoCalificacion }, userId);
   }
 
   function handleSend(e) {
@@ -1129,6 +1129,7 @@ export default function ChatWindow({ initialQuery = null }) {
           timestamp,
           consultaId: query.id,
           calificacion: query.calificacion,
+          motivoCalificacion: query.motivoCalificacion ?? null,
           canRate: true,
         });
       }
@@ -1298,7 +1299,7 @@ export default function ChatWindow({ initialQuery = null }) {
                 ref={historyTriggerRef}
                 id="chat-history-open-button"
                 aria-label="Ver historial de consultas"
-                className="lg:hidden inline-flex h-10 items-center gap-2 rounded-xl border border-line bg-paper px-3 text-sm font-semibold text-ink shadow-xs transition-colors hover:bg-mist cursor-pointer"
+                className="lg:hidden inline-flex h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-mist hover:text-ink cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
@@ -1321,7 +1322,7 @@ export default function ChatWindow({ initialQuery = null }) {
                 aria-expanded={!historyCollapsed}
                 aria-controls="chat-history-panel"
                 aria-label={historyCollapsed ? "Mostrar historial de consultas" : "Ocultar historial de consultas"}
-                className="hidden lg:inline-flex h-9 items-center gap-2 rounded-lg border border-line/70 bg-paper/80 px-3 text-xs font-semibold text-muted shadow-xs transition-colors hover:bg-mist hover:text-ink cursor-pointer"
+                className="hidden lg:inline-flex h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-mist hover:text-ink cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4" />
@@ -1338,7 +1339,7 @@ export default function ChatWindow({ initialQuery = null }) {
               id="chat-new-conversation-button"
               title="Iniciar un nuevo chat"
               aria-label="Iniciar un nuevo chat"
-              className="w-11 h-11 rounded-xl border border-line flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />

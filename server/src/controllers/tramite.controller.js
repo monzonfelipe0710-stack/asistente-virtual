@@ -1,6 +1,7 @@
 import * as tramiteService from '../services/tramite.service.js';
 import { crearTramiteSchema, actualizarTramiteSchema } from '../validators/tramite.validator.js';
 import * as usuarioService from '../services/usuario.service.js';
+import * as mesaService from '../services/mesa.service.js';
 
 export const crear = async (req, res) => {
   const datos = crearTramiteSchema.parse(req.body);
@@ -11,6 +12,15 @@ export const crear = async (req, res) => {
     const error = new Error('No tenés asignado el sector indicado para el trámite.');
     error.statusCode = 403;
     throw error;
+  }
+
+  if (datos.mesaIds.length > 0) {
+    const mesasOk = await mesaService.mesasValidasParaSector(datos.mesaIds, datos.sectorId);
+    if (!mesasOk) {
+      const error = new Error('Una o más mesas no existen o no corresponden al sector del trámite.');
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   const tramite = await tramiteService.crearTramite(datos, encargadoId);
@@ -49,6 +59,17 @@ export const actualizar = async (req, res) => {
     if (!tieneAcceso) {
       const error = new Error('No podés mover el trámite a un sector que no tenés asignado.');
       error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  if (datos.sectorId !== undefined || datos.mesaIds !== undefined) {
+    const sectorEfectivo = datos.sectorId ?? await tramiteService.obtenerSectorIdDeTramite(id);
+    const mesasEfectivas = datos.mesaIds ?? await tramiteService.obtenerMesaIdsDeTramite(id);
+    const mesasOk = await mesaService.mesasValidasParaSector(mesasEfectivas, sectorEfectivo);
+    if (!mesasOk) {
+      const error = new Error('Una o más mesas no existen o no corresponden al sector del trámite. Si cambiaste el sector, actualizá también las mesas.');
+      error.statusCode = 400;
       throw error;
     }
   }

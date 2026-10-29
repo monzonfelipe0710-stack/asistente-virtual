@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { readA11y, saveA11y } from "../../lib/accessibility";
 import useTheme from "../../hooks/useTheme";
-import { useAuth } from "../../context/AuthContext";
 import { forceOpenTutorial } from "./BotOnboardingModal";
 
 const TEXT_OPTIONS = [
@@ -63,7 +62,6 @@ export default function AccessibilityMenu() {
   const panelRef = useRef(null);
   const btnRef = useRef(null);
   const theme = useTheme();
-  const { user } = useAuth();
 
   useEffect(() => {
     saveA11y(prefs);
@@ -204,7 +202,7 @@ export default function AccessibilityMenu() {
               type="button"
               onClick={() => {
                 setOpen(false);
-                if (user?.id) forceOpenTutorial();
+                forceOpenTutorial();
               }}
               className="w-full flex items-center justify-center gap-2 rounded-xl border border-line bg-mist/40 px-3.5 py-3 text-sm font-semibold text-ink hover:bg-mist transition-colors cursor-pointer"
             >

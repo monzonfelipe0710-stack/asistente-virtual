@@ -3725,8 +3725,8 @@ html[data-a11y-readable="true"] label {
   }
 
   .chat-main-header {
-    background: color-mix(in srgb, var(--color-paper) 72%, transparent);
-    backdrop-filter: blur(16px);
+    background: transparent;
+    backdrop-filter: none;
   }
 
   /* La bienvenida se desplaza cuando el alto del dispositivo no alcanza
@@ -3748,11 +3748,6 @@ html[data-a11y-readable="true"] label {
 
   .dark .chat-main {
     background: rgba(7, 14, 32, 0.54);
-  }
-
-  .dark .chat-main-header {
-    background: rgba(7, 14, 32, 0.66);
-    border-color: rgba(255, 255, 255, 0.07);
   }
 
   .welcome-content h1 {
@@ -4026,7 +4021,6 @@ html[data-tutorial-accessibility-demo="true"] .accessibility-menu-panel {
   .hud-glass-badge { background: rgba(7, 14, 32, 0.94); }
   .tour-card { background: var(--color-paper); }
 
-  .chat-main-header,
   .chat-sidebar-frame {
     backdrop-filter: none !important;
     background: var(--color-paper);
@@ -4611,8 +4605,27 @@ html.dark .tour-avatar {
   from { opacity: 0; transform: translate3d(0, 7px, 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
+/* Panel de motivos: entrada suave tipo acordeón, con foco claro y sin saltos. */
+.rating-panel-enter {
+  animation: rating-panel-enter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top left;
+  will-change: opacity, transform;
+}
+@keyframes rating-panel-enter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.rating-detail-enter {
+  animation: rating-detail-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top center;
+  will-change: opacity, transform;
+}
+@keyframes rating-detail-enter {
+  from { opacity: 0; transform: translate3d(0, -6px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .promo-enter, .promo-leave, .chat-msg {
+  .promo-enter, .promo-leave, .chat-msg, .rating-panel-enter, .rating-detail-enter {
     animation: none !important;
     will-change: auto;
   }

@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import prisma from '../config/prisma.js';
 import { r2, R2_BUCKET } from '../config/r2.js';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import * as cache from './cache.service.js';
 
 export const listarPorTramite = async (tramiteId) => {
   return prisma.documento.findMany({
@@ -26,7 +27,7 @@ export const subirDocumento = async (archivo, datos) => {
     ContentType: archivo.mimetype,
   }));
   
-  return prisma.documento.create({
+  const documento = await prisma.documento.create({
     data: {
       nombre: datos.nombre || archivo.originalname,
       archivo: key,
@@ -34,6 +35,8 @@ export const subirDocumento = async (archivo, datos) => {
       tramiteId: datos.tramiteId,
     },
   });
+  cache.limpiar();
+  return documento;
 };
 
 export const generarUrlDescarga = async (key) => {
@@ -51,7 +54,9 @@ export const eliminarDocumento = async (documento) => {
     Key: documento.archivo,
   }));
 
-  return prisma.documento.delete({ where: { id: documento.id } });
+  const eliminado = await prisma.documento.delete({ where: { id: documento.id } });
+  cache.limpiar();
+  return eliminado;
 };
 
 // Borra de R2 los archivos de documentos cuyos registros ya se eliminaron (por

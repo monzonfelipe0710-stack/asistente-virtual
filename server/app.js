@@ -10,14 +10,10 @@ import tramiteRoutes from './src/routes/tramite.routes.js';
 import chatRoutes from './src/routes/chat.routes.js';
 import metricaRoutes from './src/routes/metrica.routes.js';
 import consultaRoutes from './src/routes/consulta.routes.js';
+import mesaRoutes from './src/routes/mesa.routes.js';
+import { origenesPermitidos } from './src/config/origenes.js';
 
 const app = express();
-
-// Orígenes permitidos, separados por coma en CORS_ORIGIN.
-const origenes = (process.env.CORS_ORIGIN ?? 'http://localhost:5173')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
 
 // Detrás de un reverse proxy (nginx, Railway, Render) Express ve la IP del proxy
 // y el rate limiter termina limitando a todos los clientes en conjunto.
@@ -30,7 +26,7 @@ if (process.env.TRUST_PROXY) {
 }
 
 app.use(helmet());
-app.use(cors({ origin: origenes }));
+app.use(cors({ origin: origenesPermitidos }));
 app.use(morgan('dev'));
 app.use(express.json());
 
@@ -45,6 +41,7 @@ app.use('/api/tramites', tramiteRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/metricas', metricaRoutes);
 app.use('/api/consultas', consultaRoutes);
+app.use('/api/mesas', mesaRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {
