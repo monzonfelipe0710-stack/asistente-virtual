@@ -1,4 +1,4 @@
-import { ia } from '../core/ia/index.js';
+import { ia } from '../core/ai/index.js';
 import prisma from '../config/prisma.js';
 
 export const generarEmbedding = (texto) => ia.generarEmbedding(texto);
