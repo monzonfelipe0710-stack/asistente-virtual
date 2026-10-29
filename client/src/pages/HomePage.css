@@ -80,7 +80,7 @@
 }
 
 .hero-anim-cta {
-  animation: heroSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.66s both;
+  animation: heroSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
 }
 
 .hero-anim-footer {
@@ -206,6 +206,10 @@
 }
 
 @media (max-width: 640px) {
+  .hero-cinematic {
+    min-height: auto;
+  }
+
   .hero-cinematic__title {
     font-size: clamp(2.25rem, 12vw, 5.5rem);
     line-height: 1.06;
@@ -214,7 +218,44 @@
   }
 
   .hero-cinematic__inner {
+    padding-top: clamp(5.5rem, 14vh, 7rem);
+    padding-bottom: 2.5rem;
     padding-inline: clamp(1rem, 4vw, 1.5rem);
+  }
+
+  .hero-cta-group {
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .hero-cta-group > * {
+    width: 100%;
+    max-width: 22rem;
+  }
+
+  .hero-microcopy {
+    font-size: 0.65rem;
+  }
+
+  .hero-quick-prompts {
+    max-width: 100%;
+    gap: 0.4rem;
+  }
+
+  .hero-quick-pill {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-height: 820px) and (min-width: 641px) {
+  .hero-cinematic__inner {
+    padding-top: 5.25rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .hero-cinematic__title {
+    font-size: clamp(2.2rem, 4.6vw, 4rem);
   }
 }
 
@@ -231,10 +272,11 @@
 
 .hero-quick-pill {
   display: inline-flex;
+  min-height: 2.5rem;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
-  font-size: 0.78rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
   font-weight: 600;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.6);
@@ -244,6 +286,11 @@
   backdrop-filter: blur(8px);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.hero-quick-pill:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 3px;
 }
 
 .dark .hero-quick-pill {
@@ -265,6 +312,61 @@
   border-color: rgba(77, 125, 255, 0.35);
   color: #93C5FD;
   box-shadow: 0 4px 14px rgba(77, 125, 255, 0.2);
+}
+
+/* ── Hero: CTAs y microcopy ─────────────────────────────────── */
+.hero-cta-group {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.hero-cta-secondary {
+  border: 1px solid rgba(15, 23, 48, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-ink);
+  box-shadow: 0 2px 10px rgba(15, 23, 48, 0.04);
+  backdrop-filter: blur(10px);
+}
+
+.hero-cta-secondary:hover {
+  border-color: var(--color-brand);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--color-brand);
+  transform: translateY(-1px);
+}
+
+.dark .hero-cta-secondary {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(13, 23, 48, 0.55);
+  color: var(--color-ink);
+}
+
+.dark .hero-cta-secondary:hover {
+  border-color: rgba(77, 125, 255, 0.45);
+  background: rgba(13, 23, 48, 0.85);
+  color: #93C5FD;
+}
+
+.hero-cta-secondary:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 3px;
+}
+
+.hero-microcopy {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+section[id] {
+  scroll-margin-top: 6rem;
 }
 
 /* ── Bento Grid Comercial ──────────────────────────────────── */
@@ -509,6 +611,12 @@
   .faq-item--open .faq-content {
     animation: none !important;
     transition: none !important;
+    transform: none;
+  }
+
+  .hero-quick-pill:hover,
+  .hero-cta-secondary:hover,
+  .minimal-feature-card:hover {
     transform: none;
   }
 }

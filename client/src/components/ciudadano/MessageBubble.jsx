@@ -1,5 +1,5 @@
 import ChatBotAvatar from "../ChatBotAvatar";
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { calificarConsulta } from "../../services/consultas";
 import { apiErrorMessage } from "../../lib/api";
 
@@ -146,6 +146,15 @@ function FormattedAnswer({ text }) {
   flush();
   return <div className="chat-answer-content">{blocks}</div>;
 }
+const OTRO_MOTIVO = "Otro motivo";
+const MOTIVOS_NO_UTIL = [
+  "No respondió mi pregunta",
+  "La información no es correcta",
+  "La respuesta fue confusa",
+  "No era lo que buscaba",
+  OTRO_MOTIVO,
+];
+
 function MessageBubble({
   message,
   speaking = false,
@@ -158,10 +167,20 @@ function MessageBubble({
   const [ratingBusy, setRatingBusy] = useState(false);
   const [ratingError, setRatingError] = useState("");
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [pendingDislike, setPendingDislike] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [motivoDetalle, setMotivoDetalle] = useState("");
+  const motivoDetalleRef = useRef(null);
   const hasRating = message.calificacion !== null && message.calificacion !== undefined;
   const isBot = message.type === "bot";
   const shown = speaking ? typedText || message.text : message.text;
   const typing = speaking && typedText.length < message.text.length;
+  const motivoGroupName = `rating-motivo-${message.id}`;
+  const pideDetalle = motivo === OTRO_MOTIVO;
+
+  useEffect(() => {
+    if (pideDetalle) motivoDetalleRef.current?.focus();
+  }, [pideDetalle]);
 
   const actionList = Array.isArray(message.actions)
     ? message.actions
@@ -169,19 +188,59 @@ function MessageBubble({
       ? [message.action]
       : [];
 
-  async function rateResponse(value) {
+  async function rateResponse(value, motivoElegido = "") {
     if (!message.consultaId || ratingBusy) return;
     setRatingBusy(true);
     setRatingError("");
     try {
-      const result = await calificarConsulta(message.consultaId, value, { publico: message.publicRating });
+      const result = await calificarConsulta(message.consultaId, value, {
+        publico: message.publicRating,
+        motivo: motivoElegido,
+      });
       setRatingSubmitted(true);
-      onRate?.(message.id, result?.calificacion ?? value);
+      setPendingDislike(false);
+      onRate?.(message.id, result?.calificacion ?? value, result?.motivoCalificacion ?? (motivoElegido || null));
     } catch (error) {
       setRatingError(apiErrorMessage(error, "No se pudo guardar tu opinión."));
     } finally {
       setRatingBusy(false);
     }
+  }
+
+  function handlePositive() {
+    if (hasRating || ratingBusy) return;
+    setPendingDislike(false);
+    setMotivo("");
+    setMotivoDetalle("");
+    setRatingError("");
+    rateResponse(1);
+  }
+
+  function handleNegative() {
+    if (hasRating || ratingBusy) return;
+    setRatingError("");
+    setPendingDislike(true);
+  }
+
+  function handleEnviarMotivo() {
+    if (!motivo) {
+      setRatingError("Elegí un motivo para continuar.");
+      return;
+    }
+    const detalle = motivoDetalle.trim();
+    if (pideDetalle && !detalle) {
+      setRatingError("Escribí brevemente qué pasó para poder ayudarte mejor.");
+      motivoDetalleRef.current?.focus();
+      return;
+    }
+    rateResponse(0, pideDetalle ? detalle : motivo);
+  }
+
+  function handleCancelarMotivo() {
+    setPendingDislike(false);
+    setMotivo("");
+    setMotivoDetalle("");
+    setRatingError("");
   }
 
   return (
@@ -229,30 +288,127 @@ function MessageBubble({
             <div className="mt-3 border-t border-line/70 pt-2.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted">¿Te sirvió esta respuesta?</span>
-                {[1, 0].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={ratingBusy || hasRating}
-                    aria-pressed={message.calificacion === value}
-                    aria-label={value ? "Sí, me sirvió" : "No me sirvió"}
-                    onClick={() => rateResponse(value)}
-                    className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                      message.calificacion === value
-                        ? "border-brand-deep bg-brand-deep text-white"
-                        : "border-line text-muted hover:bg-mist hover:text-ink"
-                    }`}
-                  >
-                    <span aria-hidden="true">{value ? "👍" : "👎"}</span>
-                    {value ? "Sí" : "No"}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  disabled={ratingBusy || hasRating}
+                  aria-pressed={message.calificacion === 1}
+                  onClick={handlePositive}
+                  className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    message.calificacion === 1
+                      ? "border-brand-deep bg-brand-deep text-white"
+                      : "border-line text-muted hover:bg-mist hover:text-ink"
+                  }`}
+                >
+                  <span aria-hidden="true">👍</span>
+                  Sí
+                </button>
+                <button
+                  type="button"
+                  disabled={ratingBusy || hasRating}
+                  aria-pressed={message.calificacion === 0}
+                  aria-expanded={pendingDislike}
+                  aria-controls={`${motivoGroupName}-panel`}
+                  onClick={handleNegative}
+                  className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    message.calificacion === 0 || pendingDislike
+                      ? "border-brand-deep bg-brand-deep text-white"
+                      : "border-line text-muted hover:bg-mist hover:text-ink"
+                  }`}
+                >
+                  <span aria-hidden="true">👎</span>
+                  No
+                </button>
                 {(hasRating || ratingSubmitted) && (
-                  <span className="text-xs text-ok" role="status">
+                  <span className="animate-fade-in text-xs text-ok" role="status">
                     ¡Gracias por tu opinión! Nos ayuda a mejorar.
                   </span>
                 )}
               </div>
+
+              {pendingDislike && !hasRating && (
+                <fieldset
+                  id={`${motivoGroupName}-panel`}
+                  className="rating-panel-enter mt-3 rounded-xl border border-line bg-paper p-3"
+                >
+                  <legend className="px-1 text-sm font-semibold text-ink">
+                    ¿Qué pasó con la respuesta?
+                  </legend>
+                  <div className="stagger-children mt-2 grid gap-2 sm:grid-cols-2">
+                    {MOTIVOS_NO_UTIL.map((opcion) => (
+                      <label
+                        key={opcion}
+                        className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                          motivo === opcion
+                            ? "border-brand-deep bg-mist text-ink"
+                            : "border-line text-ink hover:bg-mist"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={motivoGroupName}
+                          value={opcion}
+                          checked={motivo === opcion}
+                          onChange={() => setMotivo(opcion)}
+                          className="h-4 w-4 shrink-0 accent-[var(--color-brand-deep)]"
+                        />
+                        <span>{opcion}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {pideDetalle && (
+                    <div className="rating-detail-enter mt-3">
+                      <label
+                        htmlFor={`${motivoGroupName}-detalle`}
+                        className="block text-sm font-medium text-ink"
+                      >
+                        Contanos qué pasó (obligatorio)
+                      </label>
+                      <textarea
+                        id={`${motivoGroupName}-detalle`}
+                        ref={motivoDetalleRef}
+                        value={motivoDetalle}
+                        onChange={(event) => setMotivoDetalle(event.target.value)}
+                        rows={3}
+                        maxLength={300}
+                        aria-describedby={`${motivoGroupName}-detalle-ayuda`}
+                        placeholder="Escribí con tus palabras qué faltó o qué estuvo mal…"
+                        className="mt-1.5 w-full resize-y rounded-lg border border-line bg-paper px-3 py-2.5 text-base leading-6 text-ink placeholder:text-muted focus:border-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-deep/40"
+                      />
+                      <div
+                        id={`${motivoGroupName}-detalle-ayuda`}
+                        className="mt-1 flex items-center justify-between gap-3 text-xs text-muted"
+                      >
+                        <span>Cuanto más detalle, mejor podemos mejorar la respuesta.</span>
+                        <span aria-hidden="true">{motivoDetalle.length}/300</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleEnviarMotivo}
+                      disabled={ratingBusy || !motivo || (pideDetalle && !motivoDetalle.trim())}
+                      className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-deep px-4 text-sm font-semibold text-white transition-colors hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {ratingBusy ? "Enviando…" : "Enviar opinión"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelarMotivo}
+                      disabled={ratingBusy}
+                      className="inline-flex min-h-11 items-center justify-center rounded-full border border-line px-4 text-sm font-semibold text-ink transition-colors hover:bg-mist disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </fieldset>
+              )}
+
+              {message.calificacion === 0 && message.motivoCalificacion && (
+                <p className="animate-fade-in mt-2 text-xs text-muted">
+                  Motivo indicado: {message.motivoCalificacion}
+                </p>
+              )}
               {ratingError && <p role="alert" className="mt-1 text-xs text-bad">{ratingError}</p>}
             </div>
           )}

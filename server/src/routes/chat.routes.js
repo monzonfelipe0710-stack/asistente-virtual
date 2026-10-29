@@ -13,5 +13,6 @@ const chatLimiter = rateLimit({
 });
 
 router.post('/', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultar));
+router.post('/stream', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultarStream));
 
 export default router;

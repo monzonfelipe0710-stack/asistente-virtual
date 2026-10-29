@@ -4,6 +4,7 @@ import prisma from '../config/prisma.js';
 import crypto from 'crypto';
 import * as usuarioService from '../services/usuario.service.js';
 import * as correoService from '../services/correo.service.js';
+import { origenesPermitidos } from '../config/origenes.js';
 import { loginSchema, recuperarSchema, restablecerSchema, cambiarPasswordSchema } from '../validators/auth.validators.js';
 
 const MENSAJES_ESTADO = {
@@ -46,6 +47,10 @@ export const login = async (req, res) => {
 export const solicitarRecuperacion = async (req, res) => {
   const { email } = recuperarSchema.parse(req.body);
 
+  // Solo orígenes de CORS_ORIGIN: si no, se podría mandar el token a un sitio ajeno.
+  const origen = req.get('origin');
+  const urlFront = origenesPermitidos.includes(origen) ? origen : process.env.FRONTEND_URL;
+
   // Respondemos ya, igual exista o no el email (anti-enumeración + anti-timing).
   res.json({ mensaje: 'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña.' });
 
@@ -60,7 +65,7 @@ export const solicitarRecuperacion = async (req, res) => {
 
     await usuarioService.guardarTokenRecuperacion(usuario.id, tokenHash, expira);
 
-    const link = `${process.env.FRONTEND_URL}/restablecer?token=${tokenCrudo}`;
+    const link = `${urlFront}/restablecer?token=${tokenCrudo}`;
     await correoService.enviarRecuperacion(usuario.email, usuario.nombre, link);
   } catch (err) {
     console.error('Error en recuperación de contraseña:', err.message);

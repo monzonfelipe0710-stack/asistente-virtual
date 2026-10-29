@@ -104,6 +104,7 @@ model MesaEntrada {
   nombre    String
   direccion String?
   localidad String?
+  horario   String?
   esGeneral Boolean @default(false) @map("es_general")
 
   sectorId  Int? @map("sector_id")
@@ -180,6 +181,8 @@ model Consulta {
   textoConsulta   String @map("texto_consulta")
   encontrado      Boolean @default(false)
   fecha           DateTime @default(now())
+  calificacion    Int?
+  motivoCalificacion String? @map("motivo_calificacion")
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)

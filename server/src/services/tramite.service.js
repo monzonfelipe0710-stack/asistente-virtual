@@ -1,5 +1,7 @@
 import prisma from '../config/prisma.js';
 import { indexarTramite } from './embedding.service.js';
+import { eliminarArchivos } from './documento.service.js';
+import * as cache from './cache.service.js';
 
 export const crearTramite = async (datos, encargadoId) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
@@ -13,7 +15,7 @@ export const crearTramite = async (datos, encargadoId) => {
           create: requisitos,
         },
         mesas: {
-          create: mesaIds.map((mesaId) => ({ mesaId })),
+          create: [...new Set(mesaIds)].map((mesaId) => ({ mesaId })),
         },
       },
       include: {
@@ -24,9 +26,10 @@ export const crearTramite = async (datos, encargadoId) => {
   });
 
   indexarTramite(tramite.id).catch((err) => {
-    console.error(`Error al indexar el tramite ${tramite.id}`, err.message);
+    console.error(`Error al indexar el trámite ${tramite.id}`, err.message);
   });
 
+  cache.limpiar();
   return tramite;
 };
 
@@ -37,6 +40,15 @@ export const listarTramites = async () => {
       sector: { select: {id: true, nombre: true } },
       encargado: { select: { id: true, nombre: true} },
     },
+  });
+};
+
+// Catálogo público: solo publicados y solo id + nombre, sin datos de gestión.
+export const listarPublicados = async () => {
+  return prisma.tramite.findMany({
+    where: { publicado: true },
+    select: { id: true, nombre: true },
+    orderBy: { nombre: 'asc' },
   });
 };
 
@@ -52,15 +64,41 @@ export const obtenerTramitePorId = async (id) => {
   });
 };
 
+export const obtenerSectorIdDeTramite = async (id) => {
+  const tramite = await prisma.tramite.findUnique({ where: { id }, select: { sectorId: true } });
+  return tramite?.sectorId ?? null;
+};
+
+export const obtenerMesaIdsDeTramite = async (id) => {
+  const filas = await prisma.tramiteMesa.findMany({ where: { tramiteId: id }, select: { mesaId: true } });
+  return filas.map((f) => f.mesaId);
+};
+
 export const eliminarTramite = async (id) => {
-  return prisma.tramite.delete({where: { id } });
+  // La cascada de la base borra los registros de documentos, pero no los archivos
+  // en R2: hay que leer las keys antes de borrar y limpiarlas después.
+  const documentos = await prisma.documento.findMany({
+    where: { tramiteId: id },
+    select: { archivo: true },
+  });
+
+  const eliminado = await prisma.tramite.delete({where: { id } });
+
+  if (documentos.length > 0) {
+    await eliminarArchivos(documentos.map((d) => d.archivo));
+  }
+
+  cache.limpiar();
+  return eliminado;
 };
 
 export const cambiarPublicacion = async (id, publicado) => {
-  return prisma.tramite.update({
+  const tramite = await prisma.tramite.update({
     where: { id },
     data: { publicado },
   });
+  cache.limpiar();
+  return tramite;
 };
 
 export const actualizarTramite = async (id, datos) => {
@@ -83,9 +121,10 @@ export const actualizarTramite = async (id, datos) => {
 
     if (mesaIds !== undefined) {
       await tx.tramiteMesa.deleteMany({ where: { tramiteId: id } });
-      if (mesaIds.length > 0) {
+      const unicos = [...new Set(mesaIds)];
+      if (unicos.length > 0) {
         await tx.tramiteMesa.createMany({
-          data: mesaIds.map((mesaId) => ({ tramiteId: id, mesaId })),
+          data: unicos.map((mesaId) => ({ tramiteId: id, mesaId })),
         });
       }
     }
@@ -101,9 +140,12 @@ export const actualizarTramite = async (id, datos) => {
     });
   });
 
-  indexarTramite(id).catch((err) => {
-    console.error(`Error al reindexar el trámite ${id}`, err.message);
-  });
+  indexarTramite(id)
+    .then(cache.limpiar)
+    .catch((err) => {
+      console.error(`Error al reindexar el trámite ${id}`, err.message);
+    });
 
+  cache.limpiar();
   return tramiteActualizado;
 };
