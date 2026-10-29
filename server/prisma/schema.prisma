@@ -71,6 +71,7 @@ model Tramite {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   embedding Unsupported("vector(1536)")?
+  searchVector Unsupported("tsvector")? @default(dbgenerated("to_tsvector('spanish'::regconfig, ((COALESCE(nombre, ''::text) || ' '::text) || COALESCE(descripcion, ''::text)))")) @map("search_vector")
 
   sectorId  Int @map("sector_id")
   sector    Sector @relation(fields: [sectorId], references: [id], onDelete: Restrict)
@@ -83,6 +84,8 @@ model Tramite {
   fuenteUrl   String?  @unique @map("fuente_url")
 
   @@index([sectorId])
+  @@index([embedding], map: "tramites_embedding_idx")
+  @@index([searchVector], map: "tramites_search_idx", type: Gin)
   @@map("tramites")
 }
 
