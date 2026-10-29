@@ -39,43 +39,61 @@ export default function Dashboard() {
   const [sinRespuestaData, setSinRespuestaData] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [metricasPendientes, setMetricasPendientes] = useState(false);
+  const [usuariosNoDisponibles, setUsuariosNoDisponibles] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-    (async () => {
+
+    async function loadDashboard() {
       setLoading(true);
       setError("");
-      try {
-        const listaTramites = await listarTramites();
-        if (!active) return;
-        setTramites(Array.isArray(listaTramites) ? listaTramites : []);
-      } catch (err) {
-        if (active) setError(apiErrorMessage(err));
-        if (active) setLoading(false);
-        return;
+      setMetricasPendientes(false);
+      setUsuariosNoDisponibles(false);
+      setTramites([]);
+      setPorTramiteData([]);
+      setSinRespuestaData([]);
+      setUsuarios([]);
+
+      const requests = await Promise.allSettled([
+        listarTramites(),
+        ...(esSuper ? [porTramite(), sinRespuesta(), listarUsuarios()] : []),
+      ]);
+      if (!active) return;
+
+      const tramitesResult = requests[0];
+      if (tramitesResult.status === "fulfilled" && Array.isArray(tramitesResult.value)) {
+        setTramites(tramitesResult.value);
+      } else {
+        setError(
+          tramitesResult.status === "rejected"
+            ? apiErrorMessage(tramitesResult.reason, "No se pudieron cargar los trámites.")
+            : "El servidor devolvió un formato inesperado al consultar los trámites."
+        );
       }
+
       if (esSuper) {
-        try {
-          const [porT, sinResp, us] = await Promise.all([
-            porTramite(),
-            sinRespuesta(),
-            listarUsuarios(),
-          ]);
-          if (!active) return;
-          setPorTramiteData(Array.isArray(porT) ? porT : []);
-          setSinRespuestaData(Array.isArray(sinResp) ? sinResp : []);
-          setUsuarios(Array.isArray(us) ? us : []);
-          setMetricasPendientes(false);
-        } catch {
-          if (active) setMetricasPendientes(true);
-        }
+        const [porT, sinResp, us] = requests.slice(1);
+        const validPorT = porT.status === "fulfilled" && Array.isArray(porT.value);
+        const validSinResp = sinResp.status === "fulfilled" && Array.isArray(sinResp.value);
+        const validUsers = us.status === "fulfilled" && Array.isArray(us.value);
+
+        if (validPorT) setPorTramiteData(porT.value);
+        if (validSinResp) setSinRespuestaData(sinResp.value);
+        if (validUsers) setUsuarios(us.value);
+
+        setMetricasPendientes(!validPorT || !validSinResp);
+        setUsuariosNoDisponibles(!validUsers);
       }
-      if (active) setLoading(false);
-    })();
+
+      setLoading(false);
+    }
+
+    loadDashboard();
     return () => {
       active = false;
     };
-  }, [esSuper]);
+  }, [esSuper, refreshKey]);
 
   const publicados = useMemo(() => tramites.filter((t) => t.publicado).length, [tramites]);
   const misTramites = useMemo(
@@ -135,11 +153,24 @@ export default function Dashboard() {
         </Lead>
       </div>
 
-      {error && (
-        <div className="mt-8 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">
-          {error}
+      {(error || metricasPendientes || usuariosNoDisponibles) && (
+        <div role="alert" className="mt-8 rounded-lg border border-bad/30 bg-bad/5 px-4 py-3 text-sm text-bad">
+          {error && <p className="m-0">{error}</p>}
+          {metricasPendientes && <p className="m-0">No se pudieron actualizar todas las métricas del chat. Los indicadores afectados no se mostrarán como cero.</p>}
+          {usuariosNoDisponibles && <p className="m-0">No se pudo consultar el estado de las cuentas de usuario.</p>}
         </div>
       )}
+
+      <div className="mt-6 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setRefreshKey((key) => key + 1)}
+          disabled={loading}
+          className="btn-ghost text-xs disabled:cursor-wait disabled:opacity-50"
+        >
+          {loading ? "Actualizando…" : "Actualizar panel"}
+        </button>
+      </div>
 
       <div className="mt-12 grid gap-px bg-line border border-line overflow-hidden rounded-2xl grid-cols-2 lg:grid-cols-4">
         {loading ? (
@@ -153,9 +184,9 @@ export default function Dashboard() {
         ) : esSuper ? (
           <>
             <Metric label="Trámites publicados" value={publicados} hint={`de ${tramites.length} en total`} />
-            <Metric label="Consultas respondidas" value={totalConsultas} hint="registradas en el chat" />
-            <Metric label="Consultas sin respuesta" value={sinRespuestaData.length} hint="requieren revisión" />
-            <Metric label="Usuarios aprobados" value={usuariosAprobados} hint={`${usuariosPendientes} pendientes`} />
+            <Metric label="Consultas registradas" value={metricasPendientes ? "—" : totalConsultas} hint={metricasPendientes ? "Dato no disponible" : "agrupadas por trámite"} />
+            <Metric label="Consultas sin respuesta" value={metricasPendientes ? "—" : sinRespuestaData.length} hint={metricasPendientes ? "Dato no disponible" : "requieren revisión"} />
+            <Metric label="Usuarios aprobados" value={usuariosNoDisponibles ? "—" : usuariosAprobados} hint={usuariosNoDisponibles ? "Dato no disponible" : `${usuariosPendientes} pendientes`} />
           </>
         ) : (
           <>
@@ -170,8 +201,8 @@ export default function Dashboard() {
       {!esSuper && (
         <div className="mt-16">
           <PendingBackend
-            title="Métricas propias y generales — Pendiente de backend"
-            description="El dashboard del empleado tendrá un selector para ver las métricas de su mesa o las generales. Los endpoints de métricas (hoy disponibles solo para el administrador) pasarán a aceptar al empleado con un parámetro de alcance."
+            title="Métricas de actividad no disponibles para este rol"
+            description="En este momento, las métricas detalladas solo están habilitadas para el superusuario. Podés seguir gestionando tus trámites desde la sección correspondiente."
             className="mb-0"
           />
         </div>
@@ -179,7 +210,7 @@ export default function Dashboard() {
 
       {esSuper && !loading && (
         <>
-          <div className="card mt-16 overflow-hidden">
+          <div className="card mt-10 overflow-hidden sm:mt-16">
             <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
               <h2 className="display-3 text-ink m-0 uppercase">Trámites más consultados</h2>
               <span className="text-xs text-faint font-semibold uppercase tracking-wider">
@@ -191,10 +222,10 @@ export default function Dashboard() {
             ) : topConsultados.length === 0 ? (
               <SectionEmpty>Todavía no hay consultas registradas.</SectionEmpty>
             ) : (
-              <div className="p-8 space-y-4">
+              <div className="space-y-4 p-5 sm:p-8">
                 {topConsultados.map((c) => (
                   <div key={c.tramiteId ?? "null"} className="flex items-center gap-4">
-                    <span className="w-64 shrink-0 truncate text-sm text-ink">
+                    <span className="w-40 shrink-0 truncate text-sm text-ink sm:w-64">
                       {c.nombre || (c.tramiteId == null ? "Trámite eliminado" : `Trámite #${c.tramiteId}`)}
                     </span>
                     <span className="flex-1 h-2 rounded-full bg-mist overflow-hidden">
@@ -210,7 +241,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="card mt-16 overflow-hidden">
+          <div className="card mt-10 overflow-hidden sm:mt-16">
             <div className="px-8 py-6 border-b border-line flex flex-wrap items-center justify-between gap-3">
               <h2 className="display-3 text-ink m-0 uppercase">Consultas sin respuesta</h2>
               <span className="text-xs text-faint font-semibold uppercase tracking-wider">
@@ -223,7 +254,7 @@ export default function Dashboard() {
               <ul className="m-0 p-0 divide-y divide-line">
                 {sinRespuestaRecientes.map((c) => (
                   <li key={c.id} className="px-8 py-5 flex items-start justify-between gap-6">
-                    <p className="m-0 text-sm text-ink">{c.textoConsulta}</p>
+                    <p className="m-0 min-w-0 break-words text-sm text-ink">{c.textoConsulta || "Consulta sin texto disponible"}</p>
                     <span className="text-xs text-faint shrink-0">{formatDate(c.fecha)}</span>
                   </li>
                 ))}
