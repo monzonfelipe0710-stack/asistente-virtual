@@ -6,6 +6,7 @@ import multer from 'multer';
 
 import { errorHandler } from '../src/middlewares/error.middleware.js';
 import { autorizar } from '../src/middlewares/roles.middleware.js';
+import { esIdValido, validarId } from '../src/middlewares/validarId.middleware.js';
 
 // Recolecta el status y el cuerpo con los que responde el errorHandler.
 const respuestaFalsa = () => {
@@ -100,5 +101,30 @@ describe('autorizar', () => {
     let siguio = false;
     autorizar('SUPERUSUARIO', 'ADMINISTRADOR')({ usuario: { rol: 'ADMINISTRADOR' } }, {}, () => { siguio = true; });
     assert.equal(siguio, true);
+  });
+});
+
+describe('validarId', () => {
+  it('acepta enteros positivos dentro del rango de Int', () => {
+    for (const v of ['1', '42', '2147483647']) assert.equal(esIdValido(v), true, v);
+  });
+
+  it('rechaza lo que no es un entero positivo o se pasa del rango', () => {
+    for (const v of ['abc', '0', '-1', '1.5', '1e3', ' 1', '01', '', '2147483648', '99999999999']) {
+      assert.equal(esIdValido(v), false, JSON.stringify(v));
+    }
+  });
+
+  it('pasa un error 404 con el mensaje indicado cuando el id no es válido', () => {
+    let recibido;
+    validarId('Trámite no encontrado.')({}, {}, (err) => { recibido = err; }, 'abc');
+    assert.equal(recibido.statusCode, 404);
+    assert.equal(recibido.message, 'Trámite no encontrado.');
+  });
+
+  it('sigue sin error cuando el id es válido', () => {
+    let recibido = 'sin llamar';
+    validarId('x')({}, {}, (err) => { recibido = err; }, '7');
+    assert.equal(recibido, undefined);
   });
 });

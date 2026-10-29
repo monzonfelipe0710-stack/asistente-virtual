@@ -4,31 +4,14 @@ import { autenticar, autenticarOpcional } from '../middlewares/auth.middleware.j
 import { autorizar } from '../middlewares/roles.middleware.js';
 import { puedeGestionarTramite } from '../middlewares/propiedad.middleware.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { validarId } from '../middlewares/validarId.middleware.js';
 import { upload } from '../config/multer.js';
 import { publicoLimiter } from '../config/rateLimit.js';
 
+// El :id del trámite lo valida el router.param de tramite.routes.js antes de llegar acá.
 const router = Router({ mergeParams: true });
 
-const ID_MAXIMO = 2147483647; // tope de Int en Postgres
-
-const esIdValido = (valor) => /^[1-9]\d*$/.test(valor) && Number(valor) <= ID_MAXIMO;
-
-const idInvalido = (mensaje) => {
-  const error = new Error(mensaje);
-  error.statusCode = 404;
-  return error;
-};
-
-// Ids que no son enteros positivos responden 404 antes de que un NaN llegue a Prisma.
-router.use((req, res, next) => {
-  if (!esIdValido(req.params.id)) return next(idInvalido('Trámite no encontrado.'));
-  next();
-});
-
-router.param('docId', (req, res, next, valor) => {
-  if (!esIdValido(valor)) return next(idInvalido('Documento no encontrado.'));
-  next();
-});
+router.param('docId', validarId('Documento no encontrado.'));
 
 router.post(
   '/',
