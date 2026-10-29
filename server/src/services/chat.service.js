@@ -38,7 +38,7 @@ Formato de salida (JSON):
 - "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío si tipo=respuesta).`;
 
 const INSTRUCCION_TOPE = `
-IMPORTANTE: ya se pidió aclaración el máximo de veces. En este turno "tipo" DEBE ser "respuesta": respondé con el trámite más probable del contexto, o si no hay forma de saberlo, indicá que la persona consulte en una mesa de entrada.`;
+IMPORTANTE: ya se pidió aclaración el máximo de veces, así que en este turno "tipo" DEBE ser "respuesta" (no vuelvas a pedir aclaración). Si podés identificar el trámite, respondé con ese. Si varios candidatos siguen siendo posibles, NO mandes a la persona a la mesa de entrada: respondé igual describiendo brevemente cada uno de esos candidatos para que pueda elegir, con sus IDs en "tramitesUsados" y "encontrado": true. Nunca devuelvas "encontrado": true con "tramitesUsados" vacío: ahí van los IDs de TODOS los candidatos que vas a describir (si el formato te pide escribirlos antes que el texto, como en la primera línea, decidilos primero). Sugerí consultar en una mesa de entrada solo si ningún candidato del contexto corresponde.`;
 
 const SYSTEM_PROMPT_STREAM_MULTIVUELTA = `
 Sos el asistente virtual de la administración pública de Formosa.
