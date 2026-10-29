@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BotEngine } from "../bloub/engine";
 import { SHAPE_BY_ID, DEFAULT_SHAPE } from "../bloub/skins";
 import { RAYON, DEMI_VIEWBOX } from "../bloub/repere";

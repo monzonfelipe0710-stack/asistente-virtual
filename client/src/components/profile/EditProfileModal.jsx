@@ -5,7 +5,7 @@ import { DetailModal, Icon, ICONS, Field } from "./ui";
 import { generoLabel } from "../../lib/genero";
 
 export default function EditProfileModal({ open, onClose, saved }) {
-  const { user, updateProfile, isStaff } = useAuth();
+  const { user, updateProfile } = useAuth();
   const toast = useToast();
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "" });
   const [error, setError] = useState("");

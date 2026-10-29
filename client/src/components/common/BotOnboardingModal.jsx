@@ -55,7 +55,7 @@ const STEPS = [
     title: "Elegí un trámite",
     description: "Estas tarjetas son los trámites más solicitados. Seleccioná una para preguntarle a ChatAP cómo iniciar esa gestión.",
     route: "/chat",
-    target: ".chatap-popular-grid",
+    target: [".chatap-popular-grid", ".chatap-popular-procedures"],
     action: null,
   },
   {
@@ -65,7 +65,7 @@ const STEPS = [
     title: "Encontrá el acceso a Tutorial",
     description: "El menú de accesibilidad reúne herramientas para adaptar la experiencia. Desde su opción «Tutorial» podés volver a recorrer esta guía cuando la necesites.",
     route: "/chat",
-    target: "#accessibility-tutorial-button",
+    target: ["#accessibility-tutorial-button", "#accessibility-menu"],
     action: null,
   },
   {
@@ -82,8 +82,9 @@ const STEPS = [
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function triggerOnboardingForUser(userId) {
+  const actor = userId || "guest";
   try {
-    localStorage.setItem(`${TRIGGER_KEY_PREFIX}${userId}`, "true");
+    localStorage.setItem(`${TRIGGER_KEY_PREFIX}${actor}`, "true");
     window.dispatchEvent(new CustomEvent("chatap-trigger-onboarding"));
   } catch {
     /* noop */
@@ -101,10 +102,11 @@ export function forceOpenTutorial() {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function resetTutorialForUser(userId) {
+  const actor = userId || "guest";
   try {
-    localStorage.removeItem(`${STORAGE_KEY_PREFIX}${userId}`);
-    localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${userId}`);
-    localStorage.removeItem(`${TUTORIAL_STEP_KEY}${userId}`);
+    localStorage.removeItem(`${STORAGE_KEY_PREFIX}${actor}`);
+    localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${actor}`);
+    localStorage.removeItem(`${TUTORIAL_STEP_KEY}${actor}`);
     window.dispatchEvent(new CustomEvent("chatap-force-open-tutorial"));
   } catch {
     /* noop */
@@ -130,6 +132,7 @@ export default function BotOnboardingModal() {
   const navigationRunRef = useRef(0);
 
   const checkShouldOpen = useCallback(() => {
+    if (isOpen) return;
     let isCompleted = false;
     let isTriggered = false;
     try {
@@ -148,9 +151,16 @@ export default function BotOnboardingModal() {
       setDirection("next");
       lastSuccessfulStep.current = 0;
     }
-  }, [tutorialActorKey, location.pathname, navigate]);
+  }, [isOpen, tutorialActorKey, location.pathname, navigate]);
 
   const forceOpen = useCallback(() => {
+    try {
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}${tutorialActorKey}`);
+      localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${tutorialActorKey}`);
+      localStorage.removeItem(`${TUTORIAL_STEP_KEY}${tutorialActorKey}`);
+    } catch {
+      // Storage no disponible
+    }
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     if (location.pathname !== "/") navigate("/");
     setIsOpen(true);
@@ -158,7 +168,7 @@ export default function BotOnboardingModal() {
     setStep(0);
     setDirection("next");
     lastSuccessfulStep.current = 0;
-  }, [location.pathname, navigate]);
+  }, [tutorialActorKey, location.pathname, navigate]);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => checkShouldOpen());
@@ -181,6 +191,11 @@ export default function BotOnboardingModal() {
   const handleFinish = useCallback((destination) => {
     if (finishTimerRef.current) window.clearTimeout(finishTimerRef.current);
     navigationRunRef.current += 1;
+    const root = document.documentElement;
+    delete root.dataset.tutorialHistoryDemo;
+    delete root.dataset.tutorialAccessibilityDemo;
+    window.dispatchEvent(new CustomEvent("chatap-close-history-for-tutorial"));
+    window.dispatchEvent(new CustomEvent("chatap-close-accessibility-for-tutorial"));
     try {
       localStorage.setItem(`${STORAGE_KEY_PREFIX}${tutorialActorKey}`, "true");
       localStorage.removeItem(`${TRIGGER_KEY_PREFIX}${tutorialActorKey}`);
@@ -272,18 +287,22 @@ export default function BotOnboardingModal() {
       window.dispatchEvent(new CustomEvent("chatap-open-history-for-tutorial"));
     } else {
       delete root.dataset.tutorialHistoryDemo;
+      window.dispatchEvent(new CustomEvent("chatap-close-history-for-tutorial"));
     }
 
-    if (isOpen && (currentId === "a11y" || currentId === "finish")) {
+    if (isOpen && currentId === "a11y") {
       root.dataset.tutorialAccessibilityDemo = "true";
       window.dispatchEvent(new CustomEvent("chatap-open-accessibility-for-tutorial"));
     } else {
       delete root.dataset.tutorialAccessibilityDemo;
+      window.dispatchEvent(new CustomEvent("chatap-close-accessibility-for-tutorial"));
     }
 
     return () => {
       delete root.dataset.tutorialHistoryDemo;
       delete root.dataset.tutorialAccessibilityDemo;
+      window.dispatchEvent(new CustomEvent("chatap-close-history-for-tutorial"));
+      window.dispatchEvent(new CustomEvent("chatap-close-accessibility-for-tutorial"));
     };
   }, [isOpen, step]);
 
@@ -300,7 +319,7 @@ export default function BotOnboardingModal() {
 
     // Esperar más tiempo para asegurar que la navegación se completó
     const targetRoute = current.route;
-    const delay = targetRoute && targetRoute !== location.pathname ? 500 : 100;
+    const delay = targetRoute && targetRoute !== location.pathname ? 500 : 250;
     const startMeasurement = () => {
       const maxAttempts = 200;
       let attempts = 0;
@@ -361,8 +380,6 @@ export default function BotOnboardingModal() {
               return;
             }
           }
-        } else {
-          setElementNotFound(true);
         }
 
         attempts += 1;
@@ -423,7 +440,7 @@ export default function BotOnboardingModal() {
       aria-modal="true"
       aria-label="Tutorial de bienvenida"
       aria-describedby="tour-description"
-      className={`tour-overlay fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overscroll-contain p-3 sm:p-6 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
+      className={`tour-overlay pointer-events-none fixed inset-0 z-50 flex flex-col items-center overflow-y-auto overscroll-contain p-3 sm:p-6 ${isClosing ? "animate-fade-out" : "animate-fade-in"}`}
     >
       {hasSpotlight && (() => {
         const left = Math.max(4, Math.min(spotlight.rect.left - 6, window.innerWidth - Math.min(spotlight.rect.width + 12, window.innerWidth - 8) - 4));
@@ -443,7 +460,7 @@ export default function BotOnboardingModal() {
 
       <div
         key={step}
-        className={`tour-card relative z-[60] my-auto flex w-full max-w-xl shrink-0 flex-col items-center gap-3 ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
+        className={`tour-card pointer-events-auto relative z-[60] my-auto flex w-full max-w-xl shrink-0 flex-col items-center gap-3 ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
         style={wrapStyle}
         transition="all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
       >

@@ -109,18 +109,7 @@ export default function Footer() {
               <ul className="m-0 p-0 list-none flex flex-col gap-2.5">
                 {INSTITUCIONAL.map((item) => (
                   <li key={item.label}>
-                    {item.isAction ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowTeamModal(true)}
-                        className="text-sm text-left p-0 bg-transparent border-0 cursor-pointer text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text inline-flex items-center gap-1.5 group"
-                      >
-                        <span>{item.label}</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-brand/10 text-brand font-semibold group-hover:bg-brand group-hover:text-white transition-colors">
-                          IPF · RRHH
-                        </span>
-                      </button>
-                    ) : item.to ? (
+                    {item.to ? (
                       <Link
                         to={item.to}
                         className="text-sm text-muted hover:text-brand-deep dark:hover:text-brand transition-colors no-underline font-neue-text"
