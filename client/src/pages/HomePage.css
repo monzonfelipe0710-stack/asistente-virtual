@@ -233,19 +233,6 @@
     max-width: 22rem;
   }
 
-  .hero-microcopy {
-    font-size: 0.65rem;
-  }
-
-  .hero-quick-prompts {
-    max-width: 100%;
-    gap: 0.4rem;
-  }
-
-  .hero-quick-pill {
-    padding: 0.45rem 0.8rem;
-    font-size: 0.75rem;
-  }
 }
 
 @media (max-height: 820px) and (min-width: 641px) {
@@ -259,62 +246,7 @@
   }
 }
 
-/* ── Hero: Quick Prompts & Trust Bar ────────────────────────── */
-.hero-quick-prompts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  max-width: 48rem;
-  margin: 0 auto;
-}
-
-.hero-quick-pill {
-  display: inline-flex;
-  min-height: 2.5rem;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid var(--color-line);
-  color: var(--color-ink);
-  text-decoration: none;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.hero-quick-pill:focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 3px;
-}
-
-.dark .hero-quick-pill {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--color-ink);
-}
-
-.hero-quick-pill:hover {
-  transform: translateY(-1px);
-  border-color: var(--color-brand);
-  background: rgba(47, 107, 255, 0.08);
-  color: var(--color-brand);
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.12);
-}
-
-.dark .hero-quick-pill:hover {
-  background: rgba(77, 125, 255, 0.15);
-  border-color: rgba(77, 125, 255, 0.35);
-  color: #93C5FD;
-  box-shadow: 0 4px 14px rgba(77, 125, 255, 0.2);
-}
-
-/* ── Hero: CTAs y microcopy ─────────────────────────────────── */
+/* ── Hero: CTAs ─────────────────────────────────────────────── */
 .hero-cta-group {
   display: flex;
   width: 100%;
@@ -354,15 +286,6 @@
 .hero-cta-secondary:focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 3px;
-}
-
-.hero-microcopy {
-  color: var(--color-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  line-height: 1.5;
-  text-transform: uppercase;
 }
 
 section[id] {
@@ -614,7 +537,6 @@ section[id] {
     transform: none;
   }
 
-  .hero-quick-pill:hover,
   .hero-cta-secondary:hover,
   .minimal-feature-card:hover {
     transform: none;
@@ -626,7 +548,6 @@ section[id] {
    los fondos semitransparentes se vuelven casi opacos para
    conservar la legibilidad. */
 @media (max-width: 767px) {
-  .hero-quick-pill,
   .bento-card,
   .hero-search-bar,
   .minimal-feature-card,
