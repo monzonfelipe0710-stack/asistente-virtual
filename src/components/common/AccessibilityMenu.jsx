@@ -177,7 +177,7 @@ export default function AccessibilityMenu() {
                 aria-label={`Tamaño del texto: ${o.label}`}
                 title={o.label}
                 style={{ fontSize: o.preview }}
-                className={`flex h-9 items-center justify-center rounded-lg font-bold leading-none transition-colors cursor-pointer ${
+                className={`accessibility-text-option flex h-9 items-center justify-center rounded-lg font-bold leading-none cursor-pointer ${
                   prefs.text === o.id
                     ? "bg-brand-deep text-white"
                     : "text-muted hover:text-ink"
@@ -187,7 +187,7 @@ export default function AccessibilityMenu() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted mt-1.5 mb-3">Actual: {currentLabel}</p>
+          <p className="accessibility-text-current text-xs text-muted mt-1.5 mb-3" aria-live="polite">Actual: {currentLabel}</p>
 
           <div className="space-y-2">
             <Switch
