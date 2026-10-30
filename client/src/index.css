@@ -2442,9 +2442,10 @@ select {
     pointer-events: auto;
     position: relative;
     display: inline-grid;
-    grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+    grid-template-columns: auto auto auto;
     align-items: center;
-    column-gap: 0.3rem;
+    justify-content: start;
+    column-gap: 0.55rem;
     padding: 0.35rem 0.35rem 0.35rem 0.5rem;
     border-radius: 9999px;
     background: rgba(10, 17, 36, 0.94);
