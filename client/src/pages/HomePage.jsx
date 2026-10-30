@@ -458,7 +458,7 @@ export default function HomePage() {
                 Una plataforma que conecta orientación y gestión institucional.
               </h2>
               <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted m-0 leading-relaxed">
-                Además de orientar consultas, ChatAP cuenta con herramientas de gestión para organizar el conocimiento institucional y acompañar la evolución del servicio.
+                ChatAP combina la orientación ciudadana con herramientas internas para organizar contenidos y acompañar el crecimiento del servicio.
               </p>
             </div>
 
@@ -486,7 +486,7 @@ export default function HomePage() {
               <svg className="h-4 w-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              La valoración de las respuestas permite identificar oportunidades de mejora y seguir la calidad de la orientación.
+              El proyecto contempla mecanismos de valoración para detectar oportunidades de mejora y seguir fortaleciendo la calidad de la orientación.
             </p>
           </div>
         </section>
