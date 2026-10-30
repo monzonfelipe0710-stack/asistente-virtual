@@ -169,7 +169,7 @@ export function AuthProvider({ children }) {
       if (!password || password.length < 8)
         throw new Error("La contraseña debe tener al menos 8 caracteres.");
 
-      const isCustomGender = cleanGender === "O" || cleanGender === "X";
+      const isCustomGender = cleanGender === "X";
       const cleanNombre = (nombre || "").trim();
       const cleanApellido = (apellido || "").trim();
       if (isCustomGender && (!cleanNombre || !cleanApellido)) {
@@ -181,14 +181,16 @@ export function AuthProvider({ children }) {
 
       // Cuenta ciudadana: el backend valida los datos contra el padrón.
       try {
-        const registro = await registroCiudadanoRequest({
+        const registroPayload = {
           dni: cleanDni,
           genero: cleanGender,
           email: cleanEmail,
           password,
-          nombre: cleanNombre,
-          apellido: cleanApellido,
-        });
+          ...(cleanGender === "X"
+            ? { nombre: cleanNombre, apellido: cleanApellido }
+            : {}),
+        };
+        const registro = await registroCiudadanoRequest(registroPayload);
         const data = await loginRequest({ email: cleanEmail, password });
 
         const sessionUser = {
