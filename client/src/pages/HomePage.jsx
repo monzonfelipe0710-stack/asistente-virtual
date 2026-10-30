@@ -248,17 +248,6 @@ export default function HomePage() {
               <InteractiveChatMockup />
             </div>
 
-            <div className="flex flex-col items-center gap-3 pt-2 text-center">
-              <Link
-                to="/chat"
-                onPointerEnter={prefetchChat}
-                className="btn-primary no-underline text-sm sm:text-base font-bold normal-case tracking-normal px-8 py-3.5 rounded-full inline-flex items-center gap-2 shadow-lg shadow-brand/20 transition-all"
-              >
-                <span>Consultar ahora</span>
-                <span aria-hidden="true">→</span>
-              </Link>
-              <p className="text-xs text-muted m-0">Sin registro. Probalo con tu propia consulta.</p>
-            </div>
           </div>
         </section>
 
