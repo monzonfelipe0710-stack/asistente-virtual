@@ -36,18 +36,10 @@ const GENERO_OPCIONES = [
     ),
   },
   {
-    valor: "Otro",
+    valor: "Otro / Prefiero no decirlo",
     icono: (
       <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-      </svg>
-    ),
-  },
-  {
-    valor: "Prefiero no decirlo",
-    icono: (
-      <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M10.586 10.586a2 2 0 002.828 2.828L18 18m-6.5-6.5a4 4 0 00-5.657-5.657l1.5 1.5m-1.5 12.5l3-3m9.657 0l-1.5-1.5m-6.5 6.5l-3-3" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m-9-9h18M5.64 5.64l12.72 12.72m0-12.72L5.64 18.36" />
       </svg>
     ),
   },
@@ -96,7 +88,7 @@ export default function LoginRegisterPage() {
 
   const from = location.state?.from?.pathname || "/";
   const isLogin = mode === "login";
-  const requiresNameAndLastName = gender === "Otro" || gender === "Prefiero no decirlo";
+  const requiresNameAndLastName = gender === "Otro / Prefiero no decirlo";
 
   // Envío de formulario estándar (Email + Contraseña)
   async function handleSubmit(e) {
@@ -463,13 +455,13 @@ export default function LoginRegisterPage() {
                       </div>
                       <p id="register-gender-hint" className="mt-1 text-[11px] text-muted">
                         {requiresNameAndLastName
-                          ? "Al seleccionar esta opción, podés indicar tu nombre y apellido a continuación."
+                          ? "Para esta opción necesitamos tu nombre y apellido para verificar tu identidad con el padrón."
                           : "Campo obligatorio. Tus datos se validan contra el padrón de turnos."}
                       </p>
                     </div>
                   </Collapse>
 
-                  {/* Nombre y Apellido: se despliega sólo si elige "Otro" o "Prefiero no decirlo" */}
+                  {/* Nombre y Apellido: se solicitan únicamente para la opción "Otro / Prefiero no decirlo". */}
                   <Collapse open={!isLogin && requiresNameAndLastName}>
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -507,7 +499,7 @@ export default function LoginRegisterPage() {
                         </div>
                       </div>
                       <p className="text-[11px] text-muted m-0">
-                        Completá tu nombre y apellido para personalizar tu perfil y tus trámites en ChatAP.
+                        Ingresá tus datos tal como figuran en el padrón. Se utilizarán únicamente para verificar tu identidad.
                       </p>
                     </div>
                   </Collapse>
