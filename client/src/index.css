@@ -3692,6 +3692,35 @@ html[data-a11y-readable="true"] label {
     background: transparent;
   }
 
+  /* Mantiene estable el area central al alternar entre bienvenida y mensajes. */
+  .chat-message-scroll {
+    min-height: 0;
+    scrollbar-gutter: stable;
+    overflow-anchor: none;
+  }
+
+  .chat-new-conversation-button {
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .chat-new-conversation-button:focus-visible {
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 360px) {
+    .chat-new-conversation-button {
+      gap: 0.375rem;
+      padding-inline: 0.7rem;
+      font-size: 0.8125rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chat-new-conversation-button {
+      transition: none !important;
+    }
+  }
+
   .chat-sidebar-frame {
     border-color: color-mix(in srgb, var(--color-line) 75%, transparent);
     background: rgba(248, 250, 253, 0.92);
