@@ -446,40 +446,53 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        {/* 4 · Presentación del asistente (Showcase Real y Directo) */}
-        <section id="en-accion" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
-          <div className="ed-max flex flex-col items-center gap-12">
-            <div className="text-center max-w-2xl mx-auto space-y-3">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+        {/* 4 · Presentación del asistente */}
+        <section id="en-accion" className="section-bleed assistant-showcase border-t border-line/40">
+          <div className="ed-max assistant-showcase__inner">
+            <header className="assistant-showcase__intro">
+              <span className="assistant-showcase__eyebrow">
+                <span className="assistant-showcase__eyebrow-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42m0-12.72-1.42 1.42m-9.88 9.88-1.42 1.42"/><circle cx="12" cy="12" r="4"/></svg>
+                </span>
                 Demo interactiva
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
-                Así puede ser una consulta en ChatAP.
+              <h2 className="assistant-showcase__title">
+                Así puede ser una consulta <span>en ChatAP.</span>
               </h2>
-              <p className="text-base text-muted m-0 leading-relaxed">
-                Con un ejemplo sencillo, conocé cómo se presenta una consulta y cómo se organiza una orientación con información y próximos pasos.
+              <p className="assistant-showcase__lead">
+                Conocé cómo una pregunta cotidiana puede convertirse en una orientación clara, con información útil y próximos pasos para continuar.
               </p>
+            </header>
+
+            <div className="assistant-showcase__stage">
+              <div className="assistant-showcase__stage-glow" aria-hidden="true" />
+              <div className="assistant-showcase__stage-label">
+                <span className="assistant-showcase__live-dot" />
+                Así se vería una conversación
+                <span className="assistant-showcase__label-tag">Ejemplo ilustrativo</span>
+              </div>
+              <div className="assistant-showcase__mockup">
+                <InteractiveChatMockup />
+              </div>
+              <p className="assistant-showcase__caption">La conversación es ilustrativa y sirve para conocer la experiencia. Las consultas reales se realizan en el asistente.</p>
             </div>
 
-            {/* Maqueta Interactiva Limpia y Enmarcada */}
-            <div className="w-full max-w-4xl mx-auto">
-              <InteractiveChatMockup />
-            </div>
-
-            <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <div className="assistant-showcase__action">
               <Link
                 to="/chat"
                 onPointerEnter={prefetchChat}
-                className="btn-primary no-underline text-sm sm:text-base font-bold normal-case tracking-normal px-8 py-3.5 rounded-full inline-flex items-center gap-2 shadow-lg shadow-brand/20 transition-all"
+                className="assistant-showcase__cta btn-primary no-underline"
               >
-                <span>Consultar ahora</span>
-                <span aria-hidden="true">→</span>
+                <span>Empezar una consulta</span>
+                <span className="assistant-showcase__cta-icon" aria-hidden="true">↗</span>
               </Link>
-              <p className="text-xs text-muted m-0">La conversación que ves es ilustrativa. Iniciá una consulta para hablar con ChatAP.</p>
+              <span className="assistant-showcase__action-note">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Podés comenzar sin conocer términos administrativos.
+              </span>
             </div>
           </div>
         </section>
-
         {/* 5 · Bonus: ecosistema y roadmap */}
         <section id="capacidades" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
           <div className="ed-max flex flex-col items-center gap-12">
