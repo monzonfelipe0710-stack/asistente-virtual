@@ -36,10 +36,18 @@ const GENERO_OPCIONES = [
     ),
   },
   {
-    valor: "Otro / Prefiero no decirlo",
+    valor: "Otro",
     icono: (
       <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m-9-9h18M5.64 5.64l12.72 12.72m0-12.72L5.64 18.36" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m-9-9h18" />
+      </svg>
+    ),
+  },
+  {
+    valor: "Prefiero no decirlo",
+    icono: (
+      <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 1116 0 8 8 0 01-16 0zm5-3h6m-6 6h6" />
       </svg>
     ),
   },
@@ -88,7 +96,7 @@ export default function LoginRegisterPage() {
 
   const from = location.state?.from?.pathname || "/";
   const isLogin = mode === "login";
-  const requiresNameAndLastName = gender === "Otro / Prefiero no decirlo";
+  const requiresNameAndLastName = gender === "Otro" || gender === "Prefiero no decirlo";
 
   // Envío de formulario estándar (Email + Contraseña)
   async function handleSubmit(e) {
@@ -461,7 +469,7 @@ export default function LoginRegisterPage() {
                     </div>
                   </Collapse>
 
-                  {/* Nombre y Apellido: se solicitan únicamente para la opción "Otro / Prefiero no decirlo". */}
+                  {/* Nombre y Apellido: se solicitan para las opciones que el backend agrupa bajo el código X. */}
                   <Collapse open={!isLogin && requiresNameAndLastName}>
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
