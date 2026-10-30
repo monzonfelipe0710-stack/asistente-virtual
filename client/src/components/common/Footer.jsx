@@ -17,8 +17,7 @@ const INSTITUCIONAL = [
 const SOPORTE = [
   { label: "Mesa de ayuda", to: "/contacto" },
   { label: "Preguntas frecuentes", to: "/#preguntas" },
-  { label: "Términos y condiciones", to: "/terminos" },
-  { label: "Privacidad", to: "/privacidad" },
+  { label: "Accesibilidad", to: "/contacto?motivo=accesibilidad" },
 ];
 
 const SOCIAL_LINKS = [
