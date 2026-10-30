@@ -468,8 +468,8 @@ export default function HomePage() {
               <div className="assistant-showcase__stage-glow" aria-hidden="true" />
               <div className="assistant-showcase__stage-label">
                 <span className="assistant-showcase__live-dot" />
-                Así se vería una conversación
-                <span className="assistant-showcase__label-tag">Ejemplo ilustrativo</span>
+                Seguí el recorrido de una consulta
+                <span className="assistant-showcase__label-tag">Experiencia interactiva</span>
               </div>
               <div className="assistant-showcase__mockup">
                 <InteractiveChatMockup />
