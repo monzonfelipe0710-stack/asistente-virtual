@@ -124,6 +124,7 @@ export default function AdminSidebar({ open, onToggle }) {
 
   return (
     <aside
+      id="admin-sidebar"
       className={`fixed top-0 left-0 bottom-0 z-40 flex flex-col overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${isMobile && !open ? '-translate-x-full' : ''}`}
       style={{
         backgroundColor: "var(--sidebar-bg)",
