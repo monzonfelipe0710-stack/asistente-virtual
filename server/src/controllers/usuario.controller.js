@@ -144,7 +144,7 @@ export const registrarCiudadano = async (req, res) => {
     throw error;
   }
 
-  if (await usuarioService.buscarPorDni(datos.dni, datos.genero)) {
+  if (await usuarioService.buscarPorDni(datos.dni)) {
     const error = new Error("Ya existe una cuenta registrada con ese DNI.");
     error.statusCode = 409;
     throw error;

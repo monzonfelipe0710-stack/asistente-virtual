@@ -18,7 +18,7 @@ export const login = async (req, res) => {
 
   const usuario = email
     ? await prisma.usuario.findUnique({ where: { email } })
-    : await usuarioService.buscarUnicoPorDni(dni);
+    : await usuarioService.buscarPorDni(dni);
 
   // 1. Identidad: email o DNI existe + contraseña correcta (mensaje genérico a propósito)
   if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {

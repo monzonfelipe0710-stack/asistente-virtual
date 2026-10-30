@@ -27,7 +27,6 @@ const credencialesInvalidas = { statusCode: 401, message: 'Credenciales inválid
 
 describe('login', () => {
   let dni;
-  let dniRepetido;
 
   before(async () => {
     await prisma.usuario.deleteMany({ where: { email: { endsWith: DOMINIO } } });
@@ -35,14 +34,7 @@ describe('login', () => {
     const base = { nombre: 'Prueba', passwordHash, rol: 'CIUDADANO', estado: 'APROBADO' };
 
     dni = await dniLibre();
-    dniRepetido = await dniLibre();
-    await prisma.usuario.createMany({
-      data: [
-        { ...base, email: `ana${DOMINIO}`, dni, genero: 'F' },
-        { ...base, email: `rep-f${DOMINIO}`, dni: dniRepetido, genero: 'F' },
-        { ...base, email: `rep-m${DOMINIO}`, dni: dniRepetido, genero: 'M' },
-      ],
-    });
+    await prisma.usuario.create({ data: { ...base, email: `ana${DOMINIO}`, dni, genero: 'F' } });
   });
 
   after(async () => {
@@ -63,10 +55,6 @@ describe('login', () => {
 
   it('con un DNI inexistente responde el 401 genérico', async () => {
     await assert.rejects(llamarLogin({ dni: await dniLibre(), password: PASSWORD }), credencialesInvalidas);
-  });
-
-  it('con un DNI que tienen dos cuentas responde el 401 genérico', async () => {
-    await assert.rejects(llamarLogin({ dni: dniRepetido, password: PASSWORD }), credencialesInvalidas);
   });
 
   it('con la contraseña incorrecta responde el mismo 401 genérico', async () => {
