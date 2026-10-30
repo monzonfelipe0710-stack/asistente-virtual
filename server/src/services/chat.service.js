@@ -17,7 +17,7 @@ Podés hacer dos cosas:
 
 Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
-- Un candidato "corresponde" solo si es lo que la persona pide. Si NINGÚN candidato corresponde, no pidas aclaración: devolvé tipo:"respuesta" con encontrado:false (ej.: piden "licencia de conducir" y los candidatos son licencias de pesca o laborales → ninguno corresponde → encontrado:false).
+- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo:"respuesta" con encontrado:false.
 - Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
@@ -48,7 +48,7 @@ Podés hacer dos cosas:
 
 Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
-- Un candidato "corresponde" solo si es lo que la persona pide. Si NINGÚN candidato corresponde, no pidas aclaración: usá tipo:"respuesta" con encontrado:false.
+- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo:"respuesta" con encontrado:false.
 - Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
