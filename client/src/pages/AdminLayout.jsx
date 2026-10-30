@@ -15,6 +15,7 @@ const SECTION_TITLES = {
   "/admin/siged": "Integración SIGED",
   "/admin/configuracion": "Configuración",
   "/admin/reportes": "Reportes",
+  "/admin/calificacion": "Calificación",
 };
 
 export default function AdminLayout() {
@@ -41,8 +42,9 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0 });
-  }, [pathname]);
+    mainRef.current?.scrollTo({ top: 0, behavior: "instant" });
+    if (isMobile) setSidebarOpen(false);
+  }, [pathname, isMobile]);
 
   const allowed =
     !!user && (userRole === "SUPERUSUARIO" || userRole === "ADMINISTRADOR");
@@ -79,10 +81,11 @@ export default function AdminLayout() {
   return (
     <div className="admin-layout-shell h-screen overflow-hidden flex transition-colors duration-200" style={{ backgroundColor: "var(--color-paper)" }}>
       {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50"
+        <button
+          type="button"
+          className="fixed inset-0 z-30 cursor-default border-0 bg-black/50 backdrop-blur-[2px]"
           onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
+          aria-label="Cerrar menú de administración"
         />
       )}
       <div data-print-hide>
@@ -93,15 +96,17 @@ export default function AdminLayout() {
         style={{ marginLeft: isMobile ? 0 : (sidebarOpen ? "var(--sidebar-width)" : "var(--sidebar-collapsed-width)") }}
       >
         <header
-          className="h-16 shrink-0 flex items-center justify-between px-5 lg:px-8 border-b border-line/70 backdrop-blur-md"
+          className="sticky top-0 z-20 h-16 shrink-0 flex items-center justify-between px-5 lg:px-8 border-b border-line/70 backdrop-blur-md"
           data-print-hide
           style={{ backgroundColor: "color-mix(in srgb, var(--color-paper) 85%, transparent)" }}
         >
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen((o) => !o)}
-              className="lg:hidden p-2 rounded-lg hover:bg-mist/70 transition-colors"
+              className="lg:hidden p-2 rounded-xl hover:bg-mist/70 transition-colors"
               aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={sidebarOpen}
+              aria-controls="admin-sidebar"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {sidebarOpen ? (
@@ -129,7 +134,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main ref={mainRef} aria-label="Panel de administración" className="admin-layout-main flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} id="admin-main" tabIndex={-1} aria-label="Panel de administración" className="admin-layout-main flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>
