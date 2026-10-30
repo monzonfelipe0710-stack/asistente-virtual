@@ -153,11 +153,12 @@ Todas las respuestas son JSON. Los errores tienen la forma:
 { "error": "mensaje para mostrar", "codigo": "OPCIONAL" }
 ```
 
-`codigo` solo viene cuando el cliente tiene que reaccionar distinto según el caso. Hoy hay uno:
+`codigo` solo viene cuando el cliente tiene que reaccionar distinto según el caso. Hoy existe
+uno solo:
 
 | `codigo` | Status | Cuándo |
 |---|---|---|
-| `PASSWORD_CHANGE_REQUIRED` | 403 | Cualquier ruta autenticada, si el usuario tiene que cambiar la contraseña (empleado en su primer ingreso). Solo puede usar `POST /api/auth/cambiar-password` |
+| `PASSWORD_CHANGE_REQUIRED` | 403 | El usuario tiene que cambiar la contraseña (ver [Cambio de contraseña obligatorio](#cambio-de-contraseña-obligatorio)) |
 
 | Status | Cuándo |
 |---|---|
@@ -189,11 +190,56 @@ trámite. Las rutas con `:id` responden 404 si el id no es un entero positivo.
 
 - El email se normaliza (trim y minúsculas) en login, recuperar, registro y alta de empleados.
 - Login: todo fallo de identidad (email o DNI inexistente, contraseña incorrecta) responde
-  401 `Credenciales inválidas`. Con la contraseña correcta y la cuenta no `APROBADO`,
-  responde 403 con el motivo. Mandar email y DNI juntos, o ninguno, es 400.
+  401 `{ "error": "Credenciales inválidas" }`. Con la contraseña correcta y la cuenta no
+  `APROBADO`, responde 403 con el motivo (pendiente, rechazada o suspendida). Mandar email y
+  DNI juntos, o ninguno, es 400 `{ "error": "Ingresá el email o el DNI, uno de los dos." }`.
 - Recuperar: el link (`<origen>/restablecer?token=...`) vence en 1 hora y es de un solo uso.
   Se arma con el origen del pedido si está en `CORS_ORIGIN`; si no, con `FRONTEND_URL`.
 - Contraseñas: mínimo 8 caracteres.
+
+**Login de un ciudadano** (`{ "dni": "30123456", "password": "..." }` o con `email`) → 200:
+
+```json
+{
+  "token": "<jwt>",
+  "usuario": { "id": 69, "nombre": "ANA GÓMEZ", "email": "ana@mail.com", "rol": "CIUDADANO", "debeCambiarPassword": false }
+}
+```
+
+**Login de un empleado que todavía tiene que cambiar la contraseña** → también 200, con
+token. El login no lo rechaza: el front tiene que mirar `debeCambiarPassword`.
+
+```json
+{
+  "token": "<jwt>",
+  "usuario": { "id": 70, "nombre": "Juan Pérez", "email": "juan@gob.ar", "rol": "ADMINISTRADOR", "debeCambiarPassword": true }
+}
+```
+
+#### Cambio de contraseña obligatorio
+
+Un empleado creado con `POST /api/usuarios` entra con `debeCambiarPassword: true`. Con ese
+token:
+
+- **Responden 403** `{ "error": "Debés cambiar tu contraseña antes de continuar.", "codigo": "PASSWORD_CHANGE_REQUIRED" }`
+  todas las rutas que exigen autenticación: usuarios, sectores, mesas, trámites (salvo
+  `/publicados`), alta y baja de documentos, métricas y `/api/consultas/mias`.
+- **No responden 403** las rutas con token opcional (`/api/chat`, `/api/chat/stream` y la
+  lista y descarga de documentos): tratan al usuario como anónimo.
+- **La única ruta que sirve** es `POST /api/auth/cambiar-password` con
+  `{ passwordActual, passwordNueva }`. Responde 200 con un token nuevo:
+
+```json
+{
+  "mensaje": "Contraseña actualizada.",
+  "token": "<jwt nuevo>",
+  "usuario": { "id": 70, "nombre": "Juan Pérez", "email": "juan@gob.ar", "rol": "ADMINISTRADOR", "debeCambiarPassword": false }
+}
+```
+
+El token anterior deja de servir: responde 401 `Tu sesión expiró porque se cambió la
+contraseña. Iniciá sesión de nuevo.` Lo mismo pasa con todos los tokens del usuario después
+de restablecer la contraseña por correo. `passwordActual` incorrecta → 400.
 
 ### Usuarios
 
@@ -208,19 +254,39 @@ trámite. Las rutas con `:id` responden 404 si el id no es un entero positivo.
 | PATCH | `/api/usuarios/:id/suspender` | SU | → `{ mensaje, usuario }`. Solo sobre `APROBADO`, no sobre uno mismo |
 | PATCH | `/api/usuarios/:id/reactivar` | SU | → `{ mensaje, usuario }`. Solo sobre `SUSPENDIDO` |
 
-**Registro de ciudadanos.** Body `{ dni, genero, email, password }`, con `dni` de 7 u 8
-dígitos y `genero` `M`, `F` o `X`. Queda `APROBADO` y con el nombre del padrón, no el tipeado.
+#### Registro de ciudadanos
 
-| `genero` | Body extra | Verificación |
+`POST /api/usuarios/registro-ciudadano`, público, 5 por hora por IP. `dni` de 7 u 8 dígitos
+(string), `password` de al menos 8 caracteres. La cuenta queda `APROBADO` y puede iniciar
+sesión enseguida. **Se guarda el nombre y apellido del padrón, nunca el tipeado.**
+
+| `genero` | Body | Verificación |
 |---|---|---|
-| `M` o `F` | — (`nombre` y `apellido` se ignoran) | Se consulta el padrón con ese sexo |
-| `X` | `nombre` y `apellido` obligatorios | El padrón solo distingue M y F: se consulta con `M` y después con `F`, y se acepta la persona cuyo nombre y apellido coincidan con los tipeados |
+| `M` | `{ "dni": "30123456", "genero": "M", "email": "...", "password": "..." }` | Se consulta el padrón con `M`. Si vienen `nombre` o `apellido`, se ignoran |
+| `F` | `{ "dni": "30123456", "genero": "F", "email": "...", "password": "..." }` | Se consulta el padrón con `F`. Ídem |
+| `X` | `{ "dni": "30123456", "genero": "X", "nombre": "Ana", "apellido": "Gómez", "email": "...", "password": "..." }` | `nombre` y `apellido` son **obligatorios**. El padrón solo distingue M y F: se consulta con `M` y después con `F`, y se acepta la persona cuyo nombre y apellido coincidan con los tipeados. Se guarda con `genero: "X"` |
 
-La comparación ignora mayúsculas y tildes y va por palabras: cada palabra tipeada del
-nombre tiene que estar en el nombre del padrón, y lo mismo con el apellido (se puede
-escribir solo parte de un nombre compuesto, o en otro orden). Respuestas: 409 si el email
-o el DNI ya están registrados (el DNI es único, sin importar el género), 422 si el padrón
-no confirma la identidad, 503 si el padrón no responde.
+La comparación de X ignora mayúsculas y tildes y va por palabras: cada palabra tipeada del
+nombre tiene que estar en el nombre del padrón, y lo mismo con el apellido (sirve escribir
+solo parte de un nombre compuesto, o en otro orden; no sirve cruzar nombre con apellido).
+
+Respuesta 201:
+
+```json
+{
+  "mensaje": "Cuenta de ciudadano creada. Ya podés iniciar sesión.",
+  "usuario": { "id": 71, "nombre": "ANA GÓMEZ", "email": "ana@mail.com", "rol": "CIUDADANO" }
+}
+```
+
+| Status | `error` | Cuándo |
+|---|---|---|
+| 400 | `El DNI debe tener 7 u 8 dígitos.`, `El género debe ser uno de: M, F, X`, `El nombre es obligatorio.`, `El apellido es obligatorio.`, `El email no es válido`, `La contraseña debe tener al menos 8 caracteres.` | Validación (se informa el primer error) |
+| 409 | `Ya existe una cuenta registrada con ese correo.` | Email ya usado |
+| 409 | `Ya existe una cuenta registrada con ese DNI.` | DNI ya usado, **con cualquier género**: el DNI es único |
+| 422 | `No pudimos verificar tus datos en el padrón. Revisá el DNI y el sexo.` | El padrón no tiene a la persona con ese sexo o, con X, ni con M ni con F, o el nombre y apellido no coinciden. Mismo mensaje en todos los casos |
+| 503 | `No pudimos verificar tu identidad ahora mismo porque el servicio de padrón no está disponible. Probá de nuevo en unos minutos.` | El padrón no responde o responde con error |
+| 429 | `Demasiadas solicitudes de registro. Probá de nuevo más tarde.` | Más de 5 registros por hora desde la misma IP |
 
 ### Sectores
 
@@ -264,8 +330,8 @@ o editar, el embedding se recalcula en segundo plano; al publicar se genera si f
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
 | POST | `/api/tramites/:id/documentos` | ADM del sector | `multipart/form-data`: `archivo` (PDF o DOCX, hasta 10 MB) y `nombre` opcional → 201 `{ id, nombre, tipo, createdAt, tramiteId }` |
-| GET | `/api/tramites/:id/documentos` | público, 60 / min | `[{ id, nombre, tipo, createdAt }]` |
-| GET | `/api/tramites/:id/documentos/:docId/descargar` | público, 60 / min | `{ url }` firmada por 5 minutos |
+| GET | `/api/tramites/:id/documentos` | público, 60 / min, token opcional | `[{ id, nombre, tipo, createdAt }]` |
+| GET | `/api/tramites/:id/documentos/:docId/descargar` | público, 60 / min, token opcional | `{ url }` firmada por 5 minutos |
 | DELETE | `/api/tramites/:id/documentos/:docId` | ADM del sector | 204 |
 
 Las rutas públicas siguen la visibilidad del trámite: si está publicado, cualquiera; si
@@ -275,8 +341,15 @@ es un borrador, solo un SU o un ADM del sector (con token), y al resto se le res
 
 | Método | Ruta | Acceso |
 |---|---|---|
-| POST | `/api/chat` | público, 10 / min. Token opcional: si viene, la consulta queda en el historial del usuario |
+| POST | `/api/chat` | público, token opcional |
 | POST | `/api/chat/stream` | ídem, respuesta por Server-Sent Events |
+
+- **Rate limit:** 10 pedidos por minuto por IP, **compartidos** entre las dos rutas, y
+  cuentan también los pedidos rechazados por validación. Al pasarse: 429
+  `{ "error": "Demasiadas consultas. Esperá un momento e intentá de nuevo." }`.
+- **Token opcional:** si viene y es válido, la consulta queda en el historial del usuario
+  (`/api/consultas/mias`). Si es inválido, venció o el usuario tiene que cambiar la
+  contraseña, se responde igual, como anónimo.
 
 **Body (los dos):**
 
@@ -296,7 +369,9 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 }
 ```
 
-`pregunta` hasta 500 caracteres; cada `texto` hasta 2000.
+`pregunta` hasta 500 caracteres; `mensajes` de 1 a 20, cada `texto` de 1 a 2000 y `rol`
+`usuario` o `asistente`. Si vienen los dos, se usa `mensajes`. Errores 400:
+`Falta la pregunta o los mensajes.` y `El último mensaje debe ser del usuario.`
 
 **Respuesta de `POST /api/chat`:**
 
@@ -320,33 +395,84 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 | `opciones` | Trámites entre los que elegir, solo en una aclaración |
 | `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (no se registran) o si falló el registro |
 
-Para seguir después de una aclaración, se reenvía la conversación en `mensajes` con la
-elección del usuario. Después de 2 aclaraciones el asistente responde sí o sí.
+Para seguir después de una aclaración, se reenvía la conversación completa en `mensajes`,
+con la elección del usuario como último mensaje. **Tope de aclaraciones:** si `mensajes`
+ya trae 2 o más mensajes con `rol: "asistente"`, el asistente responde sí o sí (`tipo:
+"respuesta"`), describiendo los candidatos posibles si sigue sin poder elegir.
+
+El texto (`respuesta` y los `delta` del streaming) es texto plano, sin Markdown.
 
 **Contrato SSE de `POST /api/chat/stream`.** `Content-Type: text/event-stream`. Cada evento
 es una línea `data: <json>` seguida de una línea en blanco:
 
 | Evento | Forma | Cuándo |
 |---|---|---|
-| `delta` | `{ "tipo": "delta", "texto": "..." }` | Varias veces: fragmentos del texto, en orden |
-| `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado", "tramitesEncontrados", "opciones", "consultaId" }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming |
-| `error` | `{ "tipo": "error", "mensaje": "..." }` | Si algo falla a mitad del stream |
+| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la respuesta sale de la caché o no se encontró nada, llega entera en un solo `delta` |
+| `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "consultaId": number \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
+| `error` | `{ "tipo": "error", "mensaje": "Ocurrió un error procesando la consulta." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` |
 
-Los errores de validación y el rate limit llegan antes de abrir el stream, como JSON común.
-La conexión se cierra después de `fin` o `error`.
+Ejemplo:
+
+```
+data: {"tipo":"delta","texto":"Para la licencia por maternidad "}
+
+data: {"tipo":"delta","texto":"tenés que presentar..."}
+
+data: {"tipo":"fin","tipoRespuesta":"respuesta","encontrado":true,"tramitesEncontrados":[{"id":19,"nombre":"Licencia por maternidad"}],"opciones":[],"consultaId":417}
+```
+
+Los errores de validación y el rate limit llegan antes de abrir el stream, como JSON común
+con su status. La conexión se cierra después de `fin` o `error`.
 
 ### Métricas e historial
 
 | Método | Ruta | Acceso | Respuesta |
 |---|---|---|---|
-| GET | `/api/metricas/por-tramite` | SU, ADM | `[{ tramiteId, nombre, sector: { id, nombre }, cantidad }]`, de mayor a menor. Con `?alcance=propias`, un ADM ve solo sus sectores; un SU ve todo |
-| GET | `/api/metricas/sin-respuesta` | SU, ADM | Últimas 50: `[{ id, textoConsulta, encontrado, fecha, tramiteId }]`. No incluye quién preguntó |
-| GET | `/api/consultas/mias` | cualquier autenticado | Últimas 50 del usuario: `[{ id, textoConsulta, encontrado, fecha, tramite: { id, nombre } \| null }]` |
+| GET | `/api/metricas/por-tramite` | SU, ADM | Ver abajo |
+| GET | `/api/metricas/sin-respuesta` | SU, ADM | Ver abajo |
+| GET | `/api/consultas/mias` | cualquier autenticado (incluido `CIUDADANO`) | Ver abajo |
+
+**`GET /api/metricas/por-tramite`**: cantidad de consultas respondidas por trámite, de mayor
+a menor. Sin `alcance`, de todo el sistema. Con `?alcance=propias`, un ADM ve solo los
+trámites de sus sectores (si no tiene sectores asignados, `[]`); un SU ve todo, igual que sin
+`alcance`.
+
+```json
+[{ "tramiteId": 19, "nombre": "Licencia por maternidad", "sector": { "id": 3, "nombre": "Departamento de Licencias" }, "cantidad": 12 }]
+```
+
+**`GET /api/metricas/sin-respuesta`**: las últimas 50 consultas que no encontraron trámite, de
+todo el sistema, de la más nueva a la más vieja. No incluye quién preguntó. `encontrado` es
+siempre `false` y `tramiteId` siempre `null`.
+
+```json
+[{ "id": 512, "textoConsulta": "licencia por paternidad", "encontrado": false, "fecha": "2026-10-30T14:02:11.000Z", "tramiteId": null }]
+```
+
+**`GET /api/consultas/mias`**: las últimas 50 consultas del usuario del token, de la más nueva a
+la más vieja. `tramite` es `null` si no se encontró trámite o si el trámite se borró.
+
+```json
+[{ "id": 417, "textoConsulta": "licencia por maternidad", "encontrado": true, "fecha": "2026-10-30T14:05:40.000Z", "tramite": { "id": 19, "nombre": "Licencia por maternidad" } }]
+```
 
 ### Otros
 
 `GET /api/health` responde `{ "status": "ok", "servicio": "ChatAP API" }`. Cualquier ruta no
 registrada responde 404 `{ "error": "Ruta no encontrada." }`.
+
+## Cambios del contrato
+
+Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8be1`):
+
+- **Login por DNI:** `POST /api/auth/login` acepta `{ dni, password }` además de `{ email, password }`; exactamente uno de los dos (400 si vienen ambos o ninguno).
+- **Email normalizado:** login, recuperar, registro y alta de empleados hacen trim y pasan el email a minúsculas antes de validar y guardar.
+- **`codigo` en errores:** los errores pueden traer `{ error, codigo }`; hoy el único es `PASSWORD_CHANGE_REQUIRED` (403).
+- **`consultaId`:** `POST /api/chat` y el evento `fin` de `/api/chat/stream` devuelven `consultaId` (`null` en aclaraciones).
+- **`sin-respuesta` sin `usuarioId`:** `GET /api/metricas/sin-respuesta` devuelve `{ id, textoConsulta, encontrado, fecha, tramiteId }`.
+- **`alcance=propias` para el SU:** `GET /api/metricas/por-tramite?alcance=propias` con un superusuario devuelve todo en vez de `[]`.
+- **Género X:** el registro acepta `genero: "X"` con `nombre` y `apellido` obligatorios, verificados contra el padrón.
+- **DNI único:** un DNI ya registrado responde 409 aunque se registre con otro género.
 
 ## Cómo funciona el chat
 
