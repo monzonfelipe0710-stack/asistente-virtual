@@ -20,7 +20,7 @@ const casos = [
   { pregunta: 'necesito un certificado', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'licencia', esperado: { tipo: 'aclaracion' } },
-  { pregunta: 'licencia por enfermedad', esperado: { tipo: 'respuesta', encontrado: true } }, // ojo: duplicados 21-26
+  { pregunta: 'licencia por enfermedad', esperado: { tipo: 'aclaracion', incluye: [20] } },
   { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
   { pregunta: 'hola', esperado: { tipo: 'respuesta', encontrado: false } },
   { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false } },
