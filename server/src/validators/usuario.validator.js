@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { EstadoUsuario, Genero } from '@prisma/client';
+import { emailNormalizado } from './auth.validators.js';
 
 const ESTADOS = Object.values(EstadoUsuario);
 const GENEROS = Object.values(Genero);
@@ -17,13 +18,13 @@ export const asignarSectoresSchema = z.object ({
 export const registroCiudadanoSchema = z.object({
   dni: z.string().regex(/^\d{7,8}$/, 'El DNI debe tener 7 u 8 dígitos.'),
   genero: z.enum(GENEROS, { error: () => `El género debe ser uno de: ${GENEROS.join(', ')}` }),
-  email: z.email('El email no es válido'),
+  email: emailNormalizado('El email no es válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
 });
 
 export const crearEmpleadoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio.'),
-  email: z.email('El email no es válido.'),
+  email: emailNormalizado('El email no es válido.'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
   sectorIds: z.array(z.number().int().positive()).optional().default([]),
 });

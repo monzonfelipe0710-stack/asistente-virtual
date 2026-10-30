@@ -14,11 +14,13 @@ const MENSAJES_ESTADO = {
 };
 
 export const login = async (req, res) => {
-  const { email, password } = loginSchema.parse(req.body);
+  const { email, dni, password } = loginSchema.parse(req.body);
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } });
+  const usuario = email
+    ? await prisma.usuario.findUnique({ where: { email } })
+    : await usuarioService.buscarUnicoPorDni(dni);
 
-  // 1. Identidad: email existe + contraseña correcta (mensaje genérico a propósito)
+  // 1. Identidad: email o DNI existe + contraseña correcta (mensaje genérico a propósito)
   if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) {
     const error = new Error('Credenciales inválidas');
     error.statusCode = 401;

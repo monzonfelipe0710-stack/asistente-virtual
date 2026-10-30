@@ -2,8 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { TipoSector, EstadoUsuario, Genero } from '@prisma/client';
 
-import { loginSchema } from '../src/validators/auth.validators.js';
-import { registroCiudadanoSchema, filtroUsuariosSchema } from '../src/validators/usuario.validator.js';
+import { loginSchema, recuperarSchema } from '../src/validators/auth.validators.js';
+import { registroCiudadanoSchema, filtroUsuariosSchema, crearEmpleadoSchema } from '../src/validators/usuario.validator.js';
 import { crearSectorSchema, actualizarSectorSchema } from '../src/validators/sector.validator.js';
 import { crearTramiteSchema, actualizarTramiteSchema } from '../src/validators/tramite.validator.js';
 
@@ -20,6 +20,35 @@ describe('loginSchema', () => {
 
   it('rechaza una contraseña vacía', () => {
     assert.equal(mensaje(loginSchema, { email: 'a@b.com', password: '' }), 'La contraseña es obligatoria.');
+  });
+
+  it('acepta un DNI en lugar del email', () => {
+    assert.deepEqual(loginSchema.parse({ dni: '12345678', password: 'x' }), { dni: '12345678', password: 'x' });
+  });
+
+  it('exige exactamente uno entre email y DNI', () => {
+    const m = 'Ingresá el email o el DNI, uno de los dos.';
+    assert.equal(mensaje(loginSchema, { email: 'a@b.com', dni: '12345678', password: 'x' }), m);
+    assert.equal(mensaje(loginSchema, { password: 'x' }), m);
+  });
+
+  it('normaliza el email con trim y minúsculas', () => {
+    assert.equal(loginSchema.parse({ email: '  Ana@Mail.COM ', password: 'x' }).email, 'ana@mail.com');
+  });
+});
+
+describe('email normalizado en los demás formularios', () => {
+  it('recuperar, registro y alta de empleado guardan el email en minúsculas y sin espacios', () => {
+    const email = ' Ana@Mail.COM ';
+    assert.equal(recuperarSchema.parse({ email }).email, 'ana@mail.com');
+    assert.equal(
+      registroCiudadanoSchema.parse({ dni: '12345678', genero: 'F', email, password: '12345678' }).email,
+      'ana@mail.com'
+    );
+    assert.equal(
+      crearEmpleadoSchema.parse({ nombre: 'Ana', email, password: '12345678' }).email,
+      'ana@mail.com'
+    );
   });
 });
 

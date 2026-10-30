@@ -89,6 +89,13 @@ export const buscarPorDni = async (dni, genero) => {
   });
 };
 
+// El DNI es único solo junto con el género: si hay más de una cuenta con ese DNI no
+// se puede saber cuál es, y el login lo trata igual que un DNI inexistente.
+export const buscarUnicoPorDni = async (dni) => {
+  const usuarios = await prisma.usuario.findMany({ where: { dni }, take: 2 });
+  return usuarios.length === 1 ? usuarios[0] : null;
+};
+
 export const guardarTokenRecuperacion = async (id, tokenHash, expira) => {
   return prisma.usuario.update({
     where: { id },
