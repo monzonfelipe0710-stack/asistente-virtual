@@ -16,20 +16,7 @@ const Particles = lazy(() => import("../components/common/Particles"));
    Contenidos Esenciales de HomePage Minimalista
    ------------------------------------------------------------------ */
 
-const QUICK_PROMPTS = [
-  {
-    label: "¿Cómo solicito una licencia?",
-    query: "¿Cómo solicito una licencia?",
-  },
-  {
-    label: "¿Dónde veo mi recibo de sueldo?",
-    query: "¿Dónde puedo ver mi recibo de sueldo?",
-  },
-  {
-    label: "¿Cómo inicio mi jubilación?",
-    query: "¿Cómo inicio mi trámite jubilatorio?",
-  },
-];
+
 
 const BENEFITS = [
   {
