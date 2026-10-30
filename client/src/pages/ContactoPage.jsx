@@ -7,35 +7,35 @@ import "./ContactoPage.css";
 const FAQS = [
   {
     question: "¿Qué tipo de consultas puedo hacer en ChatAP?",
-    answer: "Podés consultar sobre trámites de la Administración Pública de Formosa. Cuando la información está disponible, ChatAP puede orientarte sobre requisitos, costos, documentación y lugares de presentación.",
+    answer: "Podés consultar por trámites de la Administración Pública de Formosa que estén publicados en ChatAP. Según la información cargada para cada trámite, el asistente puede orientarte sobre su descripción, requisitos, costos, dónde se realiza y documentos disponibles.",
   },
   {
-    question: "¿Necesito tener una cuenta para usar ChatAP?",
-    answer: "No. Podés realizar consultas desde el chat sin registrarte ni iniciar sesión. Si tenés una cuenta, también podés acceder a las funciones habilitadas para usuarios registrados.",
+    question: "¿Necesito una cuenta para hacer consultas?",
+    answer: "No. Podés consultar en ChatAP sin iniciar sesión. El servicio permite identificar una cuenta cuando iniciás sesión, pero la consulta pública no requiere registrarte.",
   },
   {
-    question: "¿Cómo se elaboran las respuestas?",
-    answer: "ChatAP busca información en los trámites y contenidos disponibles en la plataforma. Si un dato no está cargado o no encuentra información suficiente, puede indicarte que reformules la consulta o que te acerques a una mesa de entrada.",
+    question: "¿De dónde obtiene ChatAP la información?",
+    answer: "ChatAP busca coincidencias en el catálogo de trámites publicados y utiliza esos datos para elaborar la respuesta. La información puede incluir descripción, requisitos, costos, mesas de entrada y documentos que hayan sido cargados para el trámite.",
   },
   {
-    question: "¿Qué sucede si hay varios trámites parecidos?",
-    answer: "Puede hacerte una pregunta breve para distinguir cuál necesitás. Respondé con la opción que corresponda y continuará la orientación.",
+    question: "¿Qué pasa si mi consulta puede referirse a más de un trámite?",
+    answer: "Si encuentra varias opciones que podrían corresponder a lo que necesitás, ChatAP puede pedirte una aclaración para identificar el trámite correcto. Elegí la opción que describa mejor tu situación.",
   },
   {
-    question: "¿Puedo descargar formularios o documentación?",
-    answer: "Cuando la ficha de un trámite tiene documentos adjuntos publicados, ChatAP puede mostrarte los archivos disponibles para consultarlos o descargarlos.",
+    question: "¿Puedo consultar o descargar documentos?",
+    answer: "Sí, cuando un trámite publicado tiene documentos adjuntos. ChatAP puede mostrarte los documentos disponibles y permitirte acceder a su descarga.",
   },
   {
     question: "¿ChatAP puede iniciar un trámite o consultar mi expediente?",
-    answer: "ChatAP brinda orientación, pero no presenta documentación ni gestiona expedientes. La consulta de estado de expedientes mediante SIGED no está disponible como función confirmada en el servicio público revisado.",
+    answer: "No. ChatAP brinda orientación a partir de la información publicada, pero no inicia trámites, no recibe documentación para gestionarlos ni consulta el estado de expedientes.",
   },
   {
-    question: "¿Qué hago si no encuentro la respuesta que necesito?",
-    answer: "Probá describir tu necesidad con otras palabras o mencioná el nombre del trámite. Si ChatAP no encuentra información suficiente, consultá directamente en la mesa de entrada correspondiente.",
+    question: "¿Qué hago si ChatAP no encuentra información?",
+    answer: "Probá reformular la consulta o indicar el nombre del trámite. Si no hay información suficiente entre los trámites publicados, ChatAP te lo indicará y podrás consultar en la mesa de entrada correspondiente.",
   },
   {
-    question: "Olvidé mi contraseña, ¿cómo puedo recuperarla?",
-    answer: "Desde la pantalla de ingreso, elegí la opción para recuperar tu contraseña e ingresá el correo asociado a tu cuenta. Si está registrado y habilitado, recibirás un enlace para crear una nueva contraseña.",
+    question: "¿Cómo recupero la contraseña de mi cuenta?",
+    answer: "En la pantalla de ingreso, elegí «Olvidé mi contraseña» e ingresá el correo asociado a tu cuenta. Si la cuenta está registrada y habilitada, el sistema enviará un enlace para restablecerla. El enlace tiene una vigencia limitada.",
   },
 ];
 
@@ -82,7 +82,7 @@ function SupportIcon({ name }) {
 }
 
 export default function ContactoPage() {
-  const [openFaq, setOpenFaq] = useState(0);
+  const [openFaq, setOpenFaq] = useState(null);
   const [reportFile, setReportFile] = useState(null);
   const [reportFileError, setReportFileError] = useState("");
 
