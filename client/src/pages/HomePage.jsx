@@ -40,7 +40,7 @@ const BENEFITS = [
       </svg>
     ),
     title: "Orientación paso a paso",
-    description: "Encontrá requisitos, costos, plazos y el organismo donde se presenta cada trámite.",
+    description: "Conocé los requisitos disponibles, la documentación necesaria y el área u organismo al que corresponde dirigirte.",
   },
   {
     id: "documentos",
@@ -50,7 +50,7 @@ const BENEFITS = [
       </svg>
     ),
     title: "Formularios y puntos de atención",
-    description: "Sabé qué documento necesitás, dónde conseguirlo y generá un checklist para presentarte.",
+    description: "Identificá los formularios y documentos relacionados con tu consulta y prepará lo necesario antes de iniciar el trámite.",
   },
   {
     id: "acceso",
@@ -60,7 +60,7 @@ const BENEFITS = [
       </svg>
     ),
     title: "Disponible cuando lo necesitás",
-    description: "Consultá gratis, las 24 horas y sin registro obligatorio, en lenguaje cotidiano.",
+    description: "Hacé tus consultas en lenguaje cotidiano, cuando lo necesites y sin tener que conocer términos administrativos.",
   },
 ];
 
@@ -362,10 +362,10 @@ export default function HomePage() {
               El punto de partida
             </span>
             <h2 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight m-0 leading-[1.1] max-w-3xl">
-              Resolver una duda administrativa <span className="text-brand">no debería costar un viaje.</span>
+              Resolver una duda administrativa <span className="text-brand">no debería llevarte de un lugar a otro.</span>
             </h2>
             <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed m-0">
-              La interacción con los organismos todavía puede implicar consultas repetidas, derivaciones y traslados. Ciudadanos y agentes públicos necesitan una respuesta rápida, clara y centralizada para avanzar.
+              Encontrar información pública no siempre es sencillo: a veces hay que repetir consultas, buscar el área correcta o trasladarse para obtener una orientación. Ciudadanos y agentes públicos necesitan información clara, confiable y fácil de encontrar.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
               {["Consultas repetidas", "Derivaciones", "Traslados", "Información dispersa", "Falta de orientación clara"].map((item) => (
@@ -380,7 +380,7 @@ export default function HomePage() {
                 </span>
               ))}
             </div>
-            <p className="text-sm font-bold text-brand m-0">ChatAP nace para cambiar eso.</p>
+            <p className="text-sm font-bold text-brand m-0">ChatAP busca hacer ese recorrido más simple: reunir la información y acercar la orientación desde un solo lugar.</p>
           </div>
         </section>
 
@@ -392,7 +392,7 @@ export default function HomePage() {
                 Cómo lo resolvemos
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
-                Una conversación. Todos los pasos.
+                Una conversación para saber cómo seguir.
               </h2>
               <p className="text-base text-muted m-0 leading-relaxed">
                 ChatAP reúne orientación, preguntas frecuentes y documentos institucionales en un
@@ -423,7 +423,7 @@ export default function HomePage() {
                 Demo interactiva
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
-                Así se ve una consulta real.
+                Así puede ser una consulta en ChatAP.
               </h2>
               <p className="text-base text-muted m-0 leading-relaxed">
                 Preguntá en lenguaje cotidiano y mirá cómo ChatAP arma la respuesta con requisitos,
@@ -445,7 +445,7 @@ export default function HomePage() {
                 <span>Consultar ahora</span>
                 <span aria-hidden="true">→</span>
               </Link>
-              <p className="text-xs text-muted m-0">Sin registro. Probalo con tu propia consulta.</p>
+              <p className="text-xs text-muted m-0">La conversación que ves es ilustrativa. Iniciá una consulta para hablar con ChatAP.</p>
             </div>
           </div>
         </section>
@@ -458,7 +458,7 @@ export default function HomePage() {
                 Más que un chat
               </span>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-ink tracking-tight m-0 leading-tight text-balance">
-                Un ecosistema para gestionar el conocimiento y crecer.
+                Una plataforma que conecta orientación y gestión institucional.
               </h2>
               <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted m-0 leading-relaxed">
                 ChatAP no es solo una conversación: es una plataforma para ordenar información
@@ -490,7 +490,7 @@ export default function HomePage() {
               <svg className="h-4 w-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Cada respuesta se puede calificar para mejorar la calidad del servicio.
+              La valoración de las respuestas permite identificar oportunidades de mejora y seguir la calidad de la orientación.
             </p>
           </div>
         </section>
@@ -503,10 +503,10 @@ export default function HomePage() {
                 Preguntas frecuentes
               </span>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
-                Lo que necesitás saber antes de empezar.
+                Antes de empezar, algunas respuestas.
               </h2>
               <p className="text-base text-muted m-0">
-                Respuestas claras para consultar con tranquilidad.
+                Conocé qué puede hacer ChatAP y cómo aprovecharlo.
               </p>
             </div>
 
@@ -558,7 +558,7 @@ export default function HomePage() {
                   <span aria-hidden="true">→</span>
                 </Link>
                 <p className="text-xs font-semibold text-muted m-0">
-                  Gratis · Sin registro · 24/7
+                  Consultas en lenguaje cotidiano · Orientación clara
                 </p>
                 <Link to="/login" className="text-xs font-semibold text-brand hover:underline no-underline">
                   ¿Ya tenés cuenta? Ingresá para retomar tus consultas.
@@ -566,7 +566,7 @@ export default function HomePage() {
               </div>
 
               <p className="text-xs text-muted/70 font-mono m-0">
-                Servicio público oficial · Subsecretaría de Recursos Humanos · Ministerio Jefatura de Gabinete
+                Un servicio de orientación de la Subsecretaría de Recursos Humanos · Formosa
               </p>
             </div>
           </div>
