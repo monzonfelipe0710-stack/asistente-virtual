@@ -505,8 +505,10 @@ export default function ChatWindow({ initialQuery = null }) {
   function beginChat() {
     if (startedRef.current) return;
     startedRef.current = true;
-    setPhase("leaving");
-    setTimeout(() => setPhase("chat"), 480);
+    // Cambiamos la vista en el mismo render que agrega el primer mensaje.
+    // Evita un temporizador que podía dejar la bienvenida montada y provocar
+    // un salto si el ciudadano iniciaba o reiniciaba otra conversación rápido.
+    setPhase("chat");
   }
 
   // La invitación se oculta automáticamente a los 5 segundos de aparecer.
@@ -1357,14 +1359,15 @@ export default function ChatWindow({ initialQuery = null }) {
               type="button"
               onClick={handleResetRequest}
               id="chat-new-conversation-button"
-              title="Iniciar un nuevo chat"
-              aria-label="Iniciar un nuevo chat"
-              className="w-11 h-11 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-mist transition-colors cursor-pointer"
+              title="Crear una conversación nueva"
+              aria-label="Crear una conversación nueva"
+              className="chat-new-conversation-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-brand/25 bg-brand/10 px-3.5 text-sm font-semibold text-brand-deep shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-brand/45 hover:bg-brand/15 hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:min-h-11 sm:px-4"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v6m-3-3h6" />
-            </svg>
-          </button>
+              <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 5v14m-7-7h14" />
+              </svg>
+              <span>Nuevo chat</span>
+            </button>
           )}
         </header>
 
