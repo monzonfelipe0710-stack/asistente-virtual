@@ -177,6 +177,14 @@ function MessageBubble({
   const typing = speaking && typedText.length < message.text.length;
   const motivoGroupName = `rating-motivo-${message.id}`;
   const pideDetalle = motivo === OTRO_MOTIVO;
+  // Los mensajes históricos o de ejemplo pueden llegar sin timestamp o con
+  // un valor que Date no reconoce. Nunca convertir una fecha inválida a ISO.
+  const parsedTimestamp = message.timestamp == null || message.timestamp === ""
+    ? null
+    : new Date(message.timestamp);
+  const messageDate = parsedTimestamp && Number.isFinite(parsedTimestamp.getTime())
+    ? parsedTimestamp
+    : null;
 
   useEffect(() => {
     if (pideDetalle) motivoDetalleRef.current?.focus();
@@ -415,12 +423,14 @@ function MessageBubble({
           <span className={`chat-msg__meta ${isBot ? "" : "chat-msg__meta--end"}`}>
           {isBot && <span className="ui-dot" style={{ background: "var(--color-brand)" }} aria-hidden="true" />}
           {isBot ? "Asistente" : "Vos"} ·{" "}
-          <time dateTime={new Date(message.timestamp).toISOString()}>
-            {new Date(message.timestamp).toLocaleTimeString("es-AR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </time>
+          {messageDate && (
+            <time dateTime={messageDate.toISOString()}>
+              {messageDate.toLocaleTimeString("es-AR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </time>
+          )}
         </span>
       </div>
     </article>
