@@ -38,7 +38,13 @@ const postFormulario = (url, campos) =>
     req.end(cuerpo);
   });
 
+const SEXOS_DEL_PADRON = ['M', 'F'];
+
 export const buscarPersona = async (dni, sexo) => {
+  if (!SEXOS_DEL_PADRON.includes(sexo)) {
+    throw new Error(`El padrón de turnos solo acepta sexo M o F, no "${sexo}".`);
+  }
+
   let resp;
   try {
     resp = await postFormulario(TURNOS_URL, { dni: String(dni), sexo });

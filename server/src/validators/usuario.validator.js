@@ -15,12 +15,31 @@ export const asignarSectoresSchema = z.object ({
   sectorIds: z.array(z.number().int().positive()),
 });
 
-export const registroCiudadanoSchema = z.object({
+// El padrón solo distingue M y F. Con X no hay contra qué cruzar el género, así que
+// se pide el nombre y apellido para verificar la identidad; con M o F se ignoran.
+export const GENEROS_PADRON = GENEROS.filter((g) => g !== 'X');
+
+const registroBase = {
   dni: z.string().regex(/^\d{7,8}$/, 'El DNI debe tener 7 u 8 dígitos.'),
-  genero: z.enum(GENEROS, { error: () => `El género debe ser uno de: ${GENEROS.join(', ')}` }),
   email: emailNormalizado('El email no es válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
-});
+};
+
+const textoObligatorio = (mensaje) => z.string(mensaje).trim().min(1, mensaje);
+
+export const registroCiudadanoSchema = z.discriminatedUnion(
+  'genero',
+  [
+    z.object({ ...registroBase, genero: z.enum(GENEROS_PADRON) }),
+    z.object({
+      ...registroBase,
+      genero: z.literal('X'),
+      nombre: textoObligatorio('El nombre es obligatorio.'),
+      apellido: textoObligatorio('El apellido es obligatorio.'),
+    }),
+  ],
+  { error: (issue) => (issue.code === 'invalid_union' ? `El género debe ser uno de: ${GENEROS.join(', ')}` : undefined) },
+);
 
 export const crearEmpleadoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es obligatorio.'),

@@ -66,9 +66,24 @@ describe('registroCiudadanoSchema', () => {
   });
 
   it('acepta todos los géneros del enum de Prisma', () => {
+    const nombreCompleto = { nombre: 'Ana', apellido: 'Gómez' };
     for (const genero of Object.values(Genero)) {
-      assert.equal(registroCiudadanoSchema.safeParse({ ...base, genero }).success, true, genero);
+      assert.equal(registroCiudadanoSchema.safeParse({ ...base, ...nombreCompleto, genero }).success, true, genero);
     }
+  });
+
+  it('con M o F ignora el nombre y apellido tipeados', () => {
+    const datos = registroCiudadanoSchema.parse({ ...base, genero: 'M', nombre: 'Ana', apellido: 'Gómez' });
+    assert.equal('nombre' in datos, false);
+    assert.equal('apellido' in datos, false);
+  });
+
+  it('con X exige nombre y apellido, sin espacios de más', () => {
+    const x = { ...base, genero: 'X' };
+    assert.equal(mensaje(registroCiudadanoSchema, { ...x, apellido: 'Gómez' }), 'El nombre es obligatorio.');
+    assert.equal(mensaje(registroCiudadanoSchema, { ...x, nombre: 'Ana', apellido: '   ' }), 'El apellido es obligatorio.');
+    const datos = registroCiudadanoSchema.parse({ ...x, nombre: ' Ana ', apellido: ' Gómez ' });
+    assert.deepEqual([datos.nombre, datos.apellido], ['Ana', 'Gómez']);
   });
 
   it('rechaza un género fuera del enum con mensaje propio', () => {
