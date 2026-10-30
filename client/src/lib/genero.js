@@ -1,5 +1,5 @@
 // Géneros: etiquetas visibles y códigos enviados al backend.
-// Masculino = M, Femenino = F y Otro / Prefiero no decirlo = X.
+// Masculino = M, Femenino = F; Otro y Prefiero no decirlo = X.
 
 const GENERO_LABELS = {
   M: "Masculino",
@@ -7,13 +7,15 @@ const GENERO_LABELS = {
   X: "Otro / Prefiero no decirlo",
   Masculino: "Masculino",
   Femenino: "Femenino",
-  "Otro / Prefiero no decirlo": "Otro / Prefiero no decirlo",
+  Otro: "Otro",
+  "Prefiero no decirlo": "Prefiero no decirlo",
 };
 
 const GENERO_CODES = {
   Masculino: "M",
   Femenino: "F",
-  "Otro / Prefiero no decirlo": "X",
+  Otro: "X",
+  "Prefiero no decirlo": "X",
 };
 
 /** Devuelve la etiqueta legible del género. */
