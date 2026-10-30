@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiErrorMessage } from "../../lib/api";
 import { listar as listarTramites } from "../../services/tramites";
 import { porTramite, sinRespuesta } from "../../services/metricas";
+import PendingBackend from "./PendingBackend";
 
 function Metric({ label, value, hint }) {
   return (
@@ -111,6 +112,14 @@ export default function ReportsPage() {
           Indicadores obtenidos de la actividad registrada en ChatAP. Los resultados pueden variar según los datos disponibles y los permisos de tu cuenta.
         </p>
       </header>
+
+      <div className="mt-6">
+        <PendingBackend
+          title="Los reportes ciudadanos todavía no están conectados"
+          description="Esta pantalla muestra métricas de consultas y trámites. La recepción y gestión de reportes enviados desde Soporte requiere un módulo y una API específicos en el backend; por eso esos reportes todavía no aparecen aquí."
+          className="mb-0"
+        />
+      </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <p className="m-0 text-xs text-muted" aria-live="polite" role="status">
