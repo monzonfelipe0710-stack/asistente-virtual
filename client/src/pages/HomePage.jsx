@@ -16,21 +16,6 @@ const Particles = lazy(() => import("../components/common/Particles"));
    Contenidos Esenciales de HomePage Minimalista
    ------------------------------------------------------------------ */
 
-const QUICK_PROMPTS = [
-  {
-    label: "¿Cómo solicito una licencia?",
-    query: "¿Cómo solicito una licencia?",
-  },
-  {
-    label: "¿Dónde veo mi recibo de sueldo?",
-    query: "¿Dónde puedo ver mi recibo de sueldo?",
-  },
-  {
-    label: "¿Cómo inicio mi jubilación?",
-    query: "¿Cómo inicio mi trámite jubilatorio?",
-  },
-];
-
 const BENEFITS = [
   {
     id: "orientacion",
@@ -291,25 +276,6 @@ export default function HomePage() {
                 <span>Ver cómo funciona</span>
                 <span aria-hidden="true">↓</span>
               </a>
-            </div>
-
-            <p className="hero-anim-sub hero-microcopy mt-4 m-0">
-              Consultas en lenguaje cotidiano · Orientación desde un solo lugar
-            </p>
-
-            {/* Consultas sugeridas: inician el chat automáticamente */}
-            <div className="hero-anim-pills hero-quick-prompts mt-4" aria-label="Consultas sugeridas">
-              {QUICK_PROMPTS.map((prompt) => (
-                <Link
-                  key={prompt.query}
-                  to="/chat"
-                  state={{ initialQuery: prompt.query }}
-                  onPointerEnter={prefetchChat}
-                  className="hero-quick-pill"
-                >
-                  {prompt.label}
-                </Link>
-              ))}
             </div>
 
             {/* Sellos de confianza institucionales */}
