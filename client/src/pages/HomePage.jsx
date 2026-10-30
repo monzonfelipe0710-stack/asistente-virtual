@@ -265,73 +265,25 @@ export default function HomePage() {
                 containerClassName="hero-cinematic__title-container"
                 textClassName="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0 block"
               >
-                El Estado te responde a la primera.
+                Orientación clara para tus trámites en Formosa.
               </ScrollFloat>
             </div>
 
             {/* Subtítulo comercial y directo */}
             <p className="hero-anim-sub mt-6 text-base sm:text-lg lg:text-xl text-muted max-w-2xl mx-auto leading-relaxed m-0 font-normal">
-              Trámites, requisitos y documentos de la Administración Pública de Formosa, en una conversación clara. Para ciudadanos y agentes públicos, las 24 horas.
+              Encontrá información sobre trámites, requisitos y servicios de la Administración Pública provincial, de manera simple y en un solo lugar.
             </p>
 
-            {/* Acción principal del banner */}
+            {/* Una única acción principal para mantener el foco */}
             <div className="hero-anim-cta hero-cta-group mt-8">
               <Link
                 to="/chat"
                 onPointerEnter={prefetchChat}
                 className="btn-primary no-underline inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold normal-case tracking-normal shadow-lg shadow-brand/20 transition-all sm:text-base"
               >
-                <span>Consultar ahora</span>
+                <span>Iniciar consulta</span>
                 <span aria-hidden="true">→</span>
               </Link>
-              <a
-                href="#en-accion"
-                className="hero-cta-secondary no-underline inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold normal-case tracking-normal transition-all sm:text-base"
-              >
-                <span>Ver cómo funciona</span>
-                <span aria-hidden="true">↓</span>
-              </a>
-            </div>
-
-            <p className="hero-anim-sub hero-microcopy mt-4 m-0">
-              Gratis · Sin registro · Disponible 24/7
-            </p>
-
-            {/* Consultas sugeridas: inician el chat automáticamente */}
-            <div className="hero-anim-pills hero-quick-prompts mt-4" aria-label="Consultas sugeridas">
-              {QUICK_PROMPTS.map((prompt) => (
-                <Link
-                  key={prompt.query}
-                  to="/chat"
-                  state={{ initialQuery: prompt.query }}
-                  onPointerEnter={prefetchChat}
-                  className="hero-quick-pill"
-                >
-                  {prompt.label}
-                </Link>
-              ))}
-            </div>
-
-            {/* Sellos de confianza institucionales */}
-            <div className="hero-anim-trust flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 mt-8 text-xs text-muted font-medium select-none">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-mist/60 border border-line/40 backdrop-blur-sm shadow-xs">
-                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Servicio oficial
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-mist/60 border border-line/40 backdrop-blur-sm shadow-xs">
-                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                100% gratuito
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-mist/60 border border-line/40 backdrop-blur-sm shadow-xs">
-                <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Sin registro obligatorio
-              </span>
             </div>
 
           </div>
