@@ -103,7 +103,7 @@ export default function HomePage() {
   const theme = useTheme();
   const [openFaq, setOpenFaq] = useState(null);
 
-  const institutionalLogos = useMemo(  const institutionalLogos = useMemo(
+  const institutionalLogos = useMemo(
     () => getInstitutionalLogos(theme === "dark"),
     [theme]
   );
@@ -116,7 +116,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-paper text-ink font-sans relative selection:bg-brand selection:text-white">
       <div className="home-atmosphere" aria-hidden="true" />
 
-      <Navbar />      <Navbar />
+      <Navbar />
 
       <main id="contenido" aria-label="Página principal de ChatAP" className="flex-1 w-full relative z-10">
         {/* 1 · Hero Principal Minimalista y Directo */}
@@ -174,7 +174,7 @@ export default function HomePage() {
                     {logo.node}
                   </div>
                 ))}
-              </div>              />
+              </div>
             </div>
           </div>
         </section>
@@ -263,7 +263,6 @@ export default function HomePage() {
         </section>
 
         {/* 5 · Preguntas frecuentes */}
-        {/* 6 · Preguntas Frecuentes Concisas (FAQ) */}
         <section id="preguntas" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
           <div className="ed-max flex flex-col gap-10 max-w-3xl mx-auto">
             <div className="text-center space-y-3">
@@ -283,13 +282,13 @@ export default function HomePage() {
                 const isOpen = openFaq === item.id;
                 return (
                   <div key={item.id} className={`faq-item group ${isOpen ? "faq-item--open" : ""}`}>
-                    <button type="button" className="faq-summary" aria-expanded={isOpen} aria-controls={`home-faq-answer-${item.id}`} onClick={() => setOpenFaq(isOpen ? null : item.id)}>
+                    <button id={`home-faq-question-${item.id}`} type="button" className="faq-summary" aria-expanded={isOpen} aria-controls={`home-faq-answer-${item.id}`} onClick={() => setOpenFaq(isOpen ? null : item.id)}>
                       <span className="text-base sm:text-lg font-bold text-ink">{item.question}</span>
                       <svg className="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-                    <div id={`home-faq-answer-${item.id}`} className="faq-content text-sm sm:text-base leading-relaxed text-muted" aria-hidden={!isOpen}>
+                    <div id={`home-faq-answer-${item.id}`} className="faq-content text-sm sm:text-base leading-relaxed text-muted" aria-hidden={!isOpen} role="region" aria-labelledby={`home-faq-question-${item.id}`}>
                       <div className="faq-content-inner"><p className="m-0">{item.answer}</p></div>
                     </div>
                   </div>
@@ -324,9 +323,6 @@ export default function HomePage() {
                   <span>Consultar ahora</span>
                   <span aria-hidden="true">→</span>
                 </Link>
-                <p className="text-xs font-semibold text-muted m-0">
-                  
-                </p>
                 <Link to="/login" className="text-xs font-semibold text-brand hover:underline no-underline">
                   ¿Ya tenés cuenta? Ingresá para retomar tus consultas.
                 </Link>
