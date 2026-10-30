@@ -12,6 +12,7 @@ const requeridas = [
   'FRONTEND_URL',
   'SMTP_USER',
   'SMTP_PASS',
+  'TURNOS_URL',
 ];
 const faltantes = requeridas.filter((v) => !process.env[v]);
 
