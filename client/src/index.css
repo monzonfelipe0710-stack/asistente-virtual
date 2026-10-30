@@ -4733,3 +4733,103 @@ html.dark .tour-avatar {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ── ChatAP · Administración: sistema visual unificado ── */
+.admin-layout-shell {
+  --admin-surface: var(--color-paper);
+  --admin-card: color-mix(in srgb, var(--color-paper) 94%, white);
+  --admin-border: color-mix(in srgb, var(--color-line) 82%, transparent);
+  background:
+    radial-gradient(ellipse at 82% 0%, color-mix(in srgb, var(--color-brand) 5%, transparent), transparent 34rem),
+    var(--color-paper);
+}
+.admin-layout-shell button,
+.admin-layout-shell a,
+.admin-layout-shell input,
+.admin-layout-shell select,
+.admin-layout-shell textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-layout-main {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+.admin-layout-main > * {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+}
+.admin-layout-shell .card,
+.admin-layout-shell .card-interactive {
+  border: 1px solid var(--admin-border);
+  border-radius: 1rem;
+  background: var(--admin-card);
+  box-shadow: 0 1px 2px rgb(15 23 48 / 3%), 0 12px 32px rgb(15 23 48 / 3%);
+}
+.admin-layout-shell .card-interactive {
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.admin-layout-shell .card-interactive:hover {
+  border-color: color-mix(in srgb, var(--color-brand) 28%, var(--admin-border));
+  box-shadow: 0 8px 24px rgb(15 23 48 / 7%);
+  transform: translateY(-2px);
+}
+.admin-layout-shell :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 42px;
+  border-color: var(--admin-border);
+  border-radius: .7rem;
+  background-color: var(--admin-card);
+  color: var(--color-ink);
+}
+.admin-layout-shell :is(input, select, textarea)::placeholder {
+  color: var(--color-faint);
+}
+.admin-layout-shell :is(input, select, textarea):focus {
+  border-color: var(--color-brand);
+  outline: 3px solid color-mix(in srgb, var(--color-brand) 15%, transparent);
+  outline-offset: 0;
+}
+.admin-layout-shell :is(button, .btn-primary, .btn-ghost) {
+  transition: background-color .16s ease, color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.admin-layout-shell :is(button:not(:disabled), .btn-primary, .btn-ghost):active {
+  transform: translateY(1px);
+}
+.admin-layout-shell table thead th {
+  background: color-mix(in srgb, var(--color-mist) 68%, var(--admin-card));
+  color: var(--color-muted);
+  font-size: .68rem;
+  letter-spacing: .075em;
+}
+.admin-layout-shell table tbody tr {
+  transition: background-color .14s ease;
+}
+.admin-layout-shell table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--color-brand) 4%, transparent);
+}
+.admin-layout-shell :is(.badge, [class*="rounded-full"][class*="text-"]) {
+  line-height: 1.35;
+}
+.admin-layout-shell :is(h1, h2, h3) {
+  text-wrap: pretty;
+}
+@media (max-width: 1023px) {
+  .admin-layout-main { padding: 1.25rem; }
+}
+@media (max-width: 639px) {
+  .admin-layout-main { padding: 1rem; }
+  .admin-layout-shell .card,
+  .admin-layout-shell .card-interactive { border-radius: .85rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-layout-shell *,
+  .admin-layout-shell *::before,
+  .admin-layout-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
