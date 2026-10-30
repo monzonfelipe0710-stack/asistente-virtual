@@ -153,7 +153,7 @@ export default function AdminSidebar({ open, onToggle }) {
         style={{
           height: "72px",
           padding: "16px 0 0",
-          paddingLeft: "20px",
+          paddingLeft: open ? "20px" : "16px",
           justifyContent: "flex-start",
         }}
       >
@@ -191,7 +191,7 @@ export default function AdminSidebar({ open, onToggle }) {
           return (
             <div
               key={section.title}
-              style={{ marginBottom: "32px" }}
+              style={{ marginBottom: "24px" }}
             >
               <p
                 className="h-[18px] mb-1.5 text-[10px] font-semibold uppercase tracking-widest overflow-hidden whitespace-nowrap transition-opacity duration-300"
@@ -203,7 +203,7 @@ export default function AdminSidebar({ open, onToggle }) {
               >
                 {section.title}
               </p>
-              <div className="flex flex-col" style={{ rowGap: "12px" }}>
+              <div className="flex flex-col" style={{ rowGap: "6px" }}>
               {visible.map((link) => (
                 <NavLink
                   key={link.to}
@@ -224,9 +224,9 @@ export default function AdminSidebar({ open, onToggle }) {
                     color: isActive
                       ? "var(--sidebar-active-text)"
                       : "var(--sidebar-text)",
-                    padding: "14px 20px",
-                    columnGap: "16px",
-                    justifyContent: "flex-start",
+                    padding: open ? "12px 20px" : "12px 0",
+                    columnGap: open ? "14px" : "0",
+                    justifyContent: open ? "flex-start" : "center",
                   })}
                   data-tooltip={!open ? link.label : undefined}
                   onMouseEnter={(e) => {
@@ -302,9 +302,9 @@ export default function AdminSidebar({ open, onToggle }) {
                 ? "var(--sidebar-text-hover)"
                 : "var(--sidebar-text)",
               backgroundColor: isActive ? "var(--sidebar-hover)" : "transparent",
-              padding: "14px 20px",
-              columnGap: "16px",
-              justifyContent: "flex-start",
+              padding: open ? "12px 20px" : "12px 0",
+              columnGap: open ? "14px" : "0",
+              justifyContent: open ? "flex-start" : "center",
             })}
             data-tooltip={!open ? "Volver al inicio" : undefined}
             onMouseEnter={(e) => {
