@@ -16,9 +16,9 @@ const INSTITUCIONAL = [
 
 const SOPORTE = [
   { label: "Mesa de ayuda", to: "/contacto" },
-  { label: "WhatsApp oficial", href: "https://wa.me/5493704000000" },
-  { label: "Línea gratuita 0800", href: "tel:08005551234" },
-  { label: "Preguntas frecuentes", to: "/contacto" },
+  { label: "Preguntas frecuentes", to: "/#preguntas" },
+  { label: "Términos y condiciones", to: "/terminos" },
+  { label: "Privacidad", to: "/privacidad" },
 ];
 
 const SOCIAL_LINKS = [
@@ -52,14 +52,13 @@ export default function Footer() {
                     ChatAP<span className="text-brand">.</span>
                   </span>
                   <span className="mt-1 text-[8px] font-mono font-semibold uppercase tracking-[0.24em] text-faint">
-                    Recursos Humanos · Formosa
+                    Subsecretaría de Recursos Humanos · Formosa
                   </span>
                 </span>
               </Link>
 
               <p className="mt-4 text-sm leading-relaxed text-muted font-neue-text max-w-sm m-0">
-                La Administración Pública respondiendo a cada persona, en lenguaje
-                claro y a toda hora. Consultá trámites, haberes, licencias y expedientes sin filas.
+                Orientación sobre trámites y servicios de la Subsecretaría de Recursos Humanos, con información clara y en un lenguaje cercano.
               </p>
             </div>
 
