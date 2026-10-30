@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import ChatBotAvatar from "../ChatBotAvatar";
 
 const MESSAGES = [
-  { id: "u1", type: "user", text: "Necesito orientación para un trámite. ¿Por dónde empiezo?" },
-  { id: "b1", type: "bot", text: "Puedo ayudarte a identificar la información disponible, los requisitos mencionados y el canal oficial para continuar. ¿De qué trámite se trata?" },
-  { id: "u2", type: "user", text: "¿La respuesta reemplaza la información del organismo?" },
-  { id: "b2", type: "bot", text: "No. Mi respuesta es orientativa. Para confirmar requisitos vigentes, plazos o presentar una solicitud, verificá siempre la información con el organismo correspondiente." },
+  { id: "u1", type: "user", text: "Hola, ¿qué puedo consultar en ChatAP?" },
+  { id: "b1", type: "bot", text: "¡Hola! Soy ChatAP, el asistente de la Administración Pública de Formosa. Puedo orientarte sobre **trámites administrativos**, responder preguntas frecuentes, ayudarte a encontrar **formularios y documentos**, y orientarte para consultar el estado de un expediente en el SIGED." },
+  { id: "u2", type: "user", text: "¿Tengo que iniciar sesión para hacer una consulta?" },
+  { id: "b2", type: "bot", text: "No es obligatorio. Podés realizar consultas de forma libre y anónima. Si iniciás sesión, también podés conservar el historial de tus conversaciones." },
 ];
 
 function AnswerText({ text }) {
@@ -19,6 +19,7 @@ function AnswerText({ text }) {
 export default function InteractiveChatMockup() {
   const [count, setCount] = useState(1);
   const [typing, setTyping] = useState(false);
+  const [rating, setRating] = useState(null);
   const [reduced, setReduced] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
   const scrollRef = useRef(null);
   const timerRef = useRef(null);
@@ -51,6 +52,7 @@ export default function InteractiveChatMockup() {
 
   function replay() {
     window.clearTimeout(timerRef.current);
+    setRating(null);
     setTyping(false);
     setCount(1);
   }
@@ -58,14 +60,15 @@ export default function InteractiveChatMockup() {
   const visibleCount = reduced ? MESSAGES.length : count;
 
   return (
-    <section className="mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-line bg-paper shadow-xl" aria-label="Ejemplo ilustrativo de conversación de ChatAP">
+    <section className="mx-auto w-full max-w-3xl overflow-hidden rounded-3xl border border-line bg-paper shadow-xl" aria-label="Ejemplo de conversación de ChatAP">
       <header className="flex items-center justify-between gap-3 border-b border-line bg-card/80 px-4 py-3.5 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="relative shrink-0">
             <ChatBotAvatar size={38} reaction={typing ? "thinking" : "idle"} static={!typing} speaking={typing} />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-paper" />
           </div>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2"><h3 className="m-0 text-sm font-bold text-ink">ChatAP</h3><span className="rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand-deep">Ejemplo ilustrativo</span></div>
+            <div className="flex flex-wrap items-center gap-2"><h3 className="m-0 text-sm font-bold text-ink">ChatAP</h3><span className="rounded-full border border-brand/20 bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand-deep">Asistente oficial</span></div>
             <p className="m-0 mt-0.5 text-xs text-muted">Administración Pública de Formosa</p>
           </div>
         </div>
@@ -75,7 +78,6 @@ export default function InteractiveChatMockup() {
         </button>
       </header>
 
-      <p className="m-0 border-b border-line bg-brand/5 px-4 py-2 text-center text-xs text-muted">Conversación de muestra · No es una respuesta en tiempo real</p>
       <div ref={scrollRef} className="flex min-h-[310px] max-h-[460px] flex-col gap-4 overflow-y-auto px-3 py-5 sm:min-h-[350px] sm:px-5" aria-live="polite">
         {MESSAGES.slice(0, visibleCount).map((m) => (
           <article key={m.id} className={`flex gap-2.5 ${m.type === "user" ? "justify-end" : "justify-start"} animate-fade-up`}>
@@ -85,7 +87,15 @@ export default function InteractiveChatMockup() {
                 <p className={`m-0 whitespace-pre-wrap text-sm leading-6 ${m.type === "user" ? "text-white" : "text-ink"}`}>{m.type === "bot" ? <AnswerText text={m.text} /> : m.text}</p>
               </div>
               <span className="mt-1.5 px-1 text-[10px] text-muted">{m.type === "user" ? "Vos" : "ChatAP"} · Ejemplo</span>
-           </div>
+              {m.id === "b2" && visibleCount === MESSAGES.length && (
+                <div className="mt-3 w-full border-t border-line/70 pt-2.5">
+                  <div className="flex flex-wrap items-center gap-2"><span className="text-xs text-muted">¿Te sirvió esta respuesta?</span>
+                    {[{ value: 1, label: "Sí", icon: "👍" }, { value: 0, label: "No", icon: "👎" }].map((o) => <button key={o.value} type="button" onClick={() => setRating(o.value)} aria-pressed={rating === o.value} className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-xs font-semibold ${rating === o.value ? "border-brand-deep bg-brand-deep text-white" : "border-line text-muted hover:bg-mist hover:text-ink"}`}><span aria-hidden="true">{o.icon}</span>{o.label}</button>)}
+                    {rating !== null && <span className="text-xs text-muted" role="status">¡Gracias por tu opinión!</span>}
+                  </div>
+                </div>
+              )}
+            </div>
           </article>
         ))}
         {typing && <div className="flex items-end gap-2.5 animate-fade-up"><ChatBotAvatar size={30} reaction="thinking" /><div className="chat-msg__body flex items-center gap-1.5 border border-line bg-card px-4 py-3"><span className="mr-1 text-xs text-muted">ChatAP está respondiendo</span>{[0,150,300].map((delay) => <span key={delay} className="h-1.5 w-1.5 rounded-full bg-brand animate-bounce" style={{ animationDelay: `${delay}ms` }} />)}</div></div>}
