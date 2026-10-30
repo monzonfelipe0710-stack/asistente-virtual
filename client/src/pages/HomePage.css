@@ -2494,3 +2494,343 @@ section[id] {
     transform: none;
   }
 }
+
+
+/* ── Ecosistema institucional: sección Más que un chat ───────── */
+.ecosystem-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding-block: clamp(4.5rem, 7vw, 7rem);
+}
+
+.ecosystem-section::before {
+  position: absolute;
+  z-index: -1;
+  top: 8%;
+  right: -12rem;
+  width: min(34rem, 65vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47, 107, 255, 0.075), transparent 68%);
+  content: "";
+  pointer-events: none;
+}
+
+.dark .ecosystem-section::before {
+  background: radial-gradient(circle, rgba(77, 125, 255, 0.11), transparent 68%);
+}
+
+.ecosystem-section__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(2rem, 3.6vw, 3.25rem);
+}
+
+.ecosystem-section__intro {
+  width: min(100%, 51rem);
+  text-align: center;
+}
+
+.ecosystem-section__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.1rem;
+  color: var(--color-brand);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.ecosystem-section__eyebrow-mark {
+  width: 1.55rem;
+  height: 2px;
+  border-radius: 99px;
+  background: currentColor;
+}
+
+#capacidades .ecosystem-section__title {
+  max-width: 17ch;
+  margin: 0 auto;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.ecosystem-section__title span {
+  color: var(--color-brand);
+}
+
+#capacidades .ecosystem-section__lead {
+  max-width: 43rem;
+  margin: 1.15rem auto 0;
+  color: var(--color-muted);
+  font-size: clamp(0.96rem, 1.15vw, 1.08rem);
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+.ecosystem-section__grid {
+  display: grid;
+  width: min(100%, 70rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.85rem, 1.7vw, 1.35rem);
+}
+
+.ecosystem-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 17rem;
+  flex-direction: column;
+  gap: 2rem;
+  overflow: hidden;
+  padding: clamp(1.35rem, 2.2vw, 1.85rem);
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.56));
+  box-shadow: 0 12px 34px -30px rgba(15, 23, 48, 0.42);
+  transition: border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+}
+
+.dark .ecosystem-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(150deg, rgba(20, 34, 65, 0.82), rgba(13, 23, 48, 0.58));
+  box-shadow: 0 14px 36px -30px rgba(0, 0, 0, 0.8);
+}
+
+.ecosystem-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ecosystem-card__icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(47, 107, 255, 0.14);
+  border-radius: 0.95rem;
+  background: rgba(47, 107, 255, 0.075);
+  color: var(--color-brand);
+}
+
+.dark .ecosystem-card__icon {
+  border-color: rgba(125, 163, 255, 0.2);
+  background: rgba(77, 125, 255, 0.12);
+  color: #9bb9ff;
+}
+
+.ecosystem-card__icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.ecosystem-card__index {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  opacity: 0.72;
+}
+
+.ecosystem-card__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.ecosystem-card__content h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: clamp(1.12rem, 1.45vw, 1.35rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.ecosystem-card__content p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.91rem;
+  line-height: 1.7;
+}
+
+.ecosystem-card__accent {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 0;
+  left: 1.5rem;
+  height: 2px;
+  border-radius: 99px 99px 0 0;
+  background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+  opacity: 0;
+  transform: scaleX(0.55);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.ecosystem-card:hover {
+  border-color: rgba(47, 107, 255, 0.32);
+  box-shadow: 0 18px 42px -30px rgba(47, 107, 255, 0.34);
+  transform: translateY(-3px);
+}
+
+.ecosystem-card:hover .ecosystem-card__accent {
+  opacity: 0.8;
+  transform: scaleX(1);
+}
+
+.ecosystem-section__note {
+  display: flex;
+  width: min(100%, 56rem);
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  border: 1px solid rgba(47, 107, 255, 0.16);
+  border-radius: 1rem;
+  background: rgba(47, 107, 255, 0.045);
+}
+
+.dark .ecosystem-section__note {
+  border-color: rgba(125, 163, 255, 0.17);
+  background: rgba(77, 125, 255, 0.075);
+}
+
+.ecosystem-section__note-icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: rgba(47, 107, 255, 0.1);
+  color: var(--color-brand);
+}
+
+.ecosystem-section__note-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.ecosystem-section__note-title {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--color-ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+#capacidades .ecosystem-section__note p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .ecosystem-section__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ecosystem-card:last-child {
+    grid-column: 1 / -1;
+    min-height: 14rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .ecosystem-section {
+    padding-block: 3.5rem;
+  }
+
+  .ecosystem-section__inner {
+    gap: 1.65rem;
+  }
+
+  .ecosystem-section__intro {
+    text-align: left;
+  }
+
+  .ecosystem-section__eyebrow {
+    margin-bottom: 0.85rem;
+    font-size: 0.64rem;
+  }
+
+  #capacidades .ecosystem-section__title {
+    max-width: 19ch;
+    margin-inline: 0;
+    font-size: clamp(1.85rem, 8vw, 2.45rem);
+    line-height: 1.1;
+  }
+
+  #capacidades .ecosystem-section__lead {
+    margin: 0.85rem 0 0;
+    font-size: 0.91rem;
+    line-height: 1.68;
+  }
+
+  .ecosystem-section__grid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .ecosystem-card,
+  .ecosystem-card:last-child {
+    min-height: 0;
+    grid-column: auto;
+    gap: 1.25rem;
+    padding: 1.2rem;
+    border-radius: 1.05rem;
+  }
+
+  .ecosystem-card__icon {
+    width: 2.7rem;
+    height: 2.7rem;
+  }
+
+  .ecosystem-card__content h3 {
+    font-size: 1.12rem;
+  }
+
+  .ecosystem-card__content p {
+    font-size: 0.87rem;
+    line-height: 1.65;
+  }
+
+  .ecosystem-section__note {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .ecosystem-section__note-icon {
+    width: 2.1rem;
+    height: 2.1rem;
+  }
+
+  #capacidades .ecosystem-section__note p {
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ecosystem-card,
+  .ecosystem-card__accent {
+    transition: none;
+  }
+
+  .ecosystem-card:hover {
+    transform: none;
+  }
+}
