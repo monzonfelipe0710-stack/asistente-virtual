@@ -27,7 +27,6 @@ export default function Footer() {
           <h2 className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-ink">ChatAP</h2>
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             <li><Link to="/chat" className="text-sm text-muted no-underline transition-colors hover:text-brand">Iniciar consulta</Link></li>
-            <li><Link to="/#preguntas" className="text-sm text-muted no-underline transition-colors hover:text-brand">Preguntas frecuentes</Link></li>
             <li><Link to="/contacto" className="text-sm text-muted no-underline transition-colors hover:text-brand">Soporte y contacto</Link></li>
           </ul>
         </nav>
