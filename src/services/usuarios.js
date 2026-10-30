@@ -2,9 +2,14 @@ import { api } from "../lib/api";
 
 /** POST /api/usuarios/registro-ciudadano — público, con verificación de padrón. */
 export async function registroCiudadano({ dni, genero, email, password, nombre, apellido }) {
+  const payload = { dni, genero, email, password };
+  if (genero === "X") {
+    payload.nombre = nombre;
+    payload.apellido = apellido;
+  }
   const { data } = await api.post(
     "/api/usuarios/registro-ciudadano",
-    { dni, genero, email, password, nombre, apellido },
+    payload,
     { skipAuthHandler: true }
   );
   return data;
