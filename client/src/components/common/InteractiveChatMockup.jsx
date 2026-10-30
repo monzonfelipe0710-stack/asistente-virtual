@@ -136,7 +136,7 @@ export default function InteractiveChatMockup() {
   }
 
   if (!reduced && current?.type === "bot" && phase === "writing") {
-    visibleMessages.push({ ...current, text: typedText });
+    visibleMessages.push(current);
   }
 
   const showingThinking = !reduced && current?.type === "bot" && phase === "thinking";
