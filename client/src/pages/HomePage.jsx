@@ -474,7 +474,6 @@ export default function HomePage() {
               <div className="assistant-showcase__mockup">
                 <InteractiveChatMockup />
               </div>
-              <p className="assistant-showcase__caption">La conversación es ilustrativa y sirve para conocer la experiencia. Las consultas reales se realizan en el asistente.</p>
             </div>
 
             <div className="assistant-showcase__action">
