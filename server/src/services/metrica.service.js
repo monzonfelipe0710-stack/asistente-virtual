@@ -45,6 +45,8 @@ export const consultasSinRespuesta = async () => {
     where: { encontrado: false },
     orderBy: { fecha: 'desc' },
     take: 50,
+    // Sin usuarioId: quién preguntó no le corresponde a quien mira las métricas.
+    select: { id: true, textoConsulta: true, encontrado: true, fecha: true, tramiteId: true },
   });
 };
 
