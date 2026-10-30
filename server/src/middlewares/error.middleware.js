@@ -21,7 +21,9 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   if (err.statusCode) {
-    return res.status(err.statusCode).json({ error: err.message });
+    return res.status(err.statusCode).json(
+      err.codigo ? { error: err.message, codigo: err.codigo } : { error: err.message }
+    );
   }
 
   // Argumentos mal formados (por ejemplo, un id que no es numérico).

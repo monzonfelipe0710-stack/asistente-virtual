@@ -54,6 +54,17 @@ describe('errorHandler', () => {
     assert.deepEqual([res.codigo, res.cuerpo], [404, { error: 'Sector no encontrado.' }]);
   });
 
+  it('incluye el codigo del error propio cuando lo trae', () => {
+    const err = Object.assign(new Error('Debés cambiar tu contraseña antes de continuar.'), {
+      statusCode: 403,
+      codigo: 'PASSWORD_CHANGE_REQUIRED',
+    });
+    assert.deepEqual(
+      [manejar(err).codigo, manejar(err).cuerpo],
+      [403, { error: 'Debés cambiar tu contraseña antes de continuar.', codigo: 'PASSWORD_CHANGE_REQUIRED' }]
+    );
+  });
+
   it('convierte argumentos inválidos de Prisma en 400 y no en 500', () => {
     // Regresión: un id no numérico llegaba como NaN y salía 500.
     const res = manejar(new Prisma.PrismaClientValidationError('x', { clientVersion: '6' }));
