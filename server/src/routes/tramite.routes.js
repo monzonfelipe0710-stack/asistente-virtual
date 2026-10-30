@@ -4,10 +4,13 @@ import { autenticar } from '../middlewares/auth.middleware.js';
 import { autorizar } from '../middlewares/roles.middleware.js';
 import { puedeGestionarTramite } from '../middlewares/propiedad.middleware.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { validarId } from '../middlewares/validarId.middleware.js';
 import { publicoLimiter } from '../config/rateLimit.js';
 import documentoRoutes from './documento.routes.js';
 
 const router = Router();
+
+router.param('id', validarId('Trámite no encontrado.'));
 
 // Público. Tiene que ir antes de /:id: si no, Express toma "publicados" como id.
 router.get('/publicados', publicoLimiter, asyncHandler(tramiteController.listarPublicados));

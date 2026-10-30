@@ -1,6 +1,16 @@
 export const errorHandler = (err, req, res, next) => {
+  // Lo lanza express.json() y trae statusCode 400, pero con el mensaje del parser en inglés.
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'El cuerpo de la solicitud no es un JSON válido.' });
+  }
+
   if (err.name === 'ZodError') {
-    return res.status(400).json({ error: err.issues[0].message });
+    const [issue] = err.issues;
+    // Sin Content-Type: application/json, Express 5 deja req.body en undefined.
+    if (req.body === undefined && issue.code === 'invalid_type' && issue.path.length === 0) {
+      return res.status(400).json({ error: 'El cuerpo de la solicitud es obligatorio y debe enviarse como JSON.' });
+    }
+    return res.status(400).json({ error: issue.message });
   }
 
   // Errores propios de multer (tamaño excedido, campo de archivo inesperado, etc.).

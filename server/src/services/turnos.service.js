@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 
 const TURNOS_URL = process.env.TURNOS_URL;
+const TIMEOUT_MS = 10000;
 const parser = new XMLParser();
 
 export const buscarPersona = async (dni, sexo) => {
@@ -16,6 +17,7 @@ export const buscarPersona = async (dni, sexo) => {
         'Origin': 'https://www.formosa.gob.ar',
       },
       body: new URLSearchParams({ dni: String(dni), sexo }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (err) {
     throw new Error(`No se pudo consultar el padrón de turnos: ${err.message}`);

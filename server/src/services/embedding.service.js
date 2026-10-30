@@ -1,16 +1,7 @@
-import { openai } from '../config/openai.js';
+import { ia } from '../core/ai/index.js';
 import prisma from '../config/prisma.js';
 
-const MODELO_EMBEDDING = 'text-embedding-3-small';
-
-export const generarEmbedding = async (texto) => {
-  const respuesta = await openai.embeddings.create({
-    model: MODELO_EMBEDDING,
-    input: texto,
-  });
-
-  return respuesta.data[0].embedding;
-};
+export const generarEmbedding = (texto) => ia.generarEmbedding(texto);
 
 export const textoDeTramite = (tramite) => {
   const partes = [
@@ -47,4 +38,14 @@ export const indexarTramite = async (tramiteId) => {
   const texto = textoDeTramite(tramite);
   const embedding = await generarEmbedding(texto);
   await guardarEmbedding(tramiteId, embedding);
+};
+
+export const indexarSiFalta = async (tramiteId) => {
+  const [fila] = await prisma.$queryRaw`
+    SELECT embedding IS NULL AS falta FROM tramites WHERE id = ${tramiteId}
+  `;
+  if (!fila?.falta) return false;
+
+  await indexarTramite(tramiteId);
+  return true;
 };

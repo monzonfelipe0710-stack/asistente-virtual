@@ -1,5 +1,5 @@
 import prisma from '../config/prisma.js';
-import { indexarTramite } from './embedding.service.js';
+import { indexarTramite, indexarSiFalta } from './embedding.service.js';
 import { eliminarArchivos } from './documento.service.js';
 import * as cache from './cache.service.js';
 
@@ -98,6 +98,16 @@ export const cambiarPublicacion = async (id, publicado) => {
     data: { publicado },
   });
   cache.limpiar();
+
+  // Si falló el embedding al crearlo, el chat no lo encontraría aunque esté publicado.
+  if (publicado) {
+    indexarSiFalta(id)
+      .then((indexado) => indexado && cache.limpiar())
+      .catch((err) => {
+        console.error(`Error al indexar el trámite ${id} al publicarlo`, err.message);
+      });
+  }
+
   return tramite;
 };
 
