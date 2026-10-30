@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "./HomePage.css";
+import "../components/common/LogoLoop.css";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
 import InteractiveChatMockup from "../components/common/InteractiveChatMockup";
