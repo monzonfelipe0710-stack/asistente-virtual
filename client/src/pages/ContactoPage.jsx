@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
@@ -85,6 +85,19 @@ export default function ContactoPage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [reportFile, setReportFile] = useState(null);
   const [reportFileError, setReportFileError] = useState("");
+  const [reportPreviewUrl, setReportPreviewUrl] = useState("");
+
+  useEffect(() => {
+    if (!reportFile) {
+      setReportPreviewUrl("");
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(reportFile);
+    setReportPreviewUrl(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [reportFile]);
 
   function handleReportFile(event) {
     const file = event.target.files?.[0] || null;
@@ -244,10 +257,19 @@ export default function ContactoPage() {
                     <input id="support-report-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleReportFile} />
                   </label>
                   {reportFileError && <p className="support-report-error" role="alert">{reportFileError}</p>}
-                  {reportFile && (
-                    <button className="support-report-remove" type="button" onClick={() => { setReportFile(null); setReportFileError(""); const input = document.getElementById("support-report-file"); if (input) input.value = ""; }}>
-                      Quitar imagen
-                    </button>
+                  {reportFile && reportPreviewUrl && (
+                    <div className="support-report-preview">
+                      <div className="support-report-preview__heading">
+                        <span>Vista previa de la imagen</span>
+                        <a href={reportPreviewUrl} target="_blank" rel="noreferrer">Ver en tamaño completo ↗</a>
+                      </div>
+                      <a className="support-report-preview__image-link" href={reportPreviewUrl} target="_blank" rel="noreferrer" aria-label="Abrir imagen seleccionada en tamaño completo">
+                        <img src={reportPreviewUrl} alt={`Vista previa del archivo seleccionado: ${reportFile.name}`} />
+                      </a>
+                      <button className="support-report-remove" type="button" onClick={() => { setReportFile(null); setReportFileError(""); const input = document.getElementById("support-report-file"); if (input) input.value = ""; }}>
+                        Quitar imagen
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
