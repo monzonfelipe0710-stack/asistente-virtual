@@ -58,7 +58,7 @@ const ECOSYSTEM = [
       </svg>
     ),
     title: "Panel de usuarios y permisos",
-    description: "Herramientas para organizar cuentas, perfiles y accesos de los equipos que administran el servicio.",
+    description: "Una gestión ordenada de cuentas, perfiles y niveles de acceso para los equipos responsables de administrar ChatAP.",
   },
   {
     id: "conocimiento",
@@ -67,8 +67,8 @@ const ECOSYSTEM = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
     ),
-    title: "Conocimiento actualizable",
-    description: "Organización de contenidos, requisitos y respuestas para facilitar su revisión y actualización.",
+    title: "Conocimiento actualizado",
+    description: "Un espacio para organizar y revisar contenidos, requisitos y respuestas, y mantener la orientación alineada con la información disponible.",
   },
   {
     id: "integraciones",
@@ -77,8 +77,8 @@ const ECOSYSTEM = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.828 10.172a4 4 0 015.656 0l1.414 1.414a4 4 0 01-5.656 5.656l-1.414-1.414m-3.656-3.656a4 4 0 00-5.656 0l-1.414 1.414a4 4 0 005.656 5.656l1.414-1.414" />
       </svg>
     ),
-    title: "Integraciones en camino",
-    description: "Un camino de evolución que contempla nuevas conexiones con servicios y sistemas de la Administración Pública.",
+    title: "Integraciones en evolución",
+    description: "La plataforma contempla futuras conexiones con servicios y sistemas de la Administración Pública para ampliar sus posibilidades de gestión.",
   },
 ];
 
@@ -492,47 +492,54 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-        {/* 5 · Bonus: ecosistema y roadmap */}
-        <section id="capacidades" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
-          <div className="ed-max flex flex-col items-center gap-12">
-            <div className="mx-auto max-w-3xl space-y-4 text-center">
-              <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand/5 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wider text-brand">
+        {/* 5 · Ecosistema institucional de ChatAP */}
+        <section id="capacidades" className="section-bleed ecosystem-section border-t border-line/40">
+          <div className="ed-max ecosystem-section__inner">
+            <div className="ecosystem-section__intro">
+              <span className="ecosystem-section__eyebrow">
+                <span className="ecosystem-section__eyebrow-mark" aria-hidden="true" />
                 Más que un chat
               </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-ink tracking-tight m-0 leading-tight text-balance">
-                Una plataforma que conecta orientación y gestión institucional.
+              <h2 className="ecosystem-section__title">
+                Una plataforma para <span>orientar mejor</span> y fortalecer la gestión institucional.
               </h2>
-              <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted m-0 leading-relaxed">
-                ChatAP combina la orientación ciudadana con herramientas internas para organizar contenidos y acompañar el crecimiento del servicio.
+              <p className="ecosystem-section__lead">
+                ChatAP reúne la orientación ciudadana y herramientas de gestión en una misma propuesta: información organizada, administración responsable y una evolución pensada para mejorar el servicio.
               </p>
             </div>
 
-            <div className="grid w-full max-w-6xl grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-7">
-              {ECOSYSTEM.map((item) => (
-                <div key={item.id} className="minimal-feature-card group h-full min-w-0">
-                  <div className="flex flex-1 flex-col gap-5">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-mist dark:bg-neutral-800 border border-line">
+            <div className="ecosystem-section__grid">
+              {ECOSYSTEM.map((item, index) => (
+                <article key={item.id} className="ecosystem-card">
+                  <div className="ecosystem-card__top">
+                    <span className="ecosystem-card__icon" aria-hidden="true">
                       {item.icon}
                     </span>
-                    <div className="space-y-3">
-                      <h3 className="text-xl sm:text-2xl font-bold text-ink tracking-tight m-0 group-hover:text-brand transition-colors">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm sm:text-base text-muted leading-relaxed m-0">
-                        {item.description}
-                      </p>
-                    </div>
+                    <span className="ecosystem-card__index" aria-hidden="true">
+                      0{index + 1}
+                    </span>
                   </div>
-                </div>
+                  <div className="ecosystem-card__content">
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </div>
+                  <span className="ecosystem-card__accent" aria-hidden="true" />
+                </article>
               ))}
             </div>
 
-            <p className="inline-flex items-center gap-2 rounded-full border border-line/70 bg-card/60 px-4 py-2 text-xs font-semibold text-muted">
-              <svg className="h-4 w-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              El proyecto contempla mecanismos de valoración para detectar oportunidades de mejora y seguir fortaleciendo la calidad de la orientación.
-            </p>
+            <div className="ecosystem-section__note">
+              <span className="ecosystem-section__note-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.64 5.64l2.12 2.12m8.48 8.48 2.12 2.12m0-12.72-2.12 2.12m-8.48 8.48-2.12 2.12" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              </span>
+              <div>
+                <span className="ecosystem-section__note-title">Mejora continua</span>
+                <p>El proyecto contempla mecanismos de valoración para identificar oportunidades de mejora y seguir fortaleciendo la calidad de la orientación.</p>
+              </div>
+            </div>
           </div>
         </section>
 
