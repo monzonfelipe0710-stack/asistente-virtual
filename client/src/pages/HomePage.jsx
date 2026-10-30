@@ -401,8 +401,8 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {BENEFITS.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-line bg-card/70 p-6 flex flex-col gap-4">
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-brand/10 border border-brand/15">
+                <div key={item.id} className="group rounded-2xl border border-line bg-card/70 p-6 flex flex-col gap-4 transition-all duration-200 hover:-translate-y-1 hover:border-brand/35 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-brand/10 border border-brand/15 transition-colors group-hover:bg-brand/15">
                     {item.icon}
                   </span>
                   <h3 className="text-lg font-bold text-ink tracking-tight m-0">{item.title}</h3>
@@ -511,13 +511,13 @@ export default function HomePage() {
                 const isOpen = openFaq === item.id;
                 return (
                   <div key={item.id} className={`faq-item group ${isOpen ? "faq-item--open" : ""}`}>
-                    <button type="button" className="faq-summary" aria-expanded={isOpen} aria-controls={`home-faq-answer-${item.id}`} onClick={() => setOpenFaq(isOpen ? null : item.id)}>
+                    <button type="button" id={`home-faq-trigger-${item.id}`} className="faq-summary" aria-expanded={isOpen} aria-controls={`home-faq-answer-${item.id}`} onClick={() => setOpenFaq(isOpen ? null : item.id)}>
                       <span className="text-base sm:text-lg font-bold text-ink">{item.question}</span>
                       <svg className="faq-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-                    <div id={`home-faq-answer-${item.id}`} className="faq-content text-sm sm:text-base leading-relaxed text-muted" aria-hidden={!isOpen}>
+                    <div id={`home-faq-answer-${item.id}`} role="region" aria-labelledby={`home-faq-trigger-${item.id}`} className="faq-content text-sm sm:text-base leading-relaxed text-muted" aria-hidden={!isOpen}>
                       <div className="faq-content-inner"><p className="m-0">{item.answer}</p></div>
                     </div>
                   </div>
