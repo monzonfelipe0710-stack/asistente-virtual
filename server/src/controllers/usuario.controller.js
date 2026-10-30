@@ -132,7 +132,7 @@ export const asignarSectores = async (req, res) => {
 
   if (usuario.rol !== "ADMINISTRADOR") {
     const error = new Error(
-      "Los sectores solo pueden ser asignados a adminstradores.",
+      "Los sectores solo pueden ser asignados a administradores.",
     );
     error.statusCode = 409;
     throw error;
