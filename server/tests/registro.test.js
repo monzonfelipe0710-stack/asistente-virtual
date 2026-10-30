@@ -8,8 +8,10 @@ import prisma from '../src/config/prisma.js';
 // Los usuarios se crean en la base de verdad y se borran al terminar.
 let padron;
 let llamadas;
+// namedExports y no exports: exports recién existe en versiones nuevas de Node y
+// el proyecto soporta desde 22.3 (en las nuevas solo avisa que está deprecado).
 mock.module(new URL('../src/services/turnos.service.js', import.meta.url).href, {
-  exports: {
+  namedExports: {
     buscarPersona: async (dni, sexo) => {
       llamadas.push(sexo);
       return padron[sexo] ?? null;
