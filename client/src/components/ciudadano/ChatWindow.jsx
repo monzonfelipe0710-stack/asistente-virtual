@@ -137,6 +137,8 @@ export default function ChatWindow({ initialQuery = null }) {
   const typeTimerRef = useRef(0);
   const controllerRef = useRef(null);
   const typingTimerRef = useRef(null);
+  // Evita solicitudes simultáneas y envíos durante la animación de respuesta.
+  const requestInFlightRef = useRef(false);
   const greetedRef = useRef(false);
   const wizardRef = useRef(null);
   const [welcomeMem, setWelcomeMem] = useState(null);
@@ -558,6 +560,7 @@ export default function ChatWindow({ initialQuery = null }) {
       !!window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
+      requestInFlightRef.current = false;
       controllerRef.current?.onEvent(error ? "botError" : "botSuccess");
       return;
     }
@@ -593,6 +596,7 @@ export default function ChatWindow({ initialQuery = null }) {
         setTimeout(() => {
           if (speakingIdRef.current !== id) return;
           speakingRef.current = false;
+          requestInFlightRef.current = false;
           speakingIdRef.current = null;
           setSpeakingId(null);
           setTypedText("");
@@ -605,6 +609,8 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   async function respondTo(userText, image = null, userMessageId = null, immediateConsultaId = null) {
+    if (requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
     const responseThreadId = activeThreadIdRef.current;
     setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
@@ -720,6 +726,7 @@ export default function ChatWindow({ initialQuery = null }) {
       calificacion: null,
     };
     if (activeThreadIdRef.current !== responseThreadId) {
+      requestInFlightRef.current = false;
       // Si el usuario cambió de hilo mientras el asistente respondía, la respuesta
       // termina en el hilo original y nunca se mezcla con la conversación nueva.
       const answerMessage = {
@@ -756,7 +763,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
   function sendText(text, image = null, preview = "") {
     const t = (text ?? "").trim();
-    if (!t) return;
+    if (!t || requestInFlightRef.current || speakingRef.current) return;
 
     // También protegemos el envío directo (por ejemplo, desde una búsqueda inicial):
     // un hilo nuevo no puede empezar si ya existen cuatro conversaciones.
@@ -1631,14 +1638,14 @@ export default function ChatWindow({ initialQuery = null }) {
           {/* Botón Enviar */}
           <button
             type="submit"
-            disabled={!input.trim() || (!!imageFile && !imagePreview)}
+            disabled={!input.trim() || (!!imageFile && !imagePreview) || isTyping || !!speakingId}
             className={`ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all ${
               input.trim()
                 ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
                 : "bg-transparent text-muted/30 cursor-not-allowed hover:bg-transparent hover:text-muted/30"
             }`}
             aria-label="Enviar consulta"
-            aria-disabled={!input.trim() || (!!imageFile && !imagePreview)}
+            aria-disabled={!input.trim() || (!!imageFile && !imagePreview) || isTyping || !!speakingId}
           >
             <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12l7-7l7 7m-7 7V5" />
