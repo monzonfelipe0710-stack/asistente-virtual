@@ -4865,6 +4865,23 @@ html.dark .tour-avatar {
 
 
 
+/* Contraste explícito del selector de tamaño en ambos temas. */
+.accessibility-menu-panel .accessibility-text-heading {
+  color: var(--color-ink);
+}
+.accessibility-menu-panel .accessibility-text-option {
+  color: var(--color-muted);
+}
+.accessibility-menu-panel .accessibility-text-option[aria-pressed="true"] {
+  color: var(--color-brand-deep);
+  background-color: color-mix(in srgb, var(--color-brand) 16%, var(--color-paper));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-brand-deep) 16%, transparent);
+}
+.dark .accessibility-menu-panel .accessibility-text-option[aria-pressed="true"] {
+  color: #EAF0FA;
+  background-color: color-mix(in srgb, var(--color-brand-deep) 48%, var(--color-paper));
+}
+
 /* Selector de tamaño de texto: respuesta visual inmediata y estable. */
 .accessibility-menu-panel {
   isolation: isolate;
