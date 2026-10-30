@@ -147,37 +147,58 @@ export default function AdminSidebar({ open, onToggle }) {
       role="navigation"
       aria-label="Panel de administración"
     >
-      {/* Header: toggle de la barra. */}
+      {/* Header: identidad y toggle de la barra. */}
       <div
-        className="flex items-center shrink-0 overflow-hidden"
+        className="flex items-center shrink-0 border-b overflow-hidden"
         style={{
           height: "72px",
-          padding: "16px 0 0",
-          paddingLeft: open ? "20px" : "16px",
-          justifyContent: "flex-start",
+          padding: open ? "0 16px 0 20px" : "0 16px",
+          justifyContent: open ? "space-between" : "center",
+          borderColor: "var(--sidebar-border)",
         }}
       >
-        <button
-          onClick={onToggle}
-          className="flex items-center justify-center w-10 h-10 rounded-lg shrink-0 cursor-pointer transition-colors duration-200 hover:opacity-80"
-          style={{
-            backgroundColor: "var(--sidebar-hover)",
-            color: "var(--sidebar-text)",
-          }}
-          aria-label={open ? "Ocultar barra lateral" : "Mostrar barra lateral"}
-          title={!open ? "Mostrar barra lateral" : undefined}
-        >
-          <svg
-            className="w-[18px] h-[18px] transition-transform duration-300"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-            style={{ transform: open ? "rotate(0deg)" : "rotate(180deg)" }}
+        {!open ? (
+          <button
+            onClick={onToggle}
+            className="flex items-center justify-center w-10 h-10 rounded-xl cursor-pointer transition-transform duration-150 hover:scale-105"
+            aria-label="Expandir barra lateral"
+            title="Expandir barra lateral"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm select-none">
+              AP
+            </div>
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm select-none">
+                AP
+              </div>
+              <div className="flex flex-col min-w-0 leading-tight">
+                <span className="text-sm font-bold text-white tracking-tight truncate">ChatAP</span>
+                <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-widest mt-0.5">Admin</span>
+              </div>
+            </div>
+
+            <button
+              onClick={onToggle}
+              className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0 cursor-pointer transition-colors duration-200 hover:bg-white/10 ml-auto"
+              style={{ color: "var(--sidebar-text)" }}
+              aria-label="Ocultar barra lateral"
+              title="Ocultar barra lateral"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Navegación: flex-1, layout vertical estable */}

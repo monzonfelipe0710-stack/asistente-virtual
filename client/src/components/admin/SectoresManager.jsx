@@ -6,12 +6,13 @@ import Modal from "../common/Modal";
 import { PageHeader, EmptyState } from "./ui";
 import { TableSkeleton } from "./Skeleton";
 
-const TIPOS = ["MINISTERIO", "SUBSECRETARIA", "DEPARTAMENTO"];
+const TIPOS = ["MINISTERIO", "SUBSECRETARIA", "DEPARTAMENTO", "ORGANISMO"];
 
 const TIPO_TONE = {
   MINISTERIO: "bg-ink text-paper",
   SUBSECRETARIA: "bg-brand-deep/15 text-brand-deep",
   DEPARTAMENTO: "bg-mist text-muted border border-line",
+  ORGANISMO: "bg-emerald-600/15 text-emerald-800 border border-emerald-500/20",
 };
 
 function buildTree(list) {
