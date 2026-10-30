@@ -131,10 +131,22 @@ export default function AdminLayout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              to="/chat"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-muted hover:text-ink hover:bg-mist/80 transition-colors no-underline border border-line"
+              title="Abrir el asistente como ciudadano"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="hidden sm:inline">Ver Asistente</span>
+            </Link>
             {user && (
-              <span className="hidden sm:flex items-center gap-2">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase">{user.name ? user.name[0] : "?"}</span>
-                <span className="flex flex-col leading-none">
+              <span className="flex items-center gap-2 pl-2 border-l border-line">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-deep text-paper text-[11px] font-bold uppercase shadow-sm">
+                  {user.name ? user.name[0] : "?"}
+                </span>
+                <span className="hidden md:flex flex-col leading-none">
                   <span className="text-xs font-semibold truncate max-w-32" style={{ color: "var(--color-ink)" }}>{user.name}</span>
                   <span className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>{roleLabel(userRole)}</span>
                 </span>

@@ -161,14 +161,47 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/admin/tramites"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-line bg-paper text-xs font-semibold text-ink no-underline hover:border-brand hover:text-brand-deep transition-colors shadow-xs"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span>Trámites</span>
+          </Link>
+          <Link
+            to="/admin/mesa-de-entrada"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-line bg-paper text-xs font-semibold text-ink no-underline hover:border-brand hover:text-brand-deep transition-colors shadow-xs"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span>Mesa de Entradas</span>
+          </Link>
+          <Link
+            to="/admin/conocimiento"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-line bg-paper text-xs font-semibold text-ink no-underline hover:border-brand hover:text-brand-deep transition-colors shadow-xs"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <span>Conocimiento</span>
+          </Link>
+        </div>
+
         <button
           type="button"
           onClick={() => setRefreshKey((key) => key + 1)}
           disabled={loading}
-          className="btn-ghost text-xs disabled:cursor-wait disabled:opacity-50"
+          className="btn-ghost text-xs inline-flex items-center gap-1.5 disabled:cursor-wait disabled:opacity-50"
         >
-          {loading ? "Actualizando…" : "Actualizar panel"}
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>{loading ? "Actualizando…" : "Actualizar panel"}</span>
         </button>
       </div>
 
