@@ -5,7 +5,8 @@ import bcrypt from 'bcrypt';
 import prisma from '../src/config/prisma.js';
 import { indexarTramite } from '../src/services/embedding.service.js';
 
-const ARCHIVO = process.argv[2] ?? 'tramites_normalizado.json';
+const ARCHIVO = process.argv[2]
+  ?? new URL('../../ingestion/data/tramites_normalizado.json', import.meta.url);
 
 async function obtenerUsuarioSistema() {
   const email = 'sistema@chatap.local';
