@@ -73,7 +73,7 @@ const ECOSYSTEM = [
       </svg>
     ),
     title: "Panel de usuarios y permisos",
-    description: "Gestión de cuentas, altas y accesos para ciudadanos y equipos internos.",
+    description: "Herramientas para organizar cuentas, perfiles y accesos de los equipos que administran el servicio.",
   },
   {
     id: "conocimiento",
@@ -83,7 +83,7 @@ const ECOSYSTEM = [
       </svg>
     ),
     title: "Conocimiento actualizable",
-    description: "El equipo administra trámites, requisitos y respuestas para mantener la información al día.",
+    description: "Organización de contenidos, requisitos y respuestas para facilitar su revisión y actualización.",
   },
   {
     id: "integraciones",
@@ -93,7 +93,7 @@ const ECOSYSTEM = [
       </svg>
     ),
     title: "Integraciones en camino",
-    description: "SIGED, MiPortal, WhatsApp y mesa de entradas para ampliar el alcance del servicio.",
+    description: "Un camino de evolución que contempla nuevas conexiones con servicios y sistemas de la Administración Pública.",
   },
 ];
 
@@ -426,8 +426,7 @@ export default function HomePage() {
                 Así puede ser una consulta en ChatAP.
               </h2>
               <p className="text-base text-muted m-0 leading-relaxed">
-                Preguntá en lenguaje cotidiano y mirá cómo ChatAP arma la respuesta con requisitos,
-                formularios y próximos pasos.
+                Con un ejemplo sencillo, conocé cómo se presenta una consulta y cómo se organiza una orientación con información y próximos pasos.
               </p>
             </div>
 
@@ -461,8 +460,7 @@ export default function HomePage() {
                 Una plataforma que conecta orientación y gestión institucional.
               </h2>
               <p className="mx-auto max-w-2xl text-base sm:text-lg text-muted m-0 leading-relaxed">
-                ChatAP no es solo una conversación: es una plataforma para ordenar información
-                institucional, administrar usuarios y preparar nuevas integraciones.
+                Además de orientar consultas, ChatAP cuenta con herramientas de gestión para organizar el conocimiento institucional y acompañar la evolución del servicio.
               </p>
             </div>
 
@@ -544,8 +542,7 @@ export default function HomePage() {
               </h2>
 
               <p className="text-base sm:text-lg text-muted max-w-xl leading-relaxed m-0">
-                Escribí tu consulta y recibí orientación clara con información de la Subsecretaría
-                de Recursos Humanos.
+                Contanos qué necesitás resolver. ChatAP puede orientarte con información vinculada a trámites y servicios de la Subsecretaría de Recursos Humanos.
               </p>
 
               <div className="flex flex-col items-center gap-3 pt-2">
