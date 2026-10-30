@@ -256,7 +256,6 @@ export default function HomePage() {
           <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4">
             {/* Gran Titular Editorial con ScrollFloat */}
             <div className="hero-anim-title max-w-4xl mx-auto">
-              <div className="home-hero-kicker"><span className="home-hero-kicker__dot" /> Orientación pública, más simple</div>
               <ScrollFloat
                 as="h1"
                 mode="once"
@@ -266,13 +265,13 @@ export default function HomePage() {
                 containerClassName="hero-cinematic__title-container"
                 textClassName="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0 block"
               >
-                La información pública, más cerca y más clara.
+                El Estado te responde a la primera.
               </ScrollFloat>
             </div>
 
             {/* Subtítulo comercial y directo */}
             <p className="hero-anim-sub mt-6 text-base sm:text-lg lg:text-xl text-muted max-w-2xl mx-auto leading-relaxed m-0 font-normal">
-              Una forma más sencilla de encontrar orientación sobre trámites, requisitos y documentación de la Administración Pública de Formosa, tanto para la ciudadanía como para los agentes públicos.
+              Encontrá orientación sobre trámites, requisitos y documentación de la Administración Pública de Formosa, en una conversación clara para ciudadanos y agentes públicos.
             </p>
 
             {/* Acción principal del banner */}
@@ -357,74 +356,81 @@ export default function HomePage() {
         </section>
 
         {/* 2 · La problemática, resumida y directa */}
-        <section id="problema" className="home-section home-problem section-bleed border-t border-line/40">
-          <div className="ed-max home-problem__layout">
-            <div className="home-problem__copy">
-              <span className="home-eyebrow">El punto de partida</span>
-              <h2 className="home-section-title">
-                Encontrar una respuesta no debería convertirse en <span>un recorrido.</span>
-              </h2>
-              <p className="home-section-lead">
-                La información pública puede estar distribuida entre distintas áreas, documentos y canales. Eso hace que una consulta sencilla termine en búsquedas repetidas, derivaciones o traslados.
-              </p>
-              <p className="home-problem__statement">Ciudadanos y agentes públicos necesitan saber dónde buscar, qué documentación reunir y cómo continuar.</p>
+        <section id="problema" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col items-center gap-7 text-center">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+              El punto de partida
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight m-0 leading-[1.1] max-w-3xl">
+              Resolver una duda administrativa <span className="text-brand">no debería llevarte de un lugar a otro.</span>
+            </h2>
+            <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed m-0">
+              Encontrar información pública no siempre es sencillo: a veces hay que repetir consultas, buscar el área correcta o trasladarse para obtener una orientación. Ciudadanos y agentes públicos necesitan información clara, confiable y fácil de encontrar.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+              {["Consultas repetidas", "Derivaciones", "Traslados", "Información dispersa", "Falta de orientación clara"].map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-mist/70 dark:bg-neutral-800/70 border border-line/60 text-xs font-semibold text-muted"
+                >
+                  <svg className="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  {item}
+                </span>
+              ))}
             </div>
-            <div className="home-problem__signals" aria-label="Dificultades frecuentes al buscar información">
-              <article className="home-signal-card">
-                <span className="home-signal-card__index">01</span>
-                <div><h3>Información dispersa</h3><p>Los datos relevantes pueden encontrarse en distintos lugares.</p></div>
-              </article>
-              <article className="home-signal-card">
-                <span className="home-signal-card__index">02</span>
-                <div><h3>Consultas repetidas</h3><p>La falta de una orientación clara obliga a volver a preguntar.</p></div>
-              </article>
-              <article className="home-signal-card">
-                <span className="home-signal-card__index">03</span>
-                <div><h3>Derivaciones y traslados</h3><p>No siempre es fácil identificar el área que puede ayudar.</p></div>
-              </article>
-            </div>
-          </div>
-          <div className="ed-max home-problem__resolution">
-            <span className="home-problem__resolution-mark" aria-hidden="true">↗</span>
-            <p><strong>ChatAP propone un punto de orientación:</strong> reunir información institucional y acercarla mediante una conversación simple.</p>
+            <p className="text-sm font-bold text-brand m-0">ChatAP busca hacer ese recorrido más simple: reunir la información y acercar la orientación desde un solo lugar.</p>
           </div>
         </section>
 
         {/* 3 · Cómo lo resolvemos */}
-        <section id="solucion" className="home-section home-solution section-bleed border-t border-line/40">
-          <div className="ed-max">
-            <div className="home-section-heading">
-              <div>
-                <span className="home-eyebrow">Cómo lo resolvemos</span>
-                <h2 className="home-section-title">Una conversación para saber cómo seguir.</h2>
-              </div>
-              <p className="home-section-lead">Contá qué necesitás con tus propias palabras. ChatAP te ayuda a encontrar orientación y reconocer el próximo paso con la información institucional disponible.</p>
+        <section id="solucion" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
+          <div className="ed-max flex flex-col gap-12">
+            <div className="max-w-2xl space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Cómo lo resolvemos
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Una conversación para saber cómo seguir.
+              </h2>
+              <p className="text-base text-muted m-0 leading-relaxed">
+                ChatAP reúne orientación, preguntas frecuentes y documentación institucional para ayudarte a entender qué necesitás y cuál es el próximo paso, sin empezar la búsqueda desde cero.
+              </p>
             </div>
-            <div className="home-benefit-grid">
-              {BENEFITS.map((item, index) => (
-                <article key={item.id} className="home-benefit-card">
-                  <div className="home-benefit-card__top"><span className="home-benefit-card__icon">{item.icon}</span><span className="home-benefit-card__number">0{index + 1}</span></div>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </article>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {BENEFITS.map((item) => (
+                <div key={item.id} className="group rounded-2xl border border-line bg-card/70 p-6 flex flex-col gap-4 transition-all duration-200 hover:-translate-y-1 hover:border-brand/35 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-brand/10 border border-brand/15 transition-colors group-hover:bg-brand/15">
+                    {item.icon}
+                  </span>
+                  <h3 className="text-lg font-bold text-ink tracking-tight m-0">{item.title}</h3>
+                  <p className="text-sm text-muted leading-relaxed m-0">{item.description}</p>
+                </div>
               ))}
             </div>
           </div>
         </section>
 
         {/* 4 · Presentación del asistente (Showcase Real y Directo) */}
-        <section id="en-accion" className="home-section home-showcase section-bleed border-t border-line/40">
-          <div className="ed-max">
-            <div className="home-section-heading home-section-heading--center">
-              <span className="home-eyebrow">Conocé la experiencia</span>
-              <h2 className="home-section-title">Una consulta. Una orientación. Un próximo paso.</h2>
-              <p className="home-section-lead">Este recorrido ilustrativo muestra cómo podría desarrollarse una conversación con ChatAP.</p>
+        <section id="en-accion" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
+          <div className="ed-max flex flex-col items-center gap-12">
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+                Demo interactiva
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
+                Así puede ser una consulta en ChatAP.
+              </h2>
+              <p className="text-base text-muted m-0 leading-relaxed">
+                Con un ejemplo sencillo, conocé cómo se presenta una consulta y cómo se organiza una orientación con información y próximos pasos.
+              </p>
             </div>
-            <div className="home-showcase__frame">
-              <div className="home-showcase__meta"><span className="home-showcase__meta-dot" /> Vista ilustrativa <span>·</span> No es una consulta real</div>
-              <div className="w-full max-w-4xl mx-auto">
-                <InteractiveChatMockup />
-              </div>
+
+            {/* Maqueta Interactiva Limpia y Enmarcada */}
+            <div className="w-full max-w-4xl mx-auto">
+              <InteractiveChatMockup />
             </div>
 
             <div className="flex flex-col items-center gap-3 pt-2 text-center">
