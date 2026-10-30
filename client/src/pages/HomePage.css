@@ -118,11 +118,33 @@
   z-index: 2;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   flex: 1 1 auto;
+  box-sizing: border-box;
   width: 100%;
+  margin-inline: auto;
+  text-align: center;
   padding-top: clamp(5.5rem, 11vh, 7.5rem);
   padding-bottom: clamp(3rem, 7vh, 5rem);
+}
+
+/* Mantiene cada bloque del banner centrado dentro del mismo eje visual. */
+.hero-cinematic__inner > .hero-anim-title {
+  width: min(100%, 56rem);
+  margin-inline: auto;
+}
+.hero-cinematic__inner > .hero-anim-sub {
+  width: min(100%, 42rem);
+  margin-inline: auto;
+}
+.hero-cinematic__inner > .hero-anim-cta {
+  width: min(100%, 48rem);
+  margin-inline: auto;
+}
+.hero-cinematic__inner > .hero-anim-trust {
+  width: 100%;
+  margin-inline: auto;
 }
 
 .hero-cinematic__footer {
