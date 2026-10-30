@@ -75,7 +75,7 @@ export function PageHeader({ title, description, children }) {
       <div className="min-w-0">
         <p className="kicker m-0">[ Administración ]</p>
         <h1 className="display-3 text-ink m-0 mt-3 uppercase">{title}</h1>
-        {description && <p className="text-[15px] text-muted mt-3 m-0 max-w-2xl">{description}</p>}
+        {description && <p className="text-[15px] leading-relaxed text-muted mt-3 m-0 max-w-2xl">{description}</p>}
       </div>
       {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
     </div>
