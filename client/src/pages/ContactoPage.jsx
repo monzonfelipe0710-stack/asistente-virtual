@@ -83,6 +83,27 @@ function SupportIcon({ name }) {
 
 export default function ContactoPage() {
   const [openFaq, setOpenFaq] = useState(0);
+  const [reportFile, setReportFile] = useState(null);
+  const [reportFileError, setReportFileError] = useState("");
+
+  function handleReportFile(event) {
+    const file = event.target.files?.[0] || null;
+    setReportFileError("");
+    if (!file) { setReportFile(null); return; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setReportFile(null);
+      setReportFileError("Elegí una imagen JPG, PNG o WEBP.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setReportFile(null);
+      setReportFileError("La imagen no puede superar los 5 MB.");
+      event.target.value = "";
+      return;
+    }
+    setReportFile(file);
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-brand-deep/10 selection:text-brand-deep">
@@ -151,6 +172,95 @@ export default function ContactoPage() {
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="support-report-section section-bleed" id="reportar">
+          <div className="ed-max support-report-layout">
+            <div className="support-report-intro">
+              <span className="support-section-heading__eyebrow">¿Algo no funcionó?</span>
+              <h2>Contanos qué pasó.</h2>
+              <p>
+                Si encontraste un error o tuviste un inconveniente al usar ChatAP,
+                podés preparar un reporte para que el equipo pueda revisarlo.
+              </p>
+              <div className="support-report-note">
+                <span className="support-report-note__icon" aria-hidden="true">i</span>
+                <p>
+                  No incluyas contraseñas, códigos de seguridad ni información
+                  sensible. La captura es opcional y debería mostrar únicamente
+                  el inconveniente.
+                </p>
+              </div>
+            </div>
+
+            <form className="support-report-form" onSubmit={(event) => event.preventDefault()}>
+              <div className="support-report-form__heading">
+                <div>
+                  <span className="support-report-form__eyebrow">Formulario de reporte</span>
+                  <h3>Describí el inconveniente</h3>
+                </div>
+                <span className="support-report-form__required">* Campos obligatorios</span>
+              </div>
+
+              <div className="support-report-fields">
+                <label className="support-report-field">
+                  <span>Nombre y apellido <b>*</b></span>
+                  <input type="text" name="nombre" autoComplete="name" placeholder="Cómo podemos llamarte" required />
+                </label>
+                <label className="support-report-field">
+                  <span>Correo electrónico <b>*</b></span>
+                  <input type="email" name="email" autoComplete="email" placeholder="nombre@correo.com" required />
+                </label>
+                <label className="support-report-field">
+                  <span>Teléfono <small>(opcional)</small></span>
+                  <input type="tel" name="telefono" autoComplete="tel" placeholder="Tu número de contacto" />
+                </label>
+                <label className="support-report-field">
+                  <span>Motivo del reporte <b>*</b></span>
+                  <select name="categoria" defaultValue="" required>
+                    <option value="" disabled>Seleccioná una categoría</option>
+                    <option value="chat">Problema con ChatAP</option>
+                    <option value="cuenta">Acceso o cuenta</option>
+                    <option value="tramites">Información de trámites</option>
+                    <option value="documentos">Documentos o archivos</option>
+                    <option value="otro">Otro inconveniente</option>
+                  </select>
+                </label>
+                <label className="support-report-field support-report-field--full">
+                  <span>¿Qué ocurrió? <b>*</b></span>
+                  <textarea name="descripcion" rows="5" minLength="15" maxLength="1500" placeholder="Describí qué estabas intentando hacer, qué sucedió y si apareció algún mensaje de error." required />
+                  <small>Incluí todos los detalles que puedan ayudar a comprender el problema (hasta 1.500 caracteres).</small>
+                </label>
+                <div className="support-report-field support-report-field--full">
+                  <span>Captura de pantalla <small>(opcional)</small></span>
+                  <label className="support-report-upload" htmlFor="support-report-file">
+                    <span className="support-report-upload__icon" aria-hidden="true">↑</span>
+                    <span>
+                      <strong>{reportFile ? reportFile.name : "Adjuntar una imagen"}</strong>
+                      <small>{reportFile ? `${(reportFile.size / 1024 / 1024).toFixed(2)} MB · Archivo seleccionado` : "JPG, PNG o WEBP · Máximo 5 MB"}</small>
+                    </span>
+                    <span className="support-report-upload__action">{reportFile ? "Cambiar" : "Elegir archivo"}</span>
+                    <input id="support-report-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleReportFile} />
+                  </label>
+                  {reportFileError && <p className="support-report-error" role="alert">{reportFileError}</p>}
+                  {reportFile && (
+                    <button className="support-report-remove" type="button" onClick={() => { setReportFile(null); setReportFileError(""); const input = document.getElementById("support-report-file"); if (input) input.value = ""; }}>
+                      Quitar imagen
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="support-report-submit">
+                <p role="status">
+                  El envío de reportes estará disponible cuando se habilite la recepción segura en el sistema.
+                </p>
+                <button type="submit" disabled title="Pendiente de conexión con el servicio de reportes">
+                  Envío pendiente de habilitación
+                </button>
+              </div>
+            </form>
           </div>
         </section>
 
