@@ -101,7 +101,7 @@ const FAQ_ITEMS = [
   {
     id: "alcance",
     question: "¿Qué puedo resolver con ChatAP?",
-    answer: "ChatAP te orienta sobre trámites administrativos, responde preguntas frecuentes, te indica requisitos, documentos y puntos de atención, y te ayuda a preparar tu consulta. No reemplaza una resolución administrativa ni una notificación oficial.",
+    answer: "ChatAP ofrece orientación sobre trámites administrativos, preguntas frecuentes, requisitos, documentación y puntos de atención. La información es orientativa y no reemplaza una resolución administrativa ni una notificación oficial.",
   },
   {
     id: "registro",
