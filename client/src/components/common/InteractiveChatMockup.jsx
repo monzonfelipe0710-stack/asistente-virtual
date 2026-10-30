@@ -259,7 +259,6 @@ export default function InteractiveChatMockup() {
             )}
           </button>
         </div>
-        <span className="home-chat-preview__hint">Ejemplo ilustrativo · No se envían mensajes ni archivos reales</span>
       </footer>
     </section>
   );
