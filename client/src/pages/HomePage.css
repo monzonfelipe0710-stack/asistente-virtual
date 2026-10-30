@@ -664,3 +664,57 @@ section[id] {
 .faq-item--open .faq-content { grid-template-rows:1fr; padding-bottom:1.35rem; opacity:1; }
 .faq-item--open .faq-content-inner { transform:translateY(0); }
 @media (prefers-reduced-motion:reduce) { .faq-item .faq-content, .faq-item .faq-content-inner { transition:none!important; transform:none!important; } }
+
+
+/* Fondo ambiental estático: conserva profundidad sin un canvas WebGL permanente. */
+.home-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 42% at 8% 12%, rgba(47, 107, 255, 0.055), transparent 70%),
+    radial-gradient(ellipse 58% 38% at 92% 34%, rgba(14, 116, 190, 0.035), transparent 72%);
+}
+
+.dark .home-atmosphere {
+  background:
+    radial-gradient(ellipse 70% 42% at 8% 12%, rgba(77, 125, 255, 0.07), transparent 70%),
+    radial-gradient(ellipse 58% 38% at 92% 34%, rgba(14, 116, 190, 0.045), transparent 72%);
+}
+
+.hero-cinematic__title-container {
+  max-width: 18ch;
+  margin-inline: auto;
+  text-wrap: balance;
+}
+
+.hero-cinematic__inner {
+  padding-top: clamp(6.5rem, 13vh, 9rem);
+  padding-bottom: clamp(3.5rem, 8vh, 6rem);
+}
+
+.hero-cinematic__footer {
+  padding-bottom: clamp(1.5rem, 3vh, 2.25rem);
+}
+
+.faq-item {
+  backdrop-filter: none;
+}
+
+@media (max-width: 767px) {
+  .hero-cinematic__inner {
+    padding-top: 7rem;
+    padding-bottom: 3rem;
+  }
+
+  .hero-cinematic__footer {
+    padding-inline: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-atmosphere {
+    background-attachment: initial;
+  }
+}
