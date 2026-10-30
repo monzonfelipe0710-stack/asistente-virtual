@@ -85,33 +85,48 @@ const ECOSYSTEM = [
 const FAQ_ITEMS = [
   {
     id: "alcance",
-    question: "¿Qué puedo resolver con ChatAP?",
-    answer: "ChatAP ofrece orientación sobre trámites administrativos, preguntas frecuentes, requisitos, documentación y puntos de atención. La información es orientativa y no reemplaza una resolución administrativa ni una notificación oficial.",
+    question: "¿Qué puedo consultar en ChatAP?",
+    answer: "Podés hacer preguntas sobre trámites de la Administración Pública de Formosa. ChatAP puede orientarte con la descripción del trámite, sus requisitos, costos informados, lugares de presentación y documentos disponibles.",
   },
   {
     id: "registro",
-    question: "¿Necesito registrarme para consultar?",
-    answer: "No es obligatorio registrarte para realizar una consulta. Si iniciás sesión, podés acceder a las funciones de tu cuenta y retomar tus conversaciones guardadas.",
+    question: "¿Necesito crear una cuenta para hacer una consulta?",
+    answer: "No. Podés consultar desde el chat sin registrarte ni iniciar sesión. La cuenta es opcional y permite acceder a las funciones habilitadas para usuarios registrados.",
   },
   {
-    id: "costo",
-    question: "¿Tiene algún costo?",
-    answer: "ChatAP es una iniciativa de acceso público de la Subsecretaría de Recursos Humanos. No se cobra por realizar consultas en el asistente.",
+    id: "informacion",
+    question: "¿De dónde obtiene ChatAP sus respuestas?",
+    answer: "ChatAP busca información en el catálogo de trámites que está publicado en la plataforma. Utiliza esos datos para responder y no debería completar con suposiciones requisitos, costos ni direcciones que no estén informados.",
   },
   {
-    id: "tramites",
-    question: "¿Cómo me guía paso a paso?",
-    answer: "Contá con tus palabras qué necesitás hacer. ChatAP te ofrece orientación a partir de la información disponible y puede indicarte requisitos y el área correspondiente para continuar.",
+    id: "aclaraciones",
+    question: "¿Qué pasa si mi pregunta puede referirse a varios trámites?",
+    answer: "Si encuentra más de una opción relacionada, ChatAP puede pedirte una aclaración para identificar cuál necesitás. Así puede orientar la respuesta hacia el trámite correcto.",
+  },
+  {
+    id: "requisitos-costos",
+    question: "¿Puede decirme cuáles son los requisitos y cuánto cuesta un trámite?",
+    answer: "Sí, siempre que esos datos estén cargados en la ficha publicada del trámite. La respuesta puede incluir requisitos, dónde conseguirlos y los costos informados. Si un dato no figura, consultalo con el área responsable antes de iniciar el trámite.",
   },
   {
     id: "documentos",
-    question: "¿Qué documentos puedo encontrar?",
-    answer: "Según la información disponible, ChatAP puede orientarte sobre formularios, modelos y documentación relacionada con el trámite. Verificá siempre los requisitos vigentes con el organismo correspondiente.",
+    question: "¿Puedo encontrar y descargar formularios o documentos?",
+    answer: "Cuando el trámite publicado tiene archivos adjuntos, ChatAP puede mostrar los documentos disponibles para que los consultes o descargues. Si no aparece un archivo, significa que no hay uno disponible en esa ficha.",
   },
   {
-    id: "siged",
-    question: "¿Qué pasa con el SIGED?",
-    answer: "ChatAP puede brindarte orientación general sobre el SIGED. La consulta directa del estado de un expediente depende de que esa integración se encuentre habilitada.",
+    id: "atencion",
+    question: "¿ChatAP me indica dónde tengo que presentar la documentación?",
+    answer: "Cuando la información está cargada para ese trámite, puede mostrarte la mesa de entrada asociada y sus datos de ubicación. Revisá esa información y confirmá con el área correspondiente si necesitás validar algún detalle antes de acercarte.",
+  },
+  {
+    id: "limites",
+    question: "¿ChatAP puede iniciar o resolver mi trámite?",
+    answer: "No. ChatAP brinda orientación para que sepas cómo continuar, pero no presenta documentación, no gestiona expedientes ni reemplaza la atención o las decisiones del organismo responsable.",
+  },
+  {
+    id: "sin-resultados",
+    question: "¿Qué hago si ChatAP no encuentra información sobre mi consulta?",
+    answer: "Probá explicar tu consulta con otras palabras o mencioná el nombre del trámite si lo conocés. Si aun así no aparece información, acercate o consultá directamente en una mesa de entrada.",
   },
 ];
 
