@@ -46,6 +46,15 @@ export default function AdminLayout() {
     if (isMobile) setSidebarOpen(false);
   }, [pathname, isMobile]);
 
+  useEffect(() => {
+    if (!sidebarOpen || !isMobile) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen, isMobile]);
+
   const allowed =
     !!user && (userRole === "SUPERUSUARIO" || userRole === "ADMINISTRADOR");
 
@@ -134,8 +143,8 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main ref={mainRef} id="admin-main" tabIndex={-1} aria-label="Panel de administración" className="admin-layout-main flex-1 min-h-0 p-6 lg:p-10 overflow-y-auto overflow-x-hidden">
-          <Outlet />
+        <main ref={mainRef} id="admin-main" tabIndex={-1} aria-label="Panel de administración" className="admin-layout-main flex-1 min-h-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-9 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1440px]"><Outlet /></div>
         </main>
       </div>
     </div>
