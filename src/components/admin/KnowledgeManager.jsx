@@ -69,7 +69,7 @@ export default function KnowledgeManager() {
                     <h3 className="text-sm font-medium text-slate-800 m-0">
                       {article.question}
                     </h3>
-                    <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded flex-shrink-0">
+                    <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">
                       {article.category}
                     </span>
                   </div>
@@ -78,7 +78,7 @@ export default function KnowledgeManager() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => toggleActive(article.id)}
                     className={`px-2.5 py-1 text-xs rounded-md cursor-pointer transition-colors ${
