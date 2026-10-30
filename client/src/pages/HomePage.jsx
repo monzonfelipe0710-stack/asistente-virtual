@@ -406,34 +406,46 @@ export default function HomePage() {
         </section>
 
         {/* 3 · Cómo lo resolvemos */}
-        <section id="solucion" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
-          <div className="ed-max flex flex-col gap-12">
-            <div className="max-w-2xl space-y-3">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
+        <section id="solucion" className="section-bleed solution-section border-t border-line/40">
+          <div className="ed-max solution-section__inner">
+            <header className="solution-section__intro">
+              <span className="solution-section__eyebrow">
+                <span className="solution-section__eyebrow-mark" aria-hidden="true"><span /></span>
                 Cómo lo resolvemos
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight m-0">
-                Una conversación para saber cómo seguir.
+              <h2 className="solution-section__title">
+                Una conversación para <span>saber cómo seguir.</span>
               </h2>
-              <p className="text-base text-muted m-0 leading-relaxed">
+              <p className="solution-section__lead">
                 ChatAP reúne orientación, preguntas frecuentes y documentación institucional para ayudarte a entender qué necesitás y cuál es el próximo paso, sin empezar la búsqueda desde cero.
               </p>
+            </header>
+
+            <div className="solution-section__grid" aria-label="Formas en las que ChatAP puede orientarte">
+              {BENEFITS.map((item, index) => (
+                <article key={item.id} className={`solution-card solution-card--${item.id}`} style={{ "--card-index": index }}>
+                  <div className="solution-card__topline">
+                    <span className="solution-card__number">0{index + 1}</span>
+                    <span className="solution-card__icon" aria-hidden="true">{item.icon}</span>
+                  </div>
+                  <div className="solution-card__copy">
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </div>
+                  <span className="solution-card__accent" aria-hidden="true" />
+                </article>
+              ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {BENEFITS.map((item) => (
-                <div key={item.id} className="group rounded-2xl border border-line bg-card/70 p-6 flex flex-col gap-4 transition-all duration-200 hover:-translate-y-1 hover:border-brand/35 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none">
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-brand/10 border border-brand/15 transition-colors group-hover:bg-brand/15">
-                    {item.icon}
-                  </span>
-                  <h3 className="text-lg font-bold text-ink tracking-tight m-0">{item.title}</h3>
-                  <p className="text-sm text-muted leading-relaxed m-0">{item.description}</p>
-                </div>
-              ))}
+            <div className="solution-section__note">
+              <span className="solution-section__note-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42m0-12.72-1.42 1.42m-9.88 9.88-1.42 1.42"/><circle cx="12" cy="12" r="4"/></svg>
+              </span>
+              <p><strong>De la duda al próximo paso.</strong> Consultá con tus palabras y encontrá orientación en un mismo lugar.</p>
+              <span className="solution-section__note-arrow" aria-hidden="true">↗</span>
             </div>
           </div>
         </section>
-
         {/* 4 · Presentación del asistente (Showcase Real y Directo) */}
         <section id="en-accion" className="section-bleed bg-transparent py-20 lg:py-28 border-t border-line/40">
           <div className="ed-max flex flex-col items-center gap-12">
