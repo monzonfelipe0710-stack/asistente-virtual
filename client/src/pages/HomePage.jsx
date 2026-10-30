@@ -321,32 +321,87 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 2 · La problemática, resumida y directa */}
-        <section id="problema" className="section-bleed bg-transparent py-20 lg:py-24 border-t border-line/40">
-          <div className="ed-max flex flex-col items-center gap-7 text-center">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-brand">
-              El punto de partida
-            </span>
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight m-0 leading-[1.1] max-w-3xl">
-              Resolver una duda administrativa <span className="text-brand">no debería llevarte de un lugar a otro.</span>
-            </h2>
-            <p className="text-base sm:text-lg text-muted max-w-2xl leading-relaxed m-0">
-              Encontrar información pública no siempre es sencillo: a veces hay que repetir consultas, buscar el área correcta o trasladarse para obtener una orientación. Ciudadanos y agentes públicos necesitan información clara, confiable y fácil de encontrar.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
-              {["Consultas repetidas", "Derivaciones", "Traslados", "Información dispersa", "Falta de orientación clara"].map((item) => (
-                <span
-                  key={item}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-mist/70 dark:bg-neutral-800/70 border border-line/60 text-xs font-semibold text-muted"
-                >
-                  <svg className="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  {item}
-                </span>
-              ))}
+        {/* 2 · El problema que ChatAP busca simplificar */}
+        <section id="problema" className="section-bleed problem-section border-t border-line/40">
+          <div className="ed-max problem-section__inner">
+            <div className="problem-section__intro">
+              <span className="problem-section__eyebrow">
+                <span className="problem-section__eyebrow-line" aria-hidden="true" />
+                El punto de partida
+              </span>
+              <h2 className="problem-section__title">
+                Encontrar una respuesta <span>no debería ser otro trámite.</span>
+              </h2>
+              <p className="problem-section__lead">
+                Cuando la información está dispersa o no queda claro dónde consultar, resolver una duda administrativa puede llevar más tiempo del necesario. Ciudadanos y agentes públicos necesitan orientación clara para saber cómo continuar.
+              </p>
             </div>
-            <p className="text-sm font-bold text-brand m-0">ChatAP busca hacer ese recorrido más simple: reunir la información y acercar la orientación desde un solo lugar.</p>
+
+            <div className="problem-section__list" aria-label="Dificultades frecuentes al buscar orientación administrativa">
+              <article className="problem-card">
+                <span className="problem-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>
+                    <path d="M8 11h8M8 14h5"/>
+                  </svg>
+                </span>
+                <div className="problem-card__copy">
+                  <h3>Consultas repetidas</h3>
+                  <p>Volver a explicar la misma situación sin encontrar una respuesta concreta.</p>
+                </div>
+              </article>
+
+              <article className="problem-card">
+                <span className="problem-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="6" cy="6" r="2.5"/>
+                    <circle cx="18" cy="18" r="2.5"/>
+                    <path d="M8.5 6H13a3 3 0 0 1 3 3v6M15.5 18H11a3 3 0 0 1-3-3V9"/>
+                  </svg>
+                </span>
+                <div className="problem-card__copy">
+                  <h3>Derivaciones</h3>
+                  <p>No tener claro qué área u organismo corresponde consultar.</p>
+                </div>
+              </article>
+
+              <article className="problem-card">
+                <span className="problem-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 10.5 12 3l9 7.5"/>
+                    <path d="M5.5 9.5V21h13V9.5M9 21v-6h6v6"/>
+                    <path d="M12 6v.01"/>
+                  </svg>
+                </span>
+                <div className="problem-card__copy">
+                  <h3>Traslados innecesarios</h3>
+                  <p>Acercarse a una oficina solo para averiguar dónde o cómo empezar.</p>
+                </div>
+              </article>
+
+              <article className="problem-card">
+                <span className="problem-card__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 3.75h7l5 5V20a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z"/>
+                    <path d="M14 4v5h5M8.5 13h7M8.5 16.5h7"/>
+                  </svg>
+                </span>
+                <div className="problem-card__copy">
+                  <h3>Información dispersa</h3>
+                  <p>Buscar requisitos y documentación en distintas fuentes o lugares.</p>
+                </div>
+              </article>
+            </div>
+
+            <div className="problem-section__closing">
+              <span className="problem-section__closing-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.64 5.64l1.42 1.42m9.88 9.88 1.42 1.42m0-12.72-1.42 1.42m-9.88 9.88-1.42 1.42"/>
+                  <circle cx="12" cy="12" r="4"/>
+                </svg>
+              </span>
+              <p><strong>ChatAP busca simplificar ese recorrido.</strong> Reúne orientación e información en un mismo espacio para ayudarte a encontrar respuestas y conocer los próximos pasos.</p>
+            </div>
           </div>
         </section>
 
