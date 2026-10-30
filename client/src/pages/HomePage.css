@@ -1004,17 +1004,23 @@ section[id] {
 }
 
 .solution-section__title {
-  max-width: 17ch;
+  display: block;
+  width: 100%;
+  max-width: 20ch;
   margin: 0 auto;
   color: var(--color-ink);
   font-size: clamp(2.15rem, 4.6vw, 3.85rem);
-  font-weight: 850;
-  letter-spacing: -0.052em;
-  line-height: 1.06;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  text-align: center;
   text-wrap: balance;
+  transform: none;
 }
 
 .solution-section__title span {
+  display: block;
   color: var(--color-brand);
 }
 
