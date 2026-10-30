@@ -164,7 +164,7 @@ export default function AccessibilityMenu() {
             onToggle={toggleTheme}
           />
 
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
+          <p className="accessibility-text-heading text-xs font-semibold uppercase tracking-wider mb-2">
             Tamaño del texto
           </p>
           <div className="grid grid-cols-4 gap-1 rounded-xl border border-line bg-mist/40 p-1">
