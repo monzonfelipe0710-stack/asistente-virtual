@@ -106,27 +106,27 @@ const FAQ_ITEMS = [
   {
     id: "registro",
     question: "¿Necesito registrarme para consultar?",
-    answer: "No. Podés consultar de forma libre y anónima en cualquier momento. Si iniciás sesión, tus conversaciones quedan guardadas para que puedas retomarlas más adelante.",
+    answer: "No es obligatorio registrarte para realizar una consulta. Si iniciás sesión, podés acceder a las funciones de tu cuenta y retomar tus conversaciones guardadas.",
   },
   {
     id: "costo",
     question: "¿Tiene algún costo?",
-    answer: "No. Es un servicio 100% gratuito, público y de libre acceso, desarrollado por el Gobierno de la Provincia de Formosa a través de la Subsecretaría de Recursos Humanos.",
+    answer: "ChatAP es una iniciativa de acceso público de la Subsecretaría de Recursos Humanos. No se cobra por realizar consultas en el asistente.",
   },
   {
     id: "tramites",
     question: "¿Cómo me guía paso a paso?",
-    answer: "Escribí en lenguaje cotidiano qué necesitás resolver. ChatAP identifica el trámite y te indica requisitos, plazos y el organismo o mesa de entradas donde presentarlo.",
+    answer: "Contá con tus palabras qué necesitás hacer. ChatAP te ofrece orientación a partir de la información disponible y puede indicarte requisitos y el área correspondiente para continuar.",
   },
   {
     id: "documentos",
-    question: "¿Qué documentos o checklist puedo obtener?",
-    answer: "ChatAP te indica qué formularios y modelos necesitás, dónde conseguirlos y qué pasos seguir. También podés descargar un checklist con los requisitos y formularios del trámite consultado.",
+    question: "¿Qué documentos puedo encontrar?",
+    answer: "Según la información disponible, ChatAP puede orientarte sobre formularios, modelos y documentación relacionada con el trámite. Verificá siempre los requisitos vigentes con el organismo correspondiente.",
   },
   {
     id: "siged",
     question: "¿Qué pasa con el SIGED?",
-    answer: "La integración con el SIGED forma parte del alcance del proyecto y está en camino. Por ahora, ChatAP te orienta sobre cómo consultar el estado de tu expediente y te indica dónde realizar la consulta.",
+    answer: "ChatAP puede brindarte orientación general sobre el SIGED. La consulta directa del estado de un expediente depende de que esa integración se encuentre habilitada.",
   },
 ];
 
@@ -395,9 +395,7 @@ export default function HomePage() {
                 Una conversación para saber cómo seguir.
               </h2>
               <p className="text-base text-muted m-0 leading-relaxed">
-                ChatAP reúne orientación, preguntas frecuentes y documentos institucionales en un
-                solo lugar, para que ciudadanos y agentes públicos puedan avanzar sin perder tiempo
-                en llamados, derivaciones o traslados.
+                ChatAP reúne orientación, preguntas frecuentes y documentación institucional para ayudarte a entender qué necesitás y cuál es el próximo paso, sin empezar la búsqueda desde cero.
               </p>
             </div>
 
