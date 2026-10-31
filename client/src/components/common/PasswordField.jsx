@@ -7,6 +7,7 @@ export default function PasswordField({
   placeholder,
   autoComplete,
   animate = false,
+  minLength,
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -23,6 +24,7 @@ export default function PasswordField({
           placeholder={placeholder}
           autoComplete={autoComplete}
           required
+          minLength={minLength}
           className="w-full px-4 py-3 pr-12 rounded-xl border border-line bg-paper text-sm text-ink placeholder:text-faint transition-colors duration-200 focus:border-brand focus:ring-2 focus:ring-brand/15 focus:outline-none"
         />
         <button
