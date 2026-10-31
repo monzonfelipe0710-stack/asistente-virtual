@@ -465,10 +465,9 @@ export default function ChatWindow({ initialQuery = null }) {
     );
   }, [userId, token, consultas, historyVersion]);
 
-  // El historial prioriza hilos completos; las consultas anteriores se mantienen
-  // como entradas individuales para que los registros previos sigan accesibles.
-  // El historial muestra conversaciones (hilos), no consultas individuales del backend.
-  // Así, al borrar un hilo no reaparecen consultas antiguas como si fueran otros chats.
+  // El historial prioriza hilos completos guardados en este navegador y agrega
+  // consultas persistidas por la API que todavía no estén incluidas en esos hilos.
+  // Así se conserva el detalle local y también se recuperan consultas entre dispositivos.
   const historyQueries = useMemo(() => {
     if (!isAuthenticated || !userId) return [];
 
