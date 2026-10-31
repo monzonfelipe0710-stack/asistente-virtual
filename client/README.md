@@ -195,7 +195,7 @@ El chat y las consultas personales ya usan endpoints del backend. Para completar
 3. **Gestión de sesiones.** `src/lib/sessions.js` y la sección Seguridad revocan sesiones solo en `localStorage`. Endpoint necesario: `POST /auth/sessions/revoke-others` o `DELETE /auth/sessions/:id`.
 4. **Notificaciones en tiempo real.** `src/lib/notifications.js` guarda avisos por usuario en `localStorage`. Endpoint necesario: `GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`, y push/websocket para el canal en vivo.
 5. **Preferencias de cuenta.** `src/lib/preferences.js` persiste tema/idioma/avisos localmente. Endpoint necesario: `GET/PUT /me/preferences`.
-6. **Cambio de contraseña en servidor.** `changePassword` (Seguridad) valida y actualiza el hash dentro de `chatap.users`. Endpoint necesario: `PUT /auth/password` con validación de la contraseña actual.
+6. **Cambio de contraseña.** Para cuentas autenticadas, `AuthContext.changePassword` utiliza el servicio existente `POST /api/auth/cambiar-password`, enviando la contraseña actual y la nueva; el backend valida y actualiza la credencial. El frontend exige un mínimo de 8 caracteres, igual que el registro. Las cuentas demo locales no pueden cambiar la contraseña desde esta sección.
 
 > Las estadísticas del perfil (resumen por rol) se calculan con los datos reales de `localStorage`; al migrar al backend deben reemplazarse por los agregados del servidor en `GET /me/summary`.
 
