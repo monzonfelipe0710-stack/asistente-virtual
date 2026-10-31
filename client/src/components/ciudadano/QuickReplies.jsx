@@ -26,7 +26,7 @@ export default function QuickReplies({ onSelect, suggested = [] }) {
     {
       label: "¿Cómo sigo mi expediente?",
       query: "¿Cómo puedo seguir mi expediente?",
-      description: "Consultá el estado de tu trámite",
+      description: "Conocé cómo consultar el estado de tu trámite",
       icon: "M9 12h6m-6 4h4m-7 4h12a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z",
     },
     {
@@ -38,7 +38,7 @@ export default function QuickReplies({ onSelect, suggested = [] }) {
     {
       label: "¿Dónde veo mi recibo?",
       query: "¿Dónde puedo ver mi recibo de sueldo?",
-      description: "Accedé a tus recibos de haberes",
+      description: "Conocé dónde consultar tus recibos de haberes",
       icon: "M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2zm3 5h6m-6 4h6m-6 4h3",
     },
     {
