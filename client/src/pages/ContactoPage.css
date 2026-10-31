@@ -287,6 +287,14 @@
 .support-report-field input:focus, .support-report-field select:focus, .support-report-field textarea:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 13%, transparent); }
 .support-report-field--full { grid-column: 1 / -1; }
 .support-report-upload { display: flex; min-width: 0; align-items: center; gap: .8rem; padding: .9rem; border: 1px dashed color-mix(in srgb, var(--color-brand) 42%, var(--color-line)); border-radius: .85rem; background: color-mix(in srgb, var(--color-mist) 45%, var(--color-paper)); cursor: pointer; }
+.support-report-upload--dragging {
+  border-color: var(--color-brand-deep);
+  background: color-mix(in srgb, var(--color-brand) 12%, var(--color-paper));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+.support-report-upload--dragging .support-report-upload__icon {
+  background: color-mix(in srgb, var(--color-brand) 16%, var(--color-paper));
+}
 .support-report-upload__icon { display: grid; width: 2.4rem; height: 2.4rem; flex: 0 0 auto; place-items: center; border-radius: .7rem; background: var(--color-paper); color: var(--color-brand-deep); font-size: 1.25rem; }
 .support-report-upload > span:nth-child(2) { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: .2rem; }
 .support-report-upload strong { overflow: hidden; color: var(--color-ink); font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
