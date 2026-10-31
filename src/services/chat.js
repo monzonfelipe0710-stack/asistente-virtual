@@ -1,7 +1,7 @@
 import { api } from "../lib/api";
 
-/** POST /api/chat — PÚBLICO, limit 10/min. Pregunta de hasta 500 caracteres. */
-export async function preguntar(pregunta, imagen = null) {
+/** POST /api/chat — público. Admite pregunta simple o historial conversacional. */
+export async function preguntar(pregunta, imagen = null, mensajes = null) {
   if (imagen) {
     const formData = new FormData();
     formData.append("pregunta", pregunta);
@@ -12,11 +12,13 @@ export async function preguntar(pregunta, imagen = null) {
     return data;
   }
 
-  const { data } = await api.post(
-    "/api/chat",
-    { pregunta },
-    { skipAuthHandler: true }
-  );
+  const payload = Array.isArray(mensajes) && mensajes.length
+    ? { mensajes }
+    : { pregunta };
+
+  const { data } = await api.post("/api/chat", payload, {
+    skipAuthHandler: true,
+  });
   return data;
 }
 
