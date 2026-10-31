@@ -349,7 +349,7 @@ export default function ChatBotAvatar({
       if (e.matches) {
         stop();
         drawStatic();
-      } else if (!document.hidden) start();
+      } else if (!document.hidden) recoverAnimation();
     };
     const onVis = () => {
       if (document.hidden) stop();
