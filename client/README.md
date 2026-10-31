@@ -12,7 +12,7 @@ La interfaz combina datos mock para algunas secciones con el backend de ChatAP p
 - **Landing editorial** en `/`: hero dividido, ticker, secciones narrativas, demostración del chat y CTA final.
 - **Chat con el bot ChatAP** en `/chat`: consultas por texto o **por voz** (Web Speech API).
 - **Respuestas con la base de conocimiento**: el bot responde con los artículos reales administrados en el panel (licencias, haberes, expedientes, legajos, obra social, entre otros).
-- **Historial entre dispositivos**: las preguntas y respuestas de una cuenta autenticada se recuperan desde `Consulta`; el perfil reconstruye las conversaciones a partir de esos registros y las agrupa por intervalos de inactividad.
+- **Historial entre dispositivos**: el panel lateral recupera las consultas persistidas de una cuenta autenticada desde `Consulta`; los hilos completos se conservan localmente en el navegador donde se desarrollaron. El perfil reconstruye conversaciones a partir de las consultas del servidor y las agrupa por intervalos de inactividad.
 - **Resumen personal**: agrupa por tema las consultas del mes actual.
 - **Preparación de trámites**: las respuestas con trámites relacionados ofrecen un checklist descargable con requisitos, costos y lugares de presentación.
 - **Calificación de respuestas**: cada respuesta del chat puede marcarse como útil o no útil.
