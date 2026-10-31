@@ -98,6 +98,7 @@ export default function LoginRegisterPage() {
   const from = location.state?.from?.pathname || "/";
   const isLogin = mode === "login";
   const requiresNameAndLastName = gender === "Otro" || gender === "Prefiero no decirlo";
+  const gmailFormatInvalid = !isLogin && email.trim().length > 0 && !/^[^\s@]+@gmail\.com$/i.test(email.trim());
 
   // Envío de formulario estándar (Email + Contraseña)
   async function handleSubmit(e) {
@@ -534,8 +535,14 @@ export default function LoginRegisterPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={isLogin ? "30123456 o tucorreo@gmail.com" : "tucorreo@gmail.com"}
                       autoComplete={isLogin ? "username" : "email"}
+                      aria-describedby={gmailFormatInvalid ? "auth-email-format-warning" : undefined}
                       className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                     />
+                    {gmailFormatInvalid && (
+                      <p id="auth-email-format-warning" role="status" className="mt-1 text-xs font-medium text-amber-700">
+                        Ingresá un Gmail válido que termine en @gmail.com.
+                      </p>
+                    )}
                   </div>
 
                   <div className="mb-4">
