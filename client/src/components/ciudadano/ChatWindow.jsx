@@ -626,7 +626,10 @@ export default function ChatWindow({ initialQuery = null }) {
       // Enviamos el contexto reciente del hilo activo. El último mensaje se
       // agrega explícitamente porque addMessage actualiza el estado de forma asíncrona.
       const conversation = messages
-        .filter((message) => message?.type === "user" || message?.type === "bot")
+        .filter((message) =>
+          (message?.type === "user" || message?.type === "bot") &&
+          !message?.localWizardPrompt
+        )
         .map((message) => ({
           id: message.id,
           rol: message.type === "user" ? "usuario" : "asistente",
@@ -1048,7 +1051,7 @@ export default function ChatWindow({ initialQuery = null }) {
     addMessage("bot", step.question, {
       type: "chips",
       options: step.chips.map((c) => ({ label: c, value: c })),
-    });
+    }, { localWizardPrompt: true });
   }
 
   function startWizard(id) {
@@ -1078,7 +1081,7 @@ export default function ChatWindow({ initialQuery = null }) {
     addMessage("bot", next.question, {
       type: "chips",
       options: next.chips.map((c) => ({ label: c, value: c })),
-    });
+    }, { localWizardPrompt: true });
   }
 
   function finishWizard() {
