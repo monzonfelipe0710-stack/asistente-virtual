@@ -192,11 +192,21 @@ export default function ChatBotAvatar({
     const el = svgRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return undefined;
     const observer = new IntersectionObserver(([entry]) => {
-      visibleRef.current = entry.isIntersecting;
-      el.style.animationPlayState = entry.isIntersecting ? "" : "paused";
-      if (entry.isIntersecting) {
-        // No reiniciar la pose al volver a entrar en pantalla: hacerlo pisaba
-        // la mirada actual y podía dar la impresión de que el avatar se congelaba.
+      // IntersectionObserver puede informar una salida transitoria durante
+      // cambios de layout. Confirmamos la geometría real antes de pausar RAF.
+      const rect = el.getBoundingClientRect();
+      const margin = 120;
+      const inViewport =
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.bottom >= -margin &&
+        rect.right >= -margin &&
+        rect.top <= window.innerHeight + margin &&
+        rect.left <= window.innerWidth + margin;
+      const shouldAnimate = entry.isIntersecting || inViewport;
+      visibleRef.current = shouldAnimate;
+      el.style.animationPlayState = shouldAnimate ? "" : "paused";
+      if (shouldAnimate) {
         animationControlRef.current.start?.();
       } else {
         animationControlRef.current.stop?.();
@@ -356,6 +366,7 @@ export default function ChatBotAvatar({
       else recoverAnimation();
     };
     const onWindowFocus = () => recoverAnimation();
+    const onViewportChange = () => recoverAnimation();
 
     const latestPointer = { current: null };
     let moveFrame = 0;
@@ -439,12 +450,19 @@ export default function ChatBotAvatar({
     document.addEventListener("visibilitychange", onVis);
     window.addEventListener("focus", onWindowFocus);
     window.addEventListener("pageshow", onWindowFocus);
+    // Scroll y resize también pueden cambiar la visibilidad sin generar un
+    // evento de mouse; en esos casos el avatar debe reanudarse por sí solo.
+    window.addEventListener("scroll", onViewportChange, { passive: true, capture: true });
+    window.addEventListener("resize", onViewportChange, { passive: true });
+    recoverAnimation();
 
     return () => {
       stop();
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("focus", onWindowFocus);
       window.removeEventListener("pageshow", onWindowFocus);
+      window.removeEventListener("scroll", onViewportChange, true);
+      window.removeEventListener("resize", onViewportChange);
       if (moveFrame) cancelAnimationFrame(moveFrame);
       animationControlRef.current = { start: null, stop: null };
       if (followMouse) document.removeEventListener("mouseleave", onLeave);
