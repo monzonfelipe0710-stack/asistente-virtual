@@ -324,6 +324,25 @@ export default function ChatBotAvatar({
       if (raf) cancelAnimationFrame(raf);
       raf = 0;
     };
+    // Recupera el loop si el navegador suspendió RAF al cambiar de pestaña,
+    // restaurar la ventana o volver desde una página en caché.
+    const recoverAnimation = () => {
+      if (document.hidden || (reduceMQ && reduceMQ.matches)) return;
+      const el = svgRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const margin = 120;
+      const inViewport =
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.bottom >= -margin &&
+        rect.right >= -margin &&
+        rect.top <= window.innerHeight + margin &&
+        rect.left <= window.innerWidth + margin;
+      if (!inViewport) return;
+      visibleRef.current = true;
+      if (!raf) start();
+    };
     animationControlRef.current = { start, stop };
 
     const onReduce = (e) => {
@@ -334,8 +353,9 @@ export default function ChatBotAvatar({
     };
     const onVis = () => {
       if (document.hidden) stop();
-      else if (!(reduceMQ && reduceMQ.matches)) start();
+      else recoverAnimation();
     };
+    const onWindowFocus = () => recoverAnimation();
 
     const latestPointer = { current: null };
     let moveFrame = 0;
@@ -417,10 +437,14 @@ export default function ChatBotAvatar({
     }
     reduceMQ?.addEventListener("change", onReduce);
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("pageshow", onWindowFocus);
 
     return () => {
       stop();
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("pageshow", onWindowFocus);
       if (moveFrame) cancelAnimationFrame(moveFrame);
       animationControlRef.current = { start: null, stop: null };
       if (followMouse) document.removeEventListener("mouseleave", onLeave);
