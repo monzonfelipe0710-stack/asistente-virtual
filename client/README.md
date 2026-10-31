@@ -116,12 +116,12 @@ npm install
 npm run dev
 ```
 
-El dev server imprime la URL (por defecto `http://localhost:5173`).
+El dev server imprime la URL (por defecto `http://localhost:3000`).
 
 ### Scripts
 
 ```bash
-npm run dev       # Dev server con HMR
+npm run dev       # Dev server con HMR (http://localhost:3000)
 npm run build     # Build de producción /dist
 npm run preview   # Servir el build localmente
 npm run lint      # ESLint sobre todo el proyecto
