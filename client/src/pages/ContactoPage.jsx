@@ -89,6 +89,7 @@ export default function ContactoPage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [reportFile, setReportFile] = useState(null);
   const [reportFileError, setReportFileError] = useState("");
+  const [isDraggingReportFile, setIsDraggingReportFile] = useState(false);
   const [reportPreviewUrl, setReportPreviewUrl] = useState("");
 
   useEffect(() => {
@@ -103,23 +104,38 @@ export default function ContactoPage() {
     return () => URL.revokeObjectURL(previewUrl);
   }, [reportFile]);
 
-  function handleReportFile(event) {
-    const file = event.target.files?.[0] || null;
+  function validateReportFile(file) {
     setReportFileError("");
-    if (!file) { setReportFile(null); return; }
+    if (!file) {
+      setReportFile(null);
+      return;
+    }
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setReportFile(null);
       setReportFileError("Elegí una imagen JPG, PNG o WEBP.");
-      event.target.value = "";
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
       setReportFile(null);
       setReportFileError("La imagen no puede superar los 5 MB.");
-      event.target.value = "";
       return;
     }
     setReportFile(file);
+  }
+
+  function handleReportFile(event) {
+    validateReportFile(event.target.files?.[0] || null);
+    if (event.target.files?.[0] && !["image/jpeg", "image/png", "image/webp"].includes(event.target.files[0].type)) {
+      event.target.value = "";
+    } else if (event.target.files?.[0]?.size > 5 * 1024 * 1024) {
+      event.target.value = "";
+    }
+  }
+
+  function handleReportFileDrop(event) {
+    event.preventDefault();
+    setIsDraggingReportFile(false);
+    validateReportFile(event.dataTransfer.files?.[0] || null);
   }
 
   return (
@@ -251,11 +267,11 @@ export default function ContactoPage() {
                 </label>
                 <div className="support-report-field support-report-field--full">
                   <span>Captura de pantalla <small>(opcional)</small></span>
-                  <label className="support-report-upload" htmlFor="support-report-file">
+                  <label className={`support-report-upload ${isDraggingReportFile ? "support-report-upload--dragging" : ""}`} htmlFor="support-report-file" onDragOver={(event) => { event.preventDefault(); setIsDraggingReportFile(true); }} onDragLeave={() => setIsDraggingReportFile(false)} onDrop={handleReportFileDrop}>
                     <span className="support-report-upload__icon" aria-hidden="true">↑</span>
                     <span>
-                      <strong>{reportFile ? reportFile.name : "Adjuntar una imagen"}</strong>
-                      <small>{reportFile ? `${(reportFile.size / 1024 / 1024).toFixed(2)} MB · Archivo seleccionado` : "JPG, PNG o WEBP · Máximo 5 MB"}</small>
+                      <strong>{reportFile ? reportFile.name : isDraggingReportFile ? "Soltá la imagen acá" : "Adjuntar una imagen"}</strong>
+                      <small>{reportFile ? `${(reportFile.size / 1024 / 1024).toFixed(2)} MB · Archivo seleccionado` : "Arrastrá y soltá una imagen o elegila desde tu dispositivo · JPG, PNG o WEBP · Máximo 5 MB"}</small>
                     </span>
                     <span className="support-report-upload__action">{reportFile ? "Cambiar" : "Elegir archivo"}</span>
                     <input id="support-report-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleReportFile} />
