@@ -81,6 +81,7 @@ export default function LoginRegisterPage() {
 
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [dni, setDni] = useState("");
+  const [dniHasDots, setDniHasDots] = useState(false);
   const [gender, setGender] = useState("");
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
@@ -418,16 +419,24 @@ export default function LoginRegisterPage() {
                         inputMode="numeric"
                         required={!isLogin}
                         value={dni}
-                        onChange={(e) => setDni(formatDni(e.target.value))}
+                        onChange={(e) => {
+                          setDniHasDots(/[.,]/.test(e.target.value));
+                          setDni(formatDni(e.target.value));
+                        }}
                         autoComplete="off"
                         maxLength={8}
                         placeholder="Ej: 30123456"
-                        aria-describedby="register-dni-hint"
+                        aria-describedby={dniHasDots ? "register-dni-hint register-dni-format-warning" : "register-dni-hint"}
                         className="w-full px-4 py-3 rounded-xl border border-line bg-card text-sm text-ink placeholder-faint focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all"
                       />
                       <p id="register-dni-hint" className="mt-1 text-[11px] text-muted">
                         Tu DNI se usa para identificarte e iniciar sesión.
                       </p>
+                      {dniHasDots && (
+                        <p id="register-dni-format-warning" role="status" className="mt-1 text-xs font-medium text-amber-700">
+                          Ingresá el DNI sin puntos. Los puntos se quitan automáticamente.
+                        </p>
+                      )}
                     </div>
                   </Collapse>
 
