@@ -127,6 +127,15 @@ npm run preview   # Servir el build localmente
 npm run lint      # ESLint sobre todo el proyecto
 ```
 
+### Configuración de la API
+
+Copiar `.env.example` a `.env.local` y configurar `VITE_API_URL` con una URL absoluta:
+
+- Desarrollo local: `http://localhost:3001`.
+- Producción: origen HTTPS real donde está publicada la API.
+
+La configuración de Vite incorpora automáticamente el origen configurado a `connect-src` de la Content Security Policy. Si no se define `VITE_API_URL`, el frontend usa el mismo origen en producción; el despliegue debe tener un proxy/reverse proxy que enrute `/api` hacia la API.
+
 ---
 
 ## ✉️ Configurar EmailJS (opcional)
