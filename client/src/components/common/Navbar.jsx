@@ -370,7 +370,13 @@ export default function Navbar() {
           accumulatedDelta += delta;
         }
         if (Math.abs(accumulatedDelta) >= 10) {
-          setScrollDirection(accumulatedDelta > 0 ? "down" : "up");
+          // En ChatAP el navbar solo vuelve a mostrarse al llegar al inicio.
+          // Así no reaparece sobre los mensajes cuando el usuario sube para leer.
+          if (accumulatedDelta > 0) {
+            setScrollDirection("down");
+          } else if (!location.pathname.startsWith("/chat")) {
+            setScrollDirection("up");
+          }
           accumulatedDelta = 0;
         }
       }
