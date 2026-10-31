@@ -16,7 +16,9 @@ const NAV_LINKS = [
   { id: "soporte", label: "Soporte", to: "/contacto", match: ["/contacto", "/soporte"] },
 ];
 
-// La navegación se oculta al bajar y reaparece al subir, también en ChatAP.
+// En todas las páginas con scroll normal, el navbar se oculta al bajar
+// y reaparece al subir. La conversación con el bot queda excluida.
+const CHAT_ROUTE = "/chat";
 
 function isPathActive(pathname, target) {
   if (target === "/") {
@@ -29,8 +31,8 @@ function isLinkActive(pathname, link) {
   return (link.match || [link.to]).some((path) => isPathActive(pathname, path));
 }
 
-function hidesOnScroll() {
-  return true;
+function hidesOnScroll(pathname) {
+  return !isPathActive(pathname, CHAT_ROUTE);
 }
 
 function ProfileMenu({ user, isStaff, userRole, logout }) {
@@ -341,6 +343,12 @@ export default function Navbar() {
     const onScroll = (event) => {
       const y = getScrollPosition(event);
       const isScrolled = y > 24;
+      
+      // En ChatAP no cambiamos el estado scrolled para evitar transiciones visuales
+      if (location.pathname.startsWith("/chat")) {
+        lastY = y;
+        return;
+      }
       
       if (isScrolled !== lastScrolled) {
         lastScrolled = isScrolled;
