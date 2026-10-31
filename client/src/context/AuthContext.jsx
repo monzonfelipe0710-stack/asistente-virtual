@@ -319,12 +319,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const resetPassword = useCallback(async (token, password) => {
+    if (!password || password.length < 8) {
+      throw new Error("La contraseña debe tener al menos 8 caracteres.");
+    }
     const data = await restablecer({ token, password });
     return data?.mensaje || "Tu contraseña fue actualizada. Ya podés iniciar sesión.";
   }, []);
 
   const changePassword = useCallback(
     async (current, next) => {
+      if (!next || next.length < 8) {
+        throw new Error("La contraseña nueva debe tener al menos 8 caracteres.");
+      }
       const session = useSessionStore.getState();
       const usuarioActual = session.usuario || usuario || {};
       if (!session.token) {
