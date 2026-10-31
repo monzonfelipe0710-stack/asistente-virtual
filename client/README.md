@@ -189,7 +189,7 @@ Con `enabled: false` la app muestra el enlace de restablecimiento en pantalla (m
 
 El chat y las consultas personales ya usan endpoints del backend. Para completar la integración de las secciones restantes se necesitan:
 
-1. **SIGED — vinculación exacta de expedientes al usuario.** Hoy "Mis trámites" vincula por coincidencia de `applicant === user.name` sobre `sigedRecords` (heurística). Se necesita un campo `userId` (o `email`) en el expediente, p. ej. `GET /tramites` devolviendo `{ userId, ... }` o `GET /tramites/mis`.
+1. **SIGED — vinculación exacta de expedientes al usuario.** La sección "Mis trámites" no muestra el catálogo de demostración como si fueran expedientes personales. Para habilitarla se necesita que la API devuelva una relación verificable por `userId` (preferentemente `GET /tramites/mis`) y los datos reales del expediente. No alcanza con comparar nombres.
    - Referencia: `src/components/profile/useProfileData.js` (comentario `NOTA BACKEND`).
 2. **Auditoría persistente.** `src/lib/activity.js` mantiene el registro global en `localStorage` y lo siembra desde `mockActivity.js` (entradas con id `seed-*`). La pestaña Auditoría del Superadmin muestra un aviso de que el registro actual es local. Endpoint necesario: `GET /audit` (paginado, filtrar por `actorId` y fecha).
 3. **Gestión de sesiones.** `src/lib/sessions.js` y la sección Seguridad revocan sesiones solo en `localStorage`. Endpoint necesario: `POST /auth/sessions/revoke-others` o `DELETE /auth/sessions/:id`.
