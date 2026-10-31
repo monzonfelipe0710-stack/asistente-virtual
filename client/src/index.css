@@ -3667,10 +3667,8 @@ html[data-a11y-readable="true"] label {
 @layer components {
   .chat-page-shell {
     color: var(--color-ink);
-    background-color: #f4f7fc;
-    background-image:
-      radial-gradient(ellipse at 76% 8%, rgba(47, 107, 255, 0.08), transparent 34rem),
-      linear-gradient(135deg, #f8faff 0%, #f2f6fc 55%, #f7f9fd 100%);
+    background-color: var(--color-paper);
+    background-image: none;
     height: 100vh;
     height: 100dvh;
     padding-top: 5.5rem; /* altura navbar fijo móvil */
@@ -3683,10 +3681,8 @@ html[data-a11y-readable="true"] label {
   }
 
   .dark .chat-page-shell {
-    background-color: #070e20;
-    background-image:
-      radial-gradient(ellipse at 76% 6%, rgba(77, 125, 255, 0.11), transparent 34rem),
-      linear-gradient(135deg, #080f20 0%, #070e20 55%, #0a1226 100%);
+    background-color: var(--color-paper);
+    background-image: none;
   }
 
   .chat-window-shell {
