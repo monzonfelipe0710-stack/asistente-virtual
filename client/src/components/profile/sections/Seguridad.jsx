@@ -71,8 +71,8 @@ export default function Seguridad() {
   async function handleChangePassword(e) {
     e.preventDefault();
     setPwError("");
-    if (pw.next.length < 6) {
-      setPwError("La contraseña nueva debe tener al menos 6 caracteres.");
+    if (pw.next.length < 8) {
+      setPwError("La contraseña nueva debe tener al menos 8 caracteres.");
       return;
     }
     if (pw.next !== pw.confirm) {
@@ -125,8 +125,8 @@ export default function Seguridad() {
           </div>
           <form onSubmit={handleChangePassword} className="space-y-3">
             <PasswordField label="Contraseña actual" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} autoComplete="current-password" />
-            <PasswordField label="Contraseña nueva" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
-            <PasswordField label="Confirmar contraseña nueva" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" />
+            <PasswordField label="Contraseña nueva" value={pw.next} minLength={8} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
+            <PasswordField label="Confirmar contraseña nueva" value={pw.confirm} minLength={8} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} autoComplete="new-password" />
             {pwError && <p className="text-xs text-bad m-0">{pwError}</p>}
             <button type="submit" disabled={changing} className="btn-primary w-full text-[13px]! disabled:opacity-60">
               {changing ? "Actualizando…" : "Actualizar contraseña"}
