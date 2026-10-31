@@ -2,15 +2,18 @@ import axios from "axios";
 
 /**
  * Instancia única de Axios para toda la app.
- * - Base URL desde `VITE_API_URL` (desarrollo: http://localhost:3001).
- * - El token de sesión lo aporta el store vía `setAuthTokenGetter`.
- * - 401 global: el store de sesión registra su handler con
- *   `setUnauthorizedHandler` (cerrar sesión + redirigir al login).
- *   El backend revalida la sesión en cada request, así que un 401 puede
- *   llegar en cualquier momento (p. ej. cuenta suspendida).
+ * - VITE_API_URL permite configurar la API en cada entorno.
+ * - En desarrollo, si falta la variable, usa el backend local.
+ * - En producción, si falta la variable, usa el mismo origen (sin
+ *   intentar conectarse silenciosamente a localhost del navegador).
+ * - El token y el handler 401 los aporta el store de sesión.
  */
+const apiBaseURL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:3001" : "/");
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3001",
+  baseURL: apiBaseURL,
   timeout: 20000,
 });
 
