@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
+import { useAuth } from "../context/AuthContext";
 import "./ContactoPage.css";
 
 const FAQS = [
@@ -82,6 +83,9 @@ function SupportIcon({ name }) {
 }
 
 export default function ContactoPage() {
+  const { user, isAuthenticated } = useAuth();
+  const supportName = user?.fullName || user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  const supportEmail = user?.email || "";
   const [openFaq, setOpenFaq] = useState(null);
   const [reportFile, setReportFile] = useState(null);
   const [reportFileError, setReportFileError] = useState("");
@@ -219,11 +223,11 @@ export default function ContactoPage() {
               <div className="support-report-fields">
                 <label className="support-report-field">
                   <span>Nombre y apellido <b>*</b></span>
-                  <input type="text" name="nombre" autoComplete="name" placeholder="Cómo podemos llamarte" required />
+                  <input type="text" name="nombre" autoComplete="name" placeholder="Cómo podemos llamarte" defaultValue={isAuthenticated ? supportName : ""} readOnly={Boolean(isAuthenticated && supportName)} required />
                 </label>
                 <label className="support-report-field">
                   <span>Correo electrónico <b>*</b></span>
-                  <input type="email" name="email" autoComplete="email" placeholder="nombre@correo.com" required />
+                  <input type="email" name="email" autoComplete="email" placeholder="nombre@correo.com" defaultValue={isAuthenticated ? supportEmail : ""} readOnly={Boolean(isAuthenticated && supportEmail)} required />
                 </label>
                 <label className="support-report-field">
                   <span>Teléfono <small>(opcional)</small></span>
