@@ -471,15 +471,47 @@ export default function ChatWindow({ initialQuery = null }) {
   // Así, al borrar un hilo no reaparecen consultas antiguas como si fueran otros chats.
   const historyQueries = useMemo(() => {
     if (!isAuthenticated || !userId) return [];
-    return savedThreads
-      .map((thread) => ({
-        ...thread,
-        threadId: thread.id,
-        text: thread.title || thread.text || "Nueva consulta",
-        at: thread.updatedAt || thread.at,
-      }))
+
+    const localThreads = savedThreads.map((thread) => ({
+      ...thread,
+      threadId: thread.id,
+      text: thread.title || thread.text || "Nueva consulta",
+      at: thread.updatedAt || thread.at,
+    }));
+
+    // Los hilos locales ofrecen la conversación completa en este navegador.
+    // En otro dispositivo, recuperamos las consultas persistidas por la API
+    // para que el historial no dependa exclusivamente de localStorage.
+    const consultasIncluidasEnHilos = new Set(
+      savedThreads.flatMap((thread) =>
+        thread.messages
+          .map((message) => message.consultaId)
+          .filter((id) => id !== null && id !== undefined)
+          .map(String)
+      )
+    );
+    const consultasRemotas = token
+      ? consultas
+          .filter((consulta) =>
+            consulta?.id !== null &&
+            consulta?.id !== undefined &&
+            !consultasIncluidasEnHilos.has(String(consulta.id))
+          )
+          .map((consulta) => ({
+            id: consulta.id,
+            text: consulta.textoConsulta || consulta.pregunta || "Consulta a ChatAP",
+            answer: consulta.respuesta || "",
+            at: consulta.fecha || null,
+            calificacion: consulta.calificacion ?? null,
+            motivoCalificacion: consulta.motivoCalificacion ?? null,
+            tramite: consulta.tramite || null,
+          }))
+      : [];
+
+    return [...localThreads, ...consultasRemotas]
+      .sort((a, b) => new Date(b.updatedAt || b.at || 0) - new Date(a.updatedAt || a.at || 0))
       .slice(0, HISTORY_LIMIT);
-  }, [userId, savedThreads, isAuthenticated]);
+  }, [userId, savedThreads, isAuthenticated, token, consultas]);
 
   const displayedHistoryQueries = useMemo(
     () => historyQueries.filter((item) => !pendingDeleteKeys.has(claveHistorial(item))),
