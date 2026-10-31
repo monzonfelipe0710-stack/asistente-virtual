@@ -191,7 +191,18 @@ export function AuthProvider({ children }) {
             : {}),
         };
         const registro = await registroCiudadanoRequest(registroPayload);
-        const data = await loginRequest({ email: cleanEmail, password });
+        let data;
+        try {
+          data = await loginRequest({ email: cleanEmail, password });
+        } catch (loginError) {
+          const reason = apiErrorMessage(loginError, "No se pudo iniciar sesión.");
+          const error = new Error(
+            `La cuenta fue creada, pero no se pudo iniciar sesión automáticamente. Intentá ingresar con tu correo y contraseña. ${reason}`,
+            { cause: loginError }
+          );
+          error.registrationCompleted = true;
+          throw error;
+        }
 
         const sessionUser = {
           ...data.usuario,
@@ -226,6 +237,7 @@ export function AuthProvider({ children }) {
           user: toFrontUser(sessionUser),
         };
       } catch (err) {
+        if (err?.registrationCompleted) throw err;
         throw new Error(apiErrorMessage(err, err.message || "No se pudo crear la cuenta."), { cause: err });
       }
     },
