@@ -73,12 +73,12 @@ export default function Tramites() {
   if (myTramites.length === 0) {
     return (
       <div>
-        <SectionHeader title="Mis trámites" description="Expedientes registrados a tu nombre." />
+        <SectionHeader title="Mis trámites" description="Consulta personal de expedientes, cuando estén vinculados de forma verificable a tu cuenta." />
         <div className="card card-border">
           <EmptyNote
             icon={<Icon path={ICONS.tramite} className="w-10 h-10 mx-auto" />}
             title="No tenés trámites registrados"
-            description="Si iniciaste un trámite en la Mesa de Entradas o por SIGED, el detalle va a aparecer acá con su estado y movimiento."
+            description="Todavía no hay una consulta oficial vinculada a tu cuenta. Para evitar mostrar expedientes de otra persona, no usamos coincidencias de nombre ni datos de demostración como si fueran registros personales."
             action={<button className="btn-primary text-[13px]!" onClick={() => navigate("/contacto")}>Consultar trámites</button>}
           />
         </div>
