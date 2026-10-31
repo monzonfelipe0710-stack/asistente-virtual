@@ -8,6 +8,7 @@ import { loadSessionsFor, currentSession } from "../../lib/sessions";
 import { loadPreferences } from "../../lib/preferences";
 import { personalActivity, activityFeed } from "../../lib/activity";
 import { useChat } from "../../context/ChatContext";
+import { useSessionStore } from "../../store/session";
 
 const SIGED_LIVE = ["Ingresado", "En proceso"];
 
@@ -30,8 +31,10 @@ export function groupChatSessions(messages = []) {
 
 export function useProfileData() {
   const { user, userRole, isSuperadmin } = useAuth();
+  const token = useSessionStore((state) => state.token);
   const {
     messages: chatMessages,
+    consultas,
     historyError: chatHistoryError,
     historyLoading: chatHistoryLoading,
   } = useChat();
@@ -54,7 +57,36 @@ export function useProfileData() {
     const sessions = loadSessionsFor(user.id);
     const session = currentSession();
     const prefs = loadPreferences(user.id);
-    const chatSessions = groupChatSessions(chatMessages);
+    // Las cuentas autenticadas reciben consultas del servidor, no el historial
+    // local de mensajes. Reconstruimos pares pregunta/respuesta para el perfil.
+    const backendMessages = [...consultas]
+      .sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0))
+      .flatMap((consulta) => {
+        const timestamp = consulta.fecha || new Date().toISOString();
+        const question = consulta.textoConsulta || consulta.pregunta || "";
+        const answer = consulta.respuesta || "";
+        return [
+          ...(question
+            ? [{
+                id: `consulta-${consulta.id}-pregunta`,
+                type: "user",
+                text: question,
+                timestamp,
+                consultaId: consulta.id,
+              }]
+            : []),
+          ...(answer
+            ? [{
+                id: `consulta-${consulta.id}-respuesta`,
+                type: "bot",
+                text: answer,
+                timestamp,
+                consultaId: consulta.id,
+              }]
+            : []),
+        ];
+      });
+    const chatSessions = groupChatSessions(token ? backendMessages : chatMessages);
 
     const requestsByStatus = (s) => allRequests.filter((r) => r.status === s).length;
     const tramitesActivos = sigedRecords.filter((r) => SIGED_LIVE.includes(r.status)).length;
@@ -111,7 +143,7 @@ export function useProfileData() {
       myActivity: personalActivity(user.id, 50),
       systemActivity: isSuperadmin ? activityFeed(60) : [],
     };
-  }, [user, userRole, isSuperadmin, chatMessages, chatHistoryError, chatHistoryLoading]);
+  }, [user, userRole, isSuperadmin, chatMessages, consultas, token, chatHistoryError, chatHistoryLoading]);
 }
 
 // Estado legible para la UI de cada solicitud de empleado.
