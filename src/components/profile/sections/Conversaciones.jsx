@@ -51,11 +51,13 @@ export default function Conversaciones() {
             const preview = firstUserText(s.messages);
             const last = s.messages[s.messages.length - 1];
             return (
-              <button
-                key={i}
-                onClick={() => setOpenId(expanded ? null : i)}
-                className="card card-interactive w-full p-4 text-left cursor-pointer"
-              >
+              <div key={i} className="card card-interactive w-full p-4">
+                <button
+                  type="button"
+                  onClick={() => setOpenId(expanded ? null : i)}
+                  aria-expanded={expanded}
+                  className="w-full p-0 text-left cursor-pointer bg-transparent border-0"
+                >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="w-10 h-10 rounded-xl grid place-items-center shrink-0 bg-ok/10 text-ok">
@@ -78,6 +80,7 @@ export default function Conversaciones() {
                   </div>
                 </div>
 
+                </button>
                 {expanded && (
                   <div className="mt-4 space-y-2.5 border-t border-line pt-4">
                     {s.messages.slice(-12).map((m) => (
@@ -106,7 +109,7 @@ export default function Conversaciones() {
                     </div>
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
