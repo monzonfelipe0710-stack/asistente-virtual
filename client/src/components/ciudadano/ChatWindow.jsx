@@ -786,7 +786,8 @@ export default function ChatWindow({ initialQuery = null }) {
       }
       // La consulta ya quedó actualizada en el estado local; evitar una recarga
       // inmediata que pueda sobrescribirla con una respuesta todavía desactualizada.
-    } else if (immediateConsultaId) {
+    } else if (immediateConsultaId && !token) {
+      // Los visitantes conservan el historial local aunque no exista una cuenta.
       recordConsulta({
         id: immediateConsultaId,
         textoConsulta: userText,
@@ -797,6 +798,10 @@ export default function ChatWindow({ initialQuery = null }) {
         fecha: new Date().toISOString(),
         tramite: null,
       });
+    } else if (immediateConsultaId) {
+      // Una respuesta fallida o sin ID persistido no debe aparecer como
+      // consulta del servidor en el historial de una cuenta autenticada.
+      removeConsulta(immediateConsultaId);
     }
     setHistoryVersion((v) => v + 1);
 
