@@ -623,29 +623,74 @@ export default function ChatWindow({ initialQuery = null }) {
     let error = false;
 
     try {
-      const data = await preguntar(userText.slice(0, MAX_PREGUNTA), image);
+      // Enviamos el contexto reciente del hilo activo. El último mensaje se
+      // agrega explícitamente porque addMessage actualiza el estado de forma asíncrona.
+      const conversation = messages
+        .filter((message) => message?.type === "user" || message?.type === "bot")
+        .map((message) => ({
+          id: message.id,
+          rol: message.type === "user" ? "usuario" : "asistente",
+          texto: String(message.text || "").trim(),
+        }))
+        .filter((message) => message.text)
+        .filter((message) => message.id !== userMessageId);
+
+      if (userMessageId) {
+        conversation.push({
+          id: userMessageId,
+          rol: "usuario",
+          texto: userText.slice(0, MAX_PREGUNTA),
+        });
+      } else if (!conversation.length || conversation[conversation.length - 1].rol !== "usuario") {
+        conversation.push({ rol: "usuario", texto: userText.slice(0, MAX_PREGUNTA) });
+      }
+
+      // El contrato del backend admite hasta 20 mensajes por solicitud.
+      const mensajes = conversation.slice(-20).map(({ rol, texto }) => ({ rol, texto }));
+      const data = await preguntar(
+        userText.slice(0, MAX_PREGUNTA),
+        image,
+        image ? null : mensajes
+      );
       consultationData = data;
       finalText =
         String(data?.respuesta || "").trim() ||
         "No pude generar una respuesta. Probá reformulando la consulta.";
 
-      const tramites = Array.isArray(data?.tramitesEncontrados)
-        ? data.tramitesEncontrados.filter((t) => t?.nombre && Number.isInteger(t?.id))
-        : [];
-      if (tramites.length) {
-        finalActions = [
-          {
+      if (data?.tipo === "aclaracion") {
+        const opciones = Array.isArray(data?.opciones)
+          ? data.opciones.filter((opcion) => opcion?.nombre)
+          : [];
+        if (opciones.length) {
+          finalActions = [{
             type: "chips",
-            title: "Trámites relacionados:",
-            options: tramites.map((t) => ({ label: t.nombre, value: t.nombre })),
-          },
-          ...tramites.map((tramite) => ({
-            type: "checklist",
-            tramiteId: tramite.id,
-            tramiteNombre: tramite.nombre,
-            label: `Descargar checklist · ${tramite.nombre}`,
-          })),
-        ];
+            title: "¿Cuál de estos trámites necesitás?",
+            options: opciones.map((opcion) => ({
+              label: opcion.nombre,
+              // El backend busca por el nombre del trámite, no por el ID.
+              value: opcion.nombre,
+            })),
+          }];
+        }
+      } else {
+        const tramites = Array.isArray(data?.tramitesEncontrados)
+          ? data.tramitesEncontrados.filter((t) => t?.nombre && Number.isInteger(t?.id))
+          : [];
+        if (tramites.length) {
+          finalActions = [
+            {
+              type: "chips",
+              title: "Trámites relacionados:",
+              options: tramites.map((t) => ({ label: t.nombre, value: t.nombre })),
+            },
+            ...tramites.map((tramite) => ({
+              type: "checklist",
+              tramiteId: tramite.id,
+              tramiteNombre: tramite.nombre,
+              label: `Descargar checklist · ${tramite.nombre}`,
+            })),
+          ];
+        }
       }
     } catch (err) {
       error = true;
