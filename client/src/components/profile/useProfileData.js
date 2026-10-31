@@ -44,12 +44,10 @@ export function useProfileData() {
       .filter((r) => r.userId === user.id)
       .sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0));
 
-    // "Mis trámites": los expedientes SIGED se vinculan hoy por coincidencia
-    // de nombre del solicitante. NOTA BACKEND: se necesita un campo userId en
-    // el expediente para una vinculación exacta (ver README).
-    const myTramites = sigedRecords
-      .filter((r) => (r.applicant || "").toLowerCase() === (user.name || "").toLowerCase())
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    // No asociar expedientes de demostración por coincidencia de nombre:
+    // no es una identificación segura. La lista personal se habilitará cuando
+    // la API devuelva una relación verificable (userId) para cada expediente.
+    const myTramites = [];
 
     const allUsers = loadUsers();
     const notifications = loadNotifications(user.id);
