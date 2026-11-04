@@ -5,7 +5,7 @@ const CANTIDAD_SECTORES = 12;
 const CANTIDAD_EJEMPLOS = 8;
 
 const normalizarNombre = (nombre) =>
-  nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+  nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
 // El catálogo tiene trámites con el mismo nombre en distintos organismos: se cuentan una vez.
 const agregarSinRepetir = (destino, nombres) => {

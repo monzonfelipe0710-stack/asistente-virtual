@@ -8,7 +8,7 @@ import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 
 // Solo lee la base del .env: no crea ni modifica nada.
 const normalizar = (nombre) =>
-  nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+  nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
 describe('resumen del catálogo', () => {
   beforeEach(() => cache.limpiar());
