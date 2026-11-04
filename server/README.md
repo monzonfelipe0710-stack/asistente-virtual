@@ -621,16 +621,22 @@ npm test
 
 Runner nativo de Node, sin dependencias extra. Cubren validators, `errorHandler`,
 `autorizar`, `validarId`, el orden de las rutas, la comparación de nombres con el padrón,
-el login (por email y por DNI), el registro de ciudadanos con el padrón simulado, y la
-calificación, el historial y el panel de calificaciones de las consultas.
+el login (por email y por DNI), el registro de ciudadanos con el padrón simulado, la
+calificación, el historial y el panel de calificaciones de las consultas, el resumen del
+catálogo, el saludo y el chat con el modelo simulado (conversación, mensaje fijo, saludo,
+caché sin nombre y streaming).
 
 `esquema.test.js`, `login.test.js`, `registro.test.js`, `calificar.test.js`,
-`historial-consultas.test.js` y `calificaciones.test.js` usan la base del `.env`: crean sus
-propios datos (usuarios con dominios `.test.invalid`) y los borran al terminar. El script de
-`npm test` incluye `--experimental-test-module-mocks` para simular el padrón.
+`historial-consultas.test.js`, `calificaciones.test.js`, `catalogo.test.js` y `chat.test.js`
+usan la base del `.env`: crean sus propios datos (usuarios con dominios `.test.invalid`) y los
+borran al terminar (`catalogo.test.js` solo lee). El script de `npm test` incluye
+`--experimental-test-module-mocks` para simular el padrón, el modelo y la búsqueda.
 
-`node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad. Es para correr a demanda
-y borra las consultas que registra.
+`node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad (3 corridas por caso). Es
+para correr a demanda y borra por id las consultas que registra. Con `--detalle` imprime
+además el texto de cada corrida. Además de lo esperado de cada caso, en todas las respuestas
+chequea que no haya tuteo, que no empiece con la palabra "respuesta" y que no diga "tiene un
+costo sin costo".
 
 ## Notas de diseño
 

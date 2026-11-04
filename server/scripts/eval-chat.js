@@ -2,27 +2,33 @@
 // veces para detectar respuestas inestables. Llama a OpenAI de verdad (unos centavos
 // y algunos minutos por corrida): es para correr a demanda, no en cada commit.
 //
-//   node scripts/eval-chat.js
+//   node scripts/eval-chat.js             tabla de resultados
+//   node scripts/eval-chat.js --detalle   además, el texto de cada corrida
 //
-// responderConsulta registra cada pregunta en `consultas`; al terminar se borran
-// las filas que creó esta corrida para no ensuciar las métricas.
+// responderConsulta registra las consultas en `consultas`; al terminar se borran
+// por id las que creó esta corrida para no ensuciar las métricas.
 import 'dotenv/config';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
-import { responderConsulta } from '../src/services/chat.service.js';
+import { responderConsulta, MENSAJE_SIN_RESPUESTA } from '../src/services/chat.service.js';
+import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 
 const CORRIDAS = 3;
+const DETALLE = process.argv.includes('--detalle');
+
+const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
+const CATALOGO = { tipo: 'respuesta', conversacional: true, sinTramites: true, mencionaSector: true };
 
 const casos = [
   { pregunta: 'licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
   { pregunta: 'licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } }, // confirmar: ¿existe en la provincia?
-  { pregunta: 'licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false } }, // es municipal, no cargado
+  { pregunta: 'licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false, conversacional: false } }, // es municipal, no cargado
   { pregunta: 'necesito un certificado', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'licencia', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'licencia por enfermedad', esperado: { tipo: 'aclaracion', incluye: [20] } },
   { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
-  { pregunta: 'hola', esperado: { tipo: 'respuesta', encontrado: false } },
+  { pregunta: 'hola', esperado: CONVERSACION },
   { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false } },
   { pregunta: 'receta de chipá', esperado: { tipo: 'respuesta', encontrado: false } },
 
@@ -39,49 +45,107 @@ const casos = [
   { pregunta: 'cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] } }, // lo tramita el Registro Civil provincial
   { pregunta: 'cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [90] } }, // nuevo ejemplar, DNI en celular, recién nacido
   // Nata agrega 10-15 más con trámites reales del catálogo que conozca
+
+  // Diagnóstico de conversacionalidad:
+  { pregunta: 'buenas', esperado: CONVERSACION },
+  { pregunta: 'gracias', esperado: CONVERSACION },
+  { pregunta: 'chau', esperado: CONVERSACION },
+  { pregunta: '¿qué podés hacer?', esperado: CONVERSACION },
+  { pregunta: '¿quién sos?', esperado: CONVERSACION },
+  { pregunta: '¿qué trámites puedo hacer?', esperado: CATALOGO },
+  { pregunta: 'hola, ¿qué trámites puedo hacer?', esperado: CATALOGO },
+  { pregunta: '¿qué trámites hay?', esperado: CATALOGO },
+  { pregunta: 'hola, quiero saber cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], empiezaConSaludo: true } },
+  { pregunta: 'quiero saber cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [90] } },
+  { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
+  { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false, conversacional: false } },
+  { pregunta: 'hola, dame la receta de la pizza', esperado: { conversacional: true, noContiene: ['reformular'] } },
+  {
+    pregunta: 'seguimiento: cómo renuevo el pasaporte → ¿y cuánto cuesta?',
+    turnos: ['cómo renuevo el pasaporte', '¿y cuánto cuesta?'],
+    esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] },
+  },
 ];
+
+const { sectores } = await obtenerResumenCatalogo();
+
+const normalizar = (texto) =>
+  texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+
+const sectoresNormalizados = sectores.map((s) => normalizar(s.nombre));
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, encontrado, incluye, excluye }) =>
+const describirEsperado = ({ tipo, encontrado, incluye, excluye, conversacional, mencionaSector, empiezaConSaludo, noContiene }) =>
   [
     tipo,
+    conversacional !== undefined && `conv=${conversacional}`,
     encontrado !== undefined && `encontrado=${encontrado}`,
     incluye && `+[${incluye}]`,
     excluye && `-[${excluye}]`,
+    mencionaSector && 'sector',
+    empiezaConSaludo && 'saludo',
+    noContiene && `sin "${noContiene.join('", "')}"`,
   ].filter(Boolean).join(' ');
 
-const describirObtenido = (r) => `${r.tipo} encontrado=${r.encontrado} [${idsDe(r)}]`;
-
-const normalizarNombre = (nombre) =>
-  nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+const describirObtenido = (r) =>
+  `${r.tipo}${r.conversacional ? ' conv' : ''} encontrado=${r.encontrado} [${idsDe(r)}]`;
 
 // Regla global: ofrecer dos opciones con el mismo nombre es un error aunque el tipo sea correcto.
 const repiteNombres = (opciones) =>
-  new Set(opciones.map((o) => normalizarNombre(o.nombre))).size < opciones.length;
+  new Set(opciones.map((o) => normalizar(o.nombre))).size < opciones.length;
+
+const TUTEO = /\b(tienes|puedes|debes|asegúrate|necesitas|quieres)\b/i;
+const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
+
+// Chequeos que valen para cualquier respuesta, también los turnos intermedios.
+const fallasTransversales = (r) => [
+  TUTEO.test(r.respuesta) && 'tuteo',
+  /^\s*respuesta\b/i.test(sinSaludoCompuesto(r.respuesta)) && '"respuesta" al inicio',
+  /tiene un costo sin costo/i.test(r.respuesta) && '"costo sin costo"',
+];
 
 const fallas = (esperado, r) => {
   const ids = idsDe(r);
+  const texto = r.respuesta ?? '';
   return [
-    r.tipo !== esperado.tipo && 'tipo',
+    esperado.tipo !== undefined && r.tipo !== esperado.tipo && 'tipo',
     esperado.encontrado !== undefined && r.encontrado !== esperado.encontrado && 'encontrado',
+    esperado.conversacional !== undefined && r.conversacional !== esperado.conversacional && 'conversacional',
     esperado.incluye?.some((id) => !ids.includes(id)) && 'incluye',
     esperado.excluye?.some((id) => ids.includes(id)) && 'excluye',
+    esperado.sinTramites && r.tramitesEncontrados.length > 0 && 'trae trámites',
+    esperado.textoNoVacio && !texto.trim() && 'texto vacío',
+    esperado.distintoDelFijo && texto.includes(MENSAJE_SIN_RESPUESTA) && 'mensaje fijo',
+    esperado.mencionaSector && !sectoresNormalizados.some((s) => normalizar(texto).includes(s)) && 'sin sector',
+    esperado.empiezaConSaludo && !/^¡[^!]{1,60}! \S/.test(texto) && 'sin saludo',
+    ...(esperado.noContiene ?? []).map((p) => normalizar(texto).includes(normalizar(p)) && `contiene "${p}"`),
     repiteNombres(r.opciones) && 'opciones repetidas',
   ].filter(Boolean);
 };
 
-const [{ max: ultimaConsultaPrevia }] = await prisma.$queryRaw`
-  SELECT coalesce(max(id), 0)::int AS max FROM consultas
-`;
+const consultasCreadas = [];
 
-const correr = async (pregunta, esperado) => {
+const correr = async ({ pregunta, turnos, esperado }) => {
   cache.limpiar();
   try {
-    const r = await responderConsulta([{ rol: 'usuario', texto: pregunta }]);
-    return { obtenido: describirObtenido(r), motivo: fallas(esperado, r) };
+    const mensajes = [];
+    const transversales = [];
+    let r;
+    for (const texto of turnos ?? [pregunta]) {
+      mensajes.push({ rol: 'usuario', texto });
+      r = await responderConsulta(mensajes);
+      if (r.consultaId) consultasCreadas.push(r.consultaId);
+      transversales.push(...fallasTransversales(r));
+      mensajes.push({ rol: 'asistente', texto: r.respuesta });
+    }
+    return {
+      obtenido: describirObtenido(r),
+      motivo: [...new Set([...fallas(esperado, r), ...transversales.filter(Boolean)])],
+      texto: r.respuesta,
+    };
   } catch (err) {
-    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'] };
+    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '' };
   }
 };
 
@@ -102,22 +166,32 @@ const estadoDe = (aciertos) => {
 };
 
 const filas = [];
+const detalle = [];
 
-for (const { pregunta, esperado } of casos) {
+for (const caso of casos) {
   const corridas = [];
-  for (let i = 0; i < CORRIDAS; i++) corridas.push(await correr(pregunta, esperado));
+  for (let i = 0; i < CORRIDAS; i++) corridas.push(await correr(caso));
 
   const aciertos = corridas.filter((c) => c.motivo.length === 0).length;
   filas.push({
-    pregunta,
-    esperado: describirEsperado(esperado),
+    pregunta: caso.pregunta,
+    esperado: describirEsperado(caso.esperado),
     obtenido: resumirCorridas(corridas),
     aciertos: `${aciertos}/${CORRIDAS}`,
     estado: estadoDe(aciertos),
   });
+  detalle.push({ pregunta: caso.pregunta, textos: corridas.map((c) => c.texto) });
 }
 
 console.table(filas);
+
+if (DETALLE) {
+  console.log('\nTextos por corrida:');
+  for (const { pregunta, textos } of detalle) {
+    console.log(`\n# ${pregunta}`);
+    textos.forEach((t, i) => console.log(`  ${i + 1}) ${t.replace(/\n/g, '\n     ')}`));
+  }
+}
 
 const conEstado = (estado) => filas.filter((f) => f.estado === estado);
 const inestables = conEstado('INESTABLE');
@@ -134,14 +208,7 @@ console.log(
   `total: ${casos.length} casos × ${CORRIDAS} corridas`
 );
 
-// registrarConsulta no se espera dentro de responderConsulta: margen para que la última termine.
-await new Promise((r) => setTimeout(r, 1500));
-const borradas = await prisma.$executeRaw`
-  DELETE FROM consultas
-  WHERE id > ${ultimaConsultaPrevia}
-    AND usuario_id IS NULL
-    AND texto_consulta = ANY(${casos.map((c) => c.pregunta)})
-`;
+const { count: borradas } = await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
 console.log(`Consultas de la evaluación borradas: ${borradas}`);
 
 if (conEstado('OK').length < casos.length) process.exitCode = 1;
