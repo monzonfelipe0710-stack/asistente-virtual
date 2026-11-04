@@ -645,9 +645,11 @@ borran al terminar (`catalogo.test.js` solo lee). El script de `npm test` incluy
 
 `node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad (3 corridas por caso). Es
 para correr a demanda y borra por id las consultas que registra. Con `--detalle` imprime
-además el texto de cada corrida. Además de lo esperado de cada caso, en todas las respuestas
-chequea que no haya tuteo, que no empiece con la palabra "respuesta" y que no diga "tiene un
-costo sin costo".
+además el texto de cada corrida; con `--corridas N` cambia la cantidad de corridas y con
+`--solo "<pregunta>"` (repetible) corre solo esos casos. Además de lo esperado de cada caso, en todas las respuestas
+chequea que no haya tuteo, que no empiece con la palabra "respuesta", que no diga "tiene un
+costo sin costo", que toda URL del texto sea la fuente oficial de un trámite publicado y que
+una respuesta encontrada incluya el enlace a la fuente oficial de su trámite.
 
 ## Notas de diseño
 

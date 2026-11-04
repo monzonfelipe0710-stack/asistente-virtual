@@ -4,6 +4,8 @@
 //
 //   node scripts/eval-chat.js             tabla de resultados
 //   node scripts/eval-chat.js --detalle   además, el texto de cada corrida
+//   node scripts/eval-chat.js --corridas 5 --solo "cómo renuevo el pasaporte" --solo "..."
+//                                         otra cantidad de corridas, o solo esos casos
 //
 // responderConsulta registra las consultas en `consultas`; al terminar se borran
 // por id las que creó esta corrida para no ensuciar las métricas.
@@ -13,8 +15,11 @@ import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, MENSAJE_SIN_RESPUESTA } from '../src/services/chat.service.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 
-const CORRIDAS = 3;
+const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [process.argv[i + 1]] : []));
+
+const CORRIDAS = Number(argumento('--corridas')[0] ?? 3);
 const DETALLE = process.argv.includes('--detalle');
+const SOLO = argumento('--solo');
 
 const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
 const CATALOGO = { tipo: 'respuesta', conversacional: true, sinTramites: true, mencionaSector: true };
@@ -98,12 +103,27 @@ const repiteNombres = (opciones) =>
 const TUTEO = /\b(tienes|puedes|debes|asegúrate|necesitas|quieres)\b/i;
 const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
+const fuentePorId = new Map(
+  (await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, fuenteUrl: true } }))
+    .filter((t) => t.fuenteUrl)
+    .map((t) => [t.id, t.fuenteUrl]),
+);
+const fuentesConocidas = new Set(fuentePorId.values());
+const enlacesDe = (texto) => (texto.match(/https?:\/\/[^\s)\]<>]+/g) ?? []).map((u) => u.replace(/[.,;:]+$/, ''));
+
 // Chequeos que valen para cualquier respuesta, también los turnos intermedios.
-const fallasTransversales = (r) => [
-  TUTEO.test(r.respuesta) && 'tuteo',
-  /^\s*respuesta\b/i.test(sinSaludoCompuesto(r.respuesta)) && '"respuesta" al inicio',
-  /tiene un costo sin costo/i.test(r.respuesta) && '"costo sin costo"',
-];
+const fallasTransversales = (r) => {
+  const enlaces = enlacesDe(r.respuesta);
+  const fuentesDeLaRespuesta = r.tramitesEncontrados.map((t) => fuentePorId.get(t.id)).filter(Boolean);
+  return [
+    TUTEO.test(r.respuesta) && 'tuteo',
+    /^\s*respuesta\b/i.test(sinSaludoCompuesto(r.respuesta)) && '"respuesta" al inicio',
+    /tiene un costo sin costo/i.test(r.respuesta) && '"costo sin costo"',
+    enlaces.some((u) => !fuentesConocidas.has(u)) && 'enlace inventado',
+    r.encontrado && fuentesDeLaRespuesta.length > 0 &&
+      !fuentesDeLaRespuesta.some((u) => r.respuesta.includes(`](${u})`)) && 'sin fuente',
+  ];
+};
 
 const fallas = (esperado, r) => {
   const ids = idsDe(r);
@@ -168,7 +188,11 @@ const estadoDe = (aciertos) => {
 const filas = [];
 const detalle = [];
 
-for (const caso of casos) {
+const elegidos = SOLO.length > 0 ? casos.filter((c) => SOLO.includes(c.pregunta)) : casos;
+const desconocidos = SOLO.filter((p) => !casos.some((c) => c.pregunta === p));
+if (desconocidos.length > 0) throw new Error(`Casos que no existen: ${desconocidos.join(' | ')}`);
+
+for (const caso of elegidos) {
   const corridas = [];
   for (let i = 0; i < CORRIDAS; i++) corridas.push(await correr(caso));
 
@@ -205,11 +229,11 @@ console.log(
   `\nOK ${CORRIDAS}/${CORRIDAS}: ${conEstado('OK').length} | ` +
   `inestables: ${inestables.length} | ` +
   `fallan siempre: ${conEstado('FALLA').length} | ` +
-  `total: ${casos.length} casos × ${CORRIDAS} corridas`
+  `total: ${elegidos.length} casos × ${CORRIDAS} corridas`
 );
 
 const { count: borradas } = await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
 console.log(`Consultas de la evaluación borradas: ${borradas}`);
 
-if (conEstado('OK').length < casos.length) process.exitCode = 1;
+if (conEstado('OK').length < elegidos.length) process.exitCode = 1;
 await prisma.$disconnect();
