@@ -384,6 +384,7 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
   "encontrado": true,
   "tramitesEncontrados": [{ "id": 269, "nombre": "Certificado de buena conducta" }],
   "opciones": [],
+  "conversacional": false,
   "consultaId": 414,
   "calificarToken": "9f2c4e7a1b3d5f6e8a0c2e4f6a8b0d1c"
 }
@@ -396,6 +397,7 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 | `encontrado` | `true` solo si se respondió con algún trámite. Siempre `false` en una aclaración |
 | `tramitesEncontrados` | Trámites usados en la respuesta. Vacío si no se encontró nada o es una aclaración |
 | `opciones` | Trámites entre los que elegir, solo en una aclaración |
+| `conversacional` | `true` si el mensaje no pedía un trámite (saludo, gracias, pregunta sobre el asistente o el catálogo, tema ajeno): `respuesta` es el texto del asistente, `tipo` es `respuesta`, `encontrado` es `false`, no hay trámites ni opciones y no se registra (`consultaId` y `calificarToken` `null`). `false` en todos los demás casos |
 | `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (no se registran) o si falló el registro |
 | `calificarToken` | Token para calificar esa consulta sin sesión (32 caracteres hex). `null` cuando `consultaId` es `null`. Cada consulta tiene el suyo, también las que salen de la caché |
 
@@ -412,7 +414,7 @@ es una línea `data: <json>` seguida de una línea en blanco:
 | Evento | Forma | Cuándo |
 |---|---|---|
 | `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la respuesta sale de la caché o no se encontró nada, llega entera en un solo `delta` |
-| `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
+| `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "conversacional": bool, "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
 | `error` | `{ "tipo": "error", "mensaje": "Ocurrió un error procesando la consulta." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` |
 
 Ejemplo:
@@ -422,7 +424,7 @@ data: {"tipo":"delta","texto":"Para la licencia por maternidad "}
 
 data: {"tipo":"delta","texto":"tenés que presentar..."}
 
-data: {"tipo":"fin","tipoRespuesta":"respuesta","encontrado":true,"tramitesEncontrados":[{"id":19,"nombre":"Licencia por maternidad"}],"opciones":[],"consultaId":417,"calificarToken":"3b8e0d2f4a6c8e1f3a5c7e9b1d3f5a7c"}
+data: {"tipo":"fin","tipoRespuesta":"respuesta","encontrado":true,"tramitesEncontrados":[{"id":19,"nombre":"Licencia por maternidad"}],"opciones":[],"conversacional":false,"consultaId":417,"calificarToken":"3b8e0d2f4a6c8e1f3a5c7e9b1d3f5a7c"}
 ```
 
 Los errores de validación y el rate limit llegan antes de abrir el stream, como JSON común
@@ -561,6 +563,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **`alcance=propias` para el SU:** `GET /api/metricas/por-tramite?alcance=propias` con un superusuario devuelve todo en vez de `[]`.
 - **Género X:** el registro acepta `genero: "X"` con `nombre` y `apellido` obligatorios, verificados contra el padrón.
 - **DNI único:** un DNI ya registrado responde 409 aunque se registre con otro género.
+- **`conversacional`:** `POST /api/chat` y el evento `fin` de `/api/chat/stream` traen `conversacional` (`true` en saludos, preguntas sobre el asistente o el catálogo y temas ajenos; en ese caso no hay `consultaId` ni `calificarToken`).
 - **`calificarToken`:** `POST /api/chat` y el evento `fin` de `/api/chat/stream` devuelven `calificarToken` junto a `consultaId` (los dos `null` en aclaraciones).
 - **Calificación:** nuevo `PATCH /api/consultas/:id/calificar` (dueño o token).
 - **`/mias` con calificación:** cada consulta trae `respuesta`, `calificacion` y `motivoCalificacion`.
@@ -579,9 +582,12 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 3. **Sin candidatos:** mensaje fijo, sin llamar al modelo.
 4. **Contexto:** detalle de los candidatos (requisitos con dónde se consiguen y costo,
    mesas, nombres de los formularios).
-5. **Modelo:** devuelve un JSON con `tipo`, `respuesta`, `encontrado`, `tramitesUsados` y
-   `opciones` (en streaming, la primera línea es ese JSON y después el texto). Se descartan
-   los ids que no estén en el contexto, y `encontrado` exige que quede alguno.
+5. **Modelo:** devuelve un JSON con `tipo` (`respuesta`, `aclaracion` o `conversacion`),
+   `saludo`, `respuesta`, `encontrado`, `tramitesUsados` y `opciones` (en streaming, la
+   primera línea es ese JSON sin `respuesta` y después el texto). Se descartan los ids que no
+   estén en el contexto, y `encontrado` exige que quede alguno; una `respuesta` sin ids
+   válidos pasa al mensaje fijo. Una `conversacion` conserva el texto del modelo (hasta 600
+   caracteres), no se cachea ni se registra.
 6. **Registro** en `consultas` (salvo aclaraciones), atribuido al primer trámite usado, con
    el texto que se mostró (en streaming, sin la línea del JSON) y un `calificarToken` nuevo.
 

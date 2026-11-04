@@ -4,51 +4,28 @@ import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import * as cache from "./cache.service.js";
 
-const MENSAJE_SIN_RESPUESTA =
+export const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
 
-const SYSTEM_PROMPT_MULTIVUELTA = `
-Sos el asistente virtual de la administración pública de Formosa.
-Tu única función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites candidatos del contexto.
+// Por si el modelo marca conversación pero no escribe nada.
+const MENSAJE_CONVERSACION_VACIA = "¿En qué trámite te puedo ayudar?";
 
-Podés hacer dos cosas:
-1) RESPONDER: si queda claro a qué trámite se refiere la persona, respondé con la info del contexto.
-2) PEDIR ACLARACIÓN: solo si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere (ej. "certificado" → de antecedentes, de residencia, de nacimiento). Hacé UNA pregunta corta para que elija.
+export const TOPE_CONVERSACION = 600;
+
+// Las reglas son las mismas para las dos rutas; solo cambia el formato de salida.
+const ROL_Y_REGLAS = `
+Sos el asistente virtual de la administración pública de Formosa.
+Tu función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites candidatos del contexto.
+
+Podés hacer tres cosas:
+1) RESPONDER (tipo "respuesta"): si queda claro a qué trámite se refiere la persona, respondé con la info del contexto.
+2) PEDIR ACLARACIÓN (tipo "aclaracion"): solo si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere (ej. "certificado" → de antecedentes, de residencia, de nacimiento). Hacé UNA pregunta corta para que elija.
+3) CONVERSAR (tipo "conversacion"): si el mensaje NO pide un trámite. Es conversación un saludo, un agradecimiento o una despedida; una pregunta sobre vos ("quién sos", "qué podés hacer"); una pregunta general sobre el catálogo ("qué trámites hay", "qué trámites puedo hacer"); o un tema ajeno a los trámites. Contestá en pocas oraciones e invitá a preguntar por un trámite.
 
 Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
-- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo:"respuesta" con encontrado:false.
-- Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
-- No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
-- No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
-- En el texto para el ciudadano nombrá los trámites por su nombre; NUNCA muestres los ids. Los ids van solo en "tramitesUsados" y "opciones".
-- Si listás requisitos, hacelo conciso, con dónde se consigue y cuánto cuesta cuando el contexto lo diga.
-- Sé claro, amable y breve. Lenguaje simple (el público incluye adultos mayores).
-- Usá siempre voseo rioplatense (tenés, podés, acercate, fijate), nunca tuteo (tienes, debes, acércate).
-- Escribí en texto plano, sin markdown: nada de negritas, asteriscos (*), viñetas ni almohadillas (#).
-- No respondas sobre temas ajenos a los trámites.
-
-Formato de salida (JSON):
-- "tipo": "respuesta" o "aclaracion".
-- "respuesta": el texto para el ciudadano (la respuesta, o la pregunta aclaratoria si tipo=aclaracion).
-- "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso.
-- "tramitesUsados": IDs de los trámites que usaste para responder (vacío si no respondiste).
-- "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío si tipo=respuesta).`;
-
-const INSTRUCCION_TOPE = `
-IMPORTANTE: ya se pidió aclaración el máximo de veces, así que en este turno "tipo" DEBE ser "respuesta" (no vuelvas a pedir aclaración). Si podés identificar el trámite, respondé con ese. Si varios candidatos siguen siendo posibles, NO mandes a la persona a la mesa de entrada: respondé igual describiendo brevemente cada uno de esos candidatos para que pueda elegir, con sus IDs en "tramitesUsados" y "encontrado": true. Nunca devuelvas "encontrado": true con "tramitesUsados" vacío: ahí van los IDs de TODOS los candidatos que vas a describir (si el formato te pide escribirlos antes que el texto, como en la primera línea, decidilos primero). Sugerí consultar en una mesa de entrada solo si ningún candidato del contexto corresponde.`;
-
-const SYSTEM_PROMPT_STREAM_MULTIVUELTA = `
-Sos el asistente virtual de la administración pública de Formosa.
-Tu única función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites candidatos del contexto.
-
-Podés hacer dos cosas:
-1) RESPONDER: si queda claro a qué trámite se refiere la persona, respondé con la info del contexto.
-2) PEDIR ACLARACIÓN: solo si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere (ej. "certificado" → de antecedentes, de residencia, de nacimiento). Hacé UNA pregunta corta para que elija.
-
-Reglas:
-- Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
-- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo:"respuesta" con encontrado:false.
+- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con encontrado false.
+- Si la persona pide un trámite (aunque no exista en el contexto), el tipo es "respuesta" o "aclaracion", nunca "conversacion".
 - Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
@@ -57,16 +34,67 @@ Reglas:
 - Sé claro, amable y breve (máximo 4-6 oraciones; los requisitos, en lista corta). Lenguaje simple (el público incluye adultos mayores).
 - Usá siempre voseo rioplatense (tenés, podés, acercate, fijate), nunca tuteo (tienes, debes, acércate).
 - Escribí en texto plano, sin markdown: nada de negritas, asteriscos (*), viñetas ni almohadillas (#).
-- No respondas sobre temas ajenos a los trámites.
+- No respondas sobre temas ajenos a los trámites.`;
+
+const SYSTEM_PROMPT_MULTIVUELTA = `${ROL_Y_REGLAS}
+
+Formato de salida (JSON):
+- "tipo": "respuesta", "aclaracion" o "conversacion".
+- "saludo": el saludo con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó.
+- "respuesta": el texto para el ciudadano (la respuesta, la pregunta aclaratoria si tipo=aclaracion, o lo que contestás si tipo=conversacion).
+- "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso (siempre false en conversacion).
+- "tramitesUsados": IDs de los trámites que usaste para responder (vacío si no respondiste o si tipo=conversacion). Los ids van solo acá y en "opciones".
+- "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío en los demás casos).`;
+
+const INSTRUCCION_TOPE = `
+IMPORTANTE: ya se pidió aclaración el máximo de veces, así que en este turno "tipo" DEBE ser "respuesta" (o "conversacion" si el mensaje no pide un trámite); no vuelvas a pedir aclaración. Si podés identificar el trámite, respondé con ese. Si varios candidatos siguen siendo posibles, NO mandes a la persona a la mesa de entrada: respondé igual describiendo brevemente cada uno de esos candidatos para que pueda elegir, con sus IDs en "tramitesUsados" y "encontrado": true. Nunca devuelvas "encontrado": true con "tramitesUsados" vacío: ahí van los IDs de TODOS los candidatos que vas a describir (si el formato te pide escribirlos antes que el texto, como en la primera línea, decidilos primero). Sugerí consultar en una mesa de entrada solo si ningún candidato del contexto corresponde.`;
+
+const SYSTEM_PROMPT_STREAM_MULTIVUELTA = `${ROL_Y_REGLAS}
 
 Formato de salida (OBLIGATORIO):
-- La PRIMERA línea debe ser únicamente un objeto JSON en una sola línea, sin texto antes: {"tipo": "<respuesta|aclaracion>", "encontrado": <true|false>, "tramitesUsados": [<ids>], "opciones": [<ids>]}
-  - "tipo": "aclaracion" si pedís que elija entre varios trámites; "respuesta" en cualquier otro caso.
-  - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso (incluida una aclaracion, saludos o temas fuera de tema).
-  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder. Vacío si no respondiste.
-  - "opciones": los IDs de los trámites que ofrecés como opción. Solo si tipo=aclaracion; vacío si tipo=respuesta.
-- A partir de la SEGUNDA línea, escribí en texto plano (sin JSON ni marcadores) la respuesta para el ciudadano, o la pregunta aclaratoria si tipo=aclaracion.
-- Si ningún trámite responde, poné {"tipo": "respuesta", "encontrado": false, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
+- La PRIMERA línea debe ser únicamente un objeto JSON en una sola línea, sin texto antes: {"tipo": "<respuesta|aclaracion|conversacion>", "saludo": "<saludo o vacío>", "encontrado": <true|false>, "tramitesUsados": [<ids>], "opciones": [<ids>]}
+  - "tipo": "aclaracion" si pedís que elija entre varios trámites; "conversacion" si el mensaje no pide un trámite; "respuesta" en cualquier otro caso.
+  - "saludo": el saludo con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó.
+  - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso (incluidas aclaracion y conversacion).
+  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder. Vacío si no respondiste o si tipo=conversacion.
+  - "opciones": los IDs de los trámites que ofrecés como opción. Solo si tipo=aclaracion; vacío en los demás casos.
+- A partir de la SEGUNDA línea, escribí (sin JSON ni marcadores) el texto para el ciudadano: la respuesta, la pregunta aclaratoria o lo que contestás si tipo=conversacion.
+- Si la persona pide un trámite y ningún candidato responde, poné {"tipo": "respuesta", "saludo": "<saludo o vacío>", "encontrado": false, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
+
+const ESQUEMA_SALIDA = {
+  name: "respuesta_chat",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      tipo: { type: "string", enum: ["respuesta", "aclaracion", "conversacion"] },
+      saludo: { type: "string" },
+      respuesta: { type: "string" },
+      encontrado: { type: "boolean" },
+      tramitesUsados: { type: "array", items: { type: "integer" } },
+      opciones: { type: "array", items: { type: "integer" } },
+    },
+    required: ["tipo", "saludo", "respuesta", "encontrado", "tramitesUsados", "opciones"],
+  },
+};
+
+const limitarConversacion = (texto) => {
+  const limpio = texto.trim();
+  if (!limpio) return MENSAJE_CONVERSACION_VACIA;
+  return limpio.length < TOPE_CONVERSACION ? limpio : `${limpio.slice(0, TOPE_CONVERSACION - 1).trimEnd()}…`;
+};
+
+// Conversación: no se cachea ni se registra en consultas (no es una consulta de trámite).
+const respuestaConversacional = (respuesta) => ({
+  tipo: "respuesta",
+  respuesta,
+  encontrado: false,
+  tramitesEncontrados: [],
+  opciones: [],
+  conversacional: true,
+  ...SIN_REGISTRO,
+});
 
 const formatearCosto = (costo) =>
   costo == null || Number(costo) === 0 ? "sin costo" : `$${costo}`;
@@ -157,7 +185,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
     if (cacheado) {
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
       // Las entradas que guarda el streaming no traen tipo ni opciones.
-      return { tipo: "respuesta", opciones: [], ...cacheado, ...registro };
+      return { tipo: "respuesta", opciones: [], ...cacheado, conversacional: false, ...registro };
     }
   }
 
@@ -189,7 +217,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       opciones: [],
     };
     if (esUnTurno) cache.guardar(preguntaActual, resultado);
-    return { ...resultado, ...registro };
+    return { ...resultado, conversacional: false, ...registro };
   }
 
   const contexto = tramites.map(formatearTramite).join("\n\n");
@@ -205,25 +233,14 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
   const salidaRaw = await ia.generarRespuesta({
     instruccionSistema: `${system}\n\nContexto (trámites candidatos):\n${contexto}`,
     turnos: mensajes,
-    esquema: {
-      name: "respuesta_chat",
-      strict: true,
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          tipo: { type: "string", enum: ["respuesta", "aclaracion"] },
-          respuesta: { type: "string" },
-          encontrado: { type: "boolean" },
-          tramitesUsados: { type: "array", items: { type: "integer" } },
-          opciones: { type: "array", items: { type: "integer" } },
-        },
-        required: ["tipo", "respuesta", "encontrado", "tramitesUsados", "opciones"],
-      },
-    },
+    esquema: ESQUEMA_SALIDA,
   });
 
   const salida = JSON.parse(salidaRaw);
+
+  if (salida.tipo === "conversacion") {
+    return respuestaConversacional(limitarConversacion(salida.respuesta));
+  }
 
   // ACLARACIÓN (solo si no llegamos al tope).
   if (salida.tipo === "aclaracion" && !topeAlcanzado) {
@@ -240,6 +257,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       opciones,
       encontrado: false,
       tramitesEncontrados: [],
+      conversacional: false,
       ...SIN_REGISTRO,
     };
   }
@@ -274,7 +292,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
     opciones: [],
   };
   if (esUnTurno) cache.guardar(preguntaActual, resultado);
-  return { ...resultado, ...registro };
+  return { ...resultado, conversacional: false, ...registro };
 };
 
 const leerMeta = (linea) => {
@@ -300,6 +318,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
         encontrado: cacheado.encontrado,
         tramitesEncontrados: cacheado.tramitesEncontrados,
         opciones: [],
+        conversacional: false,
         ...registro,
       };
       return;
@@ -338,6 +357,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
       encontrado: false,
       tramitesEncontrados: [],
       opciones: [],
+      conversacional: false,
       ...registro,
     };
     return;
@@ -384,25 +404,52 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
             })
         : [];
 
+      const esConversacion = parsed?.tipo === "conversacion";
       meta = {
         valida: parsed !== null,
-        tipo: esAclaracion ? "aclaracion" : "respuesta",
+        tipo: esConversacion ? "conversacion" : esAclaracion ? "aclaracion" : "respuesta",
         encontrado:
-          !esAclaracion && parsed?.encontrado === true && idsUsados.length > 0,
-        idsUsados,
+          !esAclaracion && !esConversacion && parsed?.encontrado === true && idsUsados.length > 0,
+        idsUsados: esConversacion ? [] : idsUsados,
         opciones,
       };
 
+      // Se decide con la línea META, antes de mandar texto: lo que se transmite no se descarta.
       if (meta.tipo === "respuesta" && !meta.encontrado) break;
 
       delta = buffer.slice(nl + 1);
     }
 
-    const texto = respuestaIniciada ? delta : delta.trimStart();
+    let texto = respuestaIniciada ? delta : delta.trimStart();
     if (!texto) continue;
+
+    let llegoAlTope = false;
+    if (meta.tipo === "conversacion") {
+      const lugar = TOPE_CONVERSACION - 1 - fullAnswer.length;
+      if (texto.length > lugar) {
+        texto = `${texto.slice(0, lugar).trimEnd()}…`;
+        llegoAlTope = true;
+      }
+    }
+
     respuestaIniciada = true;
     fullAnswer += texto;
     yield { tipo: "delta", texto };
+    if (llegoAlTope) break;
+  }
+
+  if (meta?.tipo === "conversacion") {
+    if (!fullAnswer.trim()) yield { tipo: "delta", texto: MENSAJE_CONVERSACION_VACIA };
+    yield {
+      tipo: "fin",
+      tipoRespuesta: "respuesta",
+      encontrado: false,
+      tramitesEncontrados: [],
+      opciones: [],
+      conversacional: true,
+      ...SIN_REGISTRO,
+    };
+    return;
   }
 
   const esAclaracion = meta?.tipo === "aclaracion";
@@ -442,6 +489,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
     encontrado: esAclaracion ? false : encontrado,
     tramitesEncontrados,
     opciones,
+    conversacional: false,
     ...registro,
   };
 }
