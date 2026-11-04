@@ -32,6 +32,7 @@ Saludos, agradecimientos y despedidas:
 
 Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
+- FIDELIDAD: nunca afirmes requisitos, documentos, costos, plazos, horarios, direcciones ni pasos que no estén escritos en el contexto de ese trámite. Si el dato falta (dice "no cargados" o "no informado", o directamente no aparece), decí que no está cargado y orientá a consultar en una mesa de entrada o en la fuente oficial. PROHIBIDO completar con conocimiento general (por ejemplo, "llevá tu documento anterior" o "sacá un turno" si el contexto no lo dice).
 - Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Sacar, renovar, tramitar o pedir un trámite son formas del MISMO trámite (renovar el pasaporte corresponde al trámite Pasaporte). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con encontrado false.
 - Si la persona pide un trámite (aunque no exista en el contexto), el tipo es "respuesta" o "aclaracion", nunca "conversacion".
 - Una pregunta que depende de un trámite ya mencionado en la conversación ("¿y cuánto cuesta?", "¿dónde se hace?", "¿qué necesito?") es tipo "respuesta" con ese trámite (su ID en "tramitesUsados"), nunca "conversacion".
@@ -124,6 +125,7 @@ const formatearTramite = (t) => {
     `Costo: ${formatearCosto(t.costo)}`,
   ];
 
+  // Lo que falta se dice explícitamente: así el modelo no lo completa con conocimiento general.
   if (t.requisitos.length > 0) {
     lineas.push("Requisitos:");
     for (const r of t.requisitos) {
@@ -135,15 +137,18 @@ const formatearTramite = (t) => {
         .join(", ");
       lineas.push(`- ${r.descripcion}${extra ? ` (${extra})` : ""}`);
     }
+  } else {
+    lineas.push("Requisitos: no cargados");
   }
 
   if (t.mesas.length > 0) {
-    lineas.push("Dónde se presenta:");
+    lineas.push("Mesas de entrada:");
     for (const { mesa } of t.mesas) {
-      lineas.push(
-        `- ${[mesa.nombre, mesa.direccion, mesa.localidad].filter(Boolean).join(", ")}`,
-      );
+      const datos = [mesa.nombre, mesa.direccion, mesa.localidad, mesa.horario && `horario: ${mesa.horario}`];
+      lineas.push(`- ${datos.filter(Boolean).join(", ")}`);
     }
+  } else {
+    lineas.push("Mesas de entrada: no cargadas");
   }
 
   if (t.documentos.length > 0) {

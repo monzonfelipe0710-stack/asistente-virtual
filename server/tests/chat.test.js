@@ -204,6 +204,37 @@ describe('chat', () => {
     }
   });
 
+  it('al modelo le llegan los requisitos y las mesas, o "no cargados" si faltan', async () => {
+    const contextoDelTramite = async () => {
+      llamadasModelo = [];
+      cache.limpiar();
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('qué necesito'));
+      return llamadasModelo[0].instruccionSistema.split('Contexto (trámites candidatos):')[1];
+    };
+
+    const vacio = await contextoDelTramite();
+    assert.match(vacio, /^Requisitos: no cargados$/m);
+    assert.match(vacio, /^Mesas de entrada: no cargadas$/m);
+
+    const mesa = await prisma.mesaEntrada.create({
+      data: { nombre: `Mesa ${SUFIJO}`, direccion: 'San Martín 123', horario: '7 a 13' },
+    });
+    try {
+      await prisma.requisito.create({ data: { descripcion: 'DNI vigente', tramiteId: tramite.id } });
+      await prisma.tramiteMesa.create({ data: { tramiteId: tramite.id, mesaId: mesa.id } });
+
+      const completo = await contextoDelTramite();
+      assert.match(completo, /^Requisitos:\n- DNI vigente$/m);
+      assert.match(completo, new RegExp(`^Mesas de entrada:\\n- Mesa ${SUFIJO}, San Martín 123, horario: 7 a 13$`, 'm'));
+      assert.doesNotMatch(completo, /no cargad/);
+    } finally {
+      await prisma.tramiteMesa.deleteMany({ where: { mesaId: mesa.id } });
+      await prisma.requisito.deleteMany({ where: { tramiteId: tramite.id } });
+      await prisma.mesaEntrada.delete({ where: { id: mesa.id } });
+    }
+  });
+
   describe('sin candidatos', () => {
     beforeEach(() => { candidatos = []; });
 
