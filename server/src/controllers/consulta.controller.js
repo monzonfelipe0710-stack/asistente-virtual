@@ -1,6 +1,7 @@
 import * as metricaService from '../services/metrica.service.js';
 import * as consultaService from '../services/consulta.service.js';
-import { calificarSchema } from '../validators/consulta.validator.js';
+import * as usuarioService from '../services/usuario.service.js';
+import { calificarSchema, filtroCalificacionesSchema } from '../validators/consulta.validator.js';
 
 const noEncontrada = () => {
   const error = new Error('Consulta no encontrada.');
@@ -32,6 +33,16 @@ export const calificar = async (req, res) => {
   }
 
   res.json({ consultaId: id, calificacion });
+};
+
+// Mismo alcance que métricas con alcance=propias: el ADM ve los trámites de sus sectores.
+export const calificaciones = async (req, res) => {
+  const filtros = filtroCalificacionesSchema.parse(req.query);
+  const sectorIds = req.usuario.rol === 'SUPERUSUARIO'
+    ? null
+    : (await usuarioService.listarSectoresDeUsuario(req.usuario.id)).map((s) => s.id);
+
+  res.json(await consultaService.listarCalificaciones({ ...filtros, sectorIds }));
 };
 
 export const quitarDelHistorial = async (req, res) => {
