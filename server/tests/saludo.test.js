@@ -20,6 +20,12 @@ describe('sanitizarSaludo', () => {
     for (const valor of ['', '   ', null, undefined, '¡!']) assert.equal(sanitizarSaludo(valor), '');
   });
 
+  it('un agradecimiento o una despedida no son saludo', () => {
+    for (const valor of ['Gracias', '¡Muchas gracias!', 'chau', 'Adiós', 'adios', 'Hasta luego', 'Nos vemos']) {
+      assert.equal(sanitizarSaludo(valor), '', valor);
+    }
+  });
+
   it('usa "Hola" si trae otros caracteres o pasa de 30', () => {
     assert.equal(sanitizarSaludo('<b>hola</b>'), 'Hola');
     assert.equal(sanitizarSaludo('Hola 123'), 'Hola');

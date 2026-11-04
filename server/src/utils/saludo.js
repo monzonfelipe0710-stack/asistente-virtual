@@ -1,6 +1,9 @@
 const SALUDO_POR_DEFECTO = 'Hola';
 const LARGO_MAXIMO = 30;
 
+// Agradecimientos y despedidas no son saludo de entrada: no se antepone "¡Gracias!" a la respuesta.
+const NO_SON_SALUDO = /^(muchas\s+)?gracias$|^chau$|^adi[oó]s$|^hasta\s+(luego|pronto|mañana)$|^nos\s+vemos$/i;
+
 const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const conMayuscula = (texto) => texto.charAt(0).toLocaleUpperCase('es') + texto.slice(1);
 
@@ -14,7 +17,7 @@ export const sanitizarSaludo = (saludo) => {
     .replace(/[!.,;:]+$/, '')
     .replace(/\s+/g, ' ')
     .trim();
-  if (!limpio) return '';
+  if (!limpio || NO_SON_SALUDO.test(limpio)) return '';
   if (limpio.length > LARGO_MAXIMO || !/^[\p{L} ¿¡]+$/u.test(limpio)) return SALUDO_POR_DEFECTO;
   return conMayuscula(limpio);
 };
