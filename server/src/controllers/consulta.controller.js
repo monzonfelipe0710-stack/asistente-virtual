@@ -33,3 +33,10 @@ export const calificar = async (req, res) => {
 
   res.json({ consultaId: id, calificacion });
 };
+
+export const quitarDelHistorial = async (req, res) => {
+  if (!(await consultaService.quitarDelHistorial(Number(req.params.id), req.usuario.id))) {
+    throw noEncontrada();
+  }
+  res.status(204).send();
+};

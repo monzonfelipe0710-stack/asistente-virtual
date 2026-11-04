@@ -14,6 +14,15 @@ export const buscarParaCalificar = (id) =>
     select: { usuarioId: true, calificarToken: true },
   });
 
+// La fila queda para las métricas; solo se desvincula del historial de la persona.
+export const quitarDelHistorial = async (id, usuarioId) => {
+  const { count } = await prisma.consulta.updateMany({
+    where: { id, usuarioId },
+    data: { usuarioId: null },
+  });
+  return count === 1;
+};
+
 // Solo califica si todavía no tiene calificación: dos pedidos simultáneos no se pisan.
 export const guardarCalificacion = async (id, calificacion, motivo) => {
   const { count } = await prisma.consulta.updateMany({
