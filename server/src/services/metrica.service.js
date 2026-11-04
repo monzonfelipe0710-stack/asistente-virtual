@@ -64,6 +64,9 @@ export const consultasDeUsuario = async (usuarioId) => {
       textoConsulta: true,
       encontrado: true,
       fecha: true,
+      respuesta: true,
+      calificacion: true,
+      motivoCalificacion: true,
       tramite: { select: { id: true, nombre: true } },
     },
   });
