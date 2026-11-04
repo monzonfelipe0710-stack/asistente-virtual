@@ -114,7 +114,7 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 
 | Modelo (tabla) | Descripción |
 |---|---|
-| `Usuario` (`usuarios`) | Rol `SUPERUSUARIO`, `ADMINISTRADOR` o `CIUDADANO`; estado `PENDIENTE`, `APROBADO`, `RECHAZADO` o `SUSPENDIDO`. `email` único; `dni` único (los empleados no tienen); `genero` `M`, `F` o `X` |
+| `Usuario` (`usuarios`) | Rol `SUPERUSUARIO`, `ADMINISTRADOR` o `CIUDADANO`; estado `PENDIENTE`, `APROBADO`, `RECHAZADO` o `SUSPENDIDO`. `email` único; `dni` único (los empleados no tienen); `genero` `M`, `F` o `X`; `cuil` del padrón (11 dígitos o `null`) |
 | `Sector` (`sectores`) | Jerarquía (`MINISTERIO`, `SUBSECRETARIA`, `DEPARTAMENTO`, `ORGANISMO`) con `parentId`. Nombre único bajo un mismo padre |
 | `UsuarioSector` (`usuario_sector`) | Sectores asignados a cada administrador |
 | `Tramite` (`tramites`) | Nombre, descripción, costo, sector, encargado, `publicado`, `embedding vector(1536)`, `fuenteUrl` (catálogo importado) |
@@ -122,7 +122,7 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | `MesaEntrada` (`mesas_entrada`) | Lugares de presentación, con horario. Generales o de un sector |
 | `TramiteMesa` (`tramite_mesa`) | Relación N a N trámite ↔ mesa |
 | `Documento` (`documentos`) | Formularios descargables. Guarda la key del archivo en R2 |
-| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial |
+| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` mostrada, la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
 
 La columna `tramites.search_vector` es generada (`GENERATED ALWAYS AS ... STORED`, full-text
 en español sobre nombre y descripción). En el schema figura como `Unsupported("tsvector")`,
@@ -166,7 +166,7 @@ uno solo:
 | 401 | Sin token, token inválido o vencido, cuenta no activa, sesión invalidada por cambio de contraseña, credenciales inválidas |
 | 403 | Rol sin permiso, sector no asignado, cuenta no aprobada en el login, cambio de contraseña pendiente |
 | 404 | Recurso inexistente, id que no es entero positivo, borrador que el usuario no puede ver, ruta no registrada |
-| 409 | Duplicado (email, DNI, nombre de sector), borrado con registros asociados, ciclo de sectores, cambio de estado inválido |
+| 409 | Duplicado (email, DNI, nombre de sector), borrado con registros asociados, ciclo de sectores, cambio de estado inválido, consulta ya calificada |
 | 413 | Archivo de más de 10 MB |
 | 422 | El padrón no confirma la identidad en el registro |
 | 429 | Rate limit |
@@ -223,9 +223,11 @@ token:
 
 - **Responden 403** `{ "error": "Debés cambiar tu contraseña antes de continuar.", "codigo": "PASSWORD_CHANGE_REQUIRED" }`
   todas las rutas que exigen autenticación: usuarios, sectores, mesas, trámites (salvo
-  `/publicados`), alta y baja de documentos, métricas y `/api/consultas/mias`.
-- **No responden 403** las rutas con token opcional (`/api/chat`, `/api/chat/stream` y la
-  lista y descarga de documentos): tratan al usuario como anónimo.
+  `/publicados`), alta y baja de documentos, métricas, `/api/consultas/mias`,
+  `/api/consultas/calificaciones` y `DELETE /api/consultas/:id`.
+- **No responden 403** las rutas con token opcional (`/api/chat`, `/api/chat/stream`,
+  `PATCH /api/consultas/:id/calificar` y la lista y descarga de documentos): tratan al
+  usuario como anónimo.
 - **La única ruta que sirve** es `POST /api/auth/cambiar-password` con
   `{ passwordActual, passwordNueva }`. Responde 200 con un token nuevo:
 
@@ -382,7 +384,8 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
   "encontrado": true,
   "tramitesEncontrados": [{ "id": 269, "nombre": "Certificado de buena conducta" }],
   "opciones": [],
-  "consultaId": 414
+  "consultaId": 414,
+  "calificarToken": "9f2c4e7a1b3d5f6e8a0c2e4f6a8b0d1c"
 }
 ```
 
@@ -394,6 +397,7 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 | `tramitesEncontrados` | Trámites usados en la respuesta. Vacío si no se encontró nada o es una aclaración |
 | `opciones` | Trámites entre los que elegir, solo en una aclaración |
 | `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (no se registran) o si falló el registro |
+| `calificarToken` | Token para calificar esa consulta sin sesión (32 caracteres hex). `null` cuando `consultaId` es `null`. Cada consulta tiene el suyo, también las que salen de la caché |
 
 Para seguir después de una aclaración, se reenvía la conversación completa en `mensajes`,
 con la elección del usuario como último mensaje. **Tope de aclaraciones:** si `mensajes`
@@ -408,7 +412,7 @@ es una línea `data: <json>` seguida de una línea en blanco:
 | Evento | Forma | Cuándo |
 |---|---|---|
 | `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la respuesta sale de la caché o no se encontró nada, llega entera en un solo `delta` |
-| `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "consultaId": number \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
+| `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
 | `error` | `{ "tipo": "error", "mensaje": "Ocurrió un error procesando la consulta." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` |
 
 Ejemplo:
@@ -418,19 +422,22 @@ data: {"tipo":"delta","texto":"Para la licencia por maternidad "}
 
 data: {"tipo":"delta","texto":"tenés que presentar..."}
 
-data: {"tipo":"fin","tipoRespuesta":"respuesta","encontrado":true,"tramitesEncontrados":[{"id":19,"nombre":"Licencia por maternidad"}],"opciones":[],"consultaId":417}
+data: {"tipo":"fin","tipoRespuesta":"respuesta","encontrado":true,"tramitesEncontrados":[{"id":19,"nombre":"Licencia por maternidad"}],"opciones":[],"consultaId":417,"calificarToken":"3b8e0d2f4a6c8e1f3a5c7e9b1d3f5a7c"}
 ```
 
 Los errores de validación y el rate limit llegan antes de abrir el stream, como JSON común
 con su status. La conexión se cierra después de `fin` o `error`.
 
-### Métricas e historial
+### Métricas, historial y calificaciones
 
 | Método | Ruta | Acceso | Respuesta |
 |---|---|---|---|
 | GET | `/api/metricas/por-tramite` | SU, ADM | Ver abajo |
 | GET | `/api/metricas/sin-respuesta` | SU, ADM | Ver abajo |
 | GET | `/api/consultas/mias` | cualquier autenticado (incluido `CIUDADANO`) | Ver abajo |
+| DELETE | `/api/consultas/:id` | autenticado, solo el dueño | 204. Ver abajo |
+| PATCH | `/api/consultas/:id/calificar` | público, 60 / min, token opcional | Ver abajo |
+| GET | `/api/consultas/calificaciones` | SU, ADM | Ver abajo |
 
 **`GET /api/metricas/por-tramite`**: cantidad de consultas respondidas por trámite, de mayor
 a menor. Sin `alcance`, de todo el sistema. Con `?alcance=propias`, un ADM ve solo los
@@ -453,8 +460,87 @@ siempre `false` y `tramiteId` siempre `null`.
 la más vieja. `tramite` es `null` si no se encontró trámite o si el trámite se borró.
 
 ```json
-[{ "id": 417, "textoConsulta": "licencia por maternidad", "encontrado": true, "fecha": "2026-10-30T14:05:40.000Z", "tramite": { "id": 19, "nombre": "Licencia por maternidad" } }]
+[{ "id": 417, "textoConsulta": "licencia por maternidad", "encontrado": true, "fecha": "2026-10-30T14:05:40.000Z", "respuesta": "Para la licencia por maternidad tenés que presentar...", "calificacion": 0, "motivoCalificacion": "No era lo que buscaba", "tramite": { "id": 19, "nombre": "Licencia por maternidad" } }]
 ```
+
+`respuesta` es `null` en las consultas anteriores a que se empezara a guardar; `calificacion` y
+`motivoCalificacion` son `null` mientras no se califique.
+
+**`DELETE /api/consultas/:id`**: saca la consulta del historial del usuario del token. **No
+borra la fila**: le pone `usuarioId = null`, así las métricas y las calificaciones no cambian.
+404 `Consulta no encontrada.` si no existe, no es suya o ya la había sacado.
+
+**`PATCH /api/consultas/:id/calificar`**: califica una respuesta del chat, una sola vez.
+
+```json
+{ "calificacion": 0, "motivo": "No era lo que buscaba", "token": "<calificarToken>" }
+```
+
+- `calificacion`: `0` (no útil) o `1` (útil). Cualquier otro valor → 400 `La calificación debe ser 0 (no útil) o 1 (útil).`
+- `motivo` (opcional): se recorta; hasta 300 caracteres (400 `El motivo no puede superar los 300 caracteres.`). Con `calificacion: 1` se ignora y queda `null`.
+- `token` (opcional): el `calificarToken` que devolvió el chat. Se compara en tiempo constante.
+- Puede calificar el dueño logueado (sin token) o cualquiera que mande el token correcto (así califica un anónimo). Si no se cumple ninguna de las dos, o la consulta no existe: 404 `Consulta no encontrada.` (nunca 403, para no revelar qué ids existen).
+- Ya calificada → 409 `La consulta ya fue calificada.`
+
+Respuesta 200:
+
+```json
+{ "consultaId": 417, "calificacion": 0 }
+```
+
+**Motivos predefinidos.** Son los que ofrece el front al marcar "no útil" y están en
+`MOTIVOS_PREDEFINIDOS` (`src/validators/consulta.validator.js`):
+
+1. `No respondió mi pregunta`
+2. `La información no es correcta`
+3. `La respuesta fue confusa`
+4. `No era lo que buscaba`
+
+El endpoint acepta cualquier texto como motivo; la lista solo se usa para agrupar en
+`porMotivo`.
+
+**`GET /api/consultas/calificaciones`**: consultas calificadas, de la más nueva a la más vieja.
+Un ADM ve solo las de trámites de sus sectores (mismo criterio que `alcance=propias`; sin
+sectores, nada); un SU ve todas. Query, todo opcional:
+
+| Parámetro | Valor |
+|---|---|
+| `desde`, `hasta` | Fecha ISO (`2026-11-04`) o fecha y hora con zona (`2026-11-04T10:00:00Z`). `hasta` con solo la fecha incluye ese día entero (en UTC) |
+| `tramiteId` | Entero positivo |
+| `calificacion` | `0` o `1` |
+| `page` | Entero ≥ 1, por defecto `1` |
+| `limit` | Entero de 1 a 50, por defecto `20` |
+
+```json
+{
+  "resumen": {
+    "total": 6,
+    "utiles": 2,
+    "noUtiles": 4,
+    "satisfaccion": 33.3,
+    "porMotivo": [
+      { "motivo": "No respondió mi pregunta", "cantidad": 1 },
+      { "motivo": "La información no es correcta", "cantidad": 0 },
+      { "motivo": "La respuesta fue confusa", "cantidad": 0 },
+      { "motivo": "No era lo que buscaba", "cantidad": 1 },
+      { "motivo": "Otro motivo", "cantidad": 1 }
+    ],
+    "porTopico": [{ "topico": "licencias", "cantidad": 2 }, { "topico": "haberes", "cantidad": 1 }]
+  },
+  "items": [
+    { "id": 417, "fecha": "2026-10-30T14:05:40.000Z", "textoConsulta": "licencia por maternidad", "respuesta": "...", "calificacion": 0, "motivoCalificacion": "No era lo que buscaba", "topico": "licencias", "tramiteId": 19 }
+  ],
+  "page": 1,
+  "total": 6
+}
+```
+
+- El `resumen` se calcula sobre **todos** los filtros (incluido `calificacion`), no solo sobre la página. `total` es el mismo número arriba y en el resumen.
+- `satisfaccion` = útiles / total × 100, con un decimal. `null` si no hay calificaciones.
+- `porMotivo` cuenta los motivos de las no útiles: siempre los cuatro predefinidos en ese orden y `Otro motivo` al final, aunque sean 0. Se comparan recortados y sin distinguir mayúsculas (los acentos sí cuentan); cualquier otro texto va a `Otro motivo`. Las no útiles sin motivo no se cuentan.
+- `porTopico` no incluye las consultas sin tópico. Ordenado de mayor a menor.
+- Nunca devuelve `usuarioId` ni `calificarToken`.
+- Filtros inválidos → 400 con el mensaje del primer error.
 
 ### Otros
 
@@ -473,6 +559,11 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **`alcance=propias` para el SU:** `GET /api/metricas/por-tramite?alcance=propias` con un superusuario devuelve todo en vez de `[]`.
 - **Género X:** el registro acepta `genero: "X"` con `nombre` y `apellido` obligatorios, verificados contra el padrón.
 - **DNI único:** un DNI ya registrado responde 409 aunque se registre con otro género.
+- **`calificarToken`:** `POST /api/chat` y el evento `fin` de `/api/chat/stream` devuelven `calificarToken` junto a `consultaId` (los dos `null` en aclaraciones).
+- **Calificación:** nuevo `PATCH /api/consultas/:id/calificar` (dueño o token).
+- **`/mias` con calificación:** cada consulta trae `respuesta`, `calificacion` y `motivoCalificacion`.
+- **Sacar del historial:** nuevo `DELETE /api/consultas/:id` (no borra la fila).
+- **Panel de calificaciones:** nuevo `GET /api/consultas/calificaciones` para SU y ADM.
 
 ## Cómo funciona el chat
 
@@ -489,7 +580,8 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 5. **Modelo:** devuelve un JSON con `tipo`, `respuesta`, `encontrado`, `tramitesUsados` y
    `opciones` (en streaming, la primera línea es ese JSON y después el texto). Se descartan
    los ids que no estén en el contexto, y `encontrado` exige que quede alguno.
-6. **Registro** en `consultas` (salvo aclaraciones), atribuido al primer trámite usado.
+6. **Registro** en `consultas` (salvo aclaraciones), atribuido al primer trámite usado, con
+   el texto que se mostró (en streaming, sin la línea del JSON) y un `calificarToken` nuevo.
 
 ## Tests
 
@@ -499,10 +591,12 @@ npm test
 
 Runner nativo de Node, sin dependencias extra. Cubren validators, `errorHandler`,
 `autorizar`, `validarId`, el orden de las rutas, la comparación de nombres con el padrón,
-el login (por email y por DNI) y el registro de ciudadanos con el padrón simulado.
+el login (por email y por DNI), el registro de ciudadanos con el padrón simulado, y la
+calificación, el historial y el panel de calificaciones de las consultas.
 
-`esquema.test.js`, `login.test.js` y `registro.test.js` usan la base del `.env`: crean sus
-propios usuarios con dominios `.test.invalid` y los borran al terminar. El script de
+`esquema.test.js`, `login.test.js`, `registro.test.js`, `calificar.test.js`,
+`historial-consultas.test.js` y `calificaciones.test.js` usan la base del `.env`: crean sus
+propios datos (usuarios con dominios `.test.invalid`) y los borran al terminar. El script de
 `npm test` incluye `--experimental-test-module-mocks` para simular el padrón.
 
 `node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad. Es para correr a demanda
