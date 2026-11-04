@@ -6,6 +6,7 @@ import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, largoParaDetectarSaludo, quitarSaludoRepetido, sanitizarSaludo } from "../utils/saludo.js";
+import { cortarEnOracion, finDeUltimaOracion } from "../utils/texto.js";
 
 export const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
@@ -23,7 +24,7 @@ Tu función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites can
 Podés hacer tres cosas:
 1) RESPONDER (tipo "respuesta"): si queda claro a qué trámite se refiere la persona, respondé con la info del contexto.
 2) PEDIR ACLARACIÓN (tipo "aclaracion"): solo si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere (ej. "certificado" → de antecedentes, de residencia, de nacimiento). Hacé UNA pregunta corta para que elija.
-3) CONVERSAR (tipo "conversacion"): si el mensaje NO pide un trámite. Es conversación un saludo, un agradecimiento o una despedida; una pregunta sobre vos ("quién sos", "qué podés hacer"); una pregunta general sobre el catálogo ("qué trámites hay", "qué trámites puedo hacer"); o un tema ajeno a los trámites. Contestá en pocas oraciones e invitá a preguntar por un trámite.
+3) CONVERSAR (tipo "conversacion"): si el mensaje NO pide un trámite. Es conversación un saludo, un agradecimiento o una despedida; una pregunta sobre vos ("quién sos", "qué podés hacer"); una pregunta general sobre el catálogo ("qué trámites hay", "qué trámites puedo hacer"); o un tema ajeno a los trámites. Contestá en hasta 5 líneas e invitá a preguntar por un trámite.
 
 Saludos, agradecimientos y despedidas:
 - "saludo" es SOLO el saludo de entrada ("Hola", "Buen día", "Buenas tardes", "Buenas"). "Gracias", "Chau", "Adiós" o "Hasta luego" no son saludos: con ellos "saludo" va vacío.
@@ -99,7 +100,7 @@ const ESQUEMA_SALIDA = {
 const limitarConversacion = (texto) => {
   const limpio = texto.trim();
   if (!limpio) return MENSAJE_CONVERSACION_VACIA;
-  return limpio.length < TOPE_CONVERSACION ? limpio : `${limpio.slice(0, TOPE_CONVERSACION - 1).trimEnd()}…`;
+  return cortarEnOracion(limpio, TOPE_CONVERSACION);
 };
 
 // Conversación: no se cachea ni se registra en consultas (no es una consulta de trámite).
@@ -382,14 +383,21 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
   let cuerpo = "";
   let inicio = "";
   let cuerpoIniciado = false;
+  let recibido = "";
+  let llegoAlTope = false;
 
-  // Solo la conversación tiene tope; el resto pasa entero.
-  const recortar = (texto) => {
-    if (meta?.tipo !== "conversacion") return { texto, llegoAlTope: false };
-    const lugar = TOPE_CONVERSACION - 1 - cuerpo.length;
-    return texto.length > lugar
-      ? { texto: `${texto.slice(0, lugar).trimEnd()}…`, llegoAlTope: true }
-      : { texto, llegoAlTope: false };
+  // Solo la conversación tiene tope: se mandan oraciones completas y lo que viene después se
+  // retiene; si pasa el tope, se corta en la última que entra. Así nunca se transmite algo que
+  // después haya que descartar, y el corte coincide con el de la ruta sin streaming.
+  const paraEmitir = (texto, final = false) => {
+    if (meta?.tipo !== "conversacion") return texto;
+    recibido += texto;
+    if (recibido.length > TOPE_CONVERSACION) {
+      llegoAlTope = true;
+      return cortarEnOracion(recibido, TOPE_CONVERSACION).slice(cuerpo.length);
+    }
+    const hasta = final ? recibido.length : finDeUltimaOracion(recibido);
+    return hasta > cuerpo.length ? recibido.slice(cuerpo.length, hasta) : "";
   };
 
   for await (let delta of deltas) {
@@ -442,16 +450,18 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
       cuerpoIniciado = true;
     }
 
-    const { texto, llegoAlTope } = recortar(delta);
-    if (!texto) continue;
-    cuerpo += texto;
-    yield { tipo: "delta", texto };
+    const texto = paraEmitir(delta);
+    if (texto) {
+      cuerpo += texto;
+      yield { tipo: "delta", texto };
+    }
     if (llegoAlTope) break;
   }
 
-  // Un cuerpo más corto que lo retenido sale al final.
-  if (meta !== null && !cuerpoIniciado && inicio.trim()) {
-    const { texto } = recortar(quitarSaludoRepetido(inicio.trim(), saludo));
+  // Al terminar sale lo retenido: el comienzo si el cuerpo fue muy corto, o la última oración.
+  if (meta !== null && !llegoAlTope) {
+    const pendiente = !cuerpoIniciado && inicio.trim() ? quitarSaludoRepetido(inicio.trim(), saludo) : "";
+    const texto = paraEmitir(pendiente, true);
     if (texto) {
       cuerpo += texto;
       yield { tipo: "delta", texto };

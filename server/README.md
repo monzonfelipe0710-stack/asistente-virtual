@@ -601,9 +601,9 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    no cargados` y `Mesas de entrada: no cargadas`. El prompt prohíbe afirmar requisitos,
    documentos, costos, plazos, horarios, direcciones o pasos que no estén en el contexto, y
    completar con conocimiento general: si falta el dato, lo dice y deriva a la mesa de entrada o
-   a la fuente oficial. Si el trámite tiene `fuenteUrl`, va como `Fuente oficial: <url>`. El costo va como `no informado` si es `null` (el modelo
-   dice que el dato no está cargado y que se consulte en la mesa de entrada) y como `gratuito`
-   solo si es `0`.
+   a la fuente oficial. Si el trámite tiene `fuenteUrl`, va como `Fuente oficial: <url>`.
+   El costo va como `no informado` si es `null` (el modelo dice que el dato no está cargado y
+   que se consulte en la mesa de entrada) y como `gratuito` solo si es `0`.
    Siempre va también un **RESUMEN DEL CATÁLOGO** (`catalogo.service.js`): cantidad de
    trámites publicados, los 12 sectores con más trámites publicados y 8 trámites de ejemplo
    (los más consultados con respuesta; si no alcanzan, por orden alfabético; sin nombres
@@ -613,8 +613,11 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    `saludo`, `respuesta`, `encontrado`, `tramitesUsados` y `opciones` (en streaming, la
    primera línea es ese JSON sin `respuesta` y después el texto). Se descartan los ids que no
    estén en el contexto, y `encontrado` exige que quede alguno; una `respuesta` sin ids
-   válidos pasa al mensaje fijo. Una `conversacion` conserva el texto del modelo (hasta 600
-   caracteres), no se cachea ni se registra.
+   válidos pasa al mensaje fijo. Una `conversacion` conserva el texto del modelo (se le piden
+   hasta 5 líneas), no se cachea ni se registra. Si pasa de 600 caracteres se corta en la
+   última oración completa (punto, `?`, `!`, `…` o salto de línea); si no hay ninguna, en la
+   última palabra con "…". En streaming se mandan solo oraciones completas, así nunca se
+   transmite algo que después se corte, y el resultado es el mismo que sin streaming.
 6. **Registro** en `consultas` (salvo aclaraciones y conversaciones), atribuido al primer
    trámite usado, con el texto que se mostró sin el saludo compuesto (en streaming, sin la
    línea del JSON) y un `calificarToken` nuevo.

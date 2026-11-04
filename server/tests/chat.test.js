@@ -125,6 +125,15 @@ describe('chat', () => {
       assert.ok(respuesta.length <= TOPE_CONVERSACION);
       assert.ok(respuesta.endsWith('…'));
     });
+
+    it('corta en la última oración completa, no a mitad de frase', async () => {
+      const largo = Array.from({ length: 40 }, (_, i) => `Esta es la oración número ${i + 1}.`).join(' ');
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: largo });
+      const { respuesta } = await responderConsulta(turno('contame algo'));
+      assert.ok(respuesta.length <= TOPE_CONVERSACION);
+      assert.ok(respuesta.endsWith('.'));
+      assert.ok(largo.startsWith(respuesta));
+    });
   });
 
   describe('respuesta', () => {
@@ -355,6 +364,23 @@ describe('chat', () => {
         calificarToken: null,
       });
       assert.equal(registros.length, 0);
+    });
+
+    it('corta la conversación en la misma oración que sin streaming y no transmite lo que sobra', async () => {
+      const largo = Array.from({ length: 40 }, (_, i) => `Esta es la oración número ${i + 1}.`).join(' ');
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: largo });
+      const { respuesta: sinStream } = await responderConsulta(turno('contame algo'));
+
+      const pedazos = largo.match(/.{1,7}/gs);
+      pedazosStream = [meta({ tipo: 'conversacion' }), ...pedazos];
+      const { texto } = await consumir(responderConsultaStream(turno('contame algo')));
+      assert.equal(texto, sinStream);
+    });
+
+    it('una conversación corta sale entera aunque no termine en punto', async () => {
+      pedazosStream = [meta({ tipo: 'conversacion' }), 'Primera oración. ', 'Y un final sin punto'];
+      const { texto } = await consumir(responderConsultaStream(turno('hola')));
+      assert.equal(texto, 'Primera oración. Y un final sin punto');
     });
 
     it(`corta la conversación en ${TOPE_CONVERSACION} caracteres`, async () => {
