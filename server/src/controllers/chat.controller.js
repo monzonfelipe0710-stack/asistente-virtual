@@ -21,7 +21,7 @@ export const consultar = async (req, res) => {
     throw error;
   }
 
-  const resultado = await chatService.responderConsulta(mensajes, req.usuario?.id ?? null);
+  const resultado = await chatService.responderConsulta(mensajes, req.usuario ?? null);
   res.json(resultado);
 };
 
@@ -45,7 +45,7 @@ export const consultarStream = async (req, res) => {
   res.on('close', () => { clienteDesconectado = true; });
 
   try {
-    for await (const evento of chatService.responderConsultaStream(mensajes, req.usuario?.id ?? null)) {
+    for await (const evento of chatService.responderConsultaStream(mensajes, req.usuario ?? null)) {
       if (clienteDesconectado) break;
       res.write(`data: ${JSON.stringify(evento)}\n\n`);
     }

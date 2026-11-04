@@ -4,6 +4,8 @@ import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
+import { primerNombre } from "../utils/nombres.js";
+import { componerSaludo, largoParaDetectarSaludo, quitarSaludoRepetido, sanitizarSaludo } from "../utils/saludo.js";
 
 export const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
@@ -34,6 +36,7 @@ Reglas:
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
 - En el texto para el ciudadano nombrá los trámites por su nombre; NUNCA muestres los ids.
+- No empieces el texto con un saludo ni con el nombre de la persona: el saludo lo agrega el sistema a partir del campo "saludo". Tampoco inventes ni preguntes el nombre.
 - Si listás requisitos, hacelo conciso, con dónde se consigue y cuánto cuesta cuando el contexto lo diga.
 - Sé claro, amable y breve (máximo 4-6 oraciones; los requisitos, en lista corta). Lenguaje simple (el público incluye adultos mayores).
 - Usá siempre voseo rioplatense (tenés, podés, acercate, fijate), nunca tuteo (tienes, debes, acércate).
@@ -45,7 +48,7 @@ const SYSTEM_PROMPT_MULTIVUELTA = `${ROL_Y_REGLAS}
 Formato de salida (JSON):
 - "tipo": "respuesta", "aclaracion" o "conversacion".
 - "saludo": el saludo con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó.
-- "respuesta": el texto para el ciudadano (la respuesta, la pregunta aclaratoria si tipo=aclaracion, o lo que contestás si tipo=conversacion).
+- "respuesta": el texto para el ciudadano, sin saludo ni nombre (la respuesta, la pregunta aclaratoria si tipo=aclaracion, o lo que contestás si tipo=conversacion).
 - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso (siempre false en conversacion).
 - "tramitesUsados": IDs de los trámites que usaste para responder (vacío si no respondiste o si tipo=conversacion). Los ids van solo acá y en "opciones".
 - "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío en los demás casos).`;
@@ -62,7 +65,7 @@ Formato de salida (OBLIGATORIO):
   - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto responde realmente; false en cualquier otro caso (incluidas aclaracion y conversacion).
   - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder. Vacío si no respondiste o si tipo=conversacion.
   - "opciones": los IDs de los trámites que ofrecés como opción. Solo si tipo=aclaracion; vacío en los demás casos.
-- A partir de la SEGUNDA línea, escribí (sin JSON ni marcadores) el texto para el ciudadano: la respuesta, la pregunta aclaratoria o lo que contestás si tipo=conversacion.
+- A partir de la SEGUNDA línea, escribí (sin JSON ni marcadores, sin saludo ni nombre) el texto para el ciudadano: la respuesta, la pregunta aclaratoria o lo que contestás si tipo=conversacion.
 - Si la persona pide un trámite y ningún candidato responde, poné {"tipo": "respuesta", "saludo": "<saludo o vacío>", "encontrado": false, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
 
 const ESQUEMA_SALIDA = {
@@ -187,7 +190,14 @@ const registrarConsultaCacheada = (pregunta, cacheado, usuarioId) =>
     respuesta: cacheado.respuesta,
   });
 
-export const responderConsulta = async (mensajes, usuarioId = null) => {
+const nombreParaSaludo = (usuario) => (usuario ? primerNombre(usuario.nombre) : null);
+
+// La caché y `consultas` guardan el cuerpo sin el saludo: el nombre se agrega al servir.
+const conSaludo = (cuerpo, saludo, usuario) =>
+  `${componerSaludo(saludo, nombreParaSaludo(usuario))}${cuerpo}`;
+
+export const responderConsulta = async (mensajes, usuario = null) => {
+  const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
@@ -196,8 +206,15 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
-      // Las entradas que guarda el streaming no traen tipo ni opciones.
-      return { tipo: "respuesta", opciones: [], ...cacheado, conversacional: false, ...registro };
+      return {
+        tipo: "respuesta",
+        respuesta: conSaludo(cacheado.respuesta, cacheado.saludo ?? "", usuario),
+        tramitesEncontrados: cacheado.tramitesEncontrados,
+        encontrado: cacheado.encontrado,
+        opciones: [],
+        conversacional: false,
+        ...registro,
+      };
     }
   }
 
@@ -225,9 +242,11 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
   });
 
   const salida = JSON.parse(salidaRaw);
+  const saludo = sanitizarSaludo(salida.saludo);
+  const cuerpoModelo = quitarSaludoRepetido((salida.respuesta ?? "").trim(), saludo);
 
   if (salida.tipo === "conversacion") {
-    return respuestaConversacional(limitarConversacion(salida.respuesta));
+    return respuestaConversacional(conSaludo(limitarConversacion(cuerpoModelo), saludo, usuario));
   }
 
   // ACLARACIÓN (solo si no llegamos al tope).
@@ -241,7 +260,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
     // No registramos consulta: una aclaración no es una consulta resuelta.
     return {
       tipo: "aclaracion",
-      respuesta: salida.respuesta,
+      respuesta: conSaludo(cuerpoModelo, saludo, usuario),
       opciones,
       encontrado: false,
       tramitesEncontrados: [],
@@ -263,24 +282,25 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       })
     : [];
 
-  const respuesta = encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA;
+  const cuerpo = encontrado ? cuerpoModelo : MENSAJE_SIN_RESPUESTA;
   const registro = await registrar({
     textoConsulta: preguntaActual,
     tramiteId: encontrado ? idsUsados[0] : null,
     encontrado,
     usuarioId,
-    respuesta,
+    respuesta: cuerpo,
   });
 
-  const resultado = {
+  if (esUnTurno) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado });
+  return {
     tipo: "respuesta",
-    respuesta,
+    respuesta: conSaludo(cuerpo, saludo, usuario),
     tramitesEncontrados,
     encontrado,
     opciones: [],
+    conversacional: false,
+    ...registro,
   };
-  if (esUnTurno) cache.guardar(preguntaActual, resultado);
-  return { ...resultado, conversacional: false, ...registro };
 };
 
 const leerMeta = (linea) => {
@@ -291,7 +311,9 @@ const leerMeta = (linea) => {
   }
 };
 
-export async function* responderConsultaStream(mensajes, usuarioId = null) {
+export async function* responderConsultaStream(mensajes, usuario = null) {
+  const usuarioId = usuario?.id ?? null;
+  const nombre = nombreParaSaludo(usuario);
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
@@ -299,6 +321,8 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      const prefijo = componerSaludo(cacheado.saludo ?? "", nombre);
+      if (prefijo) yield { tipo: "delta", texto: prefijo };
       yield { tipo: "delta", texto: cacheado.respuesta };
       yield {
         tipo: "fin",
@@ -335,8 +359,19 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
 
   let buffer = "";
   let meta = null;
-  let fullAnswer = "";
-  let respuestaIniciada = false;
+  let saludo = "";
+  let cuerpo = "";
+  let inicio = "";
+  let cuerpoIniciado = false;
+
+  // Solo la conversación tiene tope; el resto pasa entero.
+  const recortar = (texto) => {
+    if (meta?.tipo !== "conversacion") return { texto, llegoAlTope: false };
+    const lugar = TOPE_CONVERSACION - 1 - cuerpo.length;
+    return texto.length > lugar
+      ? { texto: `${texto.slice(0, lugar).trimEnd()}…`, llegoAlTope: true }
+      : { texto, llegoAlTope: false };
+  };
 
   for await (let delta of deltas) {
     if (!delta) continue;
@@ -361,6 +396,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
         : [];
 
       const esConversacion = parsed?.tipo === "conversacion";
+      saludo = sanitizarSaludo(parsed?.saludo);
       meta = {
         valida: parsed !== null,
         tipo: esConversacion ? "conversacion" : esAclaracion ? "aclaracion" : "respuesta",
@@ -373,29 +409,41 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
       // Se decide con la línea META, antes de mandar texto: lo que se transmite no se descarta.
       if (meta.tipo === "respuesta" && !meta.encontrado) break;
 
+      const prefijo = componerSaludo(saludo, nombre);
+      if (prefijo) yield { tipo: "delta", texto: prefijo };
       delta = buffer.slice(nl + 1);
     }
 
-    let texto = respuestaIniciada ? delta : delta.trimStart();
-    if (!texto) continue;
-
-    let llegoAlTope = false;
-    if (meta.tipo === "conversacion") {
-      const lugar = TOPE_CONVERSACION - 1 - fullAnswer.length;
-      if (texto.length > lugar) {
-        texto = `${texto.slice(0, lugar).trimEnd()}…`;
-        llegoAlTope = true;
-      }
+    // El comienzo del cuerpo se retiene unos caracteres para poder sacar un saludo repetido.
+    if (!cuerpoIniciado) {
+      inicio += delta;
+      if (inicio.trimStart().length < largoParaDetectarSaludo(saludo)) continue;
+      delta = quitarSaludoRepetido(inicio.trimStart(), saludo);
+      inicio = "";
+      cuerpoIniciado = true;
     }
 
-    respuestaIniciada = true;
-    fullAnswer += texto;
+    const { texto, llegoAlTope } = recortar(delta);
+    if (!texto) continue;
+    cuerpo += texto;
     yield { tipo: "delta", texto };
     if (llegoAlTope) break;
   }
 
+  // Un cuerpo más corto que lo retenido sale al final.
+  if (meta !== null && !cuerpoIniciado && inicio.trim()) {
+    const { texto } = recortar(quitarSaludoRepetido(inicio.trim(), saludo));
+    if (texto) {
+      cuerpo += texto;
+      yield { tipo: "delta", texto };
+    }
+  }
+
+  // Sin salto de línea no hubo META separada: el buffer entero puede ser el JSON.
+  if (meta === null) saludo = sanitizarSaludo(leerMeta(buffer)?.saludo);
+
   if (meta?.tipo === "conversacion") {
-    if (!fullAnswer.trim()) yield { tipo: "delta", texto: MENSAJE_CONVERSACION_VACIA };
+    if (!cuerpo.trim()) yield { tipo: "delta", texto: MENSAJE_CONVERSACION_VACIA };
     yield {
       tipo: "fin",
       tipoRespuesta: "respuesta",
@@ -422,10 +470,10 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
   let registro = SIN_REGISTRO;
   if (!esAclaracion) {
     // Sin trámite el loop corta antes de mandar texto: solo se muestra el mensaje fijo.
-    const respuesta = encontrado ? fullAnswer.trim() : MENSAJE_SIN_RESPUESTA;
+    const respuesta = encontrado ? cuerpo.trim() : MENSAJE_SIN_RESPUESTA;
     const metaValida = meta ? meta.valida : leerMeta(buffer) !== null;
     if (esUnTurno && metaValida) {
-      cache.guardar(preguntaActual, { respuesta, tramitesEncontrados, encontrado });
+      cache.guardar(preguntaActual, { respuesta, saludo, tramitesEncontrados, encontrado });
     }
     registro = await registrar({
       textoConsulta: preguntaActual,
@@ -435,6 +483,8 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
       respuesta,
     });
     if (!encontrado) {
+      const prefijo = componerSaludo(saludo, nombre);
+      if (prefijo) yield { tipo: "delta", texto: prefijo };
       yield { tipo: "delta", texto: MENSAJE_SIN_RESPUESTA };
     }
   }

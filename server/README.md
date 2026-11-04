@@ -122,7 +122,7 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | `MesaEntrada` (`mesas_entrada`) | Lugares de presentación, con horario. Generales o de un sector |
 | `TramiteMesa` (`tramite_mesa`) | Relación N a N trámite ↔ mesa |
 | `Documento` (`documentos`) | Formularios descargables. Guarda la key del archivo en R2 |
-| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` mostrada, la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
+| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
 
 La columna `tramites.search_vector` es generada (`GENERATED ALWAYS AS ... STORED`, full-text
 en español sobre nombre y descripción). En el schema figura como `Unsupported("tsvector")`,
@@ -393,13 +393,22 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 | Campo | Significado |
 |---|---|
 | `tipo` | `respuesta`, o `aclaracion` cuando el asistente pregunta entre varios trámites |
-| `respuesta` | Texto plano para el ciudadano (la pregunta aclaratoria si `tipo` es `aclaracion`) |
+| `respuesta` | Texto para el ciudadano (la pregunta aclaratoria si `tipo` es `aclaracion`). Si la persona saludó, empieza con el saludo que compone el servidor (ver abajo) |
 | `encontrado` | `true` solo si se respondió con algún trámite. Siempre `false` en una aclaración |
 | `tramitesEncontrados` | Trámites usados en la respuesta. Vacío si no se encontró nada o es una aclaración |
 | `opciones` | Trámites entre los que elegir, solo en una aclaración |
 | `conversacional` | `true` si el mensaje no pedía un trámite (saludo, gracias, pregunta sobre el asistente o el catálogo, tema ajeno): `respuesta` es el texto del asistente, `tipo` es `respuesta`, `encontrado` es `false`, no hay trámites ni opciones y no se registra (`consultaId` y `calificarToken` `null`). `false` en todos los demás casos |
 | `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (no se registran) o si falló el registro |
 | `calificarToken` | Token para calificar esa consulta sin sesión (32 caracteres hex). `null` cuando `consultaId` es `null`. Cada consulta tiene el suyo, también las que salen de la caché |
+
+**Saludo.** El modelo devuelve aparte el saludo que usó la persona ("Hola", "Buen día",
+"Buenas tardes"; vacío si no saludó) y el texto sin saludo. El servidor arma
+`"¡{saludo}, {Nombre}! "` + texto. El nombre **nunca** se manda al modelo: es el primer nombre
+del usuario logueado en formato título ("MARÍA JOSÉ GÓMEZ" → "María"); anónimo, va sin nombre
+(`"¡Buen día! "`). El saludo se sanea: se le sacan los signos de los extremos, y si tiene otra
+cosa que letras, espacios y ¿¡, o más de 30 caracteres, se usa "Hola". Si el modelo igual
+empieza el texto con el saludo, se saca para no repetirlo. La caché y `consultas.respuesta`
+guardan el texto sin el saludo compuesto, así no queda guardado el nombre de nadie.
 
 Para seguir después de una aclaración, se reenvía la conversación completa en `mensajes`,
 con la elección del usuario como último mensaje. **Tope de aclaraciones:** si `mensajes`
@@ -413,7 +422,7 @@ es una línea `data: <json>` seguida de una línea en blanco:
 
 | Evento | Forma | Cuándo |
 |---|---|---|
-| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la respuesta sale de la caché o no se encontró nada, llega entera en un solo `delta` |
+| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la persona saludó, el primer `delta` es el saludo compuesto (`"¡Hola, María! "`). Si la respuesta sale de la caché o no se encontró nada, el cuerpo llega entero en un solo `delta` |
 | `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "conversacional": bool, "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
 | `error` | `{ "tipo": "error", "mensaje": "Ocurrió un error procesando la consulta." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` |
 
@@ -595,8 +604,9 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    estén en el contexto, y `encontrado` exige que quede alguno; una `respuesta` sin ids
    válidos pasa al mensaje fijo. Una `conversacion` conserva el texto del modelo (hasta 600
    caracteres), no se cachea ni se registra.
-6. **Registro** en `consultas` (salvo aclaraciones), atribuido al primer trámite usado, con
-   el texto que se mostró (en streaming, sin la línea del JSON) y un `calificarToken` nuevo.
+6. **Registro** en `consultas` (salvo aclaraciones y conversaciones), atribuido al primer
+   trámite usado, con el texto que se mostró sin el saludo compuesto (en streaming, sin la
+   línea del JSON) y un `calificarToken` nuevo.
 
 ## Tests
 

@@ -204,6 +204,75 @@ describe('chat', () => {
     });
   });
 
+  describe('saludo y nombre', () => {
+    const maria = { id: null, nombre: 'MARÍA JOSÉ GÓMEZ' };
+    const encontradoCon = (datos) =>
+      salida({ tipo: 'respuesta', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id], ...datos });
+
+    it('compone el saludo con el primer nombre de quien está logueado', async () => {
+      salidaModelo = encontradoCon({ saludo: 'Buen día' });
+      const r = await responderConsulta(turno('buen día, cómo hago el trámite'), maria);
+      assert.equal(r.respuesta, '¡Buen día, María! Así se hace.');
+    });
+
+    it('la caché y consultas guardan el cuerpo sin saludo ni nombre; el saludo se compone al servir', async () => {
+      salidaModelo = encontradoCon({ saludo: 'Buen día' });
+      await responderConsulta(turno('buen día, cómo hago el trámite'), maria);
+      assert.equal(registros[0].respuesta, 'Así se hace.');
+      assert.equal(cache.obtener('buen día, cómo hago el trámite').respuesta, 'Así se hace.');
+
+      const anonimo = await responderConsulta(turno('buen día, cómo hago el trámite'));
+      assert.equal(llamadasModelo.length, 1);
+      assert.equal(anonimo.respuesta, '¡Buen día! Así se hace.');
+      assert.equal(registros[1].respuesta, 'Así se hace.');
+    });
+
+    it('sin saludo no agrega nada, y un saludo inválido se reemplaza por "Hola"', async () => {
+      salidaModelo = encontradoCon({ saludo: '' });
+      assert.equal((await responderConsulta(turno('cómo hago el trámite'), maria)).respuesta, 'Así se hace.');
+
+      cache.limpiar();
+      salidaModelo = encontradoCon({ saludo: '<b>hola</b>' });
+      assert.equal((await responderConsulta(turno('cómo hago el trámite'), maria)).respuesta, '¡Hola, María! Así se hace.');
+    });
+
+    it('no repite el saludo si el modelo igual lo puso en el cuerpo', async () => {
+      salidaModelo = encontradoCon({ saludo: 'Hola', respuesta: '¡Hola! Así se hace.' });
+      assert.equal((await responderConsulta(turno('hola, cómo hago el trámite'))).respuesta, '¡Hola! Así se hace.');
+    });
+
+    it('también saluda en la conversación y en el mensaje fijo', async () => {
+      salidaModelo = salida({ tipo: 'conversacion', saludo: 'Hola', respuesta: '¿En qué trámite te ayudo?' });
+      assert.equal((await responderConsulta(turno('hola'), maria)).respuesta, '¡Hola, María! ¿En qué trámite te ayudo?');
+
+      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Buenas', respuesta: '' });
+      const r = await responderConsulta(turno('buenas, licencia de conducir'));
+      assert.equal(r.respuesta, `¡Buenas! ${MENSAJE_SIN_RESPUESTA}`);
+      assert.equal(registros[0].respuesta, MENSAJE_SIN_RESPUESTA);
+    });
+
+    it('en streaming manda primero el saludo y guarda el cuerpo sin él', async () => {
+      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', encontrado: true, tramitesUsados: [tramite.id] }), '¡Ho', 'la! Así ', 'se hace.'];
+      const eventos = [];
+      for await (const e of responderConsultaStream(turno('hola, cómo hago el trámite'), maria)) eventos.push(e);
+      const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
+
+      assert.equal(deltas[0], '¡Hola, María! ');
+      assert.equal(deltas.join(''), '¡Hola, María! Así se hace.');
+      assert.equal(registros[0].respuesta, 'Así se hace.');
+      assert.equal(cache.obtener('hola, cómo hago el trámite').respuesta, 'Así se hace.');
+    });
+
+    it('en streaming un cuerpo corto y el mensaje fijo también llevan el saludo', async () => {
+      pedazosStream = [meta({ tipo: 'conversacion', saludo: 'Buenas tardes' }), 'Listo.'];
+      assert.equal((await consumir(responderConsultaStream(turno('buenas tardes'), maria))).texto, '¡Buenas tardes, María! Listo.');
+
+      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Buenas' })];
+      const { texto } = await consumir(responderConsultaStream(turno('buenas, licencia de conducir')));
+      assert.equal(texto, `¡Buenas! ${MENSAJE_SIN_RESPUESTA}`);
+    });
+  });
+
   describe('streaming', () => {
     it('una conversación transmite el texto del modelo y no se registra', async () => {
       pedazosStream = [meta({ tipo: 'conversacion' }), '¡Gracias a vos! ', 'Cuando quieras, preguntame.'];

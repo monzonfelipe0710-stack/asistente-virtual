@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { coincideConPadron } from '../src/utils/nombres.js';
+import { coincideConPadron, primerNombre } from '../src/utils/nombres.js';
 
 const padron = { nombre: 'MARÍA JOSÉ', apellido: 'GÓMEZ PEÑA' };
 
@@ -35,5 +35,18 @@ describe('coincideConPadron', () => {
     assert.equal(coincideConPadron({ nombre: '', apellido: 'Gómez' }, padron), false);
     assert.equal(coincideConPadron({ nombre: 'María', apellido: '   ' }, padron), false);
     assert.equal(coincideConPadron({ nombre: 'María', apellido: 'Gómez' }, { nombre: '', apellido: '' }), false);
+  });
+});
+
+describe('primerNombre', () => {
+  it('toma la primera palabra en formato título', () => {
+    assert.equal(primerNombre('MARÍA JOSÉ GÓMEZ'), 'María');
+    assert.equal(primerNombre('juan pérez'), 'Juan');
+    assert.equal(primerNombre('  ÑANDÚ  '), 'Ñandú');
+    assert.equal(primerNombre('JUAN-PABLO ROMERO'), 'Juan-Pablo');
+  });
+
+  it('sin una palabra con letras devuelve null', () => {
+    for (const valor of ['', '   ', null, undefined, '. GÓMEZ']) assert.equal(primerNombre(valor), null);
   });
 });
