@@ -216,6 +216,7 @@ describe('chat', () => {
     const vacio = await contextoDelTramite();
     assert.match(vacio, /^Requisitos: no cargados$/m);
     assert.match(vacio, /^Mesas de entrada: no cargadas$/m);
+    assert.doesNotMatch(vacio, /Fuente oficial/);
 
     const mesa = await prisma.mesaEntrada.create({
       data: { nombre: `Mesa ${SUFIJO}`, direccion: 'San Martín 123', horario: '7 a 13' },
@@ -223,12 +224,16 @@ describe('chat', () => {
     try {
       await prisma.requisito.create({ data: { descripcion: 'DNI vigente', tramiteId: tramite.id } });
       await prisma.tramiteMesa.create({ data: { tramiteId: tramite.id, mesaId: mesa.id } });
+      const fuente = `https://example.invalid/${SUFIJO}`;
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: fuente } });
 
       const completo = await contextoDelTramite();
       assert.match(completo, /^Requisitos:\n- DNI vigente$/m);
+      assert.ok(completo.includes(`\nFuente oficial: ${fuente}`));
       assert.match(completo, new RegExp(`^Mesas de entrada:\\n- Mesa ${SUFIJO}, San Martín 123, horario: 7 a 13$`, 'm'));
       assert.doesNotMatch(completo, /no cargad/);
     } finally {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: null } });
       await prisma.tramiteMesa.deleteMany({ where: { mesaId: mesa.id } });
       await prisma.requisito.deleteMany({ where: { tramiteId: tramite.id } });
       await prisma.mesaEntrada.delete({ where: { id: mesa.id } });

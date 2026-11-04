@@ -417,7 +417,9 @@ ya trae 2 o más mensajes con `rol: "asistente"`, el asistente responde sí o s�
 
 El texto (`respuesta` y los `delta` del streaming) puede traer **Markdown reducido**: listas con
 viñetas (`- `), listas numeradas (`1. `) y `**negrita**`. No trae títulos, tablas, bloques de código,
-citas ni cursivas, y enlaces solo si estaban tal cual en los datos del trámite. El front tiene
+citas ni cursivas. Una respuesta sobre un trámite cierra con el enlace a su fuente oficial
+(`[Ver el trámite en la fuente oficial](<fuenteUrl>)`); no lleva otros enlaces que los que
+estén tal cual en los datos del trámite. El front tiene
 que renderizarlo (o al menos mostrar los asteriscos sin romperse). Siempre en voseo rioplatense.
 
 **Contrato SSE de `POST /api/chat/stream`.** `Content-Type: text/event-stream`. Cada evento
@@ -599,7 +601,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    no cargados` y `Mesas de entrada: no cargadas`. El prompt prohíbe afirmar requisitos,
    documentos, costos, plazos, horarios, direcciones o pasos que no estén en el contexto, y
    completar con conocimiento general: si falta el dato, lo dice y deriva a la mesa de entrada o
-   a la fuente oficial. El costo va como `no informado` si es `null` (el modelo
+   a la fuente oficial. Si el trámite tiene `fuenteUrl`, va como `Fuente oficial: <url>`. El costo va como `no informado` si es `null` (el modelo
    dice que el dato no está cargado y que se consulte en la mesa de entrada) y como `gratuito`
    solo si es `0`.
    Siempre va también un **RESUMEN DEL CATÁLOGO** (`catalogo.service.js`): cantidad de
