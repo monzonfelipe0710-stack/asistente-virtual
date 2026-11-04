@@ -415,7 +415,10 @@ con la elección del usuario como último mensaje. **Tope de aclaraciones:** si 
 ya trae 2 o más mensajes con `rol: "asistente"`, el asistente responde sí o sí (`tipo:
 "respuesta"`), describiendo los candidatos posibles si sigue sin poder elegir.
 
-El texto (`respuesta` y los `delta` del streaming) es texto plano, sin Markdown.
+El texto (`respuesta` y los `delta` del streaming) puede traer **Markdown reducido**: listas con
+viñetas (`- `), listas numeradas (`1. `) y `**negrita**`. No trae títulos, tablas, bloques de código,
+citas ni cursivas, y enlaces solo si estaban tal cual en los datos del trámite. El front tiene
+que renderizarlo (o al menos mostrar los asteriscos sin romperse). Siempre en voseo rioplatense.
 
 **Contrato SSE de `POST /api/chat/stream`.** `Content-Type: text/event-stream`. Cada evento
 es una línea `data: <json>` seguida de una línea en blanco:

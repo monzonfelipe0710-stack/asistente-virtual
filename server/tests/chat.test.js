@@ -174,6 +174,17 @@ describe('chat', () => {
     }
   });
 
+  it('las dos rutas mandan las mismas reglas al modelo; solo cambia el formato de salida', async () => {
+    salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+    await responderConsulta(turno('hola'));
+    pedazosStream = [meta({ tipo: 'conversacion' }), 'Hola.'];
+    await consumir(responderConsultaStream(turno('hola')));
+
+    const [normal, stream] = llamadasModelo.map(({ instruccionSistema }) => instruccionSistema.split('Formato de salida')[0]);
+    assert.ok(normal.includes('voseo rioplatense'));
+    assert.equal(normal, stream);
+  });
+
   describe('sin candidatos', () => {
     beforeEach(() => { candidatos = []; });
 
