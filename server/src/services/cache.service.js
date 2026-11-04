@@ -30,4 +30,16 @@ export const guardar = (pregunta, valor) => {
   cache.set(clave, { valor, expira: Date.now() + TTL_MS });
 };
 
-export const limpiar = () => cache.clear();
+// El resumen del catálogo se invalida junto con las respuestas: los dos dependen de los trámites.
+let catalogo = null;
+
+export const obtenerCatalogo = () => (catalogo && Date.now() <= catalogo.expira ? catalogo.valor : null);
+
+export const guardarCatalogo = (valor) => {
+  catalogo = { valor, expira: Date.now() + TTL_MS };
+};
+
+export const limpiar = () => {
+  cache.clear();
+  catalogo = null;
+};

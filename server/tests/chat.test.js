@@ -41,6 +41,7 @@ mock.module(servicio('services/metrica.service.js'), {
 });
 
 const cache = await import('../src/services/cache.service.js');
+const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
 const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION } =
   await import('../src/services/chat.service.js');
 
@@ -157,6 +158,20 @@ describe('chat', () => {
       assert.equal(llamadasModelo.length, 1);
       assert.equal(r.conversacional, false);
     });
+  });
+
+  it('manda siempre el resumen del catálogo al modelo, con candidatos o sin ellos', async () => {
+    const { texto } = await obtenerResumenCatalogo();
+    salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hay muchos trámites.' });
+    await responderConsulta(turno('¿qué trámites hay?'));
+    candidatos = [];
+    pedazosStream = [meta({ tipo: 'conversacion' }), 'Hay muchos trámites.'];
+    await consumir(responderConsultaStream(turno('¿qué trámites hay?')));
+
+    assert.equal(llamadasModelo.length, 2);
+    for (const { instruccionSistema } of llamadasModelo) {
+      assert.ok(instruccionSistema.includes(`RESUMEN DEL CATÁLOGO:\n${texto}`));
+    }
   });
 
   describe('sin candidatos', () => {

@@ -584,6 +584,11 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    El prompt avisa que los candidatos pueden no tener nada que ver con el mensaje.
 4. **Contexto:** detalle de los candidatos (requisitos con dónde se consiguen y costo,
    mesas, nombres de los formularios).
+   Siempre va también un **RESUMEN DEL CATÁLOGO** (`catalogo.service.js`): cantidad de
+   trámites publicados, los 12 sectores con más trámites publicados y 8 trámites de ejemplo
+   (los más consultados con respuesta; si no alcanzan, por orden alfabético; sin nombres
+   repetidos). Con eso responde "qué trámites hay" sin inventar. Queda en memoria (1 hora) y
+   se invalida junto con la caché de respuestas cuando cambian trámites, mesas o documentos.
 5. **Modelo:** devuelve un JSON con `tipo` (`respuesta`, `aclaracion` o `conversacion`),
    `saludo`, `respuesta`, `encontrado`, `tramitesUsados` y `opciones` (en streaming, la
    primera línea es ese JSON sin `respuesta` y después el texto). Se descartan los ids que no

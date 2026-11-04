@@ -2,6 +2,7 @@ import { ia } from "../core/ai/index.js";
 import prisma from "../config/prisma.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
+import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 
 export const MENSAJE_SIN_RESPUESTA =
@@ -27,6 +28,8 @@ Reglas:
 - Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con encontrado false.
 - Si la persona pide un trámite (aunque no exista en el contexto), el tipo es "respuesta" o "aclaracion", nunca "conversacion".
 - Los candidatos los trae una búsqueda automática que casi siempre devuelve algunos, aunque no tengan nada que ver con el mensaje. Si el mensaje no pide un trámite (saludo, gracias, despedida, pregunta sobre vos o sobre el catálogo, tema ajeno), ignorá los candidatos y respondé tipo "conversacion". Si no hay candidatos ("ninguno") y la persona pide un trámite, respondé tipo "respuesta" con encontrado false.
+- Para una pregunta general sobre el catálogo ("qué trámites hay", "qué trámites puedo hacer"), respondé tipo "conversacion" con los datos del RESUMEN DEL CATÁLOGO (cuántos trámites hay, algunos sectores y algunos ejemplos) e invitá a preguntar por un trámite concreto.
+- PROHIBIDO nombrar trámites que no estén en el RESUMEN DEL CATÁLOGO o entre los candidatos, y sectores que no estén en el resumen.
 - Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
@@ -153,10 +156,11 @@ const cargarDetalle = async (ids) => {
 };
 
 // Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta.
-const armarInstruccion = (prompt, topeAlcanzado, tramites) => {
+const armarInstruccion = async (prompt, topeAlcanzado, tramites) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
+  const { texto: resumen } = await obtenerResumenCatalogo();
   const contexto = tramites.length > 0 ? tramites.map(formatearTramite).join("\n\n") : "(ninguno)";
-  return `${system}\n\nContexto (trámites candidatos):\n${contexto}`;
+  return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
 };
 
 const SIN_REGISTRO = { consultaId: null, calificarToken: null };
@@ -215,7 +219,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   const salidaRaw = await ia.generarRespuesta({
-    instruccionSistema: armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, tramites),
+    instruccionSistema: await armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, tramites),
     turnos: mensajes,
     esquema: ESQUEMA_SALIDA,
   });
@@ -325,7 +329,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   const deltas = ia.generarRespuestaStream({
-    instruccionSistema: armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, tramites),
+    instruccionSistema: await armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, tramites),
     turnos: mensajes,
   });
 
