@@ -38,13 +38,20 @@ const filtroFecha = (desde, hasta) => {
 const normalizarMotivo = (motivo) => motivo.trim().toLowerCase();
 const motivoCanonico = new Map(MOTIVOS_PREDEFINIDOS.map((m) => [normalizarMotivo(m), m]));
 
+// Sin motivo = null o solo espacios. Así porMotivo + sinMotivo siempre suma noUtiles.
 const agruparMotivos = (grupos) => {
   const conteo = new Map([...MOTIVOS_PREDEFINIDOS, OTRO_MOTIVO].map((m) => [m, 0]));
+  let sinMotivo = 0;
   for (const g of grupos) {
-    const motivo = motivoCanonico.get(normalizarMotivo(g.motivoCalificacion)) ?? OTRO_MOTIVO;
+    const normalizado = g.motivoCalificacion == null ? '' : normalizarMotivo(g.motivoCalificacion);
+    if (normalizado === '') {
+      sinMotivo += g._count._all;
+      continue;
+    }
+    const motivo = motivoCanonico.get(normalizado) ?? OTRO_MOTIVO;
     conteo.set(motivo, conteo.get(motivo) + g._count._all);
   }
-  return [...conteo].map(([motivo, cantidad]) => ({ motivo, cantidad }));
+  return { porMotivo: [...conteo].map(([motivo, cantidad]) => ({ motivo, cantidad })), sinMotivo };
 };
 
 // sectorIds null = sin restricción (SU). Nunca se devuelven usuarioId ni calificarToken.
@@ -60,7 +67,7 @@ export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificaci
     prisma.consulta.groupBy({ by: ['calificacion'], where, _count: { _all: true } }),
     prisma.consulta.groupBy({
       by: ['motivoCalificacion'],
-      where: { AND: [where, { calificacion: 0, motivoCalificacion: { not: null } }] },
+      where: { AND: [where, { calificacion: 0 }] },
       _count: { _all: true },
     }),
     prisma.consulta.groupBy({
@@ -85,6 +92,7 @@ export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificaci
   const utiles = cantidad(1);
   const noUtiles = cantidad(0);
   const total = utiles + noUtiles;
+  const { porMotivo, sinMotivo } = agruparMotivos(motivos);
 
   return {
     resumen: {
@@ -92,7 +100,8 @@ export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificaci
       utiles,
       noUtiles,
       satisfaccion: total > 0 ? Math.round((utiles * 1000) / total) / 10 : null,
-      porMotivo: agruparMotivos(motivos),
+      porMotivo,
+      sinMotivo,
       porTopico: topicos.map((g) => ({ topico: g.topico, cantidad: g._count._all })),
     },
     items,

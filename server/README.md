@@ -525,6 +525,7 @@ sectores, nada); un SU ve todas. Query, todo opcional:
       { "motivo": "No era lo que buscaba", "cantidad": 1 },
       { "motivo": "Otro motivo", "cantidad": 1 }
     ],
+    "sinMotivo": 1,
     "porTopico": [{ "topico": "licencias", "cantidad": 2 }, { "topico": "haberes", "cantidad": 1 }]
   },
   "items": [
@@ -537,7 +538,8 @@ sectores, nada); un SU ve todas. Query, todo opcional:
 
 - El `resumen` se calcula sobre **todos** los filtros (incluido `calificacion`), no solo sobre la página. `total` es el mismo número arriba y en el resumen.
 - `satisfaccion` = útiles / total × 100, con un decimal. `null` si no hay calificaciones.
-- `porMotivo` cuenta los motivos de las no útiles: siempre los cuatro predefinidos en ese orden y `Otro motivo` al final, aunque sean 0. Se comparan recortados y sin distinguir mayúsculas (los acentos sí cuentan); cualquier otro texto va a `Otro motivo`. Las no útiles sin motivo no se cuentan.
+- `porMotivo` cuenta los motivos de las no útiles: siempre los cuatro predefinidos en ese orden y `Otro motivo` al final, aunque sean 0. Se comparan recortados y sin distinguir mayúsculas (los acentos sí cuentan); cualquier otro texto va a `Otro motivo`.
+- `sinMotivo` cuenta las no útiles sin motivo (`null` o solo espacios). Siempre se cumple que la suma de `porMotivo` más `sinMotivo` es igual a `noUtiles`.
 - `porTopico` no incluye las consultas sin tópico. Ordenado de mayor a menor.
 - Nunca devuelve `usuarioId` ni `calificarToken`.
 - Filtros inválidos → 400 con el mensaje del primer error.

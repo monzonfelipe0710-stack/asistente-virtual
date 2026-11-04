@@ -17,6 +17,7 @@ let su;
 let tramiteA;
 let tramiteB;
 let tramiteMedianoche;
+let tramiteSinMotivo;
 const sectoresCreados = [];
 const consultas = {};
 
@@ -53,6 +54,7 @@ describe('calificaciones de consultas', () => {
     tramiteB = await tramite(sectorB, admB);
     // Sector sin ADM: estas consultas solo las ve el SU y no cambian los totales de A ni de B.
     tramiteMedianoche = await tramite(sectorC, admA);
+    tramiteSinMotivo = await tramite(sectorC, admA);
 
     const crear = async (clave, tramiteId, fecha, datos = {}) => {
       consultas[clave] = await prisma.consulta.create({
@@ -78,11 +80,15 @@ describe('calificaciones de consultas', () => {
     await crear('b2', tramiteB.id, '2020-01-12T12:00:00Z', { calificacion: 0, motivoCalificacion: 'La respuesta fue confusa' });
     await crear('antesDeMedianoche', tramiteMedianoche.id, '2020-03-10T23:30:00-03:00', { calificacion: 1 });
     await crear('despuesDeMedianoche', tramiteMedianoche.id, '2020-03-11T00:30:00-03:00', { calificacion: 1 });
+    await crear('motivoEnBlanco', tramiteSinMotivo.id, '2020-04-01T12:00:00Z', { calificacion: 0, motivoCalificacion: '   ' });
+    await crear('motivoNulo', tramiteSinMotivo.id, '2020-04-02T12:00:00Z', { calificacion: 0 });
+    await crear('motivoOtro', tramiteSinMotivo.id, '2020-04-03T12:00:00Z', { calificacion: 0, motivoCalificacion: 'cualquier cosa' });
   });
 
   after(async () => {
     await prisma.consulta.deleteMany({ where: { id: { in: Object.values(consultas).map((c) => c.id) } } });
-    await prisma.tramite.deleteMany({ where: { id: { in: [tramiteA?.id, tramiteB?.id, tramiteMedianoche?.id].filter(Boolean) } } });
+    const tramites = [tramiteA, tramiteB, tramiteMedianoche, tramiteSinMotivo].filter(Boolean).map((t) => t.id);
+    await prisma.tramite.deleteMany({ where: { id: { in: tramites } } });
     await prisma.sector.deleteMany({ where: { id: { in: sectoresCreados } } });
     await prisma.usuario.deleteMany({ where: { email: { endsWith: DOMINIO } } });
     await prisma.$disconnect();
@@ -107,8 +113,35 @@ describe('calificaciones de consultas', () => {
         { motivo: 'No era lo que buscaba', cantidad: 1 },
         { motivo: 'Otro motivo', cantidad: 1 },
       ],
+      sinMotivo: 1,
       porTopico: [{ topico: 'licencias', cantidad: 2 }, { topico: 'haberes', cantidad: 1 }],
     });
+  });
+
+  it('porMotivo más sinMotivo suma noUtiles, con cualquier filtro', async () => {
+    const suma = ({ porMotivo, sinMotivo }) => porMotivo.reduce((acc, m) => acc + m.cantidad, 0) + sinMotivo;
+    const casos = [
+      [admA, {}],
+      [admA, { calificacion: '0' }],
+      [admA, { calificacion: '1' }],
+      [admA, { desde: '2020-01-20', hasta: '2020-02-05' }],
+      [admB, {}],
+      [admSinSectores, {}],
+      [su, { tramiteId: String(tramiteMedianoche.id) }],
+      [su, { tramiteId: String(tramiteSinMotivo.id) }],
+      [su, {}],
+    ];
+    for (const [usuario, query] of casos) {
+      const { resumen } = await llamar(usuario, query);
+      assert.equal(suma(resumen), resumen.noUtiles, JSON.stringify(query));
+    }
+  });
+
+  it('un motivo nulo o de solo espacios cuenta como sinMotivo, no como "Otro motivo"', async () => {
+    const { resumen } = await llamar(su, { tramiteId: String(tramiteSinMotivo.id) });
+    assert.equal(resumen.noUtiles, 3);
+    assert.equal(resumen.sinMotivo, 2);
+    assert.deepEqual(resumen.porMotivo.at(-1), { motivo: 'Otro motivo', cantidad: 1 });
   });
 
   it('cada item trae solo los campos públicos, sin usuarioId ni calificarToken', async () => {
