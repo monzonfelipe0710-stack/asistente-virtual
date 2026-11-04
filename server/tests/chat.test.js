@@ -159,6 +159,36 @@ describe('chat', () => {
     });
   });
 
+  describe('sin candidatos', () => {
+    beforeEach(() => { candidatos = []; });
+
+    it('llama igual al modelo, con el contexto vacío, y responde la conversación', async () => {
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: '¿En qué trámite te ayudo?' });
+      const r = await responderConsulta(turno('hola'));
+      assert.equal(llamadasModelo.length, 1);
+      assert.match(llamadasModelo[0].instruccionSistema, /Contexto \(trámites candidatos\):\n\(ninguno\)/);
+      assert.equal(r.respuesta, '¿En qué trámite te ayudo?');
+      assert.equal(r.conversacional, true);
+      assert.equal(registros.length, 0);
+    });
+
+    it('un trámite que no existe da el mensaje fijo y se registra como no encontrado', async () => {
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: '' });
+      const r = await responderConsulta(turno('licencia de conducir'));
+      assert.equal(r.respuesta, MENSAJE_SIN_RESPUESTA);
+      assert.equal(r.conversacional, false);
+      assert.deepEqual(registros.map((x) => [x.encontrado, x.tramiteId]), [[false, null]]);
+    });
+
+    it('en streaming también llama al modelo', async () => {
+      pedazosStream = [meta({ tipo: 'conversacion' }), '¡Chau! Que andes bien.'];
+      const { texto, fin } = await consumir(responderConsultaStream(turno('chau')));
+      assert.equal(llamadasModelo.length, 1);
+      assert.equal(texto, '¡Chau! Que andes bien.');
+      assert.equal(fin.conversacional, true);
+    });
+  });
+
   describe('streaming', () => {
     it('una conversación transmite el texto del modelo y no se registra', async () => {
       pedazosStream = [meta({ tipo: 'conversacion' }), '¡Gracias a vos! ', 'Cuando quieras, preguntame.'];

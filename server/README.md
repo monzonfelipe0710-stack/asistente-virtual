@@ -579,7 +579,9 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    publicados con embedding: 0,6 · similitud coseno (pgvector, HNSW) + 0,4 · `ts_rank`
    full-text en español (GIN). Es candidato si la distancia coseno es menor a
    `UMBRAL_DISTANCIA` o si coincide por texto. Se descartan los nombres repetidos y quedan 3.
-3. **Sin candidatos:** mensaje fijo, sin llamar al modelo.
+3. **Sin candidatos:** se llama igual al modelo, con el contexto vacío (`(ninguno)`): un
+   saludo da `conversacion` y un trámite que no existe, `respuesta` con `encontrado: false`.
+   El prompt avisa que los candidatos pueden no tener nada que ver con el mensaje.
 4. **Contexto:** detalle de los candidatos (requisitos con dónde se consiguen y costo,
    mesas, nombres de los formularios).
 5. **Modelo:** devuelve un JSON con `tipo` (`respuesta`, `aclaracion` o `conversacion`),
