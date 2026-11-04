@@ -191,6 +191,7 @@ export const registrarCiudadano = async (req, res) => {
     email: datos.email,
     password: datos.password,
     nombre: persona.nombreCompleto,
+    cuil: /^\d{11}$/.test(persona.cuil ?? "") ? persona.cuil : null,
   });
 
   res.status(201).json({

@@ -78,6 +78,7 @@ export const registrarCiudadano = async (datos) => {
       estado: 'APROBADO',
       dni: datos.dni,
       genero: datos.genero,
+      cuil: datos.cuil,
     },
     select: { id: true, nombre: true, email: true, rol: true },
   });

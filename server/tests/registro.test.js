@@ -23,7 +23,7 @@ const { registrarCiudadano } = await import('../src/controllers/usuario.controll
 const DOMINIO = '@registro.test.invalid';
 const PASSWORD = 'clave-de-prueba';
 
-const persona = (nombre, apellido) => ({ nombre, apellido, nombreCompleto: `${nombre} ${apellido}`, cuil: null });
+const persona = (nombre, apellido, cuil = null) => ({ nombre, apellido, nombreCompleto: `${nombre} ${apellido}`, cuil });
 
 const dniLibre = async () => {
   for (;;) {
@@ -44,6 +44,7 @@ const registrar = async (datos) => {
 };
 
 const guardado = (dni) => prisma.usuario.findUnique({ where: { dni }, select: { nombre: true, genero: true } });
+const cuilGuardado = async (dni) => (await prisma.usuario.findUnique({ where: { dni }, select: { cuil: true } })).cuil;
 
 const noVerificado = { statusCode: 422, message: 'No pudimos verificar tus datos en el padrón. Revisá el DNI y el sexo.' };
 
@@ -101,6 +102,28 @@ describe('registro de ciudadanos', () => {
   it('con X responde 422 si el padrón no tiene a la persona con ningún sexo', async () => {
     await assert.rejects(registrar({ dni: await dniLibre(), genero: 'X', nombre: 'Ana', apellido: 'Gómez' }), noVerificado);
     assert.deepEqual(llamadas, ['M', 'F']);
+  });
+
+  it('guarda el cuil del padrón si tiene 11 dígitos', async () => {
+    const dni = await dniLibre();
+    const cuil = `20${dni}5`;
+    padron.M = persona('PEDRO', 'SOSA', cuil);
+    assert.equal((await registrar({ dni, genero: 'M' })).codigo, 201);
+    assert.equal(await cuilGuardado(dni), cuil);
+  });
+
+  it('guarda el cuil en null si el padrón lo devuelve vacío', async () => {
+    padron.M = persona('PEDRO', 'SOSA', '');
+    const dni = await dniLibre();
+    assert.equal((await registrar({ dni, genero: 'M' })).codigo, 201);
+    assert.equal(await cuilGuardado(dni), null);
+  });
+
+  it('guarda el cuil en null si el padrón lo devuelve como "."', async () => {
+    padron.M = persona('PEDRO', 'SOSA', '.');
+    const dni = await dniLibre();
+    assert.equal((await registrar({ dni, genero: 'M' })).codigo, 201);
+    assert.equal(await cuilGuardado(dni), null);
   });
 
   it('responde 409 si el DNI ya está registrado con otro género, sin consultar el padrón', async () => {

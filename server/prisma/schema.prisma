@@ -156,6 +156,7 @@ model Usuario {
   updatedAt     DateTime @updatedAt @map("updated_at")
   dni           String? @unique
   genero        Genero?
+  cuil          String? @unique @db.VarChar(11)
   resetTokenHash String?  @map("reset_token_hash")
   resetTokenExpira DateTime?  @map("reset_token_expira")
   debeCambiarPassword Boolean @default(false) @map("debe_cambiar_password")
@@ -184,6 +185,11 @@ model Consulta {
   textoConsulta   String @map("texto_consulta")
   encontrado      Boolean @default(false)
   fecha           DateTime @default(now())
+  respuesta       String?
+  topico          String?
+  calificacion    Int?
+  motivoCalificacion String? @map("motivo_calificacion")
+  calificarToken  String? @unique @map("calificar_token")
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)
