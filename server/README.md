@@ -628,7 +628,9 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 npm test
 ```
 
-Runner nativo de Node, sin dependencias extra. Cubren validators, `errorHandler`,
+Runner nativo de Node, sin dependencias extra. `higiene.test.js` falla si algún `.js` de
+`src/`, `scripts/` o `tests/` tiene caracteres de combinación Unicode (U+0300 a U+036F)
+escritos literalmente: son invisibles y tienen que ir con el escape. Los demás cubren validators, `errorHandler`,
 `autorizar`, `validarId`, el orden de las rutas, la comparación de nombres con el padrón,
 el login (por email y por DNI), el registro de ciudadanos con el padrón simulado, la
 calificación, el historial y el panel de calificaciones de las consultas, el resumen del
