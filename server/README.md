@@ -595,7 +595,9 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    saludo da `conversacion` y un trámite que no existe, `respuesta` con `encontrado: false`.
    El prompt avisa que los candidatos pueden no tener nada que ver con el mensaje.
 4. **Contexto:** detalle de los candidatos (requisitos con dónde se consiguen y costo,
-   mesas, nombres de los formularios).
+   mesas, nombres de los formularios). El costo va como `no informado` si es `null` (el modelo
+   dice que el dato no está cargado y que se consulte en la mesa de entrada) y como `gratuito`
+   solo si es `0`.
    Siempre va también un **RESUMEN DEL CATÁLOGO** (`catalogo.service.js`): cantidad de
    trámites publicados, los 12 sectores con más trámites publicados y 8 trámites de ejemplo
    (los más consultados con respuesta; si no alcanzan, por orden alfabético; sin nombres

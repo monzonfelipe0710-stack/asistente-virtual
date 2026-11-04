@@ -185,6 +185,25 @@ describe('chat', () => {
     assert.equal(normal, stream);
   });
 
+  it('al modelo le llega el costo como "no informado", "gratuito" o el monto', async () => {
+    const costoEnContexto = async (costo) => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo } });
+      llamadasModelo = [];
+      cache.limpiar();
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('cuánto cuesta'));
+      const [, contexto] = llamadasModelo[0].instruccionSistema.split('Contexto (trámites candidatos):');
+      return contexto.match(/Costo: (.*)/)[1];
+    };
+    try {
+      assert.equal(await costoEnContexto(null), 'no informado');
+      assert.equal(await costoEnContexto(0), 'gratuito');
+      assert.equal(await costoEnContexto(1500), '$1500');
+    } finally {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: null } });
+    }
+  });
+
   describe('sin candidatos', () => {
     beforeEach(() => { candidatos = []; });
 
