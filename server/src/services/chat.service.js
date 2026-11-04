@@ -123,14 +123,16 @@ const cargarDetalle = async (ids) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-// Si falla el registro la respuesta igual sale, con consultaId null.
+const SIN_REGISTRO = { consultaId: null, calificarToken: null };
+
+// Si falla el registro la respuesta igual sale, con consultaId y calificarToken null.
 const registrar = async (datos) => {
   try {
     const consulta = await registrarConsulta(datos);
-    return consulta.id;
+    return { consultaId: consulta.id, calificarToken: consulta.calificarToken };
   } catch (err) {
     console.error("Error al registrar consulta:", err.message);
-    return null;
+    return SIN_REGISTRO;
   }
 };
 
@@ -142,6 +144,7 @@ const registrarConsultaCacheada = (pregunta, cacheado, usuarioId) =>
       : null,
     encontrado: cacheado.encontrado,
     usuarioId,
+    respuesta: cacheado.respuesta,
   });
 
 export const responderConsulta = async (mensajes, usuarioId = null) => {
@@ -152,9 +155,9 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
-      const consultaId = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
       // Las entradas que guarda el streaming no traen tipo ni opciones.
-      return { tipo: "respuesta", opciones: [], ...cacheado, consultaId };
+      return { tipo: "respuesta", opciones: [], ...cacheado, ...registro };
     }
   }
 
@@ -170,11 +173,12 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       : [];
 
   if (tramites.length === 0) {
-    const consultaId = await registrar({
+    const registro = await registrar({
       textoConsulta: preguntaActual,
       tramiteId: null,
       encontrado: false,
       usuarioId,
+      respuesta: MENSAJE_SIN_RESPUESTA,
     });
 
     const resultado = {
@@ -185,7 +189,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       opciones: [],
     };
     if (esUnTurno) cache.guardar(preguntaActual, resultado);
-    return { ...resultado, consultaId };
+    return { ...resultado, ...registro };
   }
 
   const contexto = tramites.map(formatearTramite).join("\n\n");
@@ -236,7 +240,7 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       opciones,
       encontrado: false,
       tramitesEncontrados: [],
-      consultaId: null,
+      ...SIN_REGISTRO,
     };
   }
 
@@ -253,22 +257,24 @@ export const responderConsulta = async (mensajes, usuarioId = null) => {
       })
     : [];
 
-  const consultaId = await registrar({
+  const respuesta = encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA;
+  const registro = await registrar({
     textoConsulta: preguntaActual,
     tramiteId: encontrado ? idsUsados[0] : null,
     encontrado,
     usuarioId,
+    respuesta,
   });
 
   const resultado = {
     tipo: "respuesta",
-    respuesta: encontrado ? salida.respuesta : MENSAJE_SIN_RESPUESTA,
+    respuesta,
     tramitesEncontrados,
     encontrado,
     opciones: [],
   };
   if (esUnTurno) cache.guardar(preguntaActual, resultado);
-  return { ...resultado, consultaId };
+  return { ...resultado, ...registro };
 };
 
 const leerMeta = (linea) => {
@@ -286,7 +292,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
-      const consultaId = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
       yield { tipo: "delta", texto: cacheado.respuesta };
       yield {
         tipo: "fin",
@@ -294,7 +300,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
         encontrado: cacheado.encontrado,
         tramitesEncontrados: cacheado.tramitesEncontrados,
         opciones: [],
-        consultaId,
+        ...registro,
       };
       return;
     }
@@ -311,11 +317,12 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
       : [];
 
   if (tramites.length === 0) {
-    const consultaId = await registrar({
+    const registro = await registrar({
       textoConsulta: preguntaActual,
       tramiteId: null,
       encontrado: false,
       usuarioId,
+      respuesta: MENSAJE_SIN_RESPUESTA,
     });
     if (esUnTurno) {
       cache.guardar(preguntaActual, {
@@ -331,7 +338,7 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
       encontrado: false,
       tramitesEncontrados: [],
       opciones: [],
-      consultaId,
+      ...registro,
     };
     return;
   }
@@ -409,21 +416,20 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
       })
     : [];
 
-  let consultaId = null;
+  let registro = SIN_REGISTRO;
   if (!esAclaracion) {
+    // Sin trámite el loop corta antes de mandar texto: solo se muestra el mensaje fijo.
+    const respuesta = encontrado ? fullAnswer.trim() : MENSAJE_SIN_RESPUESTA;
     const metaValida = meta ? meta.valida : leerMeta(buffer) !== null;
     if (esUnTurno && metaValida) {
-      cache.guardar(preguntaActual, {
-        respuesta: encontrado ? fullAnswer.trim() : MENSAJE_SIN_RESPUESTA,
-        tramitesEncontrados,
-        encontrado,
-      });
+      cache.guardar(preguntaActual, { respuesta, tramitesEncontrados, encontrado });
     }
-    consultaId = await registrar({
+    registro = await registrar({
       textoConsulta: preguntaActual,
       tramiteId: encontrado ? idsUsados[0] : null,
       encontrado,
       usuarioId,
+      respuesta,
     });
     if (!encontrado) {
       yield { tipo: "delta", texto: MENSAJE_SIN_RESPUESTA };
@@ -436,6 +442,6 @@ export async function* responderConsultaStream(mensajes, usuarioId = null) {
     encontrado: esAclaracion ? false : encontrado,
     tramitesEncontrados,
     opciones,
-    consultaId,
+    ...registro,
   };
 }

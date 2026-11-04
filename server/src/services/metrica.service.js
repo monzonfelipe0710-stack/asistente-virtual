@@ -1,13 +1,17 @@
+import crypto from 'node:crypto';
 import prisma from '../config/prisma.js';
 
-export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId }) => {
+export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId, respuesta }) => {
   return prisma.consulta.create({
     data: {
       textoConsulta,
       tramiteId: tramiteId ?? null,
       encontrado,
       usuarioId: usuarioId ?? null,
+      respuesta: respuesta ?? null,
+      calificarToken: crypto.randomBytes(16).toString('hex'),
     },
+    select: { id: true, calificarToken: true },
   });
 };
 
