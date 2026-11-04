@@ -16,6 +16,7 @@ let admSinSectores;
 let su;
 let tramiteA;
 let tramiteB;
+let tramiteMedianoche;
 const sectoresCreados = [];
 const consultas = {};
 
@@ -40,7 +41,8 @@ describe('calificaciones de consultas', () => {
 
     const sectorA = await prisma.sector.create({ data: { nombre: `A ${SUFIJO}`, tipo: 'DEPARTAMENTO' } });
     const sectorB = await prisma.sector.create({ data: { nombre: `B ${SUFIJO}`, tipo: 'DEPARTAMENTO' } });
-    sectoresCreados.push(sectorA.id, sectorB.id);
+    const sectorC = await prisma.sector.create({ data: { nombre: `C ${SUFIJO}`, tipo: 'DEPARTAMENTO' } });
+    sectoresCreados.push(sectorA.id, sectorB.id, sectorC.id);
     await prisma.usuarioSector.createMany({
       data: [{ usuarioId: admA.id, sectorId: sectorA.id }, { usuarioId: admB.id, sectorId: sectorB.id }],
     });
@@ -49,6 +51,8 @@ describe('calificaciones de consultas', () => {
       prisma.tramite.create({ data: { nombre: `T ${SUFIJO}`, descripcion: 'prueba', sectorId: sector.id, encargadoId: encargado.id } });
     tramiteA = await tramite(sectorA, admA);
     tramiteB = await tramite(sectorB, admB);
+    // Sector sin ADM: estas consultas solo las ve el SU y no cambian los totales de A ni de B.
+    tramiteMedianoche = await tramite(sectorC, admA);
 
     const crear = async (clave, tramiteId, fecha, datos = {}) => {
       consultas[clave] = await prisma.consulta.create({
@@ -72,11 +76,13 @@ describe('calificaciones de consultas', () => {
     await crear('aSinCalificar', tramiteA.id, '2020-01-12T12:00:00Z');
     await crear('b1', tramiteB.id, '2020-01-11T12:00:00Z', { calificacion: 1, topico: 'licencias' });
     await crear('b2', tramiteB.id, '2020-01-12T12:00:00Z', { calificacion: 0, motivoCalificacion: 'La respuesta fue confusa' });
+    await crear('antesDeMedianoche', tramiteMedianoche.id, '2020-03-10T23:30:00-03:00', { calificacion: 1 });
+    await crear('despuesDeMedianoche', tramiteMedianoche.id, '2020-03-11T00:30:00-03:00', { calificacion: 1 });
   });
 
   after(async () => {
     await prisma.consulta.deleteMany({ where: { id: { in: Object.values(consultas).map((c) => c.id) } } });
-    await prisma.tramite.deleteMany({ where: { id: { in: [tramiteA?.id, tramiteB?.id].filter(Boolean) } } });
+    await prisma.tramite.deleteMany({ where: { id: { in: [tramiteA?.id, tramiteB?.id, tramiteMedianoche?.id].filter(Boolean) } } });
     await prisma.sector.deleteMany({ where: { id: { in: sectoresCreados } } });
     await prisma.usuario.deleteMany({ where: { email: { endsWith: DOMINIO } } });
     await prisma.$disconnect();
@@ -138,6 +144,26 @@ describe('calificaciones de consultas', () => {
     assert.deepEqual(ids(r), [consultas.a6.id, consultas.a5.id, consultas.a4.id, consultas.a3.id]);
     assert.equal(r.resumen.utiles, 0);
     assert.equal(r.resumen.satisfaccion, 0);
+  });
+
+  it('una fecha sola es un día entero de Argentina, cerca de la medianoche', async () => {
+    const { antesDeMedianoche: antes, despuesDeMedianoche: despues } = consultas;
+    const delDia = async (query) => ids(await llamar(su, { tramiteId: String(tramiteMedianoche.id), ...query }));
+
+    // Las dos caen el 11 en UTC: interpretadas en UTC, el 10 no traería ninguna.
+    assert.deepEqual(await delDia({ desde: '2020-03-10', hasta: '2020-03-10' }), [antes.id]);
+    assert.deepEqual(await delDia({ desde: '2020-03-11', hasta: '2020-03-11' }), [despues.id]);
+    assert.deepEqual(await delDia({ hasta: '2020-03-10' }), [antes.id]);
+    assert.deepEqual(await delDia({ desde: '2020-03-11' }), [despues.id]);
+  });
+
+  it('una fecha con hora y zona se respeta tal cual', async () => {
+    const { antesDeMedianoche: antes, despuesDeMedianoche: despues } = consultas;
+    const delDia = async (query) => ids(await llamar(su, { tramiteId: String(tramiteMedianoche.id), ...query }));
+
+    assert.deepEqual(await delDia({ desde: '2020-03-11T00:00:00Z' }), [despues.id, antes.id]);
+    assert.deepEqual(await delDia({ hasta: '2020-03-11T02:30:00Z' }), [antes.id]);
+    assert.deepEqual(await delDia({ desde: '2020-03-11T00:00:00-03:00', hasta: '2020-03-11T00:30:00-03:00' }), [despues.id]);
   });
 
   it('filtra por fechas: "hasta" con solo la fecha incluye ese día entero', async () => {

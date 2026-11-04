@@ -505,7 +505,7 @@ sectores, nada); un SU ve todas. Query, todo opcional:
 
 | Parámetro | Valor |
 |---|---|
-| `desde`, `hasta` | Fecha ISO (`2026-11-04`) o fecha y hora con zona (`2026-11-04T10:00:00Z`). `hasta` con solo la fecha incluye ese día entero (en UTC) |
+| `desde`, `hasta` | Fecha ISO (`2026-11-04`) o fecha y hora con zona (`2026-11-04T10:00:00Z`). Una fecha sola es un día de Argentina (UTC-3): `desde` arranca a las 00:00:00 -03:00 y `hasta` termina a las 23:59:59.999 -03:00 de ese día. Con hora y zona se respeta tal cual. Los dos extremos son inclusivos |
 | `tramiteId` | Entero positivo |
 | `calificacion` | `0` o `1` |
 | `page` | Entero ≥ 1, por defecto `1` |

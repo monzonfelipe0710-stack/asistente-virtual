@@ -25,18 +25,13 @@ export const quitarDelHistorial = async (id, usuarioId) => {
 };
 
 const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const ZONA_ARGENTINA = '-03:00';
 
+// Una fecha sola es un día de Argentina; con hora y zona se respeta tal cual.
 const filtroFecha = (desde, hasta) => {
   const fecha = {};
-  if (desde) fecha.gte = new Date(desde);
-  if (hasta && SOLO_FECHA.test(hasta)) {
-    // Con solo la fecha, "hasta" incluye ese día entero (en UTC).
-    const finDelDia = new Date(hasta);
-    finDelDia.setUTCDate(finDelDia.getUTCDate() + 1);
-    fecha.lt = finDelDia;
-  } else if (hasta) {
-    fecha.lte = new Date(hasta);
-  }
+  if (desde) fecha.gte = new Date(SOLO_FECHA.test(desde) ? `${desde}T00:00:00${ZONA_ARGENTINA}` : desde);
+  if (hasta) fecha.lte = new Date(SOLO_FECHA.test(hasta) ? `${hasta}T23:59:59.999${ZONA_ARGENTINA}` : hasta);
   return fecha;
 };
 
