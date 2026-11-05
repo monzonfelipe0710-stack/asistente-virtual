@@ -431,6 +431,13 @@ trámite usado que tenga `fuenteUrl` http o https: `[Fuente oficial: {nombre}](<
 caché y `consultas.respuesta` guardan el texto sin saludo y sin estas líneas; las fuentes se
 buscan al servir, así siguen a la URL actual del trámite.
 
+**Conversación y temas ajenos.** Una conversación (saludo, pregunta sobre el asistente o el
+catálogo, tema ajeno) solo nombra trámites del resumen del catálogo: para un tema ajeno da dos
+ejemplos de "Algunos trámites". Si el texto del modelo nombra un candidato de la búsqueda que no
+está en el resumen ("capital de francia" → "Aumento de Capital Social"), el servidor pide la
+conversación de nuevo sin candidatos (una llamada más al modelo, solo en ese caso). Por eso en
+`/api/chat/stream` una conversación llega en un solo `delta`, al final.
+
 **Contrato SSE de `POST /api/chat/stream`.** `Content-Type: text/event-stream`. Cada evento
 es una línea `data: <json>` seguida de una línea en blanco:
 

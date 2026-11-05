@@ -6,7 +6,7 @@ import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
-import { cortarEnOracion, finDeUltimaOracion } from "../utils/texto.js";
+import { cortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
 
@@ -43,8 +43,8 @@ Reglas:
 - Una pregunta que depende de un trámite ya mencionado en la conversación ("¿y cuánto cuesta?", "¿dónde se hace?", "¿qué necesito?") es tipo "respuesta" con ese trámite (su ID en "tramitesUsados"), nunca "conversacion".
 - Los candidatos los trae una búsqueda automática que casi siempre devuelve algunos, aunque no tengan nada que ver con el mensaje. Si el mensaje no pide un trámite (saludo, gracias, despedida, pregunta sobre vos o sobre el catálogo, tema ajeno), ignorá los candidatos y respondé tipo "conversacion". Si no hay candidatos ("ninguno") y la persona pide un trámite, respondé tipo "respuesta" con encontrado false.
 - Pregunta general sobre el catálogo ("qué trámites hay", "qué trámites puedo hacer"): tipo "conversacion". Usá SOLO el RESUMEN DEL CATÁLOGO e ignorá los candidatos. Decí cuántos trámites hay, nombrá al menos 3 sectores del resumen con su nombre exacto (tal cual está escrito, sin acortarlo) y 2 o 3 trámites de ejemplo del resumen, e invitá a preguntar por un trámite concreto.
-- Tema ajeno a los trámites (recetas, deportes, cultura general): tipo "conversacion". Ignorá los candidatos y no respondas el contenido: decí con amabilidad que solo ayudás con trámites y dá 2 ejemplos, el pasaporte y el certificado de buena conducta. Nunca digas "Probá reformular tu pregunta".
-- PROHIBIDO nombrar trámites que no estén en el RESUMEN DEL CATÁLOGO o entre los candidatos, y sectores que no estén en el resumen. En preguntas sobre el catálogo y en temas ajenos los candidatos no cuentan; la única excepción son los 2 ejemplos de temas ajenos (pasaporte y certificado de buena conducta), que existen.
+- Tema ajeno a los trámites (recetas, deportes, cultura general): tipo "conversacion". Ignorá los candidatos y no respondas el contenido: decí con amabilidad que solo ayudás con trámites y dá 2 ejemplos copiando tal cual 2 nombres de la línea "Algunos trámites" del RESUMEN DEL CATÁLOGO. Nunca uses de ejemplo un candidato, aunque alguna palabra del mensaje coincida con su nombre. Nunca digas "Probá reformular tu pregunta".
+- PROHIBIDO nombrar trámites que no estén en el RESUMEN DEL CATÁLOGO o entre los candidatos, y sectores que no estén en el resumen. En preguntas sobre el catálogo y en temas ajenos los candidatos no cuentan: solo vale el resumen.
 - Cuando pidas aclaración, ofrecé TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro. No dejes afuera un candidato que corresponde.
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
@@ -190,6 +190,43 @@ const armarInstruccion = async (prompt, topeAlcanzado, tramites) => {
   return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
 };
 
+// Una conversación no usa los candidatos, pero el modelo tiende a tomarlos de ejemplo cuando
+// comparten una palabra con el mensaje ("capital de francia" → "Aumento de Capital Social"), y
+// el prompt solo no alcanza para evitarlo. Si el texto nombra un candidato que no está en el
+// resumen del catálogo, la conversación se pide de nuevo sin candidatos.
+const PROPORCION_PARA_NOMBRAR = 0.6;
+const palabrasDe = (texto) =>
+  texto.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").match(/\p{L}{4,}/gu) ?? [];
+
+// Alcanza con que estén casi todas las palabras: el modelo suele cambiar un guion por "en".
+const nombraCandidato = (texto, tramites, ejemplos) => {
+  const enTexto = new Set(palabrasDe(texto));
+  const delResumen = new Set(ejemplos.map((e) => palabrasDe(e).join(" ")));
+  return tramites.some(({ nombre }) => {
+    const palabras = palabrasDe(nombre);
+    if (palabras.length === 0 || delResumen.has(palabras.join(" "))) return false;
+    return palabras.filter((p) => enTexto.has(p)).length / palabras.length >= PROPORCION_PARA_NOMBRAR;
+  });
+};
+
+const INSTRUCCION_SIN_CANDIDATOS = `
+IMPORTANTE: este mensaje no pide un trámite. "tipo" DEBE ser "conversacion" y solo podés nombrar trámites del RESUMEN DEL CATÁLOGO.`;
+
+const textoDeConversacion = async (cuerpo, { tramites, mensajes, saludo, alCorregirTuteo }) => {
+  const { ejemplos } = await obtenerResumenCatalogo();
+  if (!nombraCandidato(cuerpo, tramites, ejemplos)) return limitarConversacion(cuerpo);
+
+  const instruccion = await armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []);
+  const salida = JSON.parse(
+    await ia.generarRespuesta({
+      instruccionSistema: `${instruccion}\n${INSTRUCCION_SIN_CANDIDATOS}`,
+      turnos: mensajes,
+      esquema: ESQUEMA_SALIDA,
+    }),
+  );
+  return limitarConversacion(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo }));
+};
+
 const SIN_REGISTRO = { consultaId: null, calificarToken: null };
 
 // Si falla el registro la respuesta igual sale, con consultaId y calificarToken null.
@@ -287,7 +324,8 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   const cuerpoModelo = limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo });
 
   if (salida.tipo === "conversacion") {
-    return respuestaConversacional(conSaludo(limitarConversacion(cuerpoModelo), saludo, usuario));
+    const texto = await textoDeConversacion(cuerpoModelo, { tramites, mensajes, saludo, alCorregirTuteo });
+    return respuestaConversacional(conSaludo(texto, saludo, usuario));
   }
 
   // ACLARACIÓN (solo si no llegamos al tope).
@@ -401,22 +439,6 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
   let saludo = "";
   let cuerpo = "";
   let limpiador = null;
-  let recibido = "";
-  let llegoAlTope = false;
-
-  // Solo la conversación tiene tope: se mandan oraciones completas y lo que viene después se
-  // retiene; si pasa el tope, se corta en la última que entra. Así nunca se transmite algo que
-  // después haya que descartar, y el corte coincide con el de la ruta sin streaming.
-  const paraEmitir = (texto, final = false) => {
-    if (meta?.tipo !== "conversacion") return texto;
-    recibido += texto;
-    if (recibido.length > TOPE_CONVERSACION) {
-      llegoAlTope = true;
-      return cortarEnOracion(recibido, TOPE_CONVERSACION).slice(cuerpo.length);
-    }
-    const hasta = final ? recibido.length : finDeUltimaOracion(recibido);
-    return hasta > cuerpo.length ? recibido.slice(cuerpo.length, hasta) : "";
-  };
 
   for await (let delta of deltas) {
     if (!delta) continue;
@@ -461,28 +483,25 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
     }
 
     // Sale de a líneas completas y limpias (sin enlaces del modelo, tuteo ni saludo repetido).
-    const texto = paraEmitir(limpiador.agregar(delta));
-    if (texto) {
-      cuerpo += texto;
-      yield { tipo: "delta", texto };
-    }
-    if (llegoAlTope) break;
+    // La conversación se retiene entera: antes de mandarla hay que ver si nombra un candidato.
+    const texto = limpiador.agregar(delta);
+    cuerpo += texto;
+    if (texto && meta.tipo !== "conversacion") yield { tipo: "delta", texto };
   }
 
-  // Al terminar sale lo retenido: la última línea, o la última oración de una conversación.
-  if (limpiador !== null && !llegoAlTope) {
-    const texto = paraEmitir(limpiador.cerrar(), true);
-    if (texto) {
-      cuerpo += texto;
-      yield { tipo: "delta", texto };
-    }
+  // Al terminar sale lo retenido: la última línea.
+  if (limpiador !== null) {
+    const texto = limpiador.cerrar();
+    cuerpo += texto;
+    if (texto && meta.tipo !== "conversacion") yield { tipo: "delta", texto };
   }
 
   // Sin salto de línea no hubo META separada: el buffer entero puede ser el JSON.
   if (meta === null) saludo = saludoPara(preguntaActual, leerMeta(buffer)?.saludo);
 
+  // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
-    if (!cuerpo.trim()) yield { tipo: "delta", texto: MENSAJE_CONVERSACION_VACIA };
+    yield { tipo: "delta", texto: await textoDeConversacion(cuerpo, { tramites, mensajes, saludo, alCorregirTuteo }) };
     yield {
       tipo: "fin",
       tipoRespuesta: "respuesta",

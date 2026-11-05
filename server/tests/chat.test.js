@@ -20,9 +20,10 @@ mock.module(servicio('services/busqueda.service.js'), {
 mock.module(servicio('core/ai/index.js'), {
   namedExports: {
     ia: {
+      // Con un array, cada llamada se lleva la siguiente salida.
       generarRespuesta: async (args) => {
         llamadasModelo.push(args);
-        return JSON.stringify(salidaModelo);
+        return JSON.stringify(Array.isArray(salidaModelo) ? salidaModelo.shift() : salidaModelo);
       },
       async *generarRespuestaStream(args) {
         llamadasModelo.push(args);
@@ -124,6 +125,33 @@ describe('chat', () => {
       const { respuesta } = await responderConsulta(turno('contame algo'));
       assert.ok(respuesta.length <= TOPE_CONVERSACION);
       assert.ok(respuesta.endsWith('…'));
+    });
+
+    it('si nombra un candidato, se pide de nuevo sin candidatos y se usa ese texto', async () => {
+      const conCandidato = `Solo ayudo con trámites, por ejemplo el Trámite ${SUFIJO}.`;
+      const sinCandidato = 'Solo ayudo con trámites, por ejemplo la Licencia por maternidad.';
+      salidaModelo = [salida({ tipo: 'conversacion', respuesta: conCandidato }), salida({ tipo: 'conversacion', respuesta: sinCandidato })];
+      const r = await responderConsulta(turno('capital de francia'));
+
+      assert.equal(r.respuesta, sinCandidato);
+      assert.equal(llamadasModelo.length, 2);
+      assert.match(llamadasModelo[1].instruccionSistema, /Contexto \(trámites candidatos\):\n\(ninguno\)/);
+      assert.match(llamadasModelo[1].instruccionSistema, /"tipo" DEBE ser "conversacion"/);
+
+      llamadasModelo = [];
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: sinCandidato });
+      pedazosStream = [meta({ tipo: 'conversacion' }), ...conCandidato.match(/.{1,4}/gs)];
+      const eventos = [];
+      for await (const e of responderConsultaStream(turno('capital de francia'))) eventos.push(e);
+      const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
+      assert.deepEqual(deltas, [sinCandidato]);
+      assert.equal(llamadasModelo.length, 2);
+    });
+
+    it('no se pide de nuevo si no nombra candidatos, aunque comparta alguna palabra', async () => {
+      salidaModelo = [salida({ tipo: 'conversacion', respuesta: 'Solo ayudo con trámites, no con la capital de Francia.' })];
+      await responderConsulta(turno('capital de francia'));
+      assert.equal(llamadasModelo.length, 1);
     });
 
     it('corta en la última oración completa, no a mitad de frase', async () => {
