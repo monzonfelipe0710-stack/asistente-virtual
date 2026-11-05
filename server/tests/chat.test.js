@@ -59,7 +59,7 @@ let tramite;
 let sector;
 
 const turno = (texto) => [{ rol: 'usuario', texto }];
-const salida = (datos) => ({ saludo: '', encontrado: false, tramitesUsados: [], opciones: [], ...datos });
+const salida = (datos) => ({ saludo: '', tramiteId: null, tramitesUsados: [], opciones: [], ...datos });
 const meta = (datos) => `${JSON.stringify(salida({ ...datos, respuesta: undefined }))}\n`;
 
 const consumir = async (generador) => {
@@ -121,7 +121,7 @@ describe('chat', () => {
     });
 
     it('ignora encontrado e ids si el modelo los manda en una conversación', async () => {
-      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.', encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.', tramiteId: tramite.id });
       const r = await responderConsulta(turno('hola'));
       assert.equal(r.encontrado, false);
       assert.deepEqual(r.tramitesEncontrados, []);
@@ -174,10 +174,10 @@ describe('chat', () => {
 
   describe('respuesta', () => {
     it('sin ids válidos del contexto usa el mensaje fijo y se registra como no encontrada', async () => {
-      for (const tramitesUsados of [[], [2147483647]]) {
+      for (const tramiteId of [null, 2147483647]) {
         registros = [];
         cache.limpiar();
-        salidaModelo = salida({ tipo: 'respuesta', respuesta: 'texto que no se usa', encontrado: true, tramitesUsados });
+        salidaModelo = salida({ tipo: 'respuesta', respuesta: 'texto que no se usa', tramiteId });
         const r = await responderConsulta(turno('licencia de conducir'));
         assert.equal(r.respuesta, MENSAJE_SIN_RESPUESTA);
         assert.equal(r.encontrado, false);
@@ -188,7 +188,7 @@ describe('chat', () => {
     });
 
     it('con un id del contexto responde con el texto del modelo y conversacional false', async () => {
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', tramiteId: tramite.id });
       const r = await responderConsulta(turno('cómo hago el trámite'));
       assert.equal(r.respuesta, 'Así se hace.');
       assert.equal(r.encontrado, true);
@@ -196,8 +196,52 @@ describe('chat', () => {
       assert.deepEqual(r.tramitesEncontrados.map((t) => t.id), [tramite.id]);
     });
 
+    it('encontrado lo decide el servidor con tramiteId, aunque el texto diga que el dato no está cargado', async () => {
+      salidaModelo = salida({ tipo: 'respuesta', tramiteId: tramite.id, respuesta: 'Ese dato no está cargado.' });
+      const r = await responderConsulta(turno('¿me dan turno?'));
+      assert.equal(r.encontrado, true);
+      assert.equal(r.respuesta, 'Ese dato no está cargado.');
+      assert.deepEqual(r.tramitesEncontrados.map((t) => t.id), [tramite.id]);
+      assert.deepEqual(registros.map((x) => [x.encontrado, x.tramiteId]), [[true, tramite.id]]);
+
+      pedazosStream = [meta({ tipo: 'respuesta', tramiteId: tramite.id }), 'Ese dato no está cargado.'];
+      const { texto, fin } = await consumir(responderConsultaStream(turno('¿me dan turno otra vez?')));
+      assert.equal(texto, 'Ese dato no está cargado.');
+      assert.equal(fin.encontrado, true);
+    });
+
+    it('tramitesUsados suma los otros candidatos que nombra, siempre con tramiteId primero', async () => {
+      const otro = await prisma.tramite.create({
+        data: { nombre: `Otro ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },
+      });
+      try {
+        candidatos = [{ id: tramite.id }, { id: otro.id }];
+        salidaModelo = salida({ tipo: 'respuesta', tramiteId: tramite.id, tramitesUsados: [otro.id, 2147483647], respuesta: 'Los dos.' });
+        const r = await responderConsulta(turno('los dos trámites'));
+        assert.deepEqual(r.tramitesEncontrados.map((t) => t.id), [tramite.id, otro.id]);
+
+        // Sin tramiteId válido no hay trámite encontrado, aunque mande otros ids.
+        salidaModelo = salida({ tipo: 'respuesta', tramiteId: null, tramitesUsados: [tramite.id], respuesta: 'x' });
+        cache.limpiar();
+        assert.equal((await responderConsulta(turno('los dos trámites'))).respuesta, MENSAJE_SIN_RESPUESTA);
+      } finally {
+        await prisma.tramite.delete({ where: { id: otro.id } });
+      }
+    });
+
+    it('el esquema de salida pide tramiteId antes de la respuesta y ya no pide encontrado', async () => {
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('hola'));
+      const { schema } = llamadasModelo[0].esquema;
+      const campos = Object.keys(schema.properties);
+      assert.ok(campos.indexOf('tramiteId') < campos.indexOf('respuesta'));
+      assert.ok(!campos.includes('encontrado'));
+      assert.deepEqual(schema.properties.tramiteId.type, ['integer', 'null']);
+      assert.doesNotMatch(llamadasModelo[0].instruccionSistema, /"encontrado"/);
+    });
+
     it('una respuesta cacheada también trae conversacional false', async () => {
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', tramiteId: tramite.id });
       await responderConsulta(turno('cómo hago el trámite'));
       const r = await responderConsulta(turno('cómo hago el trámite'));
       assert.equal(llamadasModelo.length, 1);
@@ -319,7 +363,7 @@ describe('chat', () => {
   describe('saludo y nombre', () => {
     const maria = { id: null, nombre: 'MARÍA JOSÉ GÓMEZ' };
     const encontradoCon = (datos) =>
-      salida({ tipo: 'respuesta', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id], ...datos });
+      salida({ tipo: 'respuesta', respuesta: 'Así se hace.', tramiteId: tramite.id, ...datos });
 
     it('compone el saludo con el primer nombre de quien está logueado', async () => {
       salidaModelo = encontradoCon({ saludo: 'Buen día' });
@@ -379,7 +423,7 @@ describe('chat', () => {
     });
 
     it('en streaming manda primero el saludo y guarda el cuerpo sin él', async () => {
-      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', encontrado: true, tramitesUsados: [tramite.id] }), '¡Ho', 'la! Así ', 'se hace.'];
+      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', tramiteId: tramite.id }), '¡Ho', 'la! Así ', 'se hace.'];
       const eventos = [];
       for await (const e of responderConsultaStream(turno('hola, cómo hago el trámite'), maria)) eventos.push(e);
       const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
@@ -479,7 +523,7 @@ describe('chat', () => {
     });
 
     it('una pregunta legítima parecida sigue de largo', async () => {
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', tramiteId: tramite.id });
       const r = await responderConsulta(turno('olvidé mi contraseña y necesito las instrucciones para el trámite'));
       assert.equal(r.respuesta, 'Así se hace.');
       assert.equal(llamadasModelo.length, 1);
@@ -497,7 +541,7 @@ describe('chat', () => {
 
     it('una respuesta que copia las instrucciones se reemplaza por el mensaje fijo y no se registra ni se cachea', async () => {
       const fugas = [];
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: FUGA, encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: FUGA, tramiteId: tramite.id });
       const r = await responderConsulta(turno('cómo hago el trámite'), null, { alDetectarFuga: (f) => fugas.push(f) });
       assert.equal(r.respuesta, MENSAJE_FUERA_DE_ALCANCE);
       assert.equal(r.conversacional, true);
@@ -547,13 +591,13 @@ describe('chat', () => {
     });
 
     it('saca los enlaces del modelo y agrega al final el de la fuente del trámite usado', async () => {
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: conEnlaceInventado, encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: conEnlaceInventado, tramiteId: tramite.id });
       const r = await responderConsulta(turno('cómo hago el trámite'));
       assert.equal(r.respuesta, `Así se hace.\nMás info en\n\n${enlace()}`);
     });
 
     it('la caché y consultas guardan el cuerpo sin enlaces; la fuente se agrega al servir', async () => {
-      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: 'Así se hace.', tramiteId: tramite.id });
       await responderConsulta(turno('hola, cómo hago el trámite'));
       assert.equal(registros[0].respuesta, 'Así se hace.');
       assert.equal(cache.obtener('hola, cómo hago el trámite').respuesta, 'Así se hace.');
@@ -574,13 +618,13 @@ describe('chat', () => {
       salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Mirá https://a.ar/b para más.' });
       assert.equal((await responderConsulta(turno('hola'))).respuesta, 'Mirá para más.');
 
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'x', encontrado: false });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'x' });
       assert.equal((await responderConsulta(turno('licencia de conducir'))).respuesta, MENSAJE_SIN_RESPUESTA);
     });
 
     it('en streaming limpia cada línea completa y manda la fuente como último delta', async () => {
       pedazosStream = [
-        meta({ tipo: 'respuesta', encontrado: true, tramitesUsados: [tramite.id] }),
+        meta({ tipo: 'respuesta', tramiteId: tramite.id }),
         ...conEnlaceInventado.match(/.{1,5}/gs),
       ];
       const eventos = [];
@@ -596,10 +640,10 @@ describe('chat', () => {
 
     it('las dos rutas devuelven el mismo texto', async () => {
       const texto = '¡Hola! Te cuento:\n\n\n- uno [a](http://a.ar)\n- dos\n\n[Ver](http://b.ar)\n';
-      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: texto, encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: texto, tramiteId: tramite.id });
       const { respuesta } = await responderConsulta(turno('hola, cómo hago'));
 
-      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', encontrado: true, tramitesUsados: [tramite.id] }), ...texto.match(/.{1,3}/gs)];
+      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', tramiteId: tramite.id }), ...texto.match(/.{1,3}/gs)];
       const { texto: stream } = await consumir(responderConsultaStream(turno('hola, cómo hago otra vez')));
       assert.equal(stream, respuesta);
       assert.equal(respuesta, `¡Hola! Te cuento:\n\n- uno\n- dos\n\n${enlace()}`);
@@ -660,11 +704,11 @@ describe('chat', () => {
     it('corrige el tuteo en las dos rutas, aunque la palabra llegue partida entre deltas', async () => {
       const formas = [];
       const alCorregirTuteo = (f) => formas.push(...f);
-      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Necesitas el DNI.', encontrado: true, tramitesUsados: [tramite.id] });
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Necesitas el DNI.', tramiteId: tramite.id });
       const r = await responderConsulta(turno('qué necesito'), null, { alCorregirTuteo });
       assert.equal(r.respuesta, 'Necesitás el DNI.');
 
-      pedazosStream = [meta({ tipo: 'respuesta', encontrado: true, tramitesUsados: [tramite.id] }), 'Neces', 'itas el DNI. Ten ', 'en cuenta eso.'];
+      pedazosStream = [meta({ tipo: 'respuesta', tramiteId: tramite.id }), 'Neces', 'itas el DNI. Ten ', 'en cuenta eso.'];
       const { texto } = await consumir(responderConsultaStream(turno('qué necesito otra vez'), null, { alCorregirTuteo }));
       assert.equal(texto, 'Necesitás el DNI. Tené en cuenta eso.');
       assert.deepEqual(formas, ['Necesitas', 'Necesitas', 'Ten en cuenta']);
@@ -672,7 +716,7 @@ describe('chat', () => {
     });
 
     it('una respuesta encontrada trae conversacional false en el fin', async () => {
-      pedazosStream = [meta({ tipo: 'respuesta', encontrado: true, tramitesUsados: [tramite.id] }), 'Así se hace.'];
+      pedazosStream = [meta({ tipo: 'respuesta', tramiteId: tramite.id }), 'Así se hace.'];
       const { texto, fin } = await consumir(responderConsultaStream(turno('cómo hago el trámite')));
       assert.equal(texto, 'Así se hace.');
       assert.equal(fin.encontrado, true);

@@ -633,7 +633,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    full-text en español (GIN). Es candidato si la distancia coseno es menor a
    `UMBRAL_DISTANCIA` o si coincide por texto. Se descartan los nombres repetidos y quedan 3.
 3. **Sin candidatos:** se llama igual al modelo, con el contexto vacío (`(ninguno)`): un
-   saludo da `conversacion` y un trámite que no existe, `respuesta` con `encontrado: false`.
+   saludo da `conversacion` y un trámite que no existe, `respuesta` con `tramiteId: null`.
    El prompt avisa que los candidatos pueden no tener nada que ver con el mensaje.
 4. **Contexto:** detalle de los candidatos (requisitos con dónde se consiguen y costo,
    mesas con dirección y horario, nombres de los formularios). Lo que falta se dice: `Requisitos:
@@ -650,10 +650,13 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    respuesta; si no alcanzan, por orden alfabético; sin nombres repetidos). Con eso responde "qué trámites hay" sin inventar. Queda en memoria (1 hora) y
    se invalida junto con la caché de respuestas cuando cambian trámites, mesas o documentos.
 5. **Modelo:** devuelve un JSON con `tipo` (`respuesta`, `aclaracion` o `conversacion`),
-   `saludo`, `respuesta`, `encontrado`, `tramitesUsados` y `opciones` (en streaming, la
-   primera línea es ese JSON sin `respuesta` y después el texto). Se descartan los ids que no
-   estén en el contexto, y `encontrado` exige que quede alguno; una `respuesta` sin ids
-   válidos pasa al mensaje fijo. Una `conversacion` conserva el texto del modelo (se le piden
+   `saludo`, `tramiteId`, `respuesta`, `tramitesUsados` y `opciones` (en streaming, la
+   primera línea es ese JSON sin `respuesta` y después el texto). `tramiteId` es el trámite
+   del contexto sobre el que trata la pregunta, aunque el dato pedido no esté cargado, o
+   `null`. El modelo no decide `encontrado`: lo calcula el servidor (`true` si `tramiteId` está
+   en el contexto), así "el dato no está cargado" no se confunde con "no hay trámite". Los
+   trámites usados son `tramiteId` y, después, los otros ids de `tramitesUsados` que estén en
+   el contexto; una `respuesta` sin `tramiteId` válido pasa al mensaje fijo. Una `conversacion` conserva el texto del modelo (se le piden
    hasta 5 líneas), no se cachea ni se registra. Si pasa de 600 caracteres se corta en la
    última oración completa (punto, `?`, `!`, `…` o salto de línea); si no hay ninguna, en la
    última palabra con "…". En streaming se mandan solo oraciones completas, así nunca se

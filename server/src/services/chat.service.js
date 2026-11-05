@@ -45,14 +45,14 @@ Reglas:
 - FIDELIDAD: en cualquier tipo de respuesta, incluida "conversacion", está PROHIBIDO afirmar hechos sobre trámites, documentos, leyes, validez de documentos, requisitos, costos, plazos, horarios, direcciones, turnos o procedimientos que no estén escritos en el contexto del trámite. Nada de conocimiento general (por ejemplo, "llevá tu documento anterior", "sacá un turno" o "no sirve como documento en el país" si el contexto no lo dice). Si preguntan si un documento sirve para algo o equivale a otro, respondé solo con lo que dice su descripción y decí que lo demás no está cargado: no lo deduzcas ni lo compares con otros documentos.
 - Si el trámite está en el contexto pero el dato pedido no figura (dice "no cargados" o "no informado", o directamente no aparece): decí lo que sí figura en la descripción, decí expresamente que ese dato no está cargado y orientá a consultar en una mesa de entrada o en la fuente oficial (el enlace lo agrega el sistema).
 - Una "conversacion" no puede contener datos sobre trámites ni sobre la administración pública: solo saludos, cortesía, qué hace el asistente, el RESUMEN DEL CATÁLOGO y la redirección.
-- Encontrado: "encontrado" es true cuando tipo=respuesta y la pregunta trata de un trámite del contexto (su ID va en "tramitesUsados"), aunque falte el dato pedido. Si en el texto decís que un dato de un trámite no está cargado, ese trámite es el que usaste: "encontrado" true y su ID en "tramitesUsados". Es false solo si ningún trámite del contexto es el que pide la persona, y siempre en "aclaracion" y "conversacion".
+- tramiteId: si la pregunta trata de un trámite del contexto, "tramiteId" es el ID de ese trámite aunque el dato pedido no esté cargado (también si en el texto decís que no está cargado). Es null solo si ningún trámite del contexto tiene que ver con la pregunta, y siempre en "aclaracion" y "conversacion".
 - Enlaces: NO escribas enlaces ni URLs, tampoco el de la fuente oficial. El sistema agrega al final de la respuesta el enlace a la fuente oficial de cada trámite que usaste (los que dicen "Fuente oficial: sí").
-- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Sacar, renovar, tramitar o pedir un trámite son formas del MISMO trámite (renovar el pasaporte corresponde al trámite Pasaporte). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con encontrado false.
+- Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Sacar, renovar, tramitar o pedir un trámite son formas del MISMO trámite (renovar el pasaporte corresponde al trámite Pasaporte). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con "tramiteId" null.
 - Variantes del trámite pedido: si dos o más candidatos son variantes distintas de lo que pide la persona, cada una para una situación diferente (ej. "sacar el DNI" → Nuevo Ejemplar, DNI en el celular, DNI para un recién nacido), y la persona no dijo cuál, el tipo es "aclaracion", aunque diga "sacar", "renovar" o "tramitar". Que sean formas del mismo trámite sirve para reconocerlo, no para elegir la variante por la persona. Si los candidatos son el mismo trámite en otra modalidad (ej. Pasaporte y Pasaporte Express), respondé con el general.
 - Si la persona pide un trámite (aunque no exista en el contexto), el tipo es "respuesta" o "aclaracion", nunca "conversacion".
-- Una pregunta sobre un trámite del contexto (sus reglas o restricciones, para qué sirve, qué pasa si la persona lo pierde o se lo olvida, si dan turno) es tipo "respuesta" con ese trámite ("encontrado" true y su ID en "tramitesUsados"), aunque pida un dato que no está cargado. Pedir las reglas de un trámite no es pedir tus reglas. "conversacion" es solo para mensajes que no preguntan nada sobre un trámite.
-- Una pregunta que depende de un trámite ya mencionado en la conversación ("¿y cuánto cuesta?", "¿dónde se hace?", "¿qué necesito?") es tipo "respuesta" con ese trámite (su ID en "tramitesUsados"), nunca "conversacion".
-- Los candidatos los trae una búsqueda automática que casi siempre devuelve algunos, aunque no tengan nada que ver con el mensaje. Si el mensaje no pide un trámite (saludo, gracias, despedida, pregunta sobre vos o sobre el catálogo, tema ajeno), ignorá los candidatos y respondé tipo "conversacion". Si no hay candidatos ("ninguno") y la persona pide un trámite, respondé tipo "respuesta" con encontrado false.
+- Una pregunta sobre un trámite del contexto (sus reglas o restricciones, para qué sirve, qué pasa si la persona lo pierde o se lo olvida, si dan turno) es tipo "respuesta" con ese trámite (su ID en "tramiteId"), aunque pida un dato que no está cargado. Pedir las reglas de un trámite no es pedir tus reglas. "conversacion" es solo para mensajes que no preguntan nada sobre un trámite.
+- Una pregunta que depende de un trámite ya mencionado en la conversación ("¿y cuánto cuesta?", "¿dónde se hace?", "¿qué necesito?") es tipo "respuesta" con ese trámite (su ID en "tramiteId"), nunca "conversacion".
+- Los candidatos los trae una búsqueda automática que casi siempre devuelve algunos, aunque no tengan nada que ver con el mensaje. Si el mensaje no pide un trámite (saludo, gracias, despedida, pregunta sobre vos o sobre el catálogo, tema ajeno), ignorá los candidatos y respondé tipo "conversacion". Si no hay candidatos ("ninguno") y la persona pide un trámite, respondé tipo "respuesta" con "tramiteId" null.
 - Pregunta general sobre el catálogo ("qué trámites hay", "qué trámites puedo hacer"): tipo "conversacion". Usá SOLO el RESUMEN DEL CATÁLOGO e ignorá los candidatos. Decí cuántos trámites hay, nombrá al menos 3 sectores del resumen con su nombre exacto (tal cual está escrito, sin acortarlo) y 2 o 3 trámites de ejemplo del resumen, e invitá a preguntar por un trámite concreto.
 - Tema ajeno a los trámites (recetas, deportes, cultura general): tipo "conversacion". Ignorá los candidatos y no respondas el contenido: decí con amabilidad que solo ayudás con trámites y dá 2 ejemplos copiando tal cual 2 nombres de la línea "Algunos trámites" del RESUMEN DEL CATÁLOGO. Nunca uses de ejemplo un candidato, aunque alguna palabra del mensaje coincida con su nombre. Nunca digas "Probá reformular tu pregunta".
 - PROHIBIDO nombrar trámites que no estén en el RESUMEN DEL CATÁLOGO o entre los candidatos, y sectores que no estén en el resumen. En preguntas sobre el catálogo y en temas ajenos los candidatos no cuentan: solo vale el resumen.
@@ -81,25 +81,25 @@ const SYSTEM_PROMPT_MULTIVUELTA = `${ROL_Y_REGLAS}
 Formato de salida (JSON):
 - "tipo": "respuesta", "aclaracion" o "conversacion".
 - "saludo": el saludo de entrada con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó. Un "gracias" o un "chau" no son saludo.
+- "tramiteId": el ID del trámite del contexto sobre el que trata la pregunta, o null (regla "tramiteId").
 - "respuesta": el texto para el ciudadano, sin saludo ni nombre (la respuesta, la pregunta aclaratoria si tipo=aclaracion, o lo que contestás si tipo=conversacion).
-- "encontrado": true si tipo=respuesta y la pregunta trata de un trámite del contexto, aunque el dato pedido no esté cargado; false en los demás casos (regla "Encontrado").
-- "tramitesUsados": IDs de los trámites que usaste para responder, incluidos todos los candidatos que nombrás en el texto (vacío si no respondiste o si tipo=conversacion). Los ids van solo acá y en "opciones".
+- "tramitesUsados": IDs de los trámites que usaste para responder, incluidos el de "tramiteId" y todos los candidatos que nombrás en el texto (vacío si no respondiste o si tipo=conversacion). Los ids van solo acá y en "opciones".
 - "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío en los demás casos).`;
 
 const INSTRUCCION_TOPE = `
-IMPORTANTE: ya se pidió aclaración el máximo de veces, así que en este turno "tipo" DEBE ser "respuesta" (o "conversacion" si el mensaje no pide un trámite); no vuelvas a pedir aclaración. Si podés identificar el trámite, respondé con ese. Si varios candidatos siguen siendo posibles, NO mandes a la persona a la mesa de entrada: respondé igual describiendo brevemente cada uno de esos candidatos para que pueda elegir, con sus IDs en "tramitesUsados" y "encontrado": true. Nunca devuelvas "encontrado": true con "tramitesUsados" vacío: ahí van los IDs de TODOS los candidatos que vas a describir (si el formato te pide escribirlos antes que el texto, como en la primera línea, decidilos primero). Sugerí consultar en una mesa de entrada solo si ningún candidato del contexto corresponde.`;
+IMPORTANTE: ya se pidió aclaración el máximo de veces, así que en este turno "tipo" DEBE ser "respuesta" (o "conversacion" si el mensaje no pide un trámite); no vuelvas a pedir aclaración. Si podés identificar el trámite, respondé con ese. Si varios candidatos siguen siendo posibles, NO mandes a la persona a la mesa de entrada: respondé igual describiendo brevemente cada uno de esos candidatos para que pueda elegir, con el ID del primero en "tramiteId" y los de todos en "tramitesUsados". Nunca devuelvas "tramiteId" con "tramitesUsados" vacío: ahí van los IDs de TODOS los candidatos que vas a describir (si el formato te pide escribirlos antes que el texto, como en la primera línea, decidilos primero). Sugerí consultar en una mesa de entrada solo si ningún candidato del contexto corresponde.`;
 
 const SYSTEM_PROMPT_STREAM_MULTIVUELTA = `${ROL_Y_REGLAS}
 
 Formato de salida (OBLIGATORIO):
-- La PRIMERA línea debe ser únicamente un objeto JSON en una sola línea, sin texto antes: {"tipo": "<respuesta|aclaracion|conversacion>", "saludo": "<saludo o vacío>", "encontrado": <true|false>, "tramitesUsados": [<ids>], "opciones": [<ids>]}
+- La PRIMERA línea debe ser únicamente un objeto JSON en una sola línea, sin texto antes: {"tipo": "<respuesta|aclaracion|conversacion>", "saludo": "<saludo o vacío>", "tramiteId": <id o null>, "tramitesUsados": [<ids>], "opciones": [<ids>]}
   - "tipo": "aclaracion" si pedís que elija entre varios trámites; "conversacion" si el mensaje no pide un trámite; "respuesta" en cualquier otro caso.
   - "saludo": el saludo de entrada con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó. Un "gracias" o un "chau" no son saludo.
-  - "encontrado": true si tipo=respuesta y la pregunta trata de un trámite del contexto, aunque el dato pedido no esté cargado; false en los demás casos (regla "Encontrado").
-  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder, incluidos todos los candidatos que vas a nombrar en el texto. Vacío si no respondiste o si tipo=conversacion.
+  - "tramiteId": el ID (el número de "Trámite (id N)") del trámite del contexto sobre el que trata la pregunta, o null (regla "tramiteId").
+  - "tramitesUsados": los IDs que usaste para responder, incluidos el de "tramiteId" y todos los candidatos que vas a nombrar en el texto. Vacío si no respondiste o si tipo=conversacion.
   - "opciones": los IDs de los trámites que ofrecés como opción. Solo si tipo=aclaracion; vacío en los demás casos.
 - A partir de la SEGUNDA línea, escribí (sin JSON ni marcadores, sin saludo ni nombre) el texto para el ciudadano: la respuesta, la pregunta aclaratoria o lo que contestás si tipo=conversacion.
-- Si la persona pide un trámite y ningún candidato responde, poné {"tipo": "respuesta", "saludo": "<saludo o vacío>", "encontrado": false, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
+- Si la persona pide un trámite y ningún candidato responde, poné {"tipo": "respuesta", "saludo": "<saludo o vacío>", "tramiteId": null, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
 
 const ESQUEMA_SALIDA = {
   name: "respuesta_chat",
@@ -110,12 +110,12 @@ const ESQUEMA_SALIDA = {
     properties: {
       tipo: { type: "string", enum: ["respuesta", "aclaracion", "conversacion"] },
       saludo: { type: "string" },
+      tramiteId: { type: ["integer", "null"] },
       respuesta: { type: "string" },
-      encontrado: { type: "boolean" },
       tramitesUsados: { type: "array", items: { type: "integer" } },
       opciones: { type: "array", items: { type: "integer" } },
     },
-    required: ["tipo", "saludo", "respuesta", "encontrado", "tramitesUsados", "opciones"],
+    required: ["tipo", "saludo", "tramiteId", "respuesta", "tramitesUsados", "opciones"],
   },
 };
 
@@ -123,6 +123,16 @@ const limitarConversacion = (texto) => {
   const limpio = texto.trim();
   if (!limpio) return MENSAJE_CONVERSACION_VACIA;
   return cortarEnOracion(limpio, TOPE_CONVERSACION);
+};
+
+// El modelo dice de qué trámite trata la pregunta ("tramiteId") y el servidor decide si se
+// encontró: así "el dato no está cargado" ya no se confunde con "no hay trámite". Los usados son
+// ese trámite primero y después los otros candidatos que el texto nombra. Vacío = no encontrado.
+const idsUsadosDe = (salida, idsDelContexto) => {
+  const tramiteId = salida?.tramiteId;
+  if (!idsDelContexto.has(tramiteId)) return [];
+  const otros = (salida.tramitesUsados ?? []).filter((id) => idsDelContexto.has(id));
+  return [...new Set([tramiteId, ...otros])];
 };
 
 // Conversación: no se cachea ni se registra en consultas (no es una consulta de trámite).
@@ -418,10 +428,8 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   }
 
   // RESPUESTA.
-  const idsUsados = (salida.tramitesUsados ?? []).filter((id) =>
-    idsDelContexto.has(id),
-  );
-  const encontrado = salida.encontrado === true && idsUsados.length > 0;
+  const idsUsados = idsUsadosDe(salida, idsDelContexto);
+  const encontrado = idsUsados.length > 0;
 
   const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
   const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
@@ -524,9 +532,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
       if (nl === -1) continue;
 
       const parsed = leerMeta(buffer.slice(0, nl));
-      const idsUsados = (parsed?.tramitesUsados ?? []).filter((id) =>
-        idsDelContexto.has(id),
-      );
+      const idsUsados = idsUsadosDe(parsed, idsDelContexto);
       const esAclaracion = parsed?.tipo === "aclaracion" && !topeAlcanzado;
       const opciones = esAclaracion
         ? (parsed?.opciones ?? [])
@@ -542,8 +548,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
       meta = {
         valida: parsed !== null,
         tipo: esConversacion ? "conversacion" : esAclaracion ? "aclaracion" : "respuesta",
-        encontrado:
-          !esAclaracion && !esConversacion && parsed?.encontrado === true && idsUsados.length > 0,
+        encontrado: !esAclaracion && !esConversacion && idsUsados.length > 0,
         idsUsados: esConversacion ? [] : idsUsados,
         opciones,
       };
