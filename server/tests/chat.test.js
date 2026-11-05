@@ -49,7 +49,7 @@ mock.module(servicio('services/metrica.service.js'), {
 
 const cache = await import('../src/services/cache.service.js');
 const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
-const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION } =
+const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO } =
   await import('../src/services/chat.service.js');
 const { MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 
@@ -327,6 +327,57 @@ describe('chat', () => {
       await prisma.tramiteMesa.deleteMany({ where: { mesaId: mesa.id } });
       await prisma.requisito.deleteMany({ where: { tramiteId: tramite.id } });
       await prisma.mesaEntrada.delete({ where: { id: mesa.id } });
+    }
+  });
+
+  it('acota la descripción, los requisitos, los formularios y las mesas, sin tocar lo guardado', async () => {
+    const contextoDe = async (pregunta) => {
+      llamadasModelo = [];
+      cache.limpiar();
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno(pregunta));
+      return llamadasModelo[0].instruccionSistema.split('Contexto (trámites candidatos):')[1];
+    };
+    const oracion = 'Esta es una oración de prueba que se repite para llegar al largo. ';
+    const descripcion = oracion.repeat(Math.ceil(3000 / oracion.length)).slice(0, 3000);
+    const localidades = ['Formosa', 'Clorinda', 'Pirané', 'Herradura'];
+    const mesas = [];
+    for (let i = 0; i < 20; i++) {
+      mesas.push(await prisma.mesaEntrada.create({
+        data: { nombre: `Mesa ${i} ${SUFIJO}`, direccion: `Calle ${i}`, localidad: localidades[i % 4], horario: '7 a 13' },
+      }));
+    }
+    try {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { descripcion, fuenteUrl: `https://example.invalid/topes-${SUFIJO}` } });
+      await prisma.requisito.createMany({ data: Array.from({ length: 20 }, (_, i) => ({ descripcion: `Requisito ${i}`, tramiteId: tramite.id })) });
+      await prisma.documento.createMany({ data: Array.from({ length: 12 }, (_, i) => ({ nombre: `Formulario ${i}`, archivo: `${SUFIJO}/${i}.pdf`, tramiteId: tramite.id })) });
+      await prisma.tramiteMesa.createMany({ data: mesas.map((m) => ({ tramiteId: tramite.id, mesaId: m.id })) });
+
+      const contexto = await contextoDe('dónde lo hago en Herradura');
+      const [, enContexto] = contexto.match(/^Descripción: (.*?)… \(descripción resumida: hay más información en la fuente oficial\)$/m);
+      assert.ok(enContexto.length <= TOPES_CONTEXTO.descripcion && enContexto.endsWith('.'));
+      assert.ok(descripcion.startsWith(enContexto));
+      assert.equal((await prisma.tramite.findUnique({ where: { id: tramite.id } })).descripcion, descripcion);
+
+      assert.equal(contexto.match(/^- Requisito \d+$/gm).length, TOPES_CONTEXTO.requisitos);
+      assert.match(contexto, /^- \(y 5 requisitos más: la lista completa está en la fuente oficial\)$/m);
+      assert.match(contexto, /^Formularios descargables: Formulario 0, .*Formulario 9 \(y 2 más\)$/m);
+
+      assert.match(contexto, /^Mesas de entrada: 20 en total\. Algunas:$/m);
+      const mostradas = contexto.match(/^- Mesa \d+ .*$/gm);
+      assert.equal(mostradas.length, TOPES_CONTEXTO.mesasDeLaLocalidad);
+      assert.ok(mostradas.every((m) => m.includes('Herradura')), 'las de la localidad nombrada');
+      assert.match(contexto, /^- \(las otras 15 están en la fuente oficial\)$/m);
+      assert.match(contexto, /^Localidades con mesa de entrada: Formosa, Clorinda, Pirané, Herradura$/m);
+
+      const sinLocalidad = (await contextoDe('dónde lo hago')).match(/^- Mesa \d+ .*$/gm);
+      assert.deepEqual(sinLocalidad.map((m) => m.split(' ')[2]), ['0', '1', '2']);
+    } finally {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { descripcion: 'de prueba', fuenteUrl: null } });
+      await prisma.tramiteMesa.deleteMany({ where: { tramiteId: tramite.id } });
+      await prisma.mesaEntrada.deleteMany({ where: { id: { in: mesas.map((m) => m.id) } } });
+      await prisma.requisito.deleteMany({ where: { tramiteId: tramite.id } });
+      await prisma.documento.deleteMany({ where: { tramiteId: tramite.id } });
     }
   });
 

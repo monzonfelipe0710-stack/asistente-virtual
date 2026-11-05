@@ -13,7 +13,7 @@ import * as cache from "./cache.service.js";
 import { asegurarCacheVigente } from "./version-catalogo.service.js";
 import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
-import { cortarEnOracion } from "../utils/texto.js";
+import { cortarEnOracion, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
 import {
@@ -51,6 +51,7 @@ Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
 - FIDELIDAD: en cualquier tipo de respuesta, incluida "conversacion", está PROHIBIDO afirmar hechos sobre trámites, documentos, leyes, validez de documentos, requisitos, costos, plazos, horarios, direcciones, turnos o procedimientos que no estén escritos en el contexto del trámite. Nada de conocimiento general (por ejemplo, "llevá tu documento anterior", "sacá un turno" o "no sirve como documento en el país" si el contexto no lo dice). Si preguntan si un documento sirve para algo o equivale a otro, respondé solo con lo que dice su descripción y decí que lo demás no está cargado: no lo deduzcas ni lo compares con otros documentos.
 - Si el trámite está en el contexto pero el dato pedido no figura (dice "no cargados" o "no informado", o directamente no aparece): decí lo que sí figura en la descripción, decí expresamente que ese dato no está cargado y orientá a consultar en una mesa de entrada o en la fuente oficial (el enlace lo agrega el sistema).
+- Si la descripción dice "descripción resumida" o una lista avisa que hay más (requisitos, mesas de entrada), lo que no se muestra no lo sabés: no lo completes y decí dónde está el resto, como dice el contexto.
 - Una "conversacion" no puede contener datos sobre trámites ni sobre la administración pública: solo saludos, cortesía, qué hace el asistente, el RESUMEN DEL CATÁLOGO y la redirección.
 - tramiteId: si la pregunta trata de un trámite del contexto, "tramiteId" es el ID de ese trámite aunque el dato pedido no esté cargado (también si en el texto decís que no está cargado). Si la pregunta trata de un trámite que tiene varias variantes en el contexto (por ejemplo, las tres de DNI) y no queda claro cuál, el tipo es "aclaracion". Es null solo si ningún trámite del contexto tiene que ver con la pregunta, y siempre en "aclaracion" y "conversacion": nunca respondas "no encontrado" con "tramiteId" null a una pregunta que trata de un trámite del contexto.
 - Enlaces: NO escribas enlaces ni URLs, tampoco el de la fuente oficial. El sistema agrega al final de la respuesta el enlace a la fuente oficial de cada trámite que usaste (los que dicen "Fuente oficial: sí").
@@ -168,19 +169,48 @@ const formatearCosto = (costo) => {
   return Number(costo) === 0 ? "gratuito" : `$${costo}`;
 };
 
+// Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
+export const TOPES_CONTEXTO = { descripcion: 1200, requisitos: 15, documentos: 10, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 30 };
+
+const normalizarLocalidad = (l) => normalizarNombre(l ?? "");
+
+// Con muchas mesas se muestran unas pocas con domicilio, o las de la localidad que nombró la persona.
+const mesasParaMostrar = (mesas, localidades, consulta) => {
+  const buscada = normalizarLocalidad(consulta ? loQueNombro(consulta, new Set(localidades)).localidad : null);
+  const prioridad = ({ mesa }) => (buscada && normalizarLocalidad(mesa.localidad) === buscada ? 0 : 2) + (mesa.direccion ? 0 : 1);
+  const cantidad = buscada ? TOPES_CONTEXTO.mesasDeLaLocalidad : TOPES_CONTEXTO.mesasDeMuestra;
+  return [...mesas].sort((a, b) => prioridad(a) - prioridad(b) || a.mesa.id - b.mesa.id).slice(0, cantidad);
+};
+
+const lineaDeMesa = ({ mesa }) =>
+  `- ${[mesa.nombre, mesa.direccion, mesa.localidad, mesa.horario && `horario: ${mesa.horario}`].filter(Boolean).join(", ")}`;
+
+const localidadesDe = (mesas) => {
+  const vistas = new Map();
+  for (const { mesa } of mesas) {
+    const clave = normalizarLocalidad(mesa.localidad);
+    if (clave && !vistas.has(clave)) vistas.set(clave, mesa.localidad.trim());
+  }
+  return [...vistas.values()];
+};
+
 // `organismo`: el sector con su jurisdicción y localidad efectivas (ver jurisdiccion.service.js).
-const formatearTramite = (t, organismo) => {
+// `consulta`: lo que escribió la persona, para elegir las mesas de la localidad que nombró.
+const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
+  const conFuente = esUrlHttp(t.fuenteUrl);
+  const dondeSigue = conFuente ? "en la fuente oficial" : "en una mesa de entrada";
+  const descripcion = recortarEnOracion(t.descripcion, TOPES_CONTEXTO.descripcion);
   const lineas = [
     `Trámite (id ${t.id}): ${t.nombre}`,
     ...(organismo ? [`Organismo: ${organismo.nombre}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
-    `Descripción: ${t.descripcion}`,
+    `Descripción: ${descripcion}${descripcion === t.descripcion ? "" : ` (descripción resumida: hay más información ${dondeSigue})`}`,
     `Costo: ${formatearCosto(t.costo)}`,
   ];
 
   // Lo que falta se dice explícitamente: así el modelo no lo completa con conocimiento general.
   if (t.requisitos.length > 0) {
     lineas.push("Requisitos:");
-    for (const r of t.requisitos) {
+    for (const r of t.requisitos.slice(0, TOPES_CONTEXTO.requisitos)) {
       const extra = [
         r.dondeSeConsigue && `se consigue en ${r.dondeSeConsigue}`,
         r.costo != null && Number(r.costo) > 0 && `costo $${r.costo}`,
@@ -189,28 +219,36 @@ const formatearTramite = (t, organismo) => {
         .join(", ");
       lineas.push(`- ${r.descripcion}${extra ? ` (${extra})` : ""}`);
     }
+    const resto = t.requisitos.length - TOPES_CONTEXTO.requisitos;
+    if (resto > 0) lineas.push(`- (y ${resto} requisitos más: la lista completa está ${dondeSigue})`);
   } else {
     lineas.push("Requisitos: no cargados");
   }
 
-  if (t.mesas.length > 0) {
-    lineas.push("Mesas de entrada:");
-    for (const { mesa } of t.mesas) {
-      const datos = [mesa.nombre, mesa.direccion, mesa.localidad, mesa.horario && `horario: ${mesa.horario}`];
-      lineas.push(`- ${datos.filter(Boolean).join(", ")}`);
+  if (t.mesas.length > TOPES_CONTEXTO.mesas) {
+    const localidades = localidadesDe(t.mesas);
+    const mostradas = mesasParaMostrar(t.mesas, localidades, consulta);
+    lineas.push(`Mesas de entrada: ${t.mesas.length} en total. Algunas:`, ...mostradas.map(lineaDeMesa));
+    lineas.push(`- (las otras ${t.mesas.length - mostradas.length} están ${dondeSigue})`);
+    if (localidades.length > 0) {
+      const extra = localidades.length > TOPES_CONTEXTO.localidades ? `, y ${localidades.length - TOPES_CONTEXTO.localidades} más` : "";
+      lineas.push(`Localidades con mesa de entrada: ${localidades.slice(0, TOPES_CONTEXTO.localidades).join(", ")}${extra}`);
     }
+  } else if (t.mesas.length > 0) {
+    lineas.push("Mesas de entrada:", ...t.mesas.map(lineaDeMesa));
   } else {
     lineas.push("Mesas de entrada: no cargadas");
   }
 
   if (t.documentos.length > 0) {
+    const resto = t.documentos.length - TOPES_CONTEXTO.documentos;
     lineas.push(
-      `Formularios descargables: ${t.documentos.map((d) => d.nombre).join(", ")}`,
+      `Formularios descargables: ${t.documentos.slice(0, TOPES_CONTEXTO.documentos).map((d) => d.nombre).join(", ")}${resto > 0 ? ` (y ${resto} más)` : ""}`,
     );
   }
 
   // La URL no se le pasa al modelo: el enlace lo agrega el servidor.
-  if (esUrlHttp(t.fuenteUrl)) lineas.push("Fuente oficial: sí");
+  if (conFuente) lineas.push("Fuente oficial: sí");
 
   return lineas.join("\n");
 };
@@ -264,15 +302,15 @@ const describirOrganismo = ({ jurisdiccion, localidad }) => {
   return localidad ? `${nombre} (${localidad})` : nombre;
 };
 
-const formatearCandidato = (c, jurisdicciones) =>
-  c.sinResolver ? formatearGrupo(c) : formatearTramite(c, jurisdicciones.get(c.sectorId));
+const formatearCandidato = (c, jurisdicciones, opciones) =>
+  c.sinResolver ? formatearGrupo(c) : formatearTramite(c, jurisdicciones.get(c.sectorId), opciones);
 
 // Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta.
-const armarInstruccion = async (prompt, topeAlcanzado, candidatos) => {
+const armarInstruccion = async (prompt, topeAlcanzado, candidatos, opciones = {}) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
   const { texto: resumen } = await obtenerResumenCatalogo();
   const jurisdicciones = candidatos.length > 0 ? await obtenerJurisdicciones() : null;
-  const contexto = candidatos.length > 0 ? candidatos.map((c) => formatearCandidato(c, jurisdicciones)).join("\n\n") : "(ninguno)";
+  const contexto = candidatos.length > 0 ? candidatos.map((c) => formatearCandidato(c, jurisdicciones, opciones)).join("\n\n") : "(ninguno)";
   return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
 };
 
@@ -403,7 +441,7 @@ const textoDeLaPersona = (mensajes) =>
 // Los candidatos van en el orden de la búsqueda: los trámites resueltos con su detalle y los grupos
 // de nombre repetido que la persona no resolvió (ver variantes.service.js). `ids` son todos los
 // ids del contexto; `tramites`, solo los resueltos, que son los únicos que se pueden usar.
-const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Set() };
+const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Set(), consulta: "" };
 
 const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
   traza.etapa("busqueda");
@@ -426,6 +464,7 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
     tramites,
     grupos: new Map(lista.filter((c) => c.sinResolver).map((g) => [g.id, g])),
     ids: new Set(lista.map((c) => c.id)),
+    consulta: consultaBusqueda,
   };
 };
 
@@ -531,7 +570,7 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
 
   traza.etapa("modelo");
   const salidaRaw = await ia.generarRespuesta({
-    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista), signal),
+    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal),
     turnos: mensajes,
     esquema: ESQUEMA_SALIDA,
     signal,
@@ -671,7 +710,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
 
   traza.etapa("modelo");
   const deltas = ia.generarRespuestaStream({
-    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista), signal),
+    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal),
     turnos: mensajes,
     signal,
   });

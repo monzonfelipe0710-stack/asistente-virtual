@@ -19,5 +19,18 @@ export const cortarEnOracion = (texto, tope) => {
   return `${texto.slice(0, espacio > 0 ? espacio : tope - 1).trimEnd()}…`;
 };
 
+// Recorta un texto largo con "…": en el último fin de oración seguido de un espacio (así no corta
+// "1.500") si deja al menos la mitad del tope, y si no en la última palabra completa.
+export const recortarEnOracion = (texto, tope) => {
+  if (texto.length <= tope) return texto;
+  const fines = [...texto.slice(0, tope + 1).matchAll(/[.!?…](?=\s)|\n/g)].map((m) => m.index + 1);
+  let corte = fines.at(-1) ?? 0;
+  if (corte < tope / 2) {
+    const espacio = texto.lastIndexOf(' ', tope);
+    corte = espacio > 0 ? espacio : tope;
+  }
+  return `${texto.slice(0, corte).trimEnd()}…`;
+};
+
 export const normalizarNombre = (nombre) =>
   String(nombre ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
