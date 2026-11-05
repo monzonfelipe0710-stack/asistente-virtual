@@ -1,18 +1,19 @@
 import prisma from '../config/prisma.js';
 import { generarEmbedding } from './embedding.service.js';
+import { conSenal } from '../utils/plazo.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
 
 const normalizarNombre = (nombre) =>
   nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
-export const buscarTramites = async (pregunta, limite = 3) => {
-  const embedding = await generarEmbedding(pregunta);
+export const buscarTramites = async (pregunta, { limite = 3, signal } = {}) => {
+  const embedding = await generarEmbedding(pregunta, { signal });
   const vectorSql = `[${embedding.join(',')}]`;
 
   // Se piden de más porque el catálogo tiene trámites repetidos (mismo nombre en
   // distintos organismos) que, si no, ocupan todos los lugares del contexto.
-  const candidatos = await prisma.$queryRaw`
+  const candidatos = await conSenal(prisma.$queryRaw`
     SELECT
       id,
       nombre,
@@ -32,7 +33,7 @@ export const buscarTramites = async (pregunta, limite = 3) => {
       )
     ORDER BY score DESC
     LIMIT ${limite * 4}
-  `;
+  `, signal);
 
   // Vienen ordenados por score: el primero de cada nombre es el de mejor puntaje.
   const vistos = new Set();

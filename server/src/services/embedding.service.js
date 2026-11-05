@@ -1,7 +1,7 @@
 import { ia } from '../core/ai/index.js';
 import prisma from '../config/prisma.js';
 
-export const generarEmbedding = (texto) => ia.generarEmbedding(texto);
+export const generarEmbedding = (texto, opciones) => ia.generarEmbedding(texto, opciones);
 
 export const textoDeTramite = (tramite) => {
   const partes = [

@@ -1,4 +1,5 @@
 import { openai } from '../../config/openai.js';
+import { TIEMPOS_IA } from '../../config/ia.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
 const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
@@ -19,28 +20,37 @@ const construirMensajes = (instruccionSistema, turnos) => [
 
 /** @type {import('./proveedor.js').ProveedorIA} */
 export const openaiAdapter = {
-  async generarEmbedding(texto) {
-    const r = await openai.embeddings.create({ model: MODELO_EMBEDDING, input: texto });
+  async generarEmbedding(texto, { signal } = {}) {
+    const r = await openai.embeddings.create(
+      { model: MODELO_EMBEDDING, input: texto },
+      { ...TIEMPOS_IA.embedding, signal },
+    );
     return r.data[0].embedding;
   },
 
-  async generarRespuesta({ instruccionSistema, turnos, esquema }) {
-    const completion = await openai.chat.completions.create({
-      model: MODELO_CHAT,
-      temperature: TEMPERATURA,
-      messages: construirMensajes(instruccionSistema, turnos),
-      ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
-    });
+  async generarRespuesta({ instruccionSistema, turnos, esquema, signal }) {
+    const completion = await openai.chat.completions.create(
+      {
+        model: MODELO_CHAT,
+        temperature: TEMPERATURA,
+        messages: construirMensajes(instruccionSistema, turnos),
+        ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
+      },
+      { ...TIEMPOS_IA.chat, signal },
+    );
     return completion.choices[0].message.content;
   },
 
-  async *generarRespuestaStream({ instruccionSistema, turnos }) {
-    const stream = await openai.chat.completions.create({
-      model: MODELO_CHAT,
-      temperature: TEMPERATURA,
-      stream: true,
-      messages: construirMensajes(instruccionSistema, turnos),
-    });
+  async *generarRespuestaStream({ instruccionSistema, turnos, signal }) {
+    const stream = await openai.chat.completions.create(
+      {
+        model: MODELO_CHAT,
+        temperature: TEMPERATURA,
+        stream: true,
+        messages: construirMensajes(instruccionSistema, turnos),
+      },
+      { ...TIEMPOS_IA.chat, signal },
+    );
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content ?? '';
       if (delta) yield delta;

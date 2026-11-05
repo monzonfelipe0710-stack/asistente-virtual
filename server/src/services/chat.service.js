@@ -1,6 +1,8 @@
 import { ia } from "../core/ai/index.js";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
+import { TIEMPOS_IA } from "../config/ia.js";
+import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
@@ -294,16 +296,17 @@ export const buscarFugaDeInstrucciones = (texto) => {
   return detectorDeFuga(texto);
 };
 
-const textoDeConversacion = async (cuerpo, { tramites, mensajes, saludo, alCorregirTuteo }) => {
-  const { ejemplos } = await obtenerResumenCatalogo();
+const textoDeConversacion = async (cuerpo, { tramites, mensajes, saludo, alCorregirTuteo, signal }) => {
+  const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, tramites, ejemplos)) return limitarConversacion(cuerpo);
 
-  const instruccion = await armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []);
+  const instruccion = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []), signal);
   const salida = JSON.parse(
     await ia.generarRespuesta({
       instruccionSistema: `${instruccion}\n${INSTRUCCION_SIN_CANDIDATOS}`,
       turnos: mensajes,
       esquema: ESQUEMA_SALIDA,
+      signal,
     }),
   );
   return limitarConversacion(reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo })));
@@ -374,8 +377,11 @@ const copiaInstrucciones = (texto, alDetectarFuga) => {
   return true;
 };
 
+const crearPlazo = (signal) => combinarSenales(AbortSignal.timeout(TIEMPOS_IA.plazoChat), signal);
+
 // `alCorregirTuteo` y `alDetectarFuga` son opcionales: los usan los evals para medir.
-export const responderConsulta = async (mensajes, usuario = null, { alCorregirTuteo, alDetectarFuga } = {}) => {
+export const responderConsulta = async (mensajes, usuario = null, { alCorregirTuteo, alDetectarFuga, signal: externa } = {}) => {
+  const signal = crearPlazo(externa);
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
@@ -405,10 +411,10 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
     .filter((m) => m.rol === "usuario")
     .map((m) => m.texto)
     .join(" ");
-  const encontrados = await buscarTramites(consultaBusqueda);
+  const encontrados = await buscarTramites(consultaBusqueda, { signal });
   const tramites =
     encontrados.length > 0
-      ? await cargarDetalle(encontrados.map((t) => t.id))
+      ? await conSenal(cargarDetalle(encontrados.map((t) => t.id)), signal)
       : [];
 
   const idsDelContexto = new Set(tramites.map((t) => t.id));
@@ -418,9 +424,10 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   const salidaRaw = await ia.generarRespuesta({
-    instruccionSistema: await armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, tramites),
+    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, tramites), signal),
     turnos: mensajes,
     esquema: ESQUEMA_SALIDA,
+    signal,
   });
 
   const salida = JSON.parse(salidaRaw);
@@ -431,7 +438,7 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   if (copiaInstrucciones(cuerpoModelo, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
 
   if (salida.tipo === "conversacion") {
-    const texto = await textoDeConversacion(cuerpoModelo, { tramites, mensajes, saludo, alCorregirTuteo });
+    const texto = await textoDeConversacion(cuerpoModelo, { tramites, mensajes, saludo, alCorregirTuteo, signal });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
     return respuestaConversacional(conSaludo(texto, saludo, usuario));
@@ -494,7 +501,8 @@ const leerMeta = (linea) => {
   }
 };
 
-export async function* responderConsultaStream(mensajes, usuario = null, { alCorregirTuteo } = {}) {
+export async function* responderConsultaStream(mensajes, usuario = null, { alCorregirTuteo, signal: externa } = {}) {
+  const signal = crearPlazo(externa);
   const usuarioId = usuario?.id ?? null;
   const nombre = nombreParaSaludo(usuario);
   const esUnTurno = mensajes.length === 1;
@@ -531,10 +539,10 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
     .filter((m) => m.rol === "usuario")
     .map((m) => m.texto)
     .join(" ");
-  const encontrados = await buscarTramites(consultaBusqueda);
+  const encontrados = await buscarTramites(consultaBusqueda, { signal });
   const tramites =
     encontrados.length > 0
-      ? await cargarDetalle(encontrados.map((t) => t.id))
+      ? await conSenal(cargarDetalle(encontrados.map((t) => t.id)), signal)
       : [];
 
   const idsDelContexto = new Set(tramites.map((t) => t.id));
@@ -543,8 +551,9 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   const deltas = ia.generarRespuestaStream({
-    instruccionSistema: await armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, tramites),
+    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, tramites), signal),
     turnos: mensajes,
+    signal,
   });
 
   let buffer = "";
@@ -612,7 +621,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
 
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
-    const texto = await textoDeConversacion(cuerpo, { tramites, mensajes, saludo, alCorregirTuteo });
+    const texto = await textoDeConversacion(cuerpo, { tramites, mensajes, saludo, alCorregirTuteo, signal });
     const prefijo = componerSaludo(saludo, nombre);
     if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE) yield { tipo: "delta", texto: prefijo };
     yield { tipo: "delta", texto };
