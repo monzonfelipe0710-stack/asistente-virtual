@@ -77,14 +77,15 @@
 | `services/usuario.service.js` | Búsquedas de usuarios, listado sin hash, cambio de estado, sectores asignados (reemplazo en transacción), registro de ciudadano y alta de empleado (bcrypt, 10 rondas), tokens de recuperación y cambio de contraseña (actualiza `passwordCambiadaEn`) |
 | `services/sector.service.js` | CRUD de sectores y `generariaCiclo` (recorre ancestros con `WITH RECURSIVE`, tope 100). Rechaza un sector municipal sin localidad propia ni heredada y limpia la caché del chat al cambiar un sector |
 | `services/jurisdiccion.service.js` | Resuelve la jurisdicción y la localidad efectivas de cada sector (herencia del padre) y las deja en memoria con la caché |
-| `services/importacion.service.js` | Importa el catálogo: sectores por `(nombre, padre)` con jurisdicción y localidad, trámites por `fuenteUrl` |
+| `services/importacion.service.js` | Importa el catálogo sin cortar la corrida: sectores por `(nombre, padre)` con jurisdicción y localidad; trámites por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador. Informe con creados, actualizados, sin cambios, reindexados, fallidos y conflictos; `simular` (`--dry-run`) y despublicación de faltantes con `completa`. Al terminar con cambios incrementa la versión del catálogo |
+| `services/version-catalogo.service.js` | Versión del catálogo en la base (`catalogo_version`): `marcarCatalogoCambiado` la incrementa y `asegurarCacheVigente` la lee como mucho cada `CACHE_CHEQUEO_MS` y vacía la caché local si cambió. Se registra en `cache.limpiar()` para que cada escritura del panel la incremente |
 | `services/tramite.service.js` | CRUD de trámites con requisitos y mesas en transacción, publicar/despublicar, dispara la indexación en segundo plano, borra los archivos de R2 al borrar el trámite y limpia la caché |
 | `services/mesa.service.js` | CRUD de mesas, verifica que las mesas sean generales o del sector, cuenta los trámites que usan una mesa |
-| `services/documento.service.js` | **R2:** sube con `PutObject` a la key `documentos/<uuid>.<ext>`, genera la URL firmada de `GetObject` (300 s), borra con `DeleteObject`; lista los documentos sin exponer la key |
-| `services/embedding.service.js` | Arma el texto del trámite, pide el embedding a `core/ai` y lo guarda con SQL crudo; `indexarSiFalta` para los que no tienen |
+| `services/documento.service.js` | Un documento es un archivo en **R2** (sube con `PutObject` a la key `documentos/<uuid>.<ext>`, firma `GetObject` por 300 s, borra con `DeleteObject`) o un enlace externo (se devuelve tal cual si es http/https, sin tocar R2). Alta, edición (cambiar nombre, pasar de uno a otro o reemplazar el archivo; la key anterior se borra después de guardar) y borrado; lista sin exponer la key |
+| `services/embedding.service.js` | Arma el texto del trámite, pide el embedding a `core/ai` y lo guarda con SQL crudo; `indexarSiFalta` para los que no tienen; `reindexarCatalogo` en lotes con reintentos (con `continuarSiFalla`, un lote que agota los reintentos se prueba de a un trámite y devuelve los fallidos) |
 | `services/busqueda.service.js` | Búsqueda híbrida (pgvector + full-text) sobre trámites publicados, deduplicada por nombre |
 | `services/chat.service.js` | Orquesta el RAG: caché, búsqueda, contexto, prompts, aclaración multivuelta, streaming y registro de la consulta |
-| `services/cache.service.js` | `Map` en memoria con TTL y tope de entradas, clave = pregunta normalizada |
+| `services/cache.service.js` | `Map` en memoria con TTL y tope de entradas, clave = pregunta normalizada. `limpiar()` avisa al gancho que registra `version-catalogo.service.js`, salvo con `{ propagar: false }` |
 | `services/metrica.service.js` | Registra consultas, las agrupa por trámite (con filtro de sectores), lista las sin respuesta y el historial de un usuario |
 | `services/correo.service.js` | Arma el correo de recuperación (texto + HTML, escapa el nombre) y lo manda con el `transporter` |
 | `services/turnos.service.js` | Consulta el padrón: `POST` form-urlencoded a `TURNOS_URL` con `dni` y `sexo`, parsea el XML, timeout de 10 s. Devuelve `null` si la persona no existe (incluido el relleno "SIN DATOS") y lanza si el servicio falla |
@@ -109,7 +110,9 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `TRUST_PROXY` | no | Apagado |
 | `OPENAI_MODELO_CHAT`, `OPENAI_TEMPERATURA` | no | `gpt-4o-mini`, `0.3` (no figuran en `.env.example`) |
 | `UMBRAL_DISTANCIA` | no | `0.5` (no figura en `.env.example`) |
-| `CACHE_TTL_MS`, `CACHE_MAX` | no | 1 hora, 500 entradas (no figuran en `.env.example`) |
+| `CACHE_TTL_MS`, `CACHE_MAX` | no | 1 hora, 500 entradas |
+| `CACHE_CHEQUEO_MS` | no | `5000`: cada cuánto se revisa la versión del catálogo en la base |
+| `SERVIDOR_URL` | no | Solo el script de import: `http://localhost:$PORT`, para avisar si hay un server encendido |
 
 ### 2.4 Versiones
 
@@ -177,9 +180,10 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | DELETE | `/api/tramites/:id` | `auth`, `rol(ADM)`, `sector` | `tramite.eliminar` | Borra también en R2 |
 | PATCH | `/api/tramites/:id/publicar` | `auth`, `rol(SU)` | `tramite.publicar` | Indexa si falta el embedding |
 | PATCH | `/api/tramites/:id/despublicar` | `auth`, `rol(SU)` | `tramite.despublicar` | |
-| POST | `/api/tramites/:id/documentos` | `auth`, `rol(ADM)`, `sector`, `upload.single('archivo')` | `documento.subir` | PDF o DOCX, 10 MB |
+| POST | `/api/tramites/:id/documentos` | `auth`, `rol(ADM)`, `sector`, `upload.single('archivo')` | `documento.subir` | Archivo PDF o DOCX de 10 MB (multipart) o enlace JSON `{ nombre, urlExterna }`; exactamente uno |
+| PATCH | `/api/tramites/:id/documentos/:docId` | `auth`, `rol(ADM)`, `sector`, `upload.single('archivo')` | `documento.actualizar` | `nombre`, `urlExterna` o `archivo` nuevo |
 | GET | `/api/tramites/:id/documentos` | `publicoLimiter`, `auth?` | `documento.listar` | Borrador: solo SU o ADM del sector; al resto 404 |
-| GET | `/api/tramites/:id/documentos/:docId/descargar` | `publicoLimiter`, `auth?` | `documento.descargar` | `{ url }` firmada por 5 min |
+| GET | `/api/tramites/:id/documentos/:docId/descargar` | `publicoLimiter`, `auth?` | `documento.descargar` | `{ url, externa }`: el enlace externo o una URL de R2 firmada por 5 min |
 | DELETE | `/api/tramites/:id/documentos/:docId` | `auth`, `rol(ADM)`, `sector` | `documento.eliminar` | |
 | POST | `/api/chat` | `chatLimiter`, `auth?` | `chat.consultar` | `{ tipo, respuesta, encontrado, tramitesEncontrados, opciones }` |
 | POST | `/api/chat/stream` | `chatLimiter`, `auth?` | `chat.consultarStream` | SSE: eventos `delta`, `fin`, `error` |
@@ -212,7 +216,8 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 | `Requisito` (`requisitos`) | `descripcion`, `dondeSeConsigue?`, `costo?` | `tramite` (CASCADE) |
 | `MesaEntrada` (`mesas_entrada`) | `nombre`, `direccion?`, `localidad?`, `horario?`, `esGeneral` (false) | `sector?` (SET NULL); `tramites` |
 | `TramiteMesa` (`tramite_mesa`) | PK `(tramiteId, mesaId)` | `tramite` (CASCADE), `mesa` (CASCADE) |
-| `Documento` (`documentos`) | `nombre`, `archivo` (key de R2), `tipo?`, `createdAt` | `tramite` (CASCADE) |
+| `Documento` (`documentos`) | `nombre`, `archivo?` (key de R2), `urlExterna?` (http/https), `tipo?`, `createdAt`. Exactamente uno de `archivo` y `urlExterna` (4.3) | `tramite` (CASCADE) |
+| `CatalogoVersion` (`catalogo_version`) | Una fila (`id` = 1): `version` BigInt, `actualizadoEn` | — |
 | `Usuario` (`usuarios`) | `nombre`, `email` único, `passwordHash`, `rol` (default `ADMINISTRADOR`), `estado` (default `PENDIENTE`), `dni?`, `genero?`, único `(dni, genero)`, `resetTokenHash?`, `resetTokenExpira?`, `debeCambiarPassword` (false), `passwordCambiadaEn?`, timestamps | `sectores`, `tramitesACargo`, `consultar` (sic) |
 | `UsuarioSector` (`usuario_sector`) | PK `(usuarioId, sectorId)` | `usuario` (CASCADE), `sector` (CASCADE) |
 | `Consulta` (`consultas`) | `textoConsulta`, `encontrado` (false), `fecha` | `tramite?` (SET NULL), `usuario?` (SET NULL) |
@@ -227,7 +232,10 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 - **Extensión `vector`:** declarada en el schema (`extensions = [vector]`, preview `postgresqlExtensions`) y creada en la migración `init`.
 - **En una base donde se aplicaron las migraciones de Felipe (4.4)** existen además `usuarios.cuil`, `consultas.calificacion`, `consultas.respuesta`, `consultas.topico` y los valores `O` y `X` en `Genero`, que esta rama no conoce.
 
-`tests/esquema.test.js` verifica que la columna y los dos índices existan.
+- **`CHECK` de `documentos`:** `documentos_archivo_o_url_externa` exige exactamente uno de `archivo` y `url_externa`, y `documentos_url_externa_http` que la URL empiece con `http://` o `https://`. Prisma no los modela; están en la migración `20261105130000_documento_url_externa`.
+- **`CHECK` de `catalogo_version`:** `id = 1`, para que haya una sola fila (migración `20261105120000_catalogo_version`).
+
+`tests/esquema.test.js` verifica que la columna y los dos índices existan; `version-catalogo.test.js` y `documentos.test.js`, los `CHECK`.
 
 ### 4.4 Migraciones
 
@@ -252,7 +260,9 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 | 15 | `20261026000000_mesa_horario` | `b7f7656` | `mesas_entrada.horario` |
 | 16 | `20261030000000_genero_x_dni_unico` | `d48ed8f` | Agrega `X` a `Genero` y hace único el DNI (SQL a mano, idempotente) |
 | 17 | `20261104000000_columnas_cuil_calificacion` | `28ec27e` | `usuarios.cuil` y las columnas de calificación de `consultas` (SQL a mano, idempotente) |
-| 18 | `20261105000000_jurisdiccion_sector` | — | Enum `Jurisdiccion`, `sectores.jurisdiccion` y `sectores.localidad`; los sectores raíz quedan `PROVINCIAL` (SQL a mano, idempotente) |
+| 18 | `20261105000000_jurisdiccion_sector` | `ee5447d` | Enum `Jurisdiccion`, `sectores.jurisdiccion` y `sectores.localidad`; los sectores raíz quedan `PROVINCIAL` (SQL a mano, idempotente) |
+| 19 | `20261105120000_catalogo_version` | `fb55a07` | Tabla de una fila `catalogo_version` para invalidar la caché entre procesos (SQL a mano, idempotente) |
+| 20 | `20261105130000_documento_url_externa` | `58b9b56` | `documentos.url_externa`, `archivo` opcional y los dos `CHECK` (SQL a mano, idempotente) |
 
 **Las de tu compañero (Felipe) están solo en otras ramas** y no existen en `dev-nata`:
 
@@ -287,7 +297,7 @@ En Zod 4, `z.object` **descarta en silencio** las claves que no declara. Ningún
 | `crearSectorSchema` / `actualizarSectorSchema` | `sector.validator.js` | `nombre`, `tipo` (enum de Prisma), `parentId?` nullable; el de actualizar es `.partial()` |
 | `crearTramiteSchema` / `actualizarTramiteSchema` | `tramite.validator.js` | `nombre`, `descripcion`, `costo?` ≥ 0, `sectorId`, `requisitos[]`, `mesaIds[]`. Crear pone `[]` por defecto; actualizar es `.partial()` sin defaults |
 | `crearMesaSchema` / `actualizarMesaSchema` | `mesa.validator.js` | `nombre`, `direccion?`, `localidad?`, `horario?`, `esGeneral?`, `sectorId?` nullable |
-| `subirDocumentoSchema` | `documento.validator.js` | `nombre?`: trim, 1 a 200 |
+| `subirDocumentoSchema` / `actualizarDocumentoSchema` | `documento.validator.js` | `nombre?`: trim, 1 a 200; `urlExterna?`: trim, hasta 2000, URL http o https con host. Que venga archivo o URL (y el nombre de un enlace) lo exige el controller |
 | chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-2000 }`; uno de los dos obligatorio |
 
 ### 5.2 Incompatibilidades con el frontend de `origin/dev-felipe`
@@ -341,19 +351,19 @@ POST /api/chat  (o /stream)
        └─ registra la consulta en `consultas` (las aclaraciones no se registran ni se cachean)
 ```
 
-La caché se limpia al crear, editar, borrar, publicar o despublicar un trámite, al editar o borrar una mesa y al subir o borrar un documento.
+La caché se limpia al crear, editar, borrar, publicar o despublicar un trámite, al editar o borrar una mesa y al crear, editar o borrar un documento. Cada una de esas limpiezas incrementa la versión del catálogo en la base, y el import y los scripts de reindexado también la incrementan: antes de usar la caché, cada instancia del server revisa esa versión como mucho cada `CACHE_CHEQUEO_MS` y, si cambió, vacía la suya. A los formularios el modelo los conoce solo por su nombre, sean archivo o enlace.
 
 ### Indexación
 
 - Al crear o editar un trámite, el embedding se genera en segundo plano a partir del nombre, el organismo (sector con su jurisdicción y localidad efectivas), la descripción y los requisitos. Si falla, solo se loguea.
-- Al cambiar el nombre, el padre, la jurisdicción o la localidad de un sector se reindexan en segundo plano los trámites del sector y de sus descendientes; el import reindexa además los trámites que cambiaron de sector.
+- Al cambiar el nombre, el padre, la jurisdicción o la localidad de un sector se reindexan en segundo plano los trámites del sector y de sus descendientes; el import reindexa los trámites nuevos o que cambiaron, los de un sector que cambió y los de la corrida que tienen `embedding` en `null`, en lotes con reintentos y sin cortar si un trámite falla.
 - Al publicar, si el trámite no tiene embedding, se genera.
-- `node scripts/reindexar-faltantes.js` genera los que falten.
+- `node scripts/reindexar-faltantes.js` genera los que falten. Este script y `reindexar-todo.js` incrementan al final la versión del catálogo.
 - `node scripts/reindexar-todo.js` regenera todo el catálogo en lotes de 100 (un pedido de embeddings y un `UPDATE` por lote, 3 reintentos por lote, `--desde` para retomar, `--estimar` para ver tokens y costo sin llamar a la API).
 
 ### Catálogo real
 
-`node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se actualizan por `fuenteUrl` y solo se reindexan los que cambiaron.
+`node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).
 
 Los sectores se buscan y se crean por `(nombre, padre)`: el JSON puede traer `padre` (otro sector del mismo JSON), `jurisdiccion` y `localidad`, y en un sector existente se actualiza solo lo que viene. Un trámite cuyo sector se repite bajo distintos padres trae `sectorPadre`. La lógica está en `services/importacion.service.js` y el formato, en el README ("Importar el catálogo").
 

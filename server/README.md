@@ -70,6 +70,8 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `UMBRAL_DISTANCIA` | no | Distancia coseno máxima para que un trámite sea candidato. Default `0.5` |
 | `CACHE_TTL_MS` | no | Vigencia de la caché de respuestas. Default 1 hora |
 | `CACHE_MAX` | no | Entradas máximas de la caché. Default `500` |
+| `CACHE_CHEQUEO_MS` | no | Cada cuánto el server revisa la versión del catálogo en la base para vaciar su caché. Default `5000` |
+| `SERVIDOR_URL` | no | Solo para el script de import: dónde consultar `/api/health` para avisar si hay un server encendido. Default `http://localhost:$PORT` |
 | `OPENAI_TIMEOUT_EMBEDDING_MS`, `OPENAI_REINTENTOS_EMBEDDING` | no | Timeout por intento y reintentos del embedding. Default `4000` y `1` |
 | `OPENAI_TIMEOUT_CHAT_MS`, `OPENAI_REINTENTOS_CHAT` | no | Timeout por intento y reintentos del modelo, con y sin streaming. Default `8000` y `1` |
 | `OPENAI_ESPERA_MAXIMA_REINTENTO_MS` | no | Espera máxima antes de reintentar, aunque OpenAI pida más con `retry-after`. Default `2000` |
@@ -90,9 +92,9 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `npx prisma migrate deploy` | Aplica las migraciones pendientes |
 | `npx prisma db seed` | Crea el superusuario inicial |
 | `npm run seed:demo` | Carga (o recarga) los datos de prueba |
-| `node scripts/importarTramites.js [archivo]` | Importa el catálogo real (default `ingestion/data/tramites_normalizado.json` del repo). Formato en [Importar el catálogo](#importar-el-catálogo) |
-| `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen |
-| `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding |
+| `node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa --despublicar-faltantes]` | Importa el catálogo (default `ingestion/data/tramites_normalizado.json` del repo). Formato y opciones en [Importar el catálogo](#importar-el-catálogo) |
+| `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
+| `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
 | `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
 
@@ -117,10 +119,35 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
   queda `PROVINCIAL` y un hijo hereda. En un sector existente se actualiza solo lo que el JSON
   trae: lo que no viene se conserva.
 - Un trámite nombra su sector; `sectorPadre` hace falta solo si el nombre se repite bajo
-  distintos padres (`null` para el de la raíz). Si no se puede saber cuál es, se saltea.
-- Los trámites se actualizan por `fuenteUrl` (sin `fuenteUrl` se crean de nuevo cada vez) y
-  solo se reindexan los que cambiaron. El script corre aparte: el server en marcha sigue con la
-  caché anterior hasta reiniciarlo o hasta que venza.
+  distintos padres (`null` para el de la raíz).
+- **Identificación de un trámite.** Con `fuenteUrl`, por la URL. Sin `fuenteUrl`, por
+  (sector, nombre normalizado: sin tildes, mayúsculas ni espacios de más) entre los trámites que
+  creó el importador (encargado `sistema@chatap.local`). Si en el sector ya hay uno cargado a
+  mano con ese nombre, no se pisa. Un trámite del importador sin URL la adopta si después viene
+  con una.
+- **Nunca corta la corrida.** Cada trámite se procesa aparte y al final se imprime un informe:
+  creados, actualizados, sin cambios, reindexados, **fallidos** con su motivo (sector no
+  encontrado o ambiguo, falta el nombre o la descripción, error de la base, embedding que falló)
+  y **conflictos**, donde no se escribe nada: la `fuenteUrl` ya es de un trámite de otro sector
+  (no se lo mueve), hay un trámite cargado a mano con el mismo nombre o el trámite está repetido
+  en el JSON. Con fallidos, el script sale con código 1.
+- **Embeddings en lotes** de 100 (`--lote n`) con 3 reintentos por lote. Si un lote los agota,
+  se prueba de a un trámite y los que fallan quedan como fallidos. Se reindexan los trámites
+  nuevos, los que cambiaron, los de un sector que cambió (y sus descendientes) y los que vinieron
+  en la corrida con `embedding` en `null`, aunque no hayan cambiado.
+- `--dry-run` hace todo el cálculo e imprime el informe sin escribir en la base ni llamar a la
+  API de embeddings.
+- `--despublicar-faltantes` exige `--completa`; sin ella, el script termina con un error.
+  Despublica los trámites **del importador** que no vinieron en el JSON, solo dentro de los
+  sectores del JSON y sus descendientes: importar con `--completa` el catálogo municipal no toca
+  el provincial. Nunca despublica trámites cargados a mano, y no despublica nada si algún trámite
+  del JSON no se pudo identificar (podría ser uno de los "faltantes"). Un trámite despublicado se
+  vuelve a publicar a mano.
+- **Caché.** Si hubo cambios, el import incrementa la versión del catálogo en la base y el server
+  en marcha vacía su caché en unos segundos (ver [Notas de diseño](#notas-de-diseño)). El script
+  avisa si hay un server respondiendo en `SERVIDOR_URL`; si no hay ninguno, no hace falta nada,
+  porque el que arranque empieza sin caché. Solo pide reiniciar el server si no pudo incrementar
+  la versión (por ejemplo, porque falta la migración `catalogo_version`).
 
 ## Estructura
 
@@ -156,7 +183,8 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | `Requisito` (`requisitos`) | Requisitos de un trámite, con dónde se consigue y costo |
 | `MesaEntrada` (`mesas_entrada`) | Lugares de presentación, con horario. Generales o de un sector |
 | `TramiteMesa` (`tramite_mesa`) | Relación N a N trámite ↔ mesa |
-| `Documento` (`documentos`) | Formularios descargables. Guarda la key del archivo en R2 |
+| `Documento` (`documentos`) | Formularios descargables: la key de un archivo en R2 (`archivo`) o un enlace externo http(s) (`urlExterna`), exactamente uno de los dos (`CHECK` en la base) |
+| `CatalogoVersion` (`catalogo_version`) | Una sola fila con un contador que se incrementa cada vez que cambia el catálogo; el server la usa para vaciar su caché |
 | `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo ni las fuentes oficiales), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
 
 La columna `tramites.search_vector` es generada (`GENERATED ALWAYS AS ... STORED`, full-text
@@ -375,10 +403,11 @@ o editar, el embedding se recalcula en segundo plano; al publicar se genera si f
 
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
-| POST | `/api/tramites/:id/documentos` | ADM del sector | `multipart/form-data`: `archivo` (PDF o DOCX, hasta 10 MB) y `nombre` opcional → 201 `{ id, nombre, tipo, createdAt, tramiteId }` |
-| GET | `/api/tramites/:id/documentos` | público, 60 / min, token opcional | `[{ id, nombre, tipo, createdAt }]` |
-| GET | `/api/tramites/:id/documentos/:docId/descargar` | público, 60 / min, token opcional | `{ url }` firmada por 5 minutos |
-| DELETE | `/api/tramites/:id/documentos/:docId` | ADM del sector | 204 |
+| POST | `/api/tramites/:id/documentos` | ADM del sector | Un archivo (`multipart/form-data`: `archivo` PDF o DOCX de hasta 10 MB y `nombre` opcional) o un enlace (JSON `{ nombre, urlExterna }`, http o https, con `nombre` obligatorio). Los dos a la vez, o ninguno: 400 → 201 `{ id, nombre, tipo, urlExterna, createdAt, tramiteId }` |
+| PATCH | `/api/tramites/:id/documentos/:docId` | ADM del sector | `nombre`, `urlExterna` o un `archivo` nuevo (multipart). Pasar a enlace o reemplazar el archivo borra el anterior de R2 después de guardar. Archivo y URL a la vez, o nada: 400 → 200 con el documento |
+| GET | `/api/tramites/:id/documentos` | público, 60 / min, token opcional | `[{ id, nombre, tipo, urlExterna, createdAt }]` (la key de R2 nunca sale) |
+| GET | `/api/tramites/:id/documentos/:docId/descargar` | público, 60 / min, token opcional | `{ url, externa }`: el enlace tal cual si es externo (sin firmar nada; 409 si no es http o https) o una URL de R2 firmada por 5 minutos |
+| DELETE | `/api/tramites/:id/documentos/:docId` | ADM del sector | 204. Borrar un enlace no llama a R2 |
 
 Las rutas públicas siguen la visibilidad del trámite: si está publicado, cualquiera; si
 es un borrador, solo un SU o un ADM del sector (con token), y al resto se le responde 404.
@@ -667,12 +696,15 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **Sacar del historial:** nuevo `DELETE /api/consultas/:id` (no borra la fila).
 - **Panel de calificaciones:** nuevo `GET /api/consultas/calificaciones` para SU y ADM.
 - **503 en el chat:** si OpenAI falla o se agota el plazo, `POST /api/chat` responde 503 (antes 500 `Error del servidor.`) con `"El asistente no está disponible en este momento. Probá de nuevo en unos segundos."`, y el evento `error` de `/api/chat/stream` trae ese mismo mensaje.
+- **Documentos como enlace:** `POST /api/tramites/:id/documentos` acepta también JSON `{ nombre, urlExterna }`; nuevo `PATCH /api/tramites/:id/documentos/:docId`; el listado trae `urlExterna` (`null` en un archivo) y `descargar` devuelve `{ url, externa }`. Un enlace tiene `tipo` `null`.
 - **Aclaración por jurisdicción o localidad:** con trámites del mismo nombre en distintos organismos, `POST /api/chat` y el evento `fin` pueden traer `tipo`/`tipoRespuesta` `aclaracion` con `opciones: [{ id, nombre, jurisdiccion, localidad }]`. Conviene que el front muestre las opciones y mande su `nombre` (o el historial en `mensajes`): con solo "Clorinda" como `pregunta`, sin historial, no se sabe de qué trámite se habla.
 
 ## Cómo funciona el chat
 
 1. **Caché.** Una pregunta de un solo turno se busca primero en una caché en memoria
-   (normalizada, 1 hora, 500 entradas). Se limpia al cambiar trámites, mesas o documentos.
+   (normalizada, 1 hora, 500 entradas). Se limpia al cambiar trámites, mesas o documentos, y
+   también cuando otro proceso cambió el catálogo (el import, otra instancia): antes de usarla se
+   revisa la versión del catálogo en la base, como mucho cada `CACHE_CHEQUEO_MS`.
    Un acierto de caché también se registra y tiene su propio `consultaId`.
    El embedding de cada trámite se arma con `Trámite: <nombre>. Organismo: <sector> (<jurisdicción>, <localidad>). Descripción: … Requisitos: …`
    (`textoDeTramite`). Se regenera al crear o editar el trámite, al importarlo con cambios y, en
@@ -716,7 +748,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    (primero los `TRAMITES_DESTACADOS` que estén publicados: Pasaporte, Solicitud de Certificado
    de Buena Conducta y Nuevo Ejemplar para Argentinos; después los más consultados con
    respuesta; si no alcanzan, por orden alfabético; sin nombres repetidos). Con eso responde "qué trámites hay" sin inventar. Queda en memoria (1 hora) y
-   se invalida junto con la caché de respuestas cuando cambian trámites, mesas o documentos.
+   se invalida junto con la caché de respuestas (por un cambio en el panel o en la versión del catálogo).
 5. **Modelo:** devuelve un JSON con `tipo` (`respuesta`, `aclaracion` o `conversacion`),
    `saludo`, `tramiteId`, `respuesta`, `tramitesUsados` y `opciones` (en streaming, la
    primera línea es ese JSON sin `respuesta` y después el texto). `tramiteId` es el trámite
@@ -772,11 +804,15 @@ escritos literalmente: son invisibles y tienen que ir con el escape. Los demás 
 el login (por email y por DNI), el registro de ciudadanos con el padrón simulado, la
 calificación, el historial y el panel de calificaciones de las consultas, el resumen del
 catálogo, el saludo y el chat con el modelo simulado (conversación, mensaje fijo, saludo,
-caché sin nombre y streaming).
+caché sin nombre y streaming), el import (jerarquía, identificación sin `fuenteUrl`, conflictos,
+fallidos que no cortan, `--dry-run` y despublicación), el reindexado en lotes con su respaldo de a
+un trámite, la versión del catálogo y los documentos con archivo o enlace (R2 y la firma
+simulados: alta, edición, descarga, borrado y que el chat los nombre sin la URL).
 
 `esquema.test.js`, `login.test.js`, `registro.test.js`, `calificar.test.js`,
-`historial-consultas.test.js`, `calificaciones.test.js`, `catalogo.test.js` y `chat.test.js`
-usan la base del `.env`: crean sus propios datos (usuarios con dominios `.test.invalid`) y los
+`historial-consultas.test.js`, `calificaciones.test.js`, `catalogo.test.js`, `chat.test.js`,
+`importacion.test.js`, `reindexado.test.js`, `version-catalogo.test.js` y `documentos.test.js`
+usan la base del `.env` (conviene apuntar `DATABASE_URL` a la base temporal): crean sus propios datos (usuarios con dominios `.test.invalid`) y los
 borran al terminar (`catalogo.test.js` solo lee). El script de `npm test` incluye
 `--experimental-test-module-mocks` para simular el padrón, el modelo y la búsqueda.
 
@@ -821,7 +857,20 @@ cerrar un ciclo.
 aplica aunque el campo esté en `.partial()`, y un array presente significa "reemplazar
 todo".
 
-**Borrar un trámite limpia R2 a mano.** La cascada borra los registros, no los archivos.
+**Borrar un trámite limpia R2 a mano.** La cascada borra los registros, no los archivos. Los
+documentos que son enlaces no tienen nada en R2.
+
+**La caché se invalida con una versión del catálogo en la base.** El import corre en otro
+proceso y puede haber más de una instancia del server. Por eso cada cambio del catálogo (el
+import, los scripts de reindexado y, vía `cache.limpiar()`, cada escritura del panel) incrementa
+`catalogo_version.version`. Antes de usar la caché, el server lee esa versión como mucho cada
+`CACHE_CHEQUEO_MS` (es una consulta chica) y, si cambió, vacía su caché local sin volver a
+incrementarla. Si la tabla no existe (migración sin aplicar), el chat sigue andando y se avisa
+una sola vez en el log. Ver [`version-catalogo.service.js`](src/services/version-catalogo.service.js).
+
+**Un documento es un archivo o un enlace, nunca los dos.** Lo garantiza un `CHECK` en la base,
+junto con otro que exige http o https. La descarga de un enlace devuelve la URL tal cual, después
+de revalidarla. Al modelo solo le llega el nombre del documento, nunca la URL.
 
 **El padrón se consulta con `node:https` y `insecureHTTPParser`.** El servicio responde
 encabezados que no cumplen HTTP/1.1 y `fetch` los rechaza. El parser permisivo se habilita
@@ -840,5 +889,7 @@ los suyos. Los scripts de importación corren en otro proceso y no limpian la ca
 - Editar una mesa no revalida los trámites que ya la usan.
 - Alinear las migraciones con las de otras ramas.
 - Migrar `package.json#prisma` a `prisma.config.ts` antes de Prisma 7.
+- Aplicar en la base real `20261105120000_catalogo_version` y `20261105130000_documento_url_externa` (antes, un branch de respaldo en Neon), antes o junto con el deploy: sin `catalogo_version` el server avisa una vez en el log y la caché vuelve a durar hasta 1 hora, pero sin `url_externa` fallan los endpoints de documentos.
+- Un trámite que `--despublicar-faltantes` bajó no se vuelve a publicar solo si reaparece en el JSON.
 
 Más detalle en [`docs/estado-actual-backend.md`](docs/estado-actual-backend.md).
