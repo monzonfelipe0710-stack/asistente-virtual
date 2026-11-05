@@ -439,7 +439,7 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 | `respuesta` | Texto para el ciudadano (la pregunta aclaratoria si `tipo` es `aclaracion`). Si la persona saludó, empieza con el saludo que compone el servidor (ver abajo) |
 | `encontrado` | `true` solo si se respondió con algún trámite. Siempre `false` en una aclaración |
 | `tramitesEncontrados` | Trámites usados en la respuesta. Vacío si no se encontró nada o es una aclaración |
-| `opciones` | Trámites entre los que elegir, solo en una aclaración |
+| `opciones` | Trámites entre los que elegir, solo en una aclaración: `[{ id, nombre }]`. En la aclaración por jurisdicción o localidad (ver [Cómo funciona el chat](#cómo-funciona-el-chat)) cada opción trae además `jurisdiccion` y `localidad`, y su `nombre` ("Habilitación comercial en Clorinda") mandado como `pregunta` ya resuelve el trámite |
 | `conversacional` | `true` si el mensaje no pedía un trámite (saludo, gracias, pregunta sobre el asistente o el catálogo, tema ajeno): `respuesta` es el texto del asistente, `tipo` es `respuesta`, `encontrado` es `false`, no hay trámites ni opciones y no se registra (`consultaId` y `calificarToken` `null`). `false` en todos los demás casos |
 | `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (no se registran) o si falló el registro |
 | `calificarToken` | Token para calificar esa consulta sin sesión (32 caracteres hex). `null` cuando `consultaId` es `null`. Cada consulta tiene el suyo, también las que salen de la caché |
@@ -666,6 +666,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **Sacar del historial:** nuevo `DELETE /api/consultas/:id` (no borra la fila).
 - **Panel de calificaciones:** nuevo `GET /api/consultas/calificaciones` para SU y ADM.
 - **503 en el chat:** si OpenAI falla o se agota el plazo, `POST /api/chat` responde 503 (antes 500 `Error del servidor.`) con `"El asistente no está disponible en este momento. Probá de nuevo en unos segundos."`, y el evento `error` de `/api/chat/stream` trae ese mismo mensaje.
+- **Aclaración por jurisdicción o localidad:** con trámites del mismo nombre en distintos organismos, `POST /api/chat` y el evento `fin` pueden traer `tipo`/`tipoRespuesta` `aclaracion` con `opciones: [{ id, nombre, jurisdiccion, localidad }]`. Conviene que el front muestre las opciones y mande su `nombre` (o el historial en `mensajes`): con solo "Clorinda" como `pregunta`, sin historial, no se sabe de qué trámite se habla.
 
 ## Cómo funciona el chat
 
@@ -679,7 +680,25 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 2. **Búsqueda híbrida** con el texto de todos los turnos del usuario, solo sobre trámites
    publicados con embedding: 0,6 · similitud coseno (pgvector, HNSW) + 0,4 · `ts_rank`
    full-text en español (GIN). Es candidato si la distancia coseno es menor a
-   `UMBRAL_DISTANCIA` o si coincide por texto. Se descartan los nombres repetidos y quedan 3.
+   `UMBRAL_DISTANCIA` o si coincide por texto. Los trámites se agrupan por nombre normalizado
+   (minúsculas, sin acentos) y quedan los 3 grupos de mejor puntaje, cada uno con **todas** sus
+   variantes publicadas: así las copias de un mismo trámite en distintos organismos no ocupan
+   el lugar de otros trámites.
+   **Variantes** ([`variantes.service.js`](src/services/variantes.service.js)): cada variante tiene
+   un par (jurisdicción, localidad) efectivo. Un grupo con un solo par se resuelve con la mejor
+   variante, como antes (por ejemplo, las copias de "Licencias médicas de corto tratamiento").
+   Si tiene más de un par, se mira qué nombró la persona en sus turnos: una localidad conocida
+   (comparada sin acentos y por palabras completas; "provincia de Formosa" no cuenta como la
+   localidad Formosa) y las palabras "municipal", "municipalidad", "municipio", "provincial" o
+   "nacional". Si eso deja un solo par, se usa esa variante; si no, el grupo queda **sin
+   resolver** y va al contexto como una sola línea, sin descripción, con los pares disponibles.
+   Si el modelo elige ese grupo (`respuesta` con su id en `tramiteId`), el servidor descarta el
+   texto del modelo y responde una aclaración armada, sin cachear ni registrar, aunque se haya
+   pasado el tope de aclaraciones: por localidad ("¿De qué localidad lo necesitás? Está cargado
+   para: Clorinda, Pirané o Las Lomitas…") o, si los pares difieren en jurisdicción, "¿Necesitás
+   el trámite provincial o el de la Municipalidad de Formosa?". Si la persona nombró una
+   localidad que el grupo no tiene, la pregunta empieza avisándolo. En streaming se decide con
+   la línea del JSON, antes de transmitir texto, y se corta el resto de la llamada al modelo.
 3. **Sin candidatos:** se llama igual al modelo, con el contexto vacío (`(ninguno)`): un
    saludo da `conversacion` y un trámite que no existe, `respuesta` con `tramiteId: null`.
    El prompt avisa que los candidatos pueden no tener nada que ver con el mensaje.

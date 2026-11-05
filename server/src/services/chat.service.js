@@ -5,6 +5,8 @@ import { TIEMPOS_IA } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
+import { obtenerJurisdicciones } from "./jurisdiccion.service.js";
+import { aclaracionDeGrupo, formatearGrupo, localidadesConocidas, loQueNombro, resolverGrupos } from "./variantes.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
@@ -53,6 +55,7 @@ Reglas:
 - Enlaces: NO escribas enlaces ni URLs, tampoco el de la fuente oficial. El sistema agrega al final de la respuesta el enlace a la fuente oficial de cada trámite que usaste (los que dicen "Fuente oficial: sí").
 - Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Sacar, renovar, tramitar o pedir un trámite son formas del MISMO trámite (renovar el pasaporte corresponde al trámite Pasaporte). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con "tramiteId" null.
 - Variantes del trámite pedido: si dos o más candidatos son variantes distintas de lo que pide la persona, cada una para una situación diferente (ej. "sacar el DNI" → Nuevo Ejemplar, DNI en el celular, DNI para un recién nacido), y la persona no dijo cuál, el tipo es "aclaracion", aunque diga "sacar", "renovar" o "tramitar". Que sean formas del mismo trámite sirve para reconocerlo, no para elegir la variante por la persona. Si los candidatos son el mismo trámite en otra modalidad (ej. Pasaporte y Pasaporte Express), respondé con el general.
+- Un candidato que dice "Está cargado para varias jurisdicciones o localidades" es un solo trámite que existe en distintos organismos. Si la pregunta trata de él, el tipo es "respuesta" con su ID en "tramiteId": el sistema le pregunta a la persona cuál necesita. No describas sus datos ni elijas una jurisdicción o localidad por la persona.
 - Si la persona pide un trámite (aunque no exista en el contexto), el tipo es "respuesta" o "aclaracion", nunca "conversacion".
 - Una pregunta sobre un trámite del contexto (sus reglas o restricciones, para qué sirve, qué pasa si la persona lo pierde o se lo olvida, si dan turno) es tipo "respuesta" con ese trámite (su ID en "tramiteId"), aunque pida un dato que no está cargado. Pedir las reglas de un trámite no es pedir tus reglas. "conversacion" es solo para mensajes que no preguntan nada sobre un trámite.
 - Una pregunta que depende de un trámite ya mencionado en la conversación ("¿y cuánto cuesta?", "¿dónde se hace?", "¿qué necesito?") es tipo "respuesta" con ese trámite (su ID en "tramiteId"), nunca "conversacion".
@@ -252,11 +255,13 @@ export const cargarDetalle = async (ids) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
+const formatearCandidato = (c) => (c.sinResolver ? formatearGrupo(c) : formatearTramite(c));
+
 // Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta.
-const armarInstruccion = async (prompt, topeAlcanzado, tramites) => {
+const armarInstruccion = async (prompt, topeAlcanzado, candidatos) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
   const { texto: resumen } = await obtenerResumenCatalogo();
-  const contexto = tramites.length > 0 ? tramites.map(formatearTramite).join("\n\n") : "(ninguno)";
+  const contexto = candidatos.length > 0 ? candidatos.map(formatearCandidato).join("\n\n") : "(ninguno)";
   return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
 };
 
@@ -297,9 +302,9 @@ export const buscarFugaDeInstrucciones = (texto) => {
   return detectorDeFuga(texto);
 };
 
-const textoDeConversacion = async (cuerpo, { tramites, mensajes, saludo, alCorregirTuteo, signal }) => {
+const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, signal }) => {
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
-  if (!nombraCandidato(cuerpo, tramites, ejemplos)) return limitarConversacion(cuerpo);
+  if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
 
   const instruccion = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []), signal);
   const salida = JSON.parse(
@@ -378,6 +383,50 @@ const copiaInstrucciones = (texto, alDetectarFuga) => {
   return true;
 };
 
+const textoDeLaPersona = (mensajes) =>
+  mensajes
+    .filter((m) => m.rol === "usuario")
+    .map((m) => m.texto)
+    .join(" ");
+
+// Los candidatos van en el orden de la búsqueda: los trámites resueltos con su detalle y los grupos
+// de nombre repetido que la persona no resolvió (ver variantes.service.js). `ids` son todos los
+// ids del contexto; `tramites`, solo los resueltos, que son los únicos que se pueden usar.
+const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Set() };
+
+const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
+  traza.etapa("busqueda");
+  const encontrados = await buscarTramites(consultaBusqueda, { signal });
+  if (encontrados.length === 0) return SIN_CANDIDATOS;
+
+  traza.etapa("detalle");
+  const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
+  const nombrado = loQueNombro(consultaBusqueda, localidadesConocidas(jurisdicciones));
+  const resueltos = resolverGrupos(encontrados, jurisdicciones, nombrado);
+  const ids = resueltos.filter((c) => !c.sinResolver).map((c) => c.id);
+  const tramites = ids.length > 0 ? await conSenal(cargarDetalle(ids), signal) : [];
+  const porId = new Map(tramites.map((t) => [t.id, t]));
+  const lista = resueltos.map((c) => (c.sinResolver ? c : porId.get(c.id))).filter(Boolean);
+
+  return {
+    lista,
+    tramites,
+    grupos: new Map(lista.filter((c) => c.sinResolver).map((g) => [g.id, g])),
+    ids: new Set(lista.map((c) => c.id)),
+  };
+};
+
+const opcionesDeLaAclaracion = (ids, candidatos) =>
+  (ids ?? [])
+    .filter((id) => candidatos.ids.has(id))
+    .map((id) => ({ id, nombre: candidatos.lista.find((c) => c.id === id).nombre }));
+
+// La persona pidió un trámite que existe con el mismo nombre en distintos organismos y no dijo
+// cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones), no la cachea
+// ni la registra.
+const grupoElegido = (salida, candidatos) =>
+  salida?.tipo === "respuesta" ? candidatos.grupos.get(salida.tramiteId) ?? null : null;
+
 const crearPlazo = (signal) => combinarSenales(AbortSignal.timeout(TIEMPOS_IA.plazoChat), signal);
 
 export const MENSAJE_NO_DISPONIBLE =
@@ -452,19 +501,9 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
   }
 
   // La búsqueda usa el contexto acumulado (junta los turnos del usuario).
-  const consultaBusqueda = mensajes
-    .filter((m) => m.rol === "usuario")
-    .map((m) => m.texto)
-    .join(" ");
-  traza.etapa("busqueda");
-  const encontrados = await buscarTramites(consultaBusqueda, { signal });
-  traza.etapa("detalle");
-  const tramites =
-    encontrados.length > 0
-      ? await conSenal(cargarDetalle(encontrados.map((t) => t.id)), signal)
-      : [];
-
-  const idsDelContexto = new Set(tramites.map((t) => t.id));
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza);
+  const { tramites } = candidatos;
+  const idsResueltos = new Set(tramites.map((t) => t.id));
 
   // Tope: contamos las aclaraciones previas (turnos del asistente).
   const topeAlcanzado =
@@ -472,7 +511,7 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
 
   traza.etapa("modelo");
   const salidaRaw = await ia.generarRespuesta({
-    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, tramites), signal),
+    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista), signal),
     turnos: mensajes,
     esquema: ESQUEMA_SALIDA,
     signal,
@@ -487,20 +526,29 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
 
   if (salida.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpoModelo, { tramites, mensajes, saludo, alCorregirTuteo, signal });
+    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, signal });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
     return respuestaConversacional(conSaludo(texto, saludo, usuario));
   }
 
+  const grupo = grupoElegido(salida, candidatos);
+  if (grupo) {
+    const { texto, opciones } = aclaracionDeGrupo(grupo);
+    return {
+      tipo: "aclaracion",
+      respuesta: conSaludo(texto, saludo, usuario),
+      opciones,
+      encontrado: false,
+      tramitesEncontrados: [],
+      conversacional: false,
+      ...SIN_REGISTRO,
+    };
+  }
+
   // ACLARACIÓN (solo si no llegamos al tope).
   if (salida.tipo === "aclaracion" && !topeAlcanzado) {
-    const opciones = (salida.opciones ?? [])
-      .filter((id) => idsDelContexto.has(id))
-      .map((id) => {
-        const t = tramites.find((x) => x.id === id);
-        return { id, nombre: t.nombre };
-      });
+    const opciones = opcionesDeLaAclaracion(salida.opciones, candidatos);
     // No registramos consulta: una aclaración no es una consulta resuelta.
     return {
       tipo: "aclaracion",
@@ -514,7 +562,7 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
   }
 
   // RESPUESTA.
-  const idsUsados = idsUsadosDe(salida, idsDelContexto);
+  const idsUsados = idsUsadosDe(salida, idsResueltos);
   const encontrado = idsUsados.length > 0;
 
   const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
@@ -593,26 +641,16 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
     }
   }
 
-  const consultaBusqueda = mensajes
-    .filter((m) => m.rol === "usuario")
-    .map((m) => m.texto)
-    .join(" ");
-  traza.etapa("busqueda");
-  const encontrados = await buscarTramites(consultaBusqueda, { signal });
-  traza.etapa("detalle");
-  const tramites =
-    encontrados.length > 0
-      ? await conSenal(cargarDetalle(encontrados.map((t) => t.id)), signal)
-      : [];
-
-  const idsDelContexto = new Set(tramites.map((t) => t.id));
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza);
+  const { tramites } = candidatos;
+  const idsResueltos = new Set(tramites.map((t) => t.id));
 
   const topeAlcanzado =
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   traza.etapa("modelo");
   const deltas = ia.generarRespuestaStream({
-    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, tramites), signal),
+    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista), signal),
     turnos: mensajes,
     signal,
   });
@@ -633,16 +671,29 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
       if (nl === -1) continue;
 
       const parsed = leerMeta(buffer.slice(0, nl));
-      const idsUsados = idsUsadosDe(parsed, idsDelContexto);
+
+      // Se responde con la pregunta armada y se corta el resto de la llamada al modelo.
+      const grupo = grupoElegido(parsed, candidatos);
+      if (grupo) {
+        const { texto, opciones } = aclaracionDeGrupo(grupo);
+        const prefijo = componerSaludo(saludoPara(preguntaActual, parsed.saludo), nombre);
+        if (prefijo) yield { tipo: "delta", texto: prefijo };
+        yield { tipo: "delta", texto };
+        yield {
+          tipo: "fin",
+          tipoRespuesta: "aclaracion",
+          encontrado: false,
+          tramitesEncontrados: [],
+          opciones,
+          conversacional: false,
+          ...SIN_REGISTRO,
+        };
+        return;
+      }
+
+      const idsUsados = idsUsadosDe(parsed, idsResueltos);
       const esAclaracion = parsed?.tipo === "aclaracion" && !topeAlcanzado;
-      const opciones = esAclaracion
-        ? (parsed?.opciones ?? [])
-            .filter((id) => idsDelContexto.has(id))
-            .map((id) => {
-              const t = tramites.find((x) => x.id === id);
-              return { id, nombre: t.nombre };
-            })
-        : [];
+      const opciones = esAclaracion ? opcionesDeLaAclaracion(parsed?.opciones, candidatos) : [];
 
       const esConversacion = parsed?.tipo === "conversacion";
       saludo = saludoPara(preguntaActual, parsed?.saludo);
@@ -688,7 +739,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpo, { tramites, mensajes, saludo, alCorregirTuteo, signal });
+    const texto = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, signal });
     const prefijo = componerSaludo(saludo, nombre);
     if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE) yield { tipo: "delta", texto: prefijo };
     yield { tipo: "delta", texto };
