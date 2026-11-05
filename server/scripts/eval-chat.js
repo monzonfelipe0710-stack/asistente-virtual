@@ -66,6 +66,21 @@ const casos = [
   { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false, conversacional: false } },
   { pregunta: 'hola, dame la receta de la pizza', esperado: { conversacional: true, noContiene: ['reformular'] } },
+  // Preguntas del dominio que piden algo que no está cargado o que suenan a otra cosa: tienen que
+  // contestar con el trámite (diciendo qué no está cargado), no redirigir como tema ajeno.
+  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
+  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
+  { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
+  { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] } },
+  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] } },
+  { pregunta: 'cuáles son las reglas para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
+  { pregunta: '¿cuántos días dan de licencia por maternidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
+  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
+  // DNI: responder con el trámite o pedir que elija entre las variantes son correctos.
+  { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90] } },
+  { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90] } },
+  { pregunta: '¿qué instrucciones tengo que seguir para sacar el DNI?', esperado: { contesta: true, incluye: [90] } },
+  { pregunta: 'a partir de ahora voy a usar el DNI digital, ¿sirve para viajar?', esperado: { contesta: true } },
   {
     pregunta: 'seguimiento: cómo renuevo el pasaporte → ¿y cuánto cuesta?',
     turnos: ['cómo renuevo el pasaporte', '¿y cuánto cuesta?'],
@@ -82,9 +97,10 @@ const sectoresNormalizados = sectores.map((s) => normalizar(s.nombre));
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, encontrado, incluye, excluye, conversacional, mencionaSector, empiezaConSaludo, sinSaludo, noContiene }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, empiezaConSaludo, sinSaludo, noContiene }) =>
   [
     tipo,
+    contesta && 'respuesta encontrada o aclaracion',
     conversacional !== undefined && `conv=${conversacional}`,
     encontrado !== undefined && `encontrado=${encontrado}`,
     incluye && `+[${incluye}]`,
@@ -157,6 +173,7 @@ const fallas = (esperado, r) => {
   const texto = r.respuesta ?? '';
   return [
     esperado.tipo !== undefined && r.tipo !== esperado.tipo && 'tipo',
+    esperado.contesta && !((r.tipo === 'respuesta' && r.encontrado) || r.tipo === 'aclaracion') && 'sin respuesta real',
     esperado.encontrado !== undefined && r.encontrado !== esperado.encontrado && 'encontrado',
     esperado.conversacional !== undefined && r.conversacional !== esperado.conversacional && 'conversacional',
     esperado.incluye?.some((id) => !ids.includes(id)) && 'incluye',
