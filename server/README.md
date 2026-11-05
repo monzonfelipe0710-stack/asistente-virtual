@@ -66,7 +66,7 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `CORS_ORIGIN` | no | Orígenes permitidos, separados por coma. Default `http://localhost:5173` |
 | `TRUST_PROXY` | no | Saltos de proxy a confiar. Vacío si el server se expone directo; `1` detrás de un reverse proxy |
 | `OPENAI_MODELO_CHAT` | no | Modelo de las respuestas. Default `gpt-4o-mini` |
-| `OPENAI_TEMPERATURA` | no | Default `0.1` |
+| `OPENAI_TEMPERATURA` | no | Default `0.3` |
 | `UMBRAL_DISTANCIA` | no | Distancia coseno máxima para que un trámite sea candidato. Default `0.5` |
 | `CACHE_TTL_MS` | no | Vigencia de la caché de respuestas. Default 1 hora |
 | `CACHE_MAX` | no | Entradas máximas de la caché. Default `500` |
