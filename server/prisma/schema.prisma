@@ -143,7 +143,9 @@ model TramiteMesa {
 model Documento {
   id        Int @id @default(autoincrement())
   nombre    String
-  archivo   String
+  // Exactamente uno de los dos (CHECK en la migración): clave del archivo en R2 o enlace http(s).
+  archivo    String?
+  urlExterna String? @map("url_externa")
   tipo      String?
   createdAt DateTime @default(now()) @map("created_at")
 

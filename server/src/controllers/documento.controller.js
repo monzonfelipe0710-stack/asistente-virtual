@@ -1,12 +1,14 @@
 import * as documentoService from '../services/documento.service.js';
 import { usuarioTieneSector } from '../services/usuario.service.js';
-import { subirDocumentoSchema } from '../validators/documento.validator.js';
+import { subirDocumentoSchema, actualizarDocumentoSchema } from '../validators/documento.validator.js';
 
-const noEncontrado = (mensaje) => {
+const conEstado = (statusCode, mensaje) => {
   const error = new Error(mensaje);
-  error.statusCode = 404;
+  error.statusCode = statusCode;
   return error;
 };
+
+const noEncontrado = (mensaje) => conEstado(404, mensaje);
 
 const puedeVerBorrador = async (usuario, tramite) => {
   if (usuario?.rol === 'SUPERUSUARIO') return true;
@@ -42,21 +44,27 @@ const obtenerDocumentoDelTramite = async (req) => {
   return documento;
 };
 
+// Un documento es un archivo (multipart, campo `archivo`) o un enlace (`urlExterna`), nunca los dos.
 export const subir = async (req, res) => {
-  if (!req.file) {
-    const error = new Error('No se envió ningún archivo.');
-    error.statusCode = 400;
-    throw error;
-  }
+  const { nombre, urlExterna } = subirDocumentoSchema.parse(req.body ?? {});
+  if (req.file && urlExterna) throw conEstado(400, 'Enviá un archivo o una URL externa, no los dos.');
+  if (!req.file && !urlExterna) throw conEstado(400, 'No se envió ningún archivo ni URL externa.');
+  if (urlExterna && !nombre) throw conEstado(400, 'Un enlace necesita un nombre.');
 
-  const { nombre } = subirDocumentoSchema.parse(req.body ?? {});
-
-  const documento = await documentoService.subirDocumento(req.file, {
-    nombre,
-    tramiteId: req.tramite.id,
-  });
+  const documento = req.file
+    ? await documentoService.subirDocumento(req.file, { nombre, tramiteId: req.tramite.id })
+    : await documentoService.crearEnlace({ nombre, urlExterna, tramiteId: req.tramite.id });
 
   res.status(201).json(documento);
+};
+
+export const actualizar = async (req, res) => {
+  const documento = await obtenerDocumentoDelTramite(req);
+  const { nombre, urlExterna } = actualizarDocumentoSchema.parse(req.body ?? {});
+  if (req.file && urlExterna) throw conEstado(400, 'Enviá un archivo o una URL externa, no los dos.');
+  if (!req.file && urlExterna === undefined && nombre === undefined) throw conEstado(400, 'No hay nada para actualizar.');
+
+  res.json(await documentoService.actualizarDocumento(documento, { nombre, urlExterna, archivo: req.file }));
 };
 
 export const listar = async (req, res) => {
@@ -68,8 +76,8 @@ export const listar = async (req, res) => {
 export const descargar = async (req, res) => {
   await obtenerTramiteVisible(req);
   const documento = await obtenerDocumentoDelTramite(req);
-  const url = await documentoService.generarUrlDescarga(documento.archivo);
-  res.json({ url });
+  const url = await documentoService.generarUrlDescarga(documento);
+  res.json({ url, externa: Boolean(documento.urlExterna) });
 };
 
 export const eliminar = async (req, res) => {

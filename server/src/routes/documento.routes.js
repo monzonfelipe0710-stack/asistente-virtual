@@ -27,6 +27,15 @@ router.get('/', publicoLimiter, autenticarOpcional, asyncHandler(documentoContro
 
 router.get('/:docId/descargar', publicoLimiter, autenticarOpcional, asyncHandler(documentoController.descargar));
 
+router.patch(
+  '/:docId',
+  autenticar,
+  autorizar('ADMINISTRADOR'),
+  asyncHandler(puedeGestionarTramite),
+  upload.single('archivo'),
+  asyncHandler(documentoController.actualizar)
+);
+
 router.delete(
   '/:docId',
   autenticar,
