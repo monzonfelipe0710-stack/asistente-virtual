@@ -622,8 +622,9 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    que se consulte en la mesa de entrada) y como `gratuito` solo si es `0`.
    Siempre va también un **RESUMEN DEL CATÁLOGO** (`catalogo.service.js`): cantidad de
    trámites publicados, los 12 sectores con más trámites publicados y 8 trámites de ejemplo
-   (los más consultados con respuesta; si no alcanzan, por orden alfabético; sin nombres
-   repetidos). Con eso responde "qué trámites hay" sin inventar. Queda en memoria (1 hora) y
+   (primero los `TRAMITES_DESTACADOS` que estén publicados: Pasaporte, Solicitud de Certificado
+   de Buena Conducta y Nuevo Ejemplar para Argentinos; después los más consultados con
+   respuesta; si no alcanzan, por orden alfabético; sin nombres repetidos). Con eso responde "qué trámites hay" sin inventar. Queda en memoria (1 hora) y
    se invalida junto con la caché de respuestas cuando cambian trámites, mesas o documentos.
 5. **Modelo:** devuelve un JSON con `tipo` (`respuesta`, `aclaracion` o `conversacion`),
    `saludo`, `respuesta`, `encontrado`, `tramitesUsados` y `opciones` (en streaming, la

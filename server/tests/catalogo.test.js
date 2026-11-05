@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
-import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
+import { TRAMITES_DESTACADOS, obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 
 // Solo lee la base del .env: no crea ni modifica nada.
 const normalizar = (nombre) =>
@@ -31,7 +31,7 @@ describe('resumen del catálogo', () => {
     for (const s of sectores) assert.ok(texto.includes(`${s.nombre} (${s.cantidad})`));
   });
 
-  it('trae 8 ejemplos publicados, sin nombres repetidos, empezando por el más consultado', async () => {
+  it('trae 8 ejemplos publicados, sin nombres repetidos, empezando por los destacados y después el más consultado', async () => {
     const { ejemplos } = await obtenerResumenCatalogo();
     assert.equal(ejemplos.length, 8);
     assert.equal(new Set(ejemplos.map(normalizar)).size, 8);
@@ -39,11 +39,22 @@ describe('resumen del catálogo', () => {
     const publicados = await prisma.tramite.findMany({ where: { publicado: true, nombre: { in: ejemplos } }, select: { nombre: true } });
     assert.equal(new Set(publicados.map((t) => t.nombre)).size, 8);
 
+    const destacados = (
+      await prisma.tramite.findMany({ where: { publicado: true, nombre: { in: TRAMITES_DESTACADOS } }, select: { nombre: true } })
+    ).map((t) => t.nombre);
+    const esperados = TRAMITES_DESTACADOS.filter((n) => destacados.includes(n));
+    assert.deepEqual(ejemplos.slice(0, esperados.length), esperados);
+
     const [masConsultado] = await prisma.$queryRaw`
       SELECT t.nombre FROM consultas c JOIN tramites t ON t.id = c.tramite_id
-      WHERE c.encontrado AND t.publicado
+      WHERE c.encontrado AND t.publicado AND NOT (t.nombre = ANY(${TRAMITES_DESTACADOS}))
       GROUP BY t.id, t.nombre ORDER BY count(*) DESC, t.id ASC LIMIT 1`;
-    if (masConsultado) assert.equal(ejemplos[0], masConsultado.nombre);
+    if (masConsultado) assert.equal(ejemplos[esperados.length], masConsultado.nombre);
+  });
+
+  it('los destacados existen en la base y están publicados', async () => {
+    const publicados = await prisma.tramite.findMany({ where: { publicado: true, nombre: { in: TRAMITES_DESTACADOS } }, select: { nombre: true } });
+    assert.deepEqual(new Set(publicados.map((t) => t.nombre)), new Set(TRAMITES_DESTACADOS));
   });
 
   it('queda en memoria hasta que se limpia la caché', async () => {

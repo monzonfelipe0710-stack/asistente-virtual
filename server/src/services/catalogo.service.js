@@ -4,6 +4,10 @@ import * as cache from './cache.service.js';
 const CANTIDAD_SECTORES = 12;
 const CANTIDAD_EJEMPLOS = 8;
 
+// Trámites generales y conocidos: van primero entre los ejemplos (si están publicados), porque
+// son los que el chat usa para redirigir un tema ajeno. Nombres tal cual están en la base.
+export const TRAMITES_DESTACADOS = ['Pasaporte', 'Solicitud de Certificado de Buena Conducta', 'Nuevo Ejemplar para Argentinos'];
+
 const normalizarNombre = (nombre) =>
   nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -37,8 +41,21 @@ const sectoresConMasTramites = async () => {
     .slice(0, CANTIDAD_SECTORES);
 };
 
-// Los más consultados con respuesta; si no alcanzan, se completa por orden alfabético.
+const destacadosPublicados = async () => {
+  const publicados = await prisma.tramite.findMany({
+    where: { publicado: true, nombre: { in: TRAMITES_DESTACADOS } },
+    select: { nombre: true },
+  });
+  const nombres = new Set(publicados.map((t) => t.nombre));
+  return TRAMITES_DESTACADOS.filter((nombre) => nombres.has(nombre));
+};
+
+// Primero los destacados publicados; después los más consultados con respuesta y, si no
+// alcanzan, se completa por orden alfabético.
 const tramitesDeEjemplo = async () => {
+  const ejemplos = [];
+  agregarSinRepetir(ejemplos, await destacadosPublicados());
+
   const masConsultados = await prisma.consulta.groupBy({
     by: ['tramiteId'],
     where: { encontrado: true, tramite: { publicado: true } },
@@ -52,7 +69,6 @@ const tramitesDeEjemplo = async () => {
   });
   const nombrePorId = new Map(conNombre.map((t) => [t.id, t.nombre]));
 
-  const ejemplos = [];
   agregarSinRepetir(ejemplos, masConsultados.map((g) => nombrePorId.get(g.tramiteId)).filter(Boolean));
   if (ejemplos.length < CANTIDAD_EJEMPLOS) {
     const alfabeticos = await prisma.tramite.findMany({
