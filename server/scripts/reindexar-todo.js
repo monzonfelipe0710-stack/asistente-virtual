@@ -8,6 +8,7 @@
 import 'dotenv/config';
 import prisma from '../src/config/prisma.js';
 import { reindexarCatalogo } from '../src/services/embedding.service.js';
+import { marcarCatalogoCambiado } from '../src/services/version-catalogo.service.js';
 
 const valor = (nombre) => {
   const i = process.argv.indexOf(nombre);
@@ -26,7 +27,10 @@ try {
     console.log(`${r.tramites} trámites en ${r.lotes} lotes, ${r.caracteres} caracteres, ~${r.tokens} tokens, ~${costo}`);
   } else {
     console.log(`Listo: ${r.tramites} trámites, ${r.tokens} tokens, ${costo}, ${((Date.now() - inicio) / 1000).toFixed(1)} s.`);
-    console.log('El servidor en marcha sigue con la caché anterior hasta reiniciarlo o hasta que venza (1 hora).');
+    const version = await marcarCatalogoCambiado().catch(() => null);
+    console.log(version
+      ? `Catálogo en la versión ${version}: el servidor en marcha vacía su caché en unos segundos.`
+      : 'No se pudo marcar el cambio del catálogo (¿falta la migración catalogo_version?): reiniciá el servidor.');
   }
 } catch (e) {
   console.error(e.message);

@@ -1,6 +1,7 @@
 import prisma from '../config/prisma.js';
 import * as cache from './cache.service.js';
 import { normalizarNombre } from '../utils/texto.js';
+import { asegurarCacheVigente } from './version-catalogo.service.js';
 
 const CANTIDAD_SECTORES = 12;
 const CANTIDAD_EJEMPLOS = 8;
@@ -88,6 +89,7 @@ const armarTexto = ({ totalPublicados, sectores, ejemplos }) =>
   ].join('\n');
 
 export const obtenerResumenCatalogo = async () => {
+  await asegurarCacheVigente();
   const cacheado = cache.obtenerCatalogo();
   if (cacheado) return cacheado;
 

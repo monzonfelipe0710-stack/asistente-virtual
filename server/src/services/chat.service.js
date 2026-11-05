@@ -10,6 +10,7 @@ import { aclaracionDeGrupo, formatearGrupo, localidadesConocidas, loQueNombro, q
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
+import { asegurarCacheVigente } from "./version-catalogo.service.js";
 import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
 import { cortarEnOracion } from "../utils/texto.js";
@@ -499,6 +500,7 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
   if (entradaBloqueada(mensajes)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
+  await asegurarCacheVigente();
 
   // Caché solo para un solo turno (las conversaciones dependen del contexto).
   if (esUnTurno) {
@@ -637,6 +639,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
     yield FIN_CONVERSACIONAL;
     return;
   }
+  await asegurarCacheVigente();
 
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);

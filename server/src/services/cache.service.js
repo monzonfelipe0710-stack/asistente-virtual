@@ -49,8 +49,16 @@ export const guardarJurisdicciones = (valor) => {
   jurisdicciones = { valor, expira: Date.now() + TTL_MS };
 };
 
-export const limpiar = () => {
+// version-catalogo.service.js registra acá el aviso a los demás procesos. Con `propagar: false`
+// (lo usa ese mismo módulo al ver una versión nueva) se vacía solo la caché local.
+let alInvalidar = null;
+export const alLimpiar = (fn) => {
+  alInvalidar = fn;
+};
+
+export const limpiar = (opciones) => {
   cache.clear();
   catalogo = null;
   jurisdicciones = null;
+  if (opciones?.propagar !== false) alInvalidar?.();
 };

@@ -22,11 +22,30 @@ const opciones = {
   lote: Number(valor('--lote') ?? 100),
 };
 
+// La caché la invalida la versión del catálogo en la base; el health solo sirve para avisar.
+const servidorResponde = async (base) => {
+  try {
+    const res = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+const avisoDeCache = async ({ cache }) => {
+  const base = process.env.SERVIDOR_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+  if (cache.error) return `No se pudo marcar el cambio del catálogo (${cache.error}). ¿Falta aplicar la migración catalogo_version? Reiniciá el servidor para que no responda con la caché anterior.`;
+  if (!cache.invalidada) return 'Sin cambios: la caché del servidor sigue siendo válida.';
+  return (await servidorResponde(base))
+    ? `Catálogo en la versión ${cache.version}: el servidor en ${base} vacía su caché en unos segundos (CACHE_CHEQUEO_MS, 5 s por defecto).`
+    : `Catálogo en la versión ${cache.version}. No hay servidor respondiendo en ${base}: el que arranque empieza sin caché, y uno en otra dirección también la vacía solo (la versión está en la base).`;
+};
+
 try {
   if (!Number.isInteger(opciones.lote) || opciones.lote < 1) throw new Error('--lote tiene que ser un entero positivo.');
   const informe = await importarCatalogo(JSON.parse(readFileSync(ARCHIVO, 'utf-8')), opciones);
   console.log(formatearInforme(informe));
-  if (!informe.simulado) console.log('El servidor en marcha sigue con la caché anterior hasta reiniciarlo o hasta que venza (1 hora).');
+  if (!informe.simulado) console.log(await avisoDeCache(informe));
   if (informe.fallidos.length > 0) process.exitCode = 1;
 } catch (e) {
   console.error(e.message);

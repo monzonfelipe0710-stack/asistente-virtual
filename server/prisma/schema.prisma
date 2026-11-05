@@ -209,3 +209,12 @@ model Consulta {
   @@index([usuarioId])
   @@map("consultas")
 }
+
+// Una sola fila (id = 1). Ver version-catalogo.service.js.
+model CatalogoVersion {
+  id            Int      @id @default(1)
+  version       BigInt   @default(0)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en")
+
+  @@map("catalogo_version")
+}

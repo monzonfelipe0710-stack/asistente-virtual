@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import * as cache from './cache.service.js';
+import { asegurarCacheVigente } from './version-catalogo.service.js';
 
 export const JURISDICCION_POR_DEFECTO = 'PROVINCIAL';
 
@@ -38,6 +39,7 @@ export const leerSectoresParaResolver = () =>
   prisma.sector.findMany({ select: { id: true, nombre: true, parentId: true, jurisdiccion: true, localidad: true } });
 
 export const obtenerJurisdicciones = async () => {
+  await asegurarCacheVigente();
   const cacheado = cache.obtenerJurisdicciones();
   if (cacheado) return cacheado;
   const valor = resolverJurisdicciones(await leerSectoresParaResolver());

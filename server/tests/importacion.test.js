@@ -70,6 +70,8 @@ describe('importarCatalogo', () => {
   it('crea el padre antes que las hijas, que heredan jurisdicción y localidad', async () => {
     primera = await importar(catalogo());
     assert.deepEqual(primera.sectores, { creados: 5, actualizados: 0 });
+    assert.equal(primera.cache.invalidada, true);
+    assert.ok(primera.cache.version);
 
     const municipalidad = idDe(primera, MUNICIPALIDAD);
     const secretaria = idDe(primera, SECRETARIA, MUNICIPALIDAD);
@@ -114,6 +116,7 @@ describe('importarCatalogo', () => {
   it('sin cambios no reindexa nada; un embedding null se reindexa aunque el trámite no cambie', async () => {
     const tercera = await importar(catalogo({ municipalidad: { localidad: 'Formosa capital' } }));
     assert.equal(tercera.reindexados.length, 0);
+    assert.equal(tercera.cache.invalidada, false, 'sin cambios no se invalida la caché');
 
     const [permiso] = await prisma.tramite.findMany({ where: { fuenteUrl: url(2) } });
     await prisma.$executeRaw`UPDATE tramites SET embedding = NULL WHERE id = ${permiso.id}`;
@@ -198,6 +201,7 @@ describe('importarCatalogo', () => {
       ],
     }, { simular: true, completa: true, despublicarFaltantes: true });
     assert.equal(r.simulado, true);
+    assert.equal(r.cache.invalidada, false);
     assert.equal(r.sectores.creados, 1);
     assert.deepEqual(cuantos(r), { creados: 1, actualizados: 1, sinCambios: 0, fallidos: 0, conflictos: 0 });
     assert.ok(r.despublicados.length > 0);

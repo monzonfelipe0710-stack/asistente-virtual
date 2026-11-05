@@ -5,6 +5,7 @@ import prisma from '../config/prisma.js';
 import { reindexarCatalogo, tramitesDeSectores } from './embedding.service.js';
 import { JURISDICCION_POR_DEFECTO, leerSectoresParaResolver, resolverJurisdicciones, subarbol } from './jurisdiccion.service.js';
 import { normalizarNombre } from '../utils/texto.js';
+import { marcarCatalogoCambiado } from './version-catalogo.service.js';
 
 const JURISDICCIONES = new Set(Object.values(Jurisdiccion));
 export const EMAIL_SISTEMA = 'sistema@chatap.local';
@@ -296,8 +297,19 @@ export const importarCatalogo = async (datos, {
     informe.fallidos.push(...r.fallidos);
   }
 
+  const huboCambios = sectores.creados + sectores.actualizados + informe.creados.length + informe.actualizados.length
+    + informe.reindexados.length + informe.despublicados.length > 0;
+  let cache = { invalidada: false, version: null, error: null };
+  if (!simular && huboCambios) {
+    try {
+      cache = { invalidada: true, version: await marcarCatalogoCambiado(), error: null };
+    } catch (err) {
+      cache = { invalidada: false, version: null, error: err.message.split('\n').at(-1).trim() };
+    }
+  }
+
   const sectorIds = datos.sectores.map((s, i) => ({ nombre: s.nombre, padre: s.padre ?? null, id: ids.get(i) ?? null }));
-  return { simulado: simular, sectores, sectorIds, ...informe };
+  return { simulado: simular, sectores, sectorIds, ...informe, cache };
 };
 
 const lista = (titulo, items, formato) =>
