@@ -1,10 +1,11 @@
 import { quitarEnlaces } from './enlaces.js';
-import { quitarSaludoRepetido } from './saludo.js';
+import { quitarSaludosIniciales } from './saludo.js';
 import { corregirTuteo } from './voseo.js';
 
 // El texto del modelo se limpia por líneas completas: así un enlace o una forma de tuteo nunca
-// quedan partidos entre dos deltas del streaming, y las dos rutas limpian exactamente igual. Una línea que queda vacía
-// al limpiarla se descarta; las vacías de origen separan párrafos (como mucho una en blanco).
+// quedan partidos entre dos deltas del streaming, y las dos rutas limpian exactamente igual. Una
+// línea que queda vacía al limpiarla se descarta; las vacías de origen separan párrafos (como
+// mucho una en blanco).
 // No sale nada antes de la primera línea con texto ni después de la última.
 // `alCorregirTuteo` recibe las formas de tuteo que se corrigieron (sirve para medir el prompt).
 export const crearLimpiador = ({ saludo = '', alCorregirTuteo } = {}) => {
@@ -20,7 +21,7 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo } = {}) => {
     const { texto: enVoseo, formas } = corregirTuteo(quitarEnlaces(cruda));
     if (formas.length > 0) alCorregirTuteo?.(formas);
     let limpia = enVoseo;
-    if (!empezo) limpia = quitarSaludoRepetido(limpia.trimStart(), saludo);
+    if (!empezo) limpia = quitarSaludosIniciales(limpia.trimStart(), saludo);
     limpia = limpia.trimEnd();
     if (!limpia.trim()) return '';
 

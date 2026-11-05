@@ -24,10 +24,21 @@ export const sanitizarSaludo = (saludo) => {
 
 export const componerSaludo = (saludo, nombre) => (saludo ? `¡${saludo}${nombre ? `, ${nombre}` : ''}! ` : '');
 
-// Por si el modelo igual empieza el cuerpo con el saludo que ya agrega el servidor.
-export const quitarSaludoRepetido = (texto, saludo) => {
-  if (!saludo) return texto;
-  const patron = new RegExp(`^¡?\\s*${escaparRegex(saludo)}\\s*[!.,]+\\s*`, 'iu');
-  const sinSaludo = texto.replace(patron, '');
+const sinTildes = (texto) => texto.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+const SALUDO_EN_MENSAJE = /(?<![\p{L}\p{N}])(hola|buen dia|buenos dias|buenas|que tal|saludos)(?![\p{L}\p{N}])/u;
+
+// El servidor solo saluda si la persona saludó, aunque el modelo haya devuelto un saludo.
+export const contieneSaludo = (mensaje) => SALUDO_EN_MENSAJE.test(sinTildes(String(mensaje ?? '')));
+
+const SALUDOS = String.raw`hola|buen\s+d[ií]a|buenos\s+d[ií]as|buenas(?:\s+(?:tardes|noches))?|qu[eé]\s+tal|saludos`;
+const MAXIMO_SALUDOS_INICIALES = 2;
+
+// El saludo lo pone el servidor: si el modelo igual empieza el cuerpo con uno o dos ("¡Buenas!
+// ¡Hola!"), se sacan. Solo cuentan si los sigue un signo: "Buenas noticias" no es un saludo.
+export const quitarSaludosIniciales = (texto, saludo = '') => {
+  const alternativas = saludo ? `${SALUDOS}|${escaparRegex(saludo)}` : SALUDOS;
+  const patron = new RegExp(String.raw`^[¡¿]?\s*(?:${alternativas})\s*[!.,?]+\s*`, 'iu');
+  let sinSaludo = texto;
+  for (let i = 0; i < MAXIMO_SALUDOS_INICIALES; i++) sinSaludo = sinSaludo.replace(patron, '');
   return sinSaludo === texto ? texto : conMayuscula(sinSaludo);
 };

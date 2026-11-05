@@ -406,8 +406,10 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 `"¡{saludo}, {Nombre}! "` + texto. El nombre **nunca** se manda al modelo: es el primer nombre
 del usuario logueado en formato título ("MARÍA JOSÉ GÓMEZ" → "María"); anónimo, va sin nombre
 (`"¡Buen día! "`). El saludo se sanea: se le sacan los signos de los extremos, y si tiene otra
-cosa que letras, espacios y ¿¡, o más de 30 caracteres, se usa "Hola". Si el modelo igual
-empieza el texto con el saludo, se saca para no repetirlo. La caché y `consultas.respuesta`
+cosa que letras, espacios y ¿¡, o más de 30 caracteres, se usa "Hola". El servidor solo saluda
+si el último mensaje de la persona tiene un saludo (hola, buen día, buenos días, buenas, buenas
+tardes, buenas noches, qué tal, saludos); si no, va sin saludo aunque el modelo haya devuelto uno.
+Si el modelo igual empieza el texto con uno o dos saludos ("¡Buenas! ¡Hola!"), se sacan. La caché y `consultas.respuesta`
 guardan el texto sin el saludo compuesto, así no queda guardado el nombre de nadie.
 
 Para seguir después de una aclaración, se reenvía la conversación completa en `mensajes`,

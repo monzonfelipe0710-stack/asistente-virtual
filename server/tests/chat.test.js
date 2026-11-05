@@ -307,9 +307,24 @@ describe('chat', () => {
       salidaModelo = encontradoCon({ saludo: '' });
       assert.equal((await responderConsulta(turno('cómo hago el trámite'), maria)).respuesta, 'Así se hace.');
 
-      cache.limpiar();
       salidaModelo = encontradoCon({ saludo: '<b>hola</b>' });
-      assert.equal((await responderConsulta(turno('cómo hago el trámite'), maria)).respuesta, '¡Hola, María! Así se hace.');
+      assert.equal((await responderConsulta(turno('hola, cómo hago el trámite'), maria)).respuesta, '¡Hola, María! Así se hace.');
+    });
+
+    it('no saluda si la persona no saludó, aunque el modelo devuelva un saludo o lo ponga en el cuerpo', async () => {
+      salidaModelo = salida({ tipo: 'conversacion', saludo: 'Hola', respuesta: '¡Hola! Solo ayudo con trámites.' });
+      assert.equal((await responderConsulta(turno('capital de francia'), maria)).respuesta, 'Solo ayudo con trámites.');
+
+      pedazosStream = [meta({ tipo: 'conversacion', saludo: 'Hola' }), '¡Ho', 'la! Solo ayudo con trámites.'];
+      assert.equal((await consumir(responderConsultaStream(turno('capital de francia'), maria))).texto, 'Solo ayudo con trámites.');
+    });
+
+    it('no repite el saludo aunque el modelo encadene dos', async () => {
+      salidaModelo = salida({ tipo: 'conversacion', saludo: 'Buenas', respuesta: '¡Buenas! ¡Hola! ¿En qué trámite te ayudo?' });
+      assert.equal((await responderConsulta(turno('buenas'))).respuesta, '¡Buenas! ¿En qué trámite te ayudo?');
+
+      pedazosStream = [meta({ tipo: 'conversacion', saludo: 'Buenas' }), '¡Buenas! ¡Ho', 'la! ¿En qué trámite te ayudo?'];
+      assert.equal((await consumir(responderConsultaStream(turno('buenas')))).texto, '¡Buenas! ¿En qué trámite te ayudo?');
     });
 
     it('no repite el saludo si el modelo igual lo puso en el cuerpo', async () => {

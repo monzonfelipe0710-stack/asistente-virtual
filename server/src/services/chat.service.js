@@ -5,7 +5,7 @@ import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 import { primerNombre } from "../utils/nombres.js";
-import { componerSaludo, sanitizarSaludo } from "../utils/saludo.js";
+import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
 import { cortarEnOracion, finDeUltimaOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
@@ -216,6 +216,9 @@ const registrarConsultaCacheada = (pregunta, cacheado, usuarioId) =>
 
 const nombreParaSaludo = (usuario) => (usuario ? primerNombre(usuario.nombre) : null);
 
+// El saludo que devuelve el modelo solo se usa si el último mensaje de la persona saluda.
+const saludoPara = (pregunta, delModelo) => (contieneSaludo(pregunta) ? sanitizarSaludo(delModelo) : "");
+
 // La caché y `consultas` guardan el cuerpo sin el saludo: el nombre se agrega al servir.
 const conSaludo = (cuerpo, saludo, usuario) =>
   `${componerSaludo(saludo, nombreParaSaludo(usuario))}${cuerpo}`;
@@ -280,7 +283,7 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   });
 
   const salida = JSON.parse(salidaRaw);
-  const saludo = sanitizarSaludo(salida.saludo);
+  const saludo = saludoPara(preguntaActual, salida.saludo);
   const cuerpoModelo = limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo });
 
   if (salida.tipo === "conversacion") {
@@ -438,7 +441,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
         : [];
 
       const esConversacion = parsed?.tipo === "conversacion";
-      saludo = sanitizarSaludo(parsed?.saludo);
+      saludo = saludoPara(preguntaActual, parsed?.saludo);
       meta = {
         valida: parsed !== null,
         tipo: esConversacion ? "conversacion" : esAclaracion ? "aclaracion" : "respuesta",
@@ -476,7 +479,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
   }
 
   // Sin salto de línea no hubo META separada: el buffer entero puede ser el JSON.
-  if (meta === null) saludo = sanitizarSaludo(leerMeta(buffer)?.saludo);
+  if (meta === null) saludo = saludoPara(preguntaActual, leerMeta(buffer)?.saludo);
 
   if (meta?.tipo === "conversacion") {
     if (!cuerpo.trim()) yield { tipo: "delta", texto: MENSAJE_CONVERSACION_VACIA };
