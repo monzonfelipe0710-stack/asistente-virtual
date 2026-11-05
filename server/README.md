@@ -122,7 +122,7 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | `MesaEntrada` (`mesas_entrada`) | Lugares de presentación, con horario. Generales o de un sector |
 | `TramiteMesa` (`tramite_mesa`) | Relación N a N trámite ↔ mesa |
 | `Documento` (`documentos`) | Formularios descargables. Guarda la key del archivo en R2 |
-| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
+| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo ni las fuentes oficiales), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
 
 La columna `tramites.search_vector` es generada (`GENERATED ALWAYS AS ... STORED`, full-text
 en español sobre nombre y descripción). En el schema figura como `Unsupported("tsvector")`,
@@ -417,17 +417,22 @@ ya trae 2 o más mensajes con `rol: "asistente"`, el asistente responde sí o s�
 
 El texto (`respuesta` y los `delta` del streaming) puede traer **Markdown reducido**: listas con
 viñetas (`- `), listas numeradas (`1. `) y `**negrita**`. No trae títulos, tablas, bloques de código,
-citas ni cursivas. Una respuesta sobre un trámite cierra con el enlace a su fuente oficial
-(`[Ver el trámite en la fuente oficial](<fuenteUrl>)`); no lleva otros enlaces que los que
-estén tal cual en los datos del trámite. El front tiene
-que renderizarlo (o al menos mostrar los asteriscos sin romperse). Siempre en voseo rioplatense.
+citas ni cursivas. El front tiene que renderizarlo (o al menos mostrar los asteriscos sin
+romperse). Siempre en voseo rioplatense.
+
+**Enlaces.** El modelo no escribe enlaces (ni siquiera ve las URL): el servidor saca cualquier
+enlace Markdown o URL suelta que aparezca en su texto, en todos los tipos de respuesta. Una
+respuesta con `encontrado: true` termina, después de una línea en blanco, con una línea por cada
+trámite usado que tenga `fuenteUrl` http o https: `[Fuente oficial: {nombre}](<fuenteUrl>)`. La
+caché y `consultas.respuesta` guardan el texto sin saludo y sin estas líneas; las fuentes se
+buscan al servir, así siguen a la URL actual del trámite.
 
 **Contrato SSE de `POST /api/chat/stream`.** `Content-Type: text/event-stream`. Cada evento
 es una línea `data: <json>` seguida de una línea en blanco:
 
 | Evento | Forma | Cuándo |
 |---|---|---|
-| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la persona saludó, el primer `delta` es el saludo compuesto (`"¡Hola, María! "`). Si la respuesta sale de la caché o no se encontró nada, el cuerpo llega entero en un solo `delta` |
+| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la persona saludó, el primer `delta` es el saludo compuesto (`"¡Hola, María! "`). El cuerpo sale de a líneas completas (ya limpias de enlaces); las fuentes oficiales llegan como último `delta`. Si la respuesta sale de la caché o no se encontró nada, el texto llega entero en un solo `delta` |
 | `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "conversacional": bool, "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
 | `error` | `{ "tipo": "error", "mensaje": "Ocurrió un error procesando la consulta." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` |
 

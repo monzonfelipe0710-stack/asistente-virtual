@@ -31,6 +31,3 @@ export const quitarSaludoRepetido = (texto, saludo) => {
   const sinSaludo = texto.replace(patron, '');
   return sinSaludo === texto ? texto : conMayuscula(sinSaludo);
 };
-
-// Cuántos caracteres del cuerpo hay que esperar en streaming para poder sacar un saludo repetido.
-export const largoParaDetectarSaludo = (saludo) => (saludo ? saludo.length + 4 : 1);

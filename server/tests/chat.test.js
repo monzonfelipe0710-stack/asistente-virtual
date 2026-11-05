@@ -238,7 +238,8 @@ describe('chat', () => {
 
       const completo = await contextoDelTramite();
       assert.match(completo, /^Requisitos:\n- DNI vigente$/m);
-      assert.ok(completo.includes(`\nFuente oficial: ${fuente}`));
+      assert.match(completo, /^Fuente oficial: sí$/m);
+      assert.ok(!completo.includes(fuente), 'la URL no se le pasa al modelo');
       assert.match(completo, new RegExp(`^Mesas de entrada:\\n- Mesa ${SUFIJO}, San Martín 123, horario: 7 a 13$`, 'm'));
       assert.doesNotMatch(completo, /no cargad/);
     } finally {
@@ -345,6 +346,78 @@ describe('chat', () => {
       pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Buenas' })];
       const { texto } = await consumir(responderConsultaStream(turno('buenas, licencia de conducir')));
       assert.equal(texto, `¡Buenas! ${MENSAJE_SIN_RESPUESTA}`);
+    });
+  });
+
+  describe('fuente oficial', () => {
+    const fuente = `https://example.invalid/${SUFIJO}/detalle`;
+    const enlace = () => `[Fuente oficial: ${tramite.nombre}](${fuente})`;
+    const conEnlaceInventado = 'Así se hace: [Ver el trámite](http://inventado.ar/x).\nMás info en https://otro.ar/y';
+
+    before(async () => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: fuente } });
+    });
+    after(async () => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: null } });
+    });
+
+    it('saca los enlaces del modelo y agrega al final el de la fuente del trámite usado', async () => {
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: conEnlaceInventado, encontrado: true, tramitesUsados: [tramite.id] });
+      const r = await responderConsulta(turno('cómo hago el trámite'));
+      assert.equal(r.respuesta, `Así se hace.\nMás info en\n\n${enlace()}`);
+    });
+
+    it('la caché y consultas guardan el cuerpo sin enlaces; la fuente se agrega al servir', async () => {
+      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: 'Así se hace.', encontrado: true, tramitesUsados: [tramite.id] });
+      await responderConsulta(turno('hola, cómo hago el trámite'));
+      assert.equal(registros[0].respuesta, 'Así se hace.');
+      assert.equal(cache.obtener('hola, cómo hago el trámite').respuesta, 'Así se hace.');
+
+      const cacheada = await responderConsulta(turno('hola, cómo hago el trámite'));
+      assert.equal(llamadasModelo.length, 1);
+      assert.equal(cacheada.respuesta, `¡Hola! Así se hace.\n\n${enlace()}`);
+      assert.equal(registros[1].respuesta, 'Así se hace.');
+
+      const { texto } = await consumir(responderConsultaStream(turno('hola, cómo hago el trámite')));
+      assert.equal(texto, `¡Hola! Así se hace.\n\n${enlace()}`);
+    });
+
+    it('no agrega enlaces en aclaraciones, conversaciones ni en el mensaje fijo', async () => {
+      salidaModelo = salida({ tipo: 'aclaracion', respuesta: '¿Cuál? [x](http://a.ar)', opciones: [tramite.id] });
+      assert.equal((await responderConsulta(turno('trámite'))).respuesta, '¿Cuál?');
+
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Mirá https://a.ar/b para más.' });
+      assert.equal((await responderConsulta(turno('hola'))).respuesta, 'Mirá para más.');
+
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'x', encontrado: false });
+      assert.equal((await responderConsulta(turno('licencia de conducir'))).respuesta, MENSAJE_SIN_RESPUESTA);
+    });
+
+    it('en streaming limpia cada línea completa y manda la fuente como último delta', async () => {
+      pedazosStream = [
+        meta({ tipo: 'respuesta', encontrado: true, tramitesUsados: [tramite.id] }),
+        ...conEnlaceInventado.match(/.{1,5}/gs),
+      ];
+      const eventos = [];
+      for await (const e of responderConsultaStream(turno('cómo hago el trámite'))) eventos.push(e);
+      const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
+
+      assert.ok(deltas.every((d) => !d.includes('inventado') && !d.includes('otro.ar')));
+      assert.equal(deltas.at(-1), `\n\n${enlace()}`);
+      assert.equal(deltas.join(''), `Así se hace.\nMás info en\n\n${enlace()}`);
+      assert.equal(eventos.at(-1).tipo, 'fin');
+      assert.equal(registros[0].respuesta, 'Así se hace.\nMás info en');
+    });
+
+    it('las dos rutas devuelven el mismo texto', async () => {
+      const texto = '¡Hola! Te cuento:\n\n\n- uno [a](http://a.ar)\n- dos\n\n[Ver](http://b.ar)\n';
+      salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: texto, encontrado: true, tramitesUsados: [tramite.id] });
+      const { respuesta } = await responderConsulta(turno('hola, cómo hago'));
+
+      pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', encontrado: true, tramitesUsados: [tramite.id] }), ...texto.match(/.{1,3}/gs)];
+      const { texto: stream } = await consumir(responderConsultaStream(turno('hola, cómo hago otra vez')));
+      assert.equal(stream, respuesta);
+      assert.equal(respuesta, `¡Hola! Te cuento:\n\n- uno\n- dos\n\n${enlace()}`);
     });
   });
 

@@ -5,8 +5,10 @@ import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 import { primerNombre } from "../utils/nombres.js";
-import { componerSaludo, largoParaDetectarSaludo, quitarSaludoRepetido, sanitizarSaludo } from "../utils/saludo.js";
+import { componerSaludo, sanitizarSaludo } from "../utils/saludo.js";
 import { cortarEnOracion, finDeUltimaOracion } from "../utils/texto.js";
+import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
+import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
 
 export const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
@@ -34,7 +36,7 @@ Saludos, agradecimientos y despedidas:
 Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
 - FIDELIDAD: nunca afirmes requisitos, documentos, costos, plazos, horarios, direcciones ni pasos que no estén escritos en el contexto de ese trámite. Si el dato falta (dice "no cargados" o "no informado", o directamente no aparece), decí que no está cargado y orientá a consultar en una mesa de entrada o en la fuente oficial. PROHIBIDO completar con conocimiento general (por ejemplo, "llevá tu documento anterior" o "sacá un turno" si el contexto no lo dice).
-- Fuente oficial: cuando respondas sobre un trámite (tipo "respuesta" con encontrado true), cerrá el texto con el enlace a su fuente oficial en Markdown, así: [Ver el trámite en la fuente oficial](URL), con la URL copiada tal cual de la línea "Fuente oficial" de ese trámite. Si respondés sobre varios trámites, un enlace por cada uno. Si el trámite no tiene "Fuente oficial", no pongas enlace. Nunca inventes, completes ni modifiques un enlace, y no pongas enlaces en aclaraciones ni conversaciones.
+- Enlaces: NO escribas enlaces ni URLs, tampoco el de la fuente oficial. El sistema agrega al final de la respuesta el enlace a la fuente oficial de cada trámite que usaste (los que dicen "Fuente oficial: sí").
 - Un candidato "corresponde" solo si ES el trámite que la persona pide, o una forma o variante del MISMO trámite. Un trámite parecido pero de otra cosa NO corresponde, aunque sea de la misma familia (una licencia por maternidad no corresponde a un pedido de licencia por paternidad; una licencia de pesca no corresponde a una licencia de conducir). Sacar, renovar, tramitar o pedir un trámite son formas del MISMO trámite (renovar el pasaporte corresponde al trámite Pasaporte). Si la persona pide algo específico y ningún candidato es ese trámite, NO ofrezcas los parecidos como aclaración: devolvé tipo "respuesta" con encontrado false.
 - Si la persona pide un trámite (aunque no exista en el contexto), el tipo es "respuesta" o "aclaracion", nunca "conversacion".
 - Una pregunta que depende de un trámite ya mencionado en la conversación ("¿y cuánto cuesta?", "¿dónde se hace?", "¿qué necesito?") es tipo "respuesta" con ese trámite (su ID en "tramitesUsados"), nunca "conversacion".
@@ -51,7 +53,7 @@ Reglas:
 - Costo: si dice "no informado", decí que ese dato no está cargado y que lo consulte en la mesa de entrada; nunca digas que no tiene costo. Solo "gratuito" significa que no tiene costo.
 - Tono cercano, amable y breve: respondé directo a lo que se pidió, sin repetir la pregunta. Máximo 4-6 oraciones; los requisitos, en lista corta. Lenguaje simple (el público incluye adultos mayores).
 - Usá siempre voseo rioplatense, nunca tuteo. Formas PROHIBIDAS y su forma correcta: tienes → tenés; puedes → podés; debes → debés; necesitas → necesitás; quieres → querés; asegúrate → asegurate; acércate → acercate; fíjate → fijate; ten en cuenta → tené en cuenta.
-- Formato: podés usar listas con viñetas ("- "), listas numeradas ("1. ") y **negrita** para lo importante. Nada más de markdown: sin títulos (#), tablas, bloques de código, citas (>) ni cursivas. Enlaces solo si aparecen tal cual en el contexto.
+- Formato: podés usar listas con viñetas ("- "), listas numeradas ("1. ") y **negrita** para lo importante. Nada más de markdown: sin títulos (#), tablas, bloques de código, citas (>), cursivas ni enlaces.
 - Nunca escribas las palabras "respuesta" ni "tipo" dentro del texto para el ciudadano: son nombres de campos, no texto.`;
 
 const SYSTEM_PROMPT_MULTIVUELTA = `${ROL_Y_REGLAS}
@@ -159,7 +161,8 @@ const formatearTramite = (t) => {
     );
   }
 
-  if (t.fuenteUrl) lineas.push(`Fuente oficial: ${t.fuenteUrl}`);
+  // La URL no se le pasa al modelo: el enlace lo agrega el servidor.
+  if (esUrlHttp(t.fuenteUrl)) lineas.push("Fuente oficial: sí");
 
   return lineas.join("\n");
 };
@@ -216,6 +219,18 @@ const nombreParaSaludo = (usuario) => (usuario ? primerNombre(usuario.nombre) : 
 const conSaludo = (cuerpo, saludo, usuario) =>
   `${componerSaludo(saludo, nombreParaSaludo(usuario))}${cuerpo}`;
 
+// Las fuentes de una respuesta cacheada se buscan al servirla: siguen a la URL actual del trámite.
+const tramitesConFuente = async (tramitesEncontrados) => {
+  const ids = tramitesEncontrados.map((t) => t.id);
+  if (ids.length === 0) return [];
+  const filas = await prisma.tramite.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, nombre: true, fuenteUrl: true },
+  });
+  const porId = new Map(filas.map((t) => [t.id, t]));
+  return ids.map((id) => porId.get(id)).filter(Boolean);
+};
+
 export const responderConsulta = async (mensajes, usuario = null) => {
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
@@ -226,9 +241,10 @@ export const responderConsulta = async (mensajes, usuario = null) => {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados);
       return {
         tipo: "respuesta",
-        respuesta: conSaludo(cacheado.respuesta, cacheado.saludo ?? "", usuario),
+        respuesta: conSaludo(conFuentes(cacheado.respuesta, fuentes), cacheado.saludo ?? "", usuario),
         tramitesEncontrados: cacheado.tramitesEncontrados,
         encontrado: cacheado.encontrado,
         opciones: [],
@@ -263,7 +279,7 @@ export const responderConsulta = async (mensajes, usuario = null) => {
 
   const salida = JSON.parse(salidaRaw);
   const saludo = sanitizarSaludo(salida.saludo);
-  const cuerpoModelo = quitarSaludoRepetido((salida.respuesta ?? "").trim(), saludo);
+  const cuerpoModelo = limpiarCuerpo(salida.respuesta ?? "", { saludo });
 
   if (salida.tipo === "conversacion") {
     return respuestaConversacional(conSaludo(limitarConversacion(cuerpoModelo), saludo, usuario));
@@ -295,13 +311,10 @@ export const responderConsulta = async (mensajes, usuario = null) => {
   );
   const encontrado = salida.encontrado === true && idsUsados.length > 0;
 
-  const tramitesEncontrados = encontrado
-    ? idsUsados.map((id) => {
-        const t = tramites.find((x) => x.id === id);
-        return { id, nombre: t.nombre };
-      })
-    : [];
+  const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
+  const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
 
+  // La caché y `consultas` guardan el cuerpo; el saludo y las fuentes se agregan al servir.
   const cuerpo = encontrado ? cuerpoModelo : MENSAJE_SIN_RESPUESTA;
   const registro = await registrar({
     textoConsulta: preguntaActual,
@@ -314,7 +327,7 @@ export const responderConsulta = async (mensajes, usuario = null) => {
   if (esUnTurno) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado });
   return {
     tipo: "respuesta",
-    respuesta: conSaludo(cuerpo, saludo, usuario),
+    respuesta: conSaludo(conFuentes(cuerpo, usados), saludo, usuario),
     tramitesEncontrados,
     encontrado,
     opciones: [],
@@ -341,9 +354,10 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
+      const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados);
       const prefijo = componerSaludo(cacheado.saludo ?? "", nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };
-      yield { tipo: "delta", texto: cacheado.respuesta };
+      yield { tipo: "delta", texto: conFuentes(cacheado.respuesta, fuentes) };
       yield {
         tipo: "fin",
         tipoRespuesta: "respuesta",
@@ -381,8 +395,7 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
   let meta = null;
   let saludo = "";
   let cuerpo = "";
-  let inicio = "";
-  let cuerpoIniciado = false;
+  let limpiador = null;
   let recibido = "";
   let llegoAlTope = false;
 
@@ -436,21 +449,14 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
       // Se decide con la línea META, antes de mandar texto: lo que se transmite no se descarta.
       if (meta.tipo === "respuesta" && !meta.encontrado) break;
 
+      limpiador = crearLimpiador({ saludo });
       const prefijo = componerSaludo(saludo, nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };
       delta = buffer.slice(nl + 1);
     }
 
-    // El comienzo del cuerpo se retiene unos caracteres para poder sacar un saludo repetido.
-    if (!cuerpoIniciado) {
-      inicio += delta;
-      if (inicio.trimStart().length < largoParaDetectarSaludo(saludo)) continue;
-      delta = quitarSaludoRepetido(inicio.trimStart(), saludo);
-      inicio = "";
-      cuerpoIniciado = true;
-    }
-
-    const texto = paraEmitir(delta);
+    // Sale de a líneas completas y limpias (sin enlaces del modelo ni saludo repetido).
+    const texto = paraEmitir(limpiador.agregar(delta));
     if (texto) {
       cuerpo += texto;
       yield { tipo: "delta", texto };
@@ -458,10 +464,9 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
     if (llegoAlTope) break;
   }
 
-  // Al terminar sale lo retenido: el comienzo si el cuerpo fue muy corto, o la última oración.
-  if (meta !== null && !llegoAlTope) {
-    const pendiente = !cuerpoIniciado && inicio.trim() ? quitarSaludoRepetido(inicio.trim(), saludo) : "";
-    const texto = paraEmitir(pendiente, true);
+  // Al terminar sale lo retenido: la última línea, o la última oración de una conversación.
+  if (limpiador !== null && !llegoAlTope) {
+    const texto = paraEmitir(limpiador.cerrar(), true);
     if (texto) {
       cuerpo += texto;
       yield { tipo: "delta", texto };
@@ -489,12 +494,8 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
   const encontrado = meta?.encontrado === true;
   const idsUsados = meta?.idsUsados ?? [];
   const opciones = meta?.opciones ?? [];
-  const tramitesEncontrados = encontrado
-    ? idsUsados.map((id) => {
-        const t = tramites.find((x) => x.id === id);
-        return { id, nombre: t.nombre };
-      })
-    : [];
+  const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
+  const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
 
   let registro = SIN_REGISTRO;
   if (!esAclaracion) {
@@ -517,6 +518,10 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
       yield { tipo: "delta", texto: MENSAJE_SIN_RESPUESTA };
     }
   }
+
+  // Las fuentes salen como último delta, después del cuerpo ya transmitido.
+  const fuentes = conFuentes(cuerpo, usados).slice(cuerpo.length);
+  if (fuentes) yield { tipo: "delta", texto: fuentes };
 
   yield {
     tipo: "fin",
