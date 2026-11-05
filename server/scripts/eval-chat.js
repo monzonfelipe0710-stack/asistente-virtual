@@ -34,7 +34,8 @@ const casos = [
   { pregunta: 'licencia por enfermedad', esperado: { tipo: 'aclaracion', incluye: [20] } },
   { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
   { pregunta: 'hola', esperado: CONVERSACION },
-  { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false } },
+  // "Aumento de Capital Social" es un candidato que comparte una palabra: no sirve de ejemplo.
+  { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false, sinSaludo: true, noContiene: ['aumento de capital'] } },
   { pregunta: 'receta de chipá', esperado: { tipo: 'respuesta', encontrado: false } },
 
   // Caso B (no existe → debe dar no-encontrado, hoy falla):
@@ -81,7 +82,7 @@ const sectoresNormalizados = sectores.map((s) => normalizar(s.nombre));
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, encontrado, incluye, excluye, conversacional, mencionaSector, empiezaConSaludo, noContiene }) =>
+const describirEsperado = ({ tipo, encontrado, incluye, excluye, conversacional, mencionaSector, empiezaConSaludo, sinSaludo, noContiene }) =>
   [
     tipo,
     conversacional !== undefined && `conv=${conversacional}`,
@@ -90,6 +91,7 @@ const describirEsperado = ({ tipo, encontrado, incluye, excluye, conversacional,
     excluye && `-[${excluye}]`,
     mencionaSector && 'sector',
     empiezaConSaludo && 'saludo',
+    sinSaludo && 'sin saludo',
     noContiene && `sin "${noContiene.join('", "')}"`,
   ].filter(Boolean).join(' ');
 
@@ -110,7 +112,17 @@ const fuentePorId = new Map(
     .map((t) => [t.id, t.fuenteUrl]),
 );
 const fuentesConocidas = new Set(fuentePorId.values());
-const enlacesDe = (texto) => (texto.match(/https?:\/\/[^\s)\]<>]+/g) ?? []).map((u) => u.replace(/[.,;:]+$/, ''));
+// Las URL sueltas y el destino de cada enlace Markdown, sea o no http.
+const enlacesDe = (texto) => [
+  ...new Set([
+    ...(texto.match(/https?:\/\/[^\s)\]<>]+/g) ?? []).map((u) => u.replace(/[.,;:]+$/, '')),
+    ...[...texto.matchAll(/\]\(([^)\s]*)\)/g)].map((m) => m[1]),
+  ]),
+];
+
+const SALUDO_INICIAL = /^[¡¿]?\s*(hola|buen\s+d[ií]a|buenos\s+d[ií]as|buenas(\s+(tardes|noches))?|qu[eé]\s+tal|saludos)\s*[!.,?]+\s*/iu;
+const empiezaConSaludo = (texto) => SALUDO_INICIAL.test(texto);
+const saludoDoble = (texto) => empiezaConSaludo(texto) && empiezaConSaludo(texto.replace(SALUDO_INICIAL, ''));
 
 // Chequeos que valen para cualquier respuesta, también los turnos intermedios.
 const fallasTransversales = (r) => {
@@ -120,7 +132,9 @@ const fallasTransversales = (r) => {
     TUTEO.test(r.respuesta) && 'tuteo',
     /^\s*respuesta\b/i.test(sinSaludoCompuesto(r.respuesta)) && '"respuesta" al inicio',
     /tiene un costo sin costo/i.test(r.respuesta) && '"costo sin costo"',
+    saludoDoble(r.respuesta) && 'saludo doble',
     enlaces.some((u) => !fuentesConocidas.has(u)) && 'enlace inventado',
+    enlaces.some((u) => fuentesConocidas.has(u) && !fuentesDeLaRespuesta.includes(u)) && 'enlace ajeno',
     r.encontrado && fuentesDeLaRespuesta.length > 0 &&
       !fuentesDeLaRespuesta.some((u) => r.respuesta.includes(`](${u})`)) && 'sin fuente',
   ];
@@ -140,6 +154,7 @@ const fallas = (esperado, r) => {
     esperado.distintoDelFijo && texto.includes(MENSAJE_SIN_RESPUESTA) && 'mensaje fijo',
     esperado.mencionaSector && !sectoresNormalizados.some((s) => normalizar(texto).includes(s)) && 'sin sector',
     esperado.empiezaConSaludo && !/^¡[^!]{1,60}! \S/.test(texto) && 'sin saludo',
+    esperado.sinSaludo && empiezaConSaludo(texto) && 'con saludo',
     ...(esperado.noContiene ?? []).map((p) => normalizar(texto).includes(normalizar(p)) && `contiene "${p}"`),
     repiteNombres(r.opciones) && 'opciones repetidas',
   ].filter(Boolean);
