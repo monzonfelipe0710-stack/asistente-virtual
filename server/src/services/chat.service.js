@@ -33,7 +33,7 @@ export const TOPE_CONVERSACION = 600;
 
 // Las reglas son las mismas para las dos rutas; solo cambia el formato de salida.
 const ROL_Y_REGLAS = `
-Sos el asistente virtual de la administración pública de Formosa.
+Sos el asistente virtual de trámites de la provincia de Formosa y sus municipios.
 Tu función es informar sobre trámites, usando EXCLUSIVAMENTE los trámites candidatos del contexto.
 
 Podés hacer tres cosas:
@@ -300,7 +300,7 @@ IMPORTANTE: este mensaje no pide un trámite. "tipo" DEBE ser "conversacion" y s
 // Contra la parte fija de las instrucciones; el resumen del catálogo y los candidatos no cuentan.
 // Las permitidas son frases del prompt que el modelo dice casi textual en respuestas legítimas.
 const FRASES_DE_RESPUESTA = [
-  "el asistente virtual de la administración pública de Formosa",
+  "el asistente virtual de trámites de la provincia de Formosa y sus municipios",
   "consultar en una mesa de entrada o en la fuente oficial",
 ];
 let detectorDeFuga = null;

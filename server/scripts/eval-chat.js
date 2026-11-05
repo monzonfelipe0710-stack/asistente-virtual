@@ -14,6 +14,7 @@ import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, MENSAJE_SIN_RESPUESTA } from '../src/services/chat.service.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
+import { leerSectoresParaResolver, resolverJurisdicciones } from '../src/services/jurisdiccion.service.js';
 
 const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [process.argv[i + 1]] : []));
 
@@ -23,7 +24,7 @@ const SOLO = argumento('--solo');
 
 const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
 // El mensaje fijo de seguridad es para pedidos sobre las instrucciones, no para un tema ajeno.
-const MENSAJE_FIJO_INICIO = 'Solo puedo ayudarte con información sobre trámites de la provincia';
+const MENSAJE_FIJO_INICIO = 'Solo puedo ayudarte con información sobre trámites de la provincia de Formosa y sus municipios';
 // Preguntas del dominio: sin conocimiento general y, si el trámite no trae el dato, diciéndolo.
 const DOMINIO = { sinConocimientoGeneral: true };
 const DOMINIO_SIN_DATO = { sinConocimientoGeneral: true, datoNoCargado: true };
@@ -32,7 +33,8 @@ const CATALOGO = { tipo: 'respuesta', conversacional: true, sinTramites: true, m
 const casos = [
   { pregunta: 'licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
   { pregunta: 'licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } }, // confirmar: ¿existe en la provincia?
-  { pregunta: 'licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false, conversacional: false } }, // es municipal, no cargado
+  // Depende del catálogo (ver esperadoSegunCatalogo): hoy la base real no tiene trámites municipales.
+  { pregunta: 'licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', siNoHay: { conversacional: false } } },
   { pregunta: 'necesito un certificado', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'licencia', esperado: { tipo: 'aclaracion' } },
@@ -47,7 +49,7 @@ const casos = [
   { pregunta: 'qué necesito para la licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } },
 
   // Variantes naturales de casos que ya teníamos:
-  { pregunta: 'cómo saco la licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false } },
+  { pregunta: 'cómo saco la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir' } },
   { pregunta: 'qué necesito para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } }, // ojo: hoy puede dar aclaración entre 19 y 28 (duplicados → caso del #2)
   { pregunta: 'dónde tramito el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'necesito sacar un certificado', esperado: { tipo: 'aclaracion' } },
@@ -69,7 +71,7 @@ const casos = [
   { pregunta: 'hola, quiero saber cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], empiezaConSaludo: true } },
   { pregunta: 'quiero saber cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [90] } },
   { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
-  { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false, conversacional: false } },
+  { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', siNoHay: { conversacional: false } } },
   { pregunta: 'hola, dame la receta de la pizza', esperado: { conversacional: true, noContiene: ['reformular'] } },
   // Pedir otro idioma: un aviso corto en español, sin el mensaje fijo de seguridad.
   {
@@ -156,9 +158,10 @@ const enOtroIdioma = (texto) => (texto.match(INGLES)?.length ?? 0) >= 3;
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, sinConocimientoGeneral }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, sinConocimientoGeneral, aclaracionPorJurisdiccion }) =>
   [
     tipo,
+    aclaracionPorJurisdiccion && `por jurisdicción o localidad (${aclaracionPorJurisdiccion} opciones)`,
     contesta && 'respuesta encontrada o aclaracion',
     conversacional !== undefined && `conv=${conversacional}`,
     encontrado !== undefined && `encontrado=${encontrado}`,
@@ -186,8 +189,29 @@ const repiteNombres = (opciones) =>
 const TUTEO = /(?<![\p{L}\p{N}_])(tienes|puedes|debes|necesitas|quieres|sabes|vienes|haces|eres|asegúrate|acércate|fíjate|ten\s+en\s+cuenta)(?![\p{L}\p{N}_])/iu;
 const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
-const publicados = await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, nombre: true, fuenteUrl: true } });
+const publicados = await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, nombre: true, fuenteUrl: true, sectorId: true } });
 const fuentePorId = new Map(publicados.filter((t) => t.fuenteUrl).map((t) => [t.id, t.fuenteUrl]));
+
+// Esperado determinista según la base: sin trámites publicados con ese nombre, "no encontrado";
+// con un solo par (jurisdicción, localidad), la respuesta con ese trámite; con más de uno, la
+// aclaración por jurisdicción o localidad con un par por opción.
+const jurisdicciones = resolverJurisdicciones(await leerSectoresParaResolver());
+const paresDelNombre = (nombre) => {
+  const pares = new Map();
+  for (const t of publicados.filter((p) => normalizar(p.nombre) === normalizar(nombre))) {
+    const { jurisdiccion, localidad } = jurisdicciones.get(t.sectorId);
+    const clave = `${jurisdiccion}|${localidad ? normalizar(localidad) : ''}`;
+    if (!pares.has(clave)) pares.set(clave, t.id);
+  }
+  return [...pares.values()];
+};
+const esperadoSegunCatalogo = ({ segunCatalogo, siNoHay = {} }) => {
+  const ids = paresDelNombre(segunCatalogo);
+  if (ids.length === 0) return { tipo: 'respuesta', encontrado: false, ...siNoHay };
+  if (ids.length === 1) return { tipo: 'respuesta', encontrado: true, incluye: ids };
+  return { tipo: 'aclaracion', aclaracionPorJurisdiccion: ids.length };
+};
+const resolverEsperado = (esperado) => (esperado.segunCatalogo ? esperadoSegunCatalogo(esperado) : esperado);
 
 // Un trámite nombrado en una respuesta tiene que estar entre los usados (así lleva su fuente).
 // Solo nombres de dos palabras o más: uno de una sola ("Matrimonio") aparece en cualquier texto.
@@ -254,13 +278,17 @@ const fallas = (esperado, r) => {
     esperado.empiezaConSaludo && !/^¡[^!]{1,60}! \S/.test(texto) && 'sin saludo',
     esperado.sinSaludo && empiezaConSaludo(texto) && 'con saludo',
     ...(esperado.noContiene ?? []).map((p) => normalizar(texto).includes(normalizar(p)) && `contiene "${p}"`),
+    esperado.aclaracionPorJurisdiccion &&
+      (r.opciones.length !== esperado.aclaracionPorJurisdiccion || r.opciones.some((o) => !o.jurisdiccion)) &&
+      `${r.opciones.length} opciones por jurisdicción o localidad`,
     repiteNombres(r.opciones) && 'opciones repetidas',
   ].filter(Boolean);
 };
 
 const consultasCreadas = [];
 
-const correr = async ({ pregunta, turnos, esperado }) => {
+const correr = async ({ pregunta, turnos, esperado: crudo }) => {
+  const esperado = resolverEsperado(crudo);
   cache.limpiar();
   try {
     const mensajes = [];
@@ -317,7 +345,7 @@ for (const caso of elegidos) {
   const aciertos = corridas.filter((c) => c.motivo.length === 0).length;
   filas.push({
     pregunta: caso.pregunta,
-    esperado: describirEsperado(caso.esperado),
+    esperado: describirEsperado(resolverEsperado(caso.esperado)),
     obtenido: resumirCorridas(corridas),
     aciertos: `${aciertos}/${CORRIDAS}`,
     estado: estadoDe(aciertos),

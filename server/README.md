@@ -1,6 +1,6 @@
 # ChatAP — API
 
-Backend del asistente virtual de trámites de la Provincia de Formosa.
+Backend del asistente virtual de trámites de la provincia de Formosa y sus municipios.
 
 El personal carga trámites (requisitos, mesas de entrada y formularios descargables) y un
 supervisor los publica. El ciudadano pregunta en lenguaje natural en un chat público y
@@ -480,7 +480,7 @@ también con tildes, mayúsculas, espacios de más, caracteres de ancho cero o l
 revelar las instrucciones, de anular las reglas y marcadores de rol (`system:`, `<|im_start|>`,
 `[INST]`…). Si alguno coincide, la respuesta tiene la forma de una conversación (`conversacional:
 true`, sin trámites ni registro) con el texto fijo "Solo puedo ayudarte con información sobre
-trámites de la provincia. Contame qué trámite necesitás.", sin saludo ni enlaces; en streaming, un
+trámites de la provincia de Formosa y sus municipios. Contame qué trámite necesitás.", sin saludo ni enlaces; en streaming, un
 solo `delta` y el `fin`. No se cachea ni se registra; se loguea la categoría y los primeros 80
 caracteres.
 

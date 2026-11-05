@@ -570,7 +570,7 @@ describe('chat', () => {
     });
 
     it('las frases que el prompt le pide decir no son una fuga', async () => {
-      const legitima = 'Soy el asistente virtual de la administración pública de Formosa. Si falta un dato, podés consultar en una mesa de entrada o en la fuente oficial.';
+      const legitima = 'Soy el asistente virtual de trámites de la provincia de Formosa y sus municipios. Si falta un dato, podés consultar en una mesa de entrada o en la fuente oficial.';
       salidaModelo = salida({ tipo: 'conversacion', respuesta: legitima });
       assert.equal((await responderConsulta(turno('¿quién sos?'))).respuesta, legitima);
       salidaModelo = salida({ tipo: 'conversacion', respuesta: '¡De nada! Cuando quieras, preguntame por otro trámite.' });

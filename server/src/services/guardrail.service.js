@@ -3,7 +3,7 @@
 // específicos en español, inglés y portugués; lo que se escape lo cubre el prompt.
 
 export const MENSAJE_FUERA_DE_ALCANCE =
-  'Solo puedo ayudarte con información sobre trámites de la provincia. Contame qué trámite necesitás.';
+  'Solo puedo ayudarte con información sobre trámites de la provincia de Formosa y sus municipios. Contame qué trámite necesitás.';
 
 // El prompt le pide al modelo esta marca en vez del mensaje: con la frase a la vista, el modelo
 // la usaba para redirigir cualquier tema ajeno en lugar de dar dos ejemplos del catálogo.
