@@ -702,7 +702,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 3. **Sin candidatos:** se llama igual al modelo, con el contexto vacío (`(ninguno)`): un
    saludo da `conversacion` y un trámite que no existe, `respuesta` con `tramiteId: null`.
    El prompt avisa que los candidatos pueden no tener nada que ver con el mensaje.
-4. **Contexto:** detalle de los candidatos (requisitos con dónde se consiguen y costo,
+4. **Contexto:** detalle de los candidatos (organismo y jurisdicción, por ejemplo `Jurisdicción: municipal (Clorinda)`; requisitos con dónde se consiguen y costo,
    mesas con dirección y horario, nombres de los formularios). Lo que falta se dice: `Requisitos:
    no cargados` y `Mesas de entrada: no cargadas`. El prompt prohíbe afirmar requisitos,
    documentos, costos, plazos, horarios, direcciones o pasos que no estén en el contexto, y

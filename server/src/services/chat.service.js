@@ -5,7 +5,7 @@ import { TIEMPOS_IA } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
-import { obtenerJurisdicciones } from "./jurisdiccion.service.js";
+import { describirJurisdiccion, obtenerJurisdicciones } from "./jurisdiccion.service.js";
 import { aclaracionDeGrupo, formatearGrupo, localidadesConocidas, loQueNombro, resolverGrupos } from "./variantes.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
@@ -167,9 +167,11 @@ const formatearCosto = (costo) => {
   return Number(costo) === 0 ? "gratuito" : `$${costo}`;
 };
 
-const formatearTramite = (t) => {
+// `organismo`: el sector con su jurisdicción y localidad efectivas (ver jurisdiccion.service.js).
+const formatearTramite = (t, organismo) => {
   const lineas = [
     `Trámite (id ${t.id}): ${t.nombre}`,
+    ...(organismo ? [`Organismo: ${organismo.nombre}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
     `Descripción: ${t.descripcion}`,
     `Costo: ${formatearCosto(t.costo)}`,
   ];
@@ -255,13 +257,21 @@ export const cargarDetalle = async (ids) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-const formatearCandidato = (c) => (c.sinResolver ? formatearGrupo(c) : formatearTramite(c));
+// "municipal (Clorinda)" o "provincial".
+const describirOrganismo = ({ jurisdiccion, localidad }) => {
+  const nombre = describirJurisdiccion({ jurisdiccion, localidad: null });
+  return localidad ? `${nombre} (${localidad})` : nombre;
+};
+
+const formatearCandidato = (c, jurisdicciones) =>
+  c.sinResolver ? formatearGrupo(c) : formatearTramite(c, jurisdicciones.get(c.sectorId));
 
 // Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta.
 const armarInstruccion = async (prompt, topeAlcanzado, candidatos) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
   const { texto: resumen } = await obtenerResumenCatalogo();
-  const contexto = candidatos.length > 0 ? candidatos.map(formatearCandidato).join("\n\n") : "(ninguno)";
+  const jurisdicciones = candidatos.length > 0 ? await obtenerJurisdicciones() : null;
+  const contexto = candidatos.length > 0 ? candidatos.map((c) => formatearCandidato(c, jurisdicciones)).join("\n\n") : "(ninguno)";
   return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
 };
 

@@ -128,6 +128,15 @@ describe('chat con trámites repetidos en distintos municipios', () => {
     assert.equal(registros.length, 1);
   });
 
+  it('el contexto de cada trámite trae el organismo, la jurisdicción y la localidad', async () => {
+    candidatos = [{ id: otro.id }, grupo()];
+    salidaModelo = salida({ tipo: 'respuesta', tramiteId: enPirane.id, tramitesUsados: [enPirane.id], respuesta: 'Así.' });
+    await responderConsulta(turno('habilitación comercial en Pirané o libre deuda'));
+    const instruccion = llamadasModelo[0].instruccionSistema;
+    assert.ok(instruccion.includes(`Trámite (id ${enPirane.id}): ${NOMBRE}\nOrganismo: Municipalidad de Pirané ${SUFIJO}\nJurisdicción: municipal (Pirané)\nDescripción:`));
+    assert.ok(instruccion.includes(`Organismo: Dirección provincial ${SUFIJO}\nJurisdicción: provincial\nDescripción:`));
+  });
+
   it('la localidad dicha en un turno anterior también resuelve', async () => {
     salidaModelo = salida({ tipo: 'respuesta', tramiteId: enClorinda.id, tramitesUsados: [enClorinda.id], respuesta: 'Así.' });
     const r = await responderConsulta([
