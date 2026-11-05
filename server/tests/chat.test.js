@@ -472,6 +472,20 @@ describe('chat', () => {
       assert.deepEqual(registros.map((x) => x.respuesta), [MENSAJE_SIN_RESPUESTA]);
     });
 
+    it('corrige el tuteo en las dos rutas, aunque la palabra llegue partida entre deltas', async () => {
+      const formas = [];
+      const alCorregirTuteo = (f) => formas.push(...f);
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Necesitas el DNI.', encontrado: true, tramitesUsados: [tramite.id] });
+      const r = await responderConsulta(turno('qué necesito'), null, { alCorregirTuteo });
+      assert.equal(r.respuesta, 'Necesitás el DNI.');
+
+      pedazosStream = [meta({ tipo: 'respuesta', encontrado: true, tramitesUsados: [tramite.id] }), 'Neces', 'itas el DNI. Ten ', 'en cuenta eso.'];
+      const { texto } = await consumir(responderConsultaStream(turno('qué necesito otra vez'), null, { alCorregirTuteo }));
+      assert.equal(texto, 'Necesitás el DNI. Tené en cuenta eso.');
+      assert.deepEqual(formas, ['Necesitas', 'Necesitas', 'Ten en cuenta']);
+      assert.deepEqual(registros.map((x) => x.respuesta), ['Necesitás el DNI.', 'Necesitás el DNI. Tené en cuenta eso.']);
+    });
+
     it('una respuesta encontrada trae conversacional false en el fin', async () => {
       pedazosStream = [meta({ tipo: 'respuesta', encontrado: true, tramitesUsados: [tramite.id] }), 'Así se hace.'];
       const { texto, fin } = await consumir(responderConsultaStream(turno('cómo hago el trámite')));

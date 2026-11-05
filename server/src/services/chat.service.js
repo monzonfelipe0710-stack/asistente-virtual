@@ -231,7 +231,8 @@ const tramitesConFuente = async (tramitesEncontrados) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-export const responderConsulta = async (mensajes, usuario = null) => {
+// `alCorregirTuteo` es opcional: lo usa el eval para contar cuántas veces el modelo tuteó.
+export const responderConsulta = async (mensajes, usuario = null, { alCorregirTuteo } = {}) => {
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
@@ -279,7 +280,7 @@ export const responderConsulta = async (mensajes, usuario = null) => {
 
   const salida = JSON.parse(salidaRaw);
   const saludo = sanitizarSaludo(salida.saludo);
-  const cuerpoModelo = limpiarCuerpo(salida.respuesta ?? "", { saludo });
+  const cuerpoModelo = limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo });
 
   if (salida.tipo === "conversacion") {
     return respuestaConversacional(conSaludo(limitarConversacion(cuerpoModelo), saludo, usuario));
@@ -344,7 +345,7 @@ const leerMeta = (linea) => {
   }
 };
 
-export async function* responderConsultaStream(mensajes, usuario = null) {
+export async function* responderConsultaStream(mensajes, usuario = null, { alCorregirTuteo } = {}) {
   const usuarioId = usuario?.id ?? null;
   const nombre = nombreParaSaludo(usuario);
   const esUnTurno = mensajes.length === 1;
@@ -449,13 +450,13 @@ export async function* responderConsultaStream(mensajes, usuario = null) {
       // Se decide con la línea META, antes de mandar texto: lo que se transmite no se descarta.
       if (meta.tipo === "respuesta" && !meta.encontrado) break;
 
-      limpiador = crearLimpiador({ saludo });
+      limpiador = crearLimpiador({ saludo, alCorregirTuteo });
       const prefijo = componerSaludo(saludo, nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };
       delta = buffer.slice(nl + 1);
     }
 
-    // Sale de a líneas completas y limpias (sin enlaces del modelo ni saludo repetido).
+    // Sale de a líneas completas y limpias (sin enlaces del modelo, tuteo ni saludo repetido).
     const texto = paraEmitir(limpiador.agregar(delta));
     if (texto) {
       cuerpo += texto;

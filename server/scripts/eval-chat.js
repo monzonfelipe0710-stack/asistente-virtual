@@ -100,7 +100,8 @@ const describirObtenido = (r) =>
 const repiteNombres = (opciones) =>
   new Set(opciones.map((o) => normalizar(o.nombre))).size < opciones.length;
 
-const TUTEO = /\b(tienes|puedes|debes|asegúrate|necesitas|quieres)\b/i;
+// Mide el texto final (ya corregido por el servidor); lo que tuteó el modelo se cuenta aparte.
+const TUTEO = /(?<![\p{L}\p{N}_])(tienes|puedes|debes|necesitas|quieres|sabes|vienes|haces|eres|asegúrate|acércate|fíjate|ten\s+en\s+cuenta)(?![\p{L}\p{N}_])/iu;
 const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
 const fuentePorId = new Map(
@@ -151,10 +152,12 @@ const correr = async ({ pregunta, turnos, esperado }) => {
   try {
     const mensajes = [];
     const transversales = [];
+    const tuteo = [];
+    const alCorregirTuteo = (formas) => tuteo.push(...formas);
     let r;
     for (const texto of turnos ?? [pregunta]) {
       mensajes.push({ rol: 'usuario', texto });
-      r = await responderConsulta(mensajes);
+      r = await responderConsulta(mensajes, null, { alCorregirTuteo });
       if (r.consultaId) consultasCreadas.push(r.consultaId);
       transversales.push(...fallasTransversales(r));
       mensajes.push({ rol: 'asistente', texto: r.respuesta });
@@ -163,9 +166,10 @@ const correr = async ({ pregunta, turnos, esperado }) => {
       obtenido: describirObtenido(r),
       motivo: [...new Set([...fallas(esperado, r), ...transversales.filter(Boolean)])],
       texto: r.respuesta,
+      tuteo,
     };
   } catch (err) {
-    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '' };
+    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [] };
   }
 };
 
@@ -187,6 +191,7 @@ const estadoDe = (aciertos) => {
 
 const filas = [];
 const detalle = [];
+const tuteoPorCaso = [];
 
 const elegidos = SOLO.length > 0 ? casos.filter((c) => SOLO.includes(c.pregunta)) : casos;
 const desconocidos = SOLO.filter((p) => !casos.some((c) => c.pregunta === p));
@@ -205,6 +210,11 @@ for (const caso of elegidos) {
     estado: estadoDe(aciertos),
   });
   detalle.push({ pregunta: caso.pregunta, textos: corridas.map((c) => c.texto) });
+  tuteoPorCaso.push({
+    pregunta: caso.pregunta,
+    corridas: corridas.filter((c) => c.tuteo.length > 0).length,
+    formas: corridas.flatMap((c) => c.tuteo),
+  });
 }
 
 console.table(filas);
@@ -224,6 +234,19 @@ if (inestables.length > 0) {
   console.log('\nInestables (varían entre corridas: es un hallazgo, no un aprobado):');
   for (const f of inestables) console.log(`  - "${f.pregunta}" (${f.aciertos}): ${f.obtenido}`);
 }
+
+// Cuántas veces tuteó el modelo (el servidor lo corrige): si crece, el prompt necesita refuerzo.
+const contarFormas = (formas) =>
+  Object.entries(Object.groupBy(formas.map((f) => f.toLowerCase()), (f) => f))
+    .map(([forma, veces]) => `${forma} ×${veces.length}`)
+    .join(', ');
+const conTuteo = tuteoPorCaso.filter((t) => t.formas.length > 0);
+console.log(
+  `\nTuteo del modelo corregido por el servidor: en ${conTuteo.reduce((n, t) => n + t.corridas, 0)} de ` +
+  `${elegidos.length * CORRIDAS} corridas` +
+  (conTuteo.length > 0 ? ` (${contarFormas(conTuteo.flatMap((t) => t.formas))})` : '')
+);
+for (const t of conTuteo) console.log(`  - "${t.pregunta}": ${t.corridas}/${CORRIDAS} (${contarFormas(t.formas)})`);
 
 console.log(
   `\nOK ${CORRIDAS}/${CORRIDAS}: ${conEstado('OK').length} | ` +

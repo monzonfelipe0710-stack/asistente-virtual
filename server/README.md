@@ -418,7 +418,9 @@ ya trae 2 o más mensajes con `rol: "asistente"`, el asistente responde sí o s�
 El texto (`respuesta` y los `delta` del streaming) puede traer **Markdown reducido**: listas con
 viñetas (`- `), listas numeradas (`1. `) y `**negrita**`. No trae títulos, tablas, bloques de código,
 citas ni cursivas. El front tiene que renderizarlo (o al menos mostrar los asteriscos sin
-romperse). Siempre en voseo rioplatense.
+romperse). Siempre en voseo rioplatense: si el modelo igual tutea, el servidor corrige una lista
+cerrada de palabras completas (tienes → tenés, puedes → podés, ten en cuenta → tené en cuenta, …),
+respetando la mayúscula inicial y sin tocar enlaces.
 
 **Enlaces.** El modelo no escribe enlaces (ni siquiera ve las URL): el servidor saca cualquier
 enlace Markdown o URL suelta que aparezca en su texto, en todos los tipos de respuesta. Una

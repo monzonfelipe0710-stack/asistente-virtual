@@ -10,6 +10,9 @@ const ENLACE = new RegExp(String.raw`[ \t]*:?[ \t]*(?:${ENLACE_MARKDOWN}|${URL_S
 
 export const quitarEnlaces = (texto) => texto.replace(ENLACE, '');
 
+// Parte el texto en pedazos: los de índice impar son enlaces o URL, los pares, el resto.
+export const separarEnlaces = (texto) => texto.split(new RegExp(`(${ENLACE_MARKDOWN}|${URL_SUELTA})`, 'i'));
+
 export const esUrlHttp = (url) => {
   try {
     const { protocol } = new URL(url);
