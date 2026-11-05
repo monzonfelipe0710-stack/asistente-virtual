@@ -49,6 +49,7 @@ Reglas:
 - No descartes un candidato porque su nombre mencione variantes o modalidades (ej. "ordinaria, extraordinaria").
 - No dividas un mismo trámite en sub-opciones, ni inventes opciones que no estén entre los candidatos. Si hay un único candidato claro, respondé directo.
 - En el texto para el ciudadano nombrá los trámites por su nombre; NUNCA muestres los ids.
+- En una respuesta (tipo "respuesta"), todo trámite de los candidatos que nombres explícitamente en el texto tiene que estar en "tramitesUsados", aunque lo menciones de pasada (ej. si al responder sobre el Pasaporte mencionás el Pasaporte "Express", van los IDs de los dos).
 - No empieces el texto con un saludo ni con el nombre de la persona: el saludo lo agrega el sistema a partir del campo "saludo". Tampoco inventes ni preguntes el nombre.
 - Si listás requisitos, hacelo conciso, con dónde se consigue y cuánto cuesta cuando el contexto lo diga.
 - Costo: si dice "no informado", decí que ese dato no está cargado y que lo consulte en la mesa de entrada; nunca digas que no tiene costo. Solo "gratuito" significa que no tiene costo.
@@ -64,7 +65,7 @@ Formato de salida (JSON):
 - "saludo": el saludo de entrada con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó. Un "gracias" o un "chau" no son saludo.
 - "respuesta": el texto para el ciudadano, sin saludo ni nombre (la respuesta, la pregunta aclaratoria si tipo=aclaracion, o lo que contestás si tipo=conversacion).
 - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto es el que pide la persona, aunque falte el dato que pregunta ("no cargados", "no informado"); false en cualquier otro caso (siempre false en conversacion).
-- "tramitesUsados": IDs de los trámites que usaste para responder (vacío si no respondiste o si tipo=conversacion). Los ids van solo acá y en "opciones".
+- "tramitesUsados": IDs de los trámites que usaste para responder, incluidos todos los candidatos que nombrás en el texto (vacío si no respondiste o si tipo=conversacion). Los ids van solo acá y en "opciones".
 - "opciones": IDs de los trámites candidatos que ofrecés como opción (solo si tipo=aclaracion; vacío en los demás casos).`;
 
 const INSTRUCCION_TOPE = `
@@ -77,7 +78,7 @@ Formato de salida (OBLIGATORIO):
   - "tipo": "aclaracion" si pedís que elija entre varios trámites; "conversacion" si el mensaje no pide un trámite; "respuesta" en cualquier otro caso.
   - "saludo": el saludo de entrada con el que empezó la persona (ej. "Hola", "Buen día", "Buenas tardes"), o "" si no saludó. Un "gracias" o un "chau" no son saludo.
   - "encontrado": true SOLO si tipo=respuesta y algún trámite del contexto es el que pide la persona, aunque falte el dato que pregunta ("no cargados", "no informado"); false en cualquier otro caso (incluidas aclaracion y conversacion).
-  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder. Vacío si no respondiste o si tipo=conversacion.
+  - "tramitesUsados": los IDs (el número de "Trámite (id N)") que usaste para responder, incluidos todos los candidatos que vas a nombrar en el texto. Vacío si no respondiste o si tipo=conversacion.
   - "opciones": los IDs de los trámites que ofrecés como opción. Solo si tipo=aclaracion; vacío en los demás casos.
 - A partir de la SEGUNDA línea, escribí (sin JSON ni marcadores, sin saludo ni nombre) el texto para el ciudadano: la respuesta, la pregunta aclaratoria o lo que contestás si tipo=conversacion.
 - Si la persona pide un trámite y ningún candidato responde, poné {"tipo": "respuesta", "saludo": "<saludo o vacío>", "encontrado": false, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;

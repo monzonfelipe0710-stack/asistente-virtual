@@ -106,11 +106,22 @@ const repiteNombres = (opciones) =>
 const TUTEO = /(?<![\p{L}\p{N}_])(tienes|puedes|debes|necesitas|quieres|sabes|vienes|haces|eres|asegúrate|acércate|fíjate|ten\s+en\s+cuenta)(?![\p{L}\p{N}_])/iu;
 const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
-const fuentePorId = new Map(
-  (await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, fuenteUrl: true } }))
-    .filter((t) => t.fuenteUrl)
-    .map((t) => [t.id, t.fuenteUrl]),
-);
+const publicados = await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, nombre: true, fuenteUrl: true } });
+const fuentePorId = new Map(publicados.filter((t) => t.fuenteUrl).map((t) => [t.id, t.fuenteUrl]));
+
+// Un trámite nombrado en una respuesta tiene que estar entre los usados (así lleva su fuente).
+// Solo nombres de dos palabras o más: uno de una sola ("Matrimonio") aparece en cualquier texto.
+const sinSignos = (texto) => ` ${normalizar(texto).replace(/[^a-z0-9ñ]+/g, ' ').trim()} `;
+const nombresComparables = publicados
+  .map((t) => ({ id: t.id, nombre: t.nombre, clave: sinSignos(t.nombre) }))
+  .filter((t) => t.clave.trim().split(' ').length >= 2);
+const nombradosSinUsar = (r) => {
+  const usados = new Set(r.tramitesEncontrados.map((t) => t.id));
+  // Se sacan primero los nombres de los usados, que pueden contener el de otro trámite.
+  let texto = sinSignos(r.respuesta);
+  for (const t of nombresComparables) if (usados.has(t.id)) texto = texto.replaceAll(t.clave, ' ');
+  return nombresComparables.filter((t) => !usados.has(t.id) && texto.includes(t.clave)).map((t) => t.nombre);
+};
 const fuentesConocidas = new Set(fuentePorId.values());
 // Las URL sueltas y el destino de cada enlace Markdown, sea o no http.
 const enlacesDe = (texto) => [
@@ -135,6 +146,7 @@ const fallasTransversales = (r) => {
     saludoDoble(r.respuesta) && 'saludo doble',
     enlaces.some((u) => !fuentesConocidas.has(u)) && 'enlace inventado',
     enlaces.some((u) => fuentesConocidas.has(u) && !fuentesDeLaRespuesta.includes(u)) && 'enlace ajeno',
+    r.tipo === 'respuesta' && r.encontrado && nombradosSinUsar(r).length > 0 && `nombra sin usar: ${nombradosSinUsar(r).join(' / ')}`,
     r.encontrado && fuentesDeLaRespuesta.length > 0 &&
       !fuentesDeLaRespuesta.some((u) => r.respuesta.includes(`](${u})`)) && 'sin fuente',
   ];
