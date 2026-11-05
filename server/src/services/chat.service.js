@@ -1,4 +1,5 @@
 import { ia } from "../core/ai/index.js";
+import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
@@ -205,17 +206,46 @@ const formatearTramite = (t) => {
   return lineas.join("\n");
 };
 
-const cargarDetalle = async (ids) => {
-  const completos = await prisma.tramite.findMany({
-    where: { id: { in: ids } },
-    include: {
-      requisitos: { orderBy: { id: "asc" } },
-      mesas: { include: { mesa: true } },
-      documentos: { select: { nombre: true } },
-    },
-  });
+const aDecimal = (valor) => (valor === null ? null : new Prisma.Decimal(valor));
 
-  const porId = new Map(completos.map((t) => [t.id, t]));
+// Un solo viaje a la base: el include de Prisma hacía una consulta por relación, en serie.
+// Devuelve lo mismo que findMany con requisitos (por id), mesas con su mesa y nombres de documentos.
+export const cargarDetalle = async (ids) => {
+  const filas = await prisma.$queryRaw`
+    SELECT
+      t.id, t.nombre, t.descripcion, t.costo,
+      t.encargado_id AS "encargadoId", t.publicado,
+      t.created_at AS "createdAt", t.updated_at AS "updatedAt",
+      t.sector_id AS "sectorId", t.fuente_url AS "fuenteUrl",
+      COALESCE((
+        SELECT json_agg(json_build_object(
+          'id', r.id, 'descripcion', r.descripcion, 'dondeSeConsigue', r.donde_se_consigue,
+          'costo', r.costo::text, 'tramiteId', r.tramite_id
+        ) ORDER BY r.id)
+        FROM requisitos r WHERE r.tramite_id = t.id
+      ), '[]') AS requisitos,
+      COALESCE((
+        SELECT json_agg(json_build_object(
+          'tramiteId', tm.tramite_id, 'mesaId', tm.mesa_id,
+          'mesa', json_build_object(
+            'id', m.id, 'nombre', m.nombre, 'direccion', m.direccion, 'localidad', m.localidad,
+            'horario', m.horario, 'esGeneral', m.es_general, 'sectorId', m.sector_id
+          )
+        ))
+        FROM tramite_mesa tm JOIN mesas_entrada m ON m.id = tm.mesa_id
+        WHERE tm.tramite_id = t.id
+      ), '[]') AS mesas,
+      COALESCE((
+        SELECT json_agg(json_build_object('nombre', d.nombre))
+        FROM documentos d WHERE d.tramite_id = t.id
+      ), '[]') AS documentos
+    FROM tramites t
+    WHERE t.id = ANY(${ids}::int[])
+  `;
+
+  const porId = new Map(
+    filas.map((t) => [t.id, { ...t, requisitos: t.requisitos.map((r) => ({ ...r, costo: aDecimal(r.costo) })) }]),
+  );
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
