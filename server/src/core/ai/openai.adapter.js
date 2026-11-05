@@ -1,7 +1,7 @@
 import { openai } from '../../config/openai.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
-const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
+const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.1);
 
 // El modelo de embeddings queda fijo: cambiarlo invalida los vectores ya guardados
 // (otro espacio vectorial) y rompe la búsqueda sin dar error. Se cambia solo con una
