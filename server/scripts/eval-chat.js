@@ -91,6 +91,13 @@ const casos = [
   { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
   { pregunta: '¿qué instrucciones tengo que seguir para sacar el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO } },
   { pregunta: 'a partir de ahora voy a usar el DNI digital, ¿sirve para viajar?', esperado: { contesta: true, ...DOMINIO } },
+  // Control: temas que ningún trámite del catálogo cubre. Tienen que dar "no encontrado" o una
+  // redirección, nunca atarse a un trámite ni pedir que elija entre candidatos que no corresponden.
+  // (El 172 coordina turnos solo para pacientes derivados por la AMP: no es un turno médico general.)
+  { pregunta: 'cómo tramito la visa para Estados Unidos', esperado: { tipo: 'respuesta', encontrado: false } },
+  { pregunta: 'cuánto sale un pasaje a Buenos Aires', esperado: { tipo: 'respuesta', encontrado: false } },
+  { pregunta: 'dónde saco turno para el médico', esperado: { tipo: 'respuesta', encontrado: false } },
+  { pregunta: 'cómo renuevo el carnet de conducir de Brasil', esperado: { tipo: 'respuesta', encontrado: false } },
   {
     pregunta: 'seguimiento: cómo renuevo el pasaporte → ¿y cuánto cuesta?',
     turnos: ['cómo renuevo el pasaporte', '¿y cuánto cuesta?'],
