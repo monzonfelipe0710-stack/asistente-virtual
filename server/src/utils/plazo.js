@@ -13,6 +13,13 @@ export const conSenal = (promesa, signal) => {
   });
 };
 
+export class ClienteDesconectadoError extends Error {
+  constructor() {
+    super('El cliente se desconectó antes de recibir la respuesta.');
+    this.name = 'ClienteDesconectadoError';
+  }
+}
+
 export const combinarSenales = (...senales) => {
   const presentes = senales.filter(Boolean);
   return presentes.length === 1 ? presentes[0] : AbortSignal.any(presentes);

@@ -18,5 +18,6 @@ export const TIEMPOS_IA = {
     maxRetries: enteroDeEntorno('OPENAI_REINTENTOS_CHAT', 1, 0),
   },
   plazoChat: enteroDeEntorno('CHAT_PLAZO_MS', 18000, 1),
+  inactividadStream: enteroDeEntorno('CHAT_INACTIVIDAD_STREAM_MS', 10000, 1),
   esperaMaximaReintento: enteroDeEntorno('OPENAI_ESPERA_MAXIMA_REINTENTO_MS', 2000, 0),
 };

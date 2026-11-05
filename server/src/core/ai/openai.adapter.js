@@ -1,5 +1,7 @@
 import { openai } from '../../config/openai.js';
 import { TIEMPOS_IA } from '../../config/ia.js';
+import { combinarSenales } from '../../utils/plazo.js';
+import { ErrorProveedorIA } from './errores.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
 const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
@@ -41,19 +43,49 @@ export const openaiAdapter = {
     return completion.choices[0].message.content;
   },
 
+  // El SDK termina el stream sin error si se corta sin [DONE] o si se lo aborta: por eso un abort
+  // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
   async *generarRespuestaStream({ instruccionSistema, turnos, signal }) {
-    const stream = await openai.chat.completions.create(
-      {
-        model: MODELO_CHAT,
-        temperature: TEMPERATURA,
-        stream: true,
-        messages: construirMensajes(instruccionSistema, turnos),
-      },
-      { ...TIEMPOS_IA.chat, signal },
-    );
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content ?? '';
-      if (delta) yield delta;
+    const inactividad = new AbortController();
+    const senal = combinarSenales(signal, inactividad.signal);
+    let temporizador;
+    const rearmar = () => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(
+        () => inactividad.abort(new ErrorProveedorIA('stream inactivo', { operacion: 'chat_stream' })),
+        TIEMPOS_IA.inactividadStream,
+      );
+    };
+
+    let finishReason = null;
+    try {
+      const stream = await openai.chat.completions.create(
+        {
+          model: MODELO_CHAT,
+          temperature: TEMPERATURA,
+          stream: true,
+          messages: construirMensajes(instruccionSistema, turnos),
+        },
+        { ...TIEMPOS_IA.chat, signal: senal },
+      );
+      rearmar();
+      for await (const chunk of stream) {
+        rearmar();
+        const opcion = chunk.choices[0];
+        finishReason = opcion?.finish_reason ?? finishReason;
+        const delta = opcion?.delta?.content ?? '';
+        if (delta) yield delta;
+      }
+    } catch (err) {
+      if (senal.aborted) throw senal.reason;
+      throw err;
+    } finally {
+      clearTimeout(temporizador);
+    }
+
+    if (senal.aborted) throw senal.reason;
+    if (finishReason !== 'stop') {
+      throw new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion: 'chat_stream' });
     }
   },
 

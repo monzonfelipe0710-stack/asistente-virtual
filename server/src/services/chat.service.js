@@ -561,9 +561,10 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
   let saludo = "";
   let cuerpo = "";
   let limpiador = null;
+  let sinTramite = false;
 
   for await (let delta of deltas) {
-    if (!delta) continue;
+    if (!delta || sinTramite) continue;
 
     if (meta === null) {
       buffer += delta;
@@ -593,7 +594,11 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
       };
 
       // Se decide con la línea META, antes de mandar texto: lo que se transmite no se descarta.
-      if (meta.tipo === "respuesta" && !meta.encontrado) break;
+      // El resto se consume sin mostrarlo, para saber si el modelo terminó bien.
+      if (meta.tipo === "respuesta" && !meta.encontrado) {
+        sinTramite = true;
+        continue;
+      }
 
       limpiador = crearLimpiador({ saludo, alCorregirTuteo });
       // El saludo de una conversación sale al final: si es el mensaje fijo, va sin saludo.
