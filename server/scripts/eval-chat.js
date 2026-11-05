@@ -24,6 +24,9 @@ const SOLO = argumento('--solo');
 const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
 // El mensaje fijo de seguridad es para pedidos sobre las instrucciones, no para un tema ajeno.
 const MENSAJE_FIJO_INICIO = 'Solo puedo ayudarte con información sobre trámites de la provincia';
+// Preguntas del dominio: sin conocimiento general y, si el trámite no trae el dato, diciéndolo.
+const DOMINIO = { sinConocimientoGeneral: true };
+const DOMINIO_SIN_DATO = { sinConocimientoGeneral: true, datoNoCargado: true };
 const CATALOGO = { tipo: 'respuesta', conversacional: true, sinTramites: true, mencionaSector: true };
 
 const casos = [
@@ -75,19 +78,19 @@ const casos = [
   },
   // Preguntas del dominio que piden algo que no está cargado o que suenan a otra cosa: tienen que
   // contestar con el trámite (diciendo qué no está cargado), no redirigir como tema ajeno.
-  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
-  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
-  { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
-  { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] } },
-  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] } },
-  { pregunta: 'cuáles son las reglas para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
-  { pregunta: '¿cuántos días dan de licencia por maternidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
-  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
+  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO } },
+  { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'cuáles son las reglas para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19], ...DOMINIO } },
+  { pregunta: '¿cuántos días dan de licencia por maternidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19], ...DOMINIO } },
+  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO_SIN_DATO } },
   // DNI: responder con el trámite o pedir que elija entre las variantes son correctos.
-  { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90] } },
-  { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90] } },
-  { pregunta: '¿qué instrucciones tengo que seguir para sacar el DNI?', esperado: { contesta: true, incluye: [90] } },
-  { pregunta: 'a partir de ahora voy a usar el DNI digital, ¿sirve para viajar?', esperado: { contesta: true } },
+  { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
+  { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
+  { pregunta: '¿qué instrucciones tengo que seguir para sacar el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO } },
+  { pregunta: 'a partir de ahora voy a usar el DNI digital, ¿sirve para viajar?', esperado: { contesta: true, ...DOMINIO } },
   {
     pregunta: 'seguimiento: cómo renuevo el pasaporte → ¿y cuánto cuesta?',
     turnos: ['cómo renuevo el pasaporte', '¿y cuánto cuesta?'],
@@ -110,11 +113,40 @@ const ejemplosNombrados = (texto) => {
   return ejemplos.filter((e) => palabrasDe(e).every((p) => enTexto.has(p))).length;
 };
 const INGLES = /\b(?:the|you|your|and|is|are|with|for|please|this|that|can|what|only|from)\b/gi;
+
+// Si el trámite no trae el dato pedido, el texto tiene que decirlo con alguna de estas expresiones.
+const DICE_NO_CARGADO = /no esta cargad|no figura|no cuento con/;
+// Conocimiento general que el modelo ya inventó en estas preguntas, y variantes parecidas
+// (normalizadas: minúsculas y sin tildes).
+const CONOCIMIENTO_GENERAL = [
+  'en el ambito nacional',
+  'podes presentar otros documentos',
+  'otros documentos que acrediten',
+  'en el mismo sentido que',
+  'documento de viaje',
+  'en argentina',
+  'dentro del pais',
+  'para identificacion en el pais',
+  'se utiliza el documento nacional',
+  'no se considera un documento de identidad',
+  'no es considerado un documento de identidad',
+  'no actua como documento de identidad',
+  'podes enfrentar inconvenientes',
+  'podes tener dificultades',
+  'no podras realizar',
+  'es recomendable que lleves',
+  'es recomendable llevar',
+  'lleva siempre',
+  'una copia de tu dni',
+  'saca un turno',
+  'pedi un turno',
+  'lleva tu documento anterior',
+];
 const enOtroIdioma = (texto) => (texto.match(INGLES)?.length ?? 0) >= 3;
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, sinConocimientoGeneral }) =>
   [
     tipo,
     contesta && 'respuesta encontrada o aclaracion',
@@ -126,6 +158,8 @@ const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conve
     ejemplosDelCatalogo && `${ejemplosDelCatalogo} ejemplos`,
     enEspanol && 'en español',
     largoMaximo && `<=${largoMaximo}`,
+    datoNoCargado && 'dice que no está cargado',
+    sinConocimientoGeneral && 'sin conocimiento general',
     empiezaConSaludo && 'saludo',
     sinSaludo && 'sin saludo',
     noContiene && `sin "${noContiene.join('", "')}"`,
@@ -205,6 +239,8 @@ const fallas = (esperado, r) => {
     esperado.ejemplosDelCatalogo && ejemplosNombrados(texto) < esperado.ejemplosDelCatalogo && `${ejemplosNombrados(texto)} ejemplos del catálogo`,
     esperado.enEspanol && enOtroIdioma(texto) && 'en otro idioma',
     esperado.largoMaximo && texto.length > esperado.largoMaximo && `largo ${texto.length}`,
+    esperado.datoNoCargado && r.tipo !== 'aclaracion' && !DICE_NO_CARGADO.test(normalizar(texto)) && 'no dice que no está cargado',
+    ...(esperado.sinConocimientoGeneral ? CONOCIMIENTO_GENERAL.filter((f) => normalizar(texto).includes(f)).map((f) => `inventa: "${f}"`) : []),
     esperado.empiezaConSaludo && !/^¡[^!]{1,60}! \S/.test(texto) && 'sin saludo',
     esperado.sinSaludo && empiezaConSaludo(texto) && 'con saludo',
     ...(esperado.noContiene ?? []).map((p) => normalizar(texto).includes(normalizar(p)) && `contiene "${p}"`),
