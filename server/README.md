@@ -70,8 +70,15 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `UMBRAL_DISTANCIA` | no | Distancia coseno máxima para que un trámite sea candidato. Default `0.5` |
 | `CACHE_TTL_MS` | no | Vigencia de la caché de respuestas. Default 1 hora |
 | `CACHE_MAX` | no | Entradas máximas de la caché. Default `500` |
+| `OPENAI_TIMEOUT_EMBEDDING_MS`, `OPENAI_REINTENTOS_EMBEDDING` | no | Timeout por intento y reintentos del embedding. Default `4000` y `1` |
+| `OPENAI_TIMEOUT_CHAT_MS`, `OPENAI_REINTENTOS_CHAT` | no | Timeout por intento y reintentos del modelo, con y sin streaming. Default `8000` y `1` |
+| `OPENAI_ESPERA_MAXIMA_REINTENTO_MS` | no | Espera máxima antes de reintentar, aunque OpenAI pida más con `retry-after`. Default `2000` |
+| `CHAT_PLAZO_MS` | no | Plazo total de una consulta del chat. Default `18000` |
+| `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
 
 El modelo de embeddings no es configurable: cambiarlo invalida los vectores guardados.
+Los tiempos tienen sus valores por defecto en el código ([`src/config/ia.js`](src/config/ia.js)):
+una variable ausente, vacía o que no sea un entero válido deja el default (con un aviso en el log).
 
 ## Scripts
 
@@ -170,7 +177,7 @@ uno solo:
 | 413 | Archivo de más de 10 MB |
 | 422 | El padrón no confirma la identidad en el registro |
 | 429 | Rate limit |
-| 503 | El padrón no responde |
+| 503 | El padrón no responde; en el chat, OpenAI falla o se agota el plazo de la consulta (ver [Timeouts y fallas de OpenAI](#timeouts-y-fallas-de-openai)) |
 | 500 | Error inesperado: mensaje genérico, el detalle queda en el log |
 
 ## Endpoints
@@ -468,7 +475,7 @@ es una línea `data: <json>` seguida de una línea en blanco:
 |---|---|---|
 | `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la persona saludó, el primer `delta` es el saludo compuesto (`"¡Hola, María! "`). El cuerpo sale de a líneas completas (ya limpias de enlaces); las fuentes oficiales llegan como último `delta`. Si la respuesta sale de la caché o no se encontró nada, el texto llega entero en un solo `delta` |
 | `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "conversacional": bool, "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
-| `error` | `{ "tipo": "error", "mensaje": "Ocurrió un error procesando la consulta." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` |
+| `error` | `{ "tipo": "error", "mensaje": "El asistente no está disponible en este momento. Probá de nuevo en unos segundos." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` y lo ya transmitido no vale como respuesta (no se cachea ni se registra). El mensaje es ese cuando falla OpenAI o se agota el plazo; ante un error propio del servidor es `"Ocurrió un error procesando la consulta."` |
 
 Ejemplo:
 
@@ -622,6 +629,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **`/mias` con calificación:** cada consulta trae `respuesta`, `calificacion` y `motivoCalificacion`.
 - **Sacar del historial:** nuevo `DELETE /api/consultas/:id` (no borra la fila).
 - **Panel de calificaciones:** nuevo `GET /api/consultas/calificaciones` para SU y ADM.
+- **503 en el chat:** si OpenAI falla o se agota el plazo, `POST /api/chat` responde 503 (antes 500 `Error del servidor.`) con `"El asistente no está disponible en este momento. Probá de nuevo en unos segundos."`, y el evento `error` de `/api/chat/stream` trae ese mismo mensaje.
 
 ## Cómo funciona el chat
 
@@ -665,6 +673,32 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    trámite usado, con el texto que se mostró sin el saludo compuesto (en streaming, sin la
    línea del JSON) y un `calificarToken` nuevo.
 
+### Timeouts y fallas de OpenAI
+
+| Llamada | Timeout por intento | Reintentos |
+|---|---|---|
+| Embedding de la consulta | 4 s | 1 |
+| Modelo, con y sin streaming | 8 s | 1 |
+
+- **Reintentos:** los hace el SDK ante 408, 409, 429, 5xx, errores de conexión y timeouts. Si
+  OpenAI manda `retry-after`, la espera se recorta a 2 s
+  (`OPENAI_ESPERA_MAXIMA_REINTENTO_MS`) para no pasarse del plazo.
+- **Plazo total:** 18 s por consulta, de punta a punta. Se pasa como `AbortSignal` al
+  embedding y al modelo; las consultas a la base no se pueden cancelar, pero la respuesta no
+  las espera si el plazo vence. Al agotarse, la consulta termina con error, no queda esperando.
+- **Streaming:** el timeout del SDK solo cubre hasta que llegan las cabeceras, así que además
+  hay un límite de 10 s sin recibir pedazos del modelo. La respuesta solo se cachea y se
+  registra si el modelo terminó con `finish_reason: "stop"`; un stream que se corta (aunque
+  sea limpio, sin `[DONE]`), se trunca o queda inactivo es un error. Si el cliente se
+  desconecta, se cancela la llamada al modelo.
+- **Qué recibe el cliente:** sin streaming, **503**
+  `{ "error": "El asistente no está disponible en este momento. Probá de nuevo en unos segundos." }`;
+  en streaming, el evento `error` con ese mensaje. Nada se cachea ni se registra. Un error
+  propio del servidor sigue siendo 500.
+- **Log:** `Chat: asistente no disponible (etapa modelo, chat: RateLimitError 429, 713 ms en
+  la etapa, 1518 ms en total)`: etapa (`busqueda`, `detalle`, `modelo`, `conversacion`), causa
+  real y duración, sin el texto de la consulta.
+
 ## Tests
 
 ```bash
@@ -685,6 +719,13 @@ caché sin nombre y streaming).
 usan la base del `.env`: crean sus propios datos (usuarios con dominios `.test.invalid`) y los
 borran al terminar (`catalogo.test.js` solo lee). El script de `npm test` incluye
 `--experimental-test-module-mocks` para simular el padrón, el modelo y la búsqueda.
+
+`fallas-openai.test.js` levanta un OpenAI falso local (con `OPENAI_BASE_URL`) y prueba el chat
+por HTTP con tiempos chicos: 429 y 500 con reintento, `retry-after` largo, 503 seguido de
+éxito, timeout, cuerpo que no termina de llegar (plazo), falla del embedding, stream cortado
+sin `[DONE]`, socket cortado, corte a mitad de la línea del JSON, stream inactivo y
+desconexión del cliente. En cada caso revisa qué recibe el cliente, que no se cachee ni se
+registre nada y que el log no tenga el texto de la consulta.
 
 `node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad (3 corridas por caso). Es
 para correr a demanda y borra por id las consultas que registra. Con `--detalle` imprime
