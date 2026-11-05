@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import { TIEMPOS_IA } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
+import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
@@ -379,8 +380,52 @@ const copiaInstrucciones = (texto, alDetectarFuga) => {
 
 const crearPlazo = (signal) => combinarSenales(AbortSignal.timeout(TIEMPOS_IA.plazoChat), signal);
 
+export const MENSAJE_NO_DISPONIBLE =
+  "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
+
+export class AsistenteNoDisponibleError extends Error {
+  constructor(causa) {
+    super(MENSAJE_NO_DISPONIBLE, { cause: causa });
+    this.name = "AsistenteNoDisponibleError";
+    this.statusCode = 503;
+  }
+}
+
+// Una falla del modelo o el plazo agotado llegan a la persona con el mensaje fijo; la causa queda
+// en el log con la etapa y la duración, sin el texto de la consulta. Lo demás es un error propio.
+const crearTraza = () => {
+  const inicio = Date.now();
+  let etapa = "inicio";
+  let desde = inicio;
+  return {
+    etapa(nombre) {
+      etapa = nombre;
+      desde = Date.now();
+    },
+    traducir(err) {
+      const plazoAgotado = err?.name === "TimeoutError";
+      if (!(err instanceof ErrorProveedorIA) && !plazoAgotado) return err;
+      const causa = plazoAgotado ? "plazo agotado" : `${err.operacion ?? "-"}: ${err.causa}`;
+      const ahora = Date.now();
+      console.error(
+        `Chat: asistente no disponible (etapa ${etapa}, ${causa}, ${ahora - desde} ms en la etapa, ${ahora - inicio} ms en total)`,
+      );
+      return new AsistenteNoDisponibleError(err);
+    },
+  };
+};
+
 // `alCorregirTuteo` y `alDetectarFuga` son opcionales: los usan los evals para medir.
-export const responderConsulta = async (mensajes, usuario = null, { alCorregirTuteo, alDetectarFuga, signal: externa } = {}) => {
+export const responderConsulta = async (mensajes, usuario = null, opciones = {}) => {
+  const traza = crearTraza();
+  try {
+    return await resolverConsulta(mensajes, usuario, opciones, traza);
+  } catch (err) {
+    throw traza.traducir(err);
+  }
+};
+
+const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectarFuga, signal: externa }, traza) => {
   const signal = crearPlazo(externa);
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
@@ -411,7 +456,9 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
     .filter((m) => m.rol === "usuario")
     .map((m) => m.texto)
     .join(" ");
+  traza.etapa("busqueda");
   const encontrados = await buscarTramites(consultaBusqueda, { signal });
+  traza.etapa("detalle");
   const tramites =
     encontrados.length > 0
       ? await conSenal(cargarDetalle(encontrados.map((t) => t.id)), signal)
@@ -423,6 +470,7 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   const topeAlcanzado =
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
+  traza.etapa("modelo");
   const salidaRaw = await ia.generarRespuesta({
     instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, tramites), signal),
     turnos: mensajes,
@@ -438,6 +486,7 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   if (copiaInstrucciones(cuerpoModelo, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
 
   if (salida.tipo === "conversacion") {
+    traza.etapa("conversacion");
     const texto = await textoDeConversacion(cuerpoModelo, { tramites, mensajes, saludo, alCorregirTuteo, signal });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
@@ -501,7 +550,16 @@ const leerMeta = (linea) => {
   }
 };
 
-export async function* responderConsultaStream(mensajes, usuario = null, { alCorregirTuteo, signal: externa } = {}) {
+export async function* responderConsultaStream(mensajes, usuario = null, opciones = {}) {
+  const traza = crearTraza();
+  try {
+    yield* transmitirConsulta(mensajes, usuario, opciones, traza);
+  } catch (err) {
+    throw traza.traducir(err);
+  }
+}
+
+async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal: externa }, traza) {
   const signal = crearPlazo(externa);
   const usuarioId = usuario?.id ?? null;
   const nombre = nombreParaSaludo(usuario);
@@ -539,7 +597,9 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
     .filter((m) => m.rol === "usuario")
     .map((m) => m.texto)
     .join(" ");
+  traza.etapa("busqueda");
   const encontrados = await buscarTramites(consultaBusqueda, { signal });
+  traza.etapa("detalle");
   const tramites =
     encontrados.length > 0
       ? await conSenal(cargarDetalle(encontrados.map((t) => t.id)), signal)
@@ -550,6 +610,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
   const topeAlcanzado =
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
+  traza.etapa("modelo");
   const deltas = ia.generarRespuestaStream({
     instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, tramites), signal),
     turnos: mensajes,
@@ -626,6 +687,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
 
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
+    traza.etapa("conversacion");
     const texto = await textoDeConversacion(cuerpo, { tramites, mensajes, saludo, alCorregirTuteo, signal });
     const prefijo = componerSaludo(saludo, nombre);
     if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE) yield { tipo: "delta", texto: prefijo };

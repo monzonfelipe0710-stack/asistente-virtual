@@ -57,8 +57,11 @@ export const consultarStream = async (req, res) => {
     }
   } catch (err) {
     if (cancelacion.signal.aborted) return;
-    console.error('Error en streaming del chat:', err.message);
-    res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje: 'Ocurrió un error procesando la consulta.' })}\n\n`);
+    // La causa de una falla del modelo ya quedó en el log del servicio.
+    const noDisponible = err instanceof chatService.AsistenteNoDisponibleError;
+    if (!noDisponible) console.error('Error en streaming del chat:', err);
+    const mensaje = noDisponible ? err.message : 'Ocurrió un error procesando la consulta.';
+    res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje })}\n\n`);
   } finally {
     res.end();
   }
