@@ -9,6 +9,7 @@ import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo
 import { cortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
+import { MENSAJE_FUERA_DE_ALCANCE, revisarMensajes } from "./guardrail.service.js";
 
 export const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
@@ -117,6 +118,14 @@ const respuestaConversacional = (respuesta) => ({
   conversacional: true,
   ...SIN_REGISTRO,
 });
+
+// Un mensaje que intenta sacar al asistente de su función no llega a la caché, la búsqueda ni
+// el modelo: se contesta con el mensaje fijo, como una conversación (sin saludo ni registro).
+const entradaBloqueada = (mensajes) => {
+  const { bloqueada, categoria, texto } = revisarMensajes(mensajes);
+  if (bloqueada) console.warn(`Chat: entrada bloqueada (${categoria}): "${texto.slice(0, 80)}"`);
+  return bloqueada;
+};
 
 // null es "no se cargó", no "gratis": solo un 0 explícito es gratuito.
 const formatearCosto = (costo) => {
@@ -230,6 +239,16 @@ const textoDeConversacion = async (cuerpo, { tramites, mensajes, saludo, alCorre
 
 const SIN_REGISTRO = { consultaId: null, calificarToken: null };
 
+const FIN_CONVERSACIONAL = {
+  tipo: "fin",
+  tipoRespuesta: "respuesta",
+  encontrado: false,
+  tramitesEncontrados: [],
+  opciones: [],
+  conversacional: true,
+  ...SIN_REGISTRO,
+};
+
 // Si falla el registro la respuesta igual sale, con consultaId y calificarToken null.
 const registrar = async (datos) => {
   try {
@@ -278,6 +297,8 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
+
+  if (entradaBloqueada(mensajes)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
 
   // Caché solo para un solo turno (las conversaciones dependen del contexto).
   if (esUnTurno) {
@@ -394,6 +415,12 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
+  if (entradaBloqueada(mensajes)) {
+    yield { tipo: "delta", texto: MENSAJE_FUERA_DE_ALCANCE };
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
+
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
@@ -503,15 +530,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, { alCor
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
     yield { tipo: "delta", texto: await textoDeConversacion(cuerpo, { tramites, mensajes, saludo, alCorregirTuteo }) };
-    yield {
-      tipo: "fin",
-      tipoRespuesta: "respuesta",
-      encontrado: false,
-      tramitesEncontrados: [],
-      opciones: [],
-      conversacional: true,
-      ...SIN_REGISTRO,
-    };
+    yield FIN_CONVERSACIONAL;
     return;
   }
 

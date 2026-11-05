@@ -431,6 +431,16 @@ trámite usado que tenga `fuenteUrl` http o https: `[Fuente oficial: {nombre}](<
 caché y `consultas.respuesta` guardan el texto sin saludo y sin estas líneas; las fuentes se
 buscan al servir, así siguen a la URL actual del trámite.
 
+**Reglas de entrada.** Antes de la caché, la búsqueda y el modelo, `guardrail.service.js` revisa
+todos los mensajes con `rol: "usuario"` contra patrones específicos (español, inglés y portugués,
+también con tildes, mayúsculas, espacios de más, caracteres de ancho cero o leetspeak): pedidos de
+revelar las instrucciones, de anular las reglas y marcadores de rol (`system:`, `<|im_start|>`,
+`[INST]`…). Si alguno coincide, la respuesta tiene la forma de una conversación (`conversacional:
+true`, sin trámites ni registro) con el texto fijo "Solo puedo ayudarte con información sobre
+trámites de la provincia. Contame qué trámite necesitás.", sin saludo ni enlaces; en streaming, un
+solo `delta` y el `fin`. No se cachea ni se registra; se loguea la categoría y los primeros 80
+caracteres.
+
 **Conversación y temas ajenos.** Una conversación (saludo, pregunta sobre el asistente o el
 catálogo, tema ajeno) solo nombra trámites del resumen del catálogo: para un tema ajeno da dos
 ejemplos de "Algunos trámites". Si el texto del modelo nombra un candidato de la búsqueda que no
