@@ -108,7 +108,7 @@ describe('aclaracionDeGrupo', () => {
     const [g] = resolverGrupos([grupo('Habilitación comercial', [1, 2, 3])], jurisdicciones, nada);
     const { texto, opciones } = aclaracionDeGrupo(g);
     assert.match(texto, /¿De qué localidad lo necesitás\? Está cargado para: Clorinda, Pirané o Las Lomitas\./);
-    assert.match(texto, /«habilitación comercial en clorinda»/);
+    assert.match(texto, /«habilitación comercial en Clorinda»/);
     assert.deepEqual(opciones[0], { id: 100, nombre: 'Habilitación comercial en Clorinda', jurisdiccion: 'MUNICIPAL', localidad: 'Clorinda' });
     assert.deepEqual(loQueNombro(opciones[1].nombre, LOCALIDADES).localidad, 'Pirané');
   });

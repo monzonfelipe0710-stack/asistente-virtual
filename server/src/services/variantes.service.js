@@ -113,6 +113,8 @@ const cualDeJurisdiccion = ({ jurisdiccion, localidad }) => {
   return `el trámite ${describirJurisdiccion({ jurisdiccion, localidad })}`;
 };
 
+const minusculaInicial = (texto) => texto.charAt(0).toLowerCase() + texto.slice(1);
+
 const unirConO = (partes) => (partes.length < 2 ? partes.join('') : `${partes.slice(0, -1).join(', ')} o ${partes.at(-1)}`);
 
 const describirNoEncontrado = ({ localidad, jurisdiccion }) =>
@@ -132,7 +134,7 @@ export const aclaracionDeGrupo = (grupo) => {
     pregunta =
       `«${nombre}» depende de cada ${opciones[0].jurisdiccion === 'MUNICIPAL' ? 'municipio' : 'localidad'}. ` +
       `¿De qué localidad lo necesitás? Está cargado para: ${unirConO(localidades)}. ` +
-      `Podés escribir, por ejemplo, «${etiquetaDeOpcion(nombre, opciones[0]).toLowerCase()}».`;
+      `Podés escribir, por ejemplo, «${minusculaInicial(etiquetaDeOpcion(nombre, opciones[0]))}».`;
   } else {
     pregunta = `Hay más de un trámite «${nombre}». ¿Necesitás ${unirConO(opciones.map(cualDeJurisdiccion))}?`;
   }
