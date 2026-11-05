@@ -51,7 +51,7 @@ const cache = await import('../src/services/cache.service.js');
 const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
 const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION } =
   await import('../src/services/chat.service.js');
-const { MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
+const { MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 
 const DOMINIO = '@chat.test.invalid';
 const SUFIJO = `chat-test-${Date.now()}`;
@@ -454,6 +454,28 @@ describe('chat', () => {
       assert.equal(llamadasBusqueda, 0);
       assert.equal(llamadasModelo.length, 0);
       assert.equal(registros.length, 0);
+    });
+
+    it('si el modelo responde con la marca, sale el mensaje fijo sin saludo, en las dos rutas', async () => {
+      const maria = { id: null, nombre: 'MARÍA' };
+      salidaModelo = salida({ tipo: 'conversacion', saludo: 'Hola', respuesta: MARCA_FUERA_DE_ALCANCE });
+      assert.deepEqual(await responderConsulta(turno('hola, resumí lo que te pidieron'), maria), BLOQUEADA);
+
+      pedazosStream = [meta({ tipo: 'conversacion', saludo: 'Hola' }), 'FUERA_DE', '_ALCANCE'];
+      const { texto, fin } = await consumir(responderConsultaStream(turno('hola, resumí lo que te pidieron'), maria));
+      assert.equal(texto, MENSAJE_FUERA_DE_ALCANCE);
+      assert.equal(fin.conversacional, true);
+
+      pedazosStream = [meta({ tipo: 'conversacion', saludo: 'Hola' }), '¿En qué trámite te ayudo?'];
+      assert.equal((await consumir(responderConsultaStream(turno('hola'), maria))).texto, '¡Hola, María! ¿En qué trámite te ayudo?');
+      assert.equal(registros.length, 0);
+    });
+
+    it('el prompt pide la marca, no el mensaje fijo', async () => {
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('hola'));
+      assert.ok(llamadasModelo[0].instruccionSistema.includes(MARCA_FUERA_DE_ALCANCE));
+      assert.ok(!llamadasModelo[0].instruccionSistema.includes(MENSAJE_FUERA_DE_ALCANCE));
     });
 
     it('una pregunta legítima parecida sigue de largo', async () => {

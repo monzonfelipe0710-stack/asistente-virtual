@@ -5,6 +5,11 @@
 export const MENSAJE_FUERA_DE_ALCANCE =
   'Solo puedo ayudarte con información sobre trámites de la provincia. Contame qué trámite necesitás.';
 
+// El prompt le pide al modelo esta marca en vez del mensaje: con la frase a la vista, el modelo
+// la usaba para redirigir cualquier tema ajeno en lugar de dar dos ejemplos del catálogo.
+export const MARCA_FUERA_DE_ALCANCE = 'FUERA_DE_ALCANCE';
+export const reemplazarMarca = (texto) => texto.replaceAll(MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE);
+
 const ANCHO_CERO = new RegExp(
   `[${[0x200b, 0x200c, 0x200d, 0x200e, 0x200f, 0x2060, 0xfeff].map((c) => String.fromCharCode(c)).join('')}]`,
   'g',
