@@ -115,10 +115,13 @@ const ejemplosNombrados = (texto) => {
 const INGLES = /\b(?:the|you|your|and|is|are|with|for|please|this|that|can|what|only|from)\b/gi;
 
 // Si el trámite no trae el dato pedido, el texto tiene que decirlo con alguna de estas expresiones.
-const DICE_NO_CARGADO = /no esta cargad|no figura|no cuento con/;
+const DICE_NO_CARGADO = /no esta cargad|no estan cargad|no figura|no cuento con|no tengo informacion/;
 // Conocimiento general que el modelo ya inventó en estas preguntas, y variantes parecidas
 // (normalizadas: minúsculas y sin tildes).
 const CONOCIMIENTO_GENERAL = [
+  'es recomendable que lleves una copia',
+  'documento alternativo',
+  'en argentina, el documento nacional',
   'en el ambito nacional',
   'podes presentar otros documentos',
   'otros documentos que acrediten',
