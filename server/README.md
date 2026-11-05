@@ -92,6 +92,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `npm run seed:demo` | Carga (o recarga) los datos de prueba |
 | `node scripts/importarTramites.js [archivo]` | Importa el catálogo real (default `ingestion/data/tramites_normalizado.json` del repo). Formato en [Importar el catálogo](#importar-el-catálogo) |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen |
+| `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding |
 | `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
 
 ### Importar el catálogo
@@ -671,6 +672,10 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 1. **Caché.** Una pregunta de un solo turno se busca primero en una caché en memoria
    (normalizada, 1 hora, 500 entradas). Se limpia al cambiar trámites, mesas o documentos.
    Un acierto de caché también se registra y tiene su propio `consultaId`.
+   El embedding de cada trámite se arma con `Trámite: <nombre>. Organismo: <sector> (<jurisdicción>, <localidad>). Descripción: … Requisitos: …`
+   (`textoDeTramite`). Se regenera al crear o editar el trámite, al importarlo con cambios y, en
+   segundo plano, para todos los trámites de un sector (y sus descendientes) cuando cambia su
+   nombre, padre, jurisdicción o localidad.
 2. **Búsqueda híbrida** con el texto de todos los turnos del usuario, solo sobre trámites
    publicados con embedding: 0,6 · similitud coseno (pgvector, HNSW) + 0,4 · `ts_rank`
    full-text en español (GIN). Es candidato si la distancia coseno es menor a

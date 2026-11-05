@@ -50,6 +50,22 @@ export const openaiAdapter = {
     }
   },
 
+  // Para reindexar en lotes: un pedido con varios textos tarda más que uno solo.
+  async generarEmbeddings(textos, { signal, timeout = TIEMPOS_IA.embedding.timeout * 5 } = {}) {
+    try {
+      const r = await openai.embeddings.create(
+        { model: MODELO_EMBEDDING, input: textos },
+        { ...TIEMPOS_IA.embedding, timeout, signal },
+      );
+      return {
+        vectores: [...r.data].sort((a, b) => a.index - b.index).map((d) => d.embedding),
+        tokens: r.usage?.total_tokens ?? null,
+      };
+    } catch (err) {
+      throw comoFalla(err, signal, 'embedding_lote');
+    }
+  },
+
   async generarRespuesta({ instruccionSistema, turnos, esquema, signal }) {
     let completion;
     try {

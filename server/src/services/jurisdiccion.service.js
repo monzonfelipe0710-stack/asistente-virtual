@@ -3,6 +3,12 @@ import * as cache from './cache.service.js';
 
 export const JURISDICCION_POR_DEFECTO = 'PROVINCIAL';
 
+const NOMBRES = { PROVINCIAL: 'provincial', MUNICIPAL: 'municipal', NACIONAL: 'nacional' };
+
+// "municipal, Clorinda" o "provincial".
+export const describirJurisdiccion = ({ jurisdiccion, localidad }) =>
+  [NOMBRES[jurisdiccion] ?? NOMBRES[JURISDICCION_POR_DEFECTO], localidad].filter(Boolean).join(', ');
+
 // Cada campo sale del propio sector o, si es null, del ancestro más cercano que lo tenga; sin
 // ninguno, provincial y sin localidad. Los dos se resuelven por separado: una delegación
 // provincial puede tener localidad propia.

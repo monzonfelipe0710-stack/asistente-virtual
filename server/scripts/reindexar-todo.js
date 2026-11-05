@@ -1,0 +1,37 @@
+// Regenera el embedding de todo el catálogo (publicados y borradores) con el texto actual de
+// `textoDeTramite`. Hace falta después de cambiar ese texto.
+//
+//   node scripts/reindexar-todo.js --estimar      cantidad, tokens y costo aproximados, sin llamar a la API
+//   node scripts/reindexar-todo.js                reindexa en lotes de 100
+//   node scripts/reindexar-todo.js --desde 412    retoma desde ese id (lo indica si un lote falla)
+//   node scripts/reindexar-todo.js --lote 50
+import 'dotenv/config';
+import prisma from '../src/config/prisma.js';
+import { reindexarCatalogo } from '../src/services/embedding.service.js';
+
+const valor = (nombre) => {
+  const i = process.argv.indexOf(nombre);
+  return i === -1 ? undefined : Number(process.argv[i + 1]);
+};
+
+const estimar = process.argv.includes('--estimar');
+const desde = valor('--desde') ?? 0;
+const lote = valor('--lote') ?? 100;
+
+try {
+  const inicio = Date.now();
+  const r = await reindexarCatalogo({ estimar, desde, lote });
+  const costo = `USD ${r.costoUsd.toFixed(5)}`;
+  if (estimar) {
+    console.log(`${r.tramites} trámites en ${r.lotes} lotes, ${r.caracteres} caracteres, ~${r.tokens} tokens, ~${costo}`);
+  } else {
+    console.log(`Listo: ${r.tramites} trámites, ${r.tokens} tokens, ${costo}, ${((Date.now() - inicio) / 1000).toFixed(1)} s.`);
+    console.log('El servidor en marcha sigue con la caché anterior hasta reiniciarlo o hasta que venza (1 hora).');
+  }
+} catch (e) {
+  console.error(e.message);
+  if (e.cause) console.error('Causa:', e.cause.message);
+  process.exitCode = 1;
+} finally {
+  await prisma.$disconnect();
+}

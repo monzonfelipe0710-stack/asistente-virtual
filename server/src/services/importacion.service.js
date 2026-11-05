@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { Jurisdiccion } from '@prisma/client';
 import prisma from '../config/prisma.js';
-import { indexarTramite } from './embedding.service.js';
+import { indexarTramite, tramitesDeSectores } from './embedding.service.js';
 import { JURISDICCION_POR_DEFECTO, leerSectoresParaResolver, resolverJurisdicciones } from './jurisdiccion.service.js';
 
 const JURISDICCIONES = new Set(Object.values(Jurisdiccion));
@@ -49,6 +49,7 @@ const buscarEnJson = (sectores, nombre, padre) => {
 const upsertSectores = async (sectores, log) => {
   const ids = new Map();
   const resumen = { creados: 0, actualizados: 0 };
+  const cambiados = [];
   const padres = sectores.map((s) => (s.padre ? buscarEnJson(sectores, s.padre) : null));
   let pendientes = sectores.map((_, i) => i).filter((i) => padres[i] !== -1);
 
@@ -63,9 +64,10 @@ const upsertSectores = async (sectores, log) => {
       const existente = await prisma.sector.findFirst({ where: { nombre: s.nombre, parentId } });
 
       if (existente) {
-        if (Object.keys(campos).length > 0) {
+        if (Object.entries(campos).some(([campo, valor]) => existente[campo] !== valor)) {
           await prisma.sector.update({ where: { id: existente.id }, data: campos });
           resumen.actualizados++;
+          cambiados.push(existente.id);
         }
         ids.set(i, existente.id);
       } else {
@@ -88,7 +90,7 @@ const upsertSectores = async (sectores, log) => {
   sectores.forEach((s, i) => {
     if (!ids.has(i)) log.warn(`Sector salteado: "${s.nombre}" (su padre "${s.padre}" no está en el JSON, es ambiguo o hay un ciclo)`);
   });
-  return { ids, resumen };
+  return { ids, resumen, cambiados };
 };
 
 // Un trámite nombra su sector; si el nombre se repite entre sectores con distinto padre, tiene
@@ -109,10 +111,12 @@ const avisarMunicipalesSinLocalidad = async (ids, log) => {
 // `publicar` en false deja los trámites nuevos como borradores (lo usan los tests: no aparecen en el chat).
 export const importarCatalogo = async (datos, { indexar = indexarTramite, log = console, publicar = true } = {}) => {
   const sistema = await obtenerUsuarioSistema();
-  const { ids, resumen: sectores } = await upsertSectores(datos.sectores, log);
+  const { ids, resumen: sectores, cambiados } = await upsertSectores(datos.sectores, log);
   await avisarMunicipalesSinLocalidad(ids, log);
 
-  const aIndexar = [];
+  // El texto del embedding incluye el sector: si cambió la jurisdicción o la localidad de un
+  // sector, se reindexan sus trámites y los de sus descendientes.
+  const aIndexar = cambiados.length > 0 ? await tramitesDeSectores(cambiados) : [];
   const tramites = { creados: 0, actualizados: 0, salteados: 0 };
 
   for (const t of datos.tramites) {
@@ -128,13 +132,13 @@ export const importarCatalogo = async (datos, { indexar = indexarTramite, log = 
       : null;
 
     if (existente) {
-      const cambio = existente.descripcion !== t.descripcion || existente.nombre !== t.nombre;
+      const cambio = existente.descripcion !== t.descripcion || existente.nombre !== t.nombre || existente.sectorId !== sectorId;
       await prisma.tramite.update({
         where: { id: existente.id },
         data: { nombre: t.nombre, descripcion: t.descripcion, sectorId },
       });
       tramites.actualizados++;
-      if (cambio) aIndexar.push(existente.id);
+      if (cambio && !aIndexar.includes(existente.id)) aIndexar.push(existente.id);
     } else {
       const creado = await prisma.tramite.create({
         data: {

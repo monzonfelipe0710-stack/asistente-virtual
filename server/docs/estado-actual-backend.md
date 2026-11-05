@@ -67,7 +67,7 @@
 | Services | ver 2.2 |
 | Rutas | `auth`, `usuario`, `sector`, `tramite`, `documento` (anidada en trámites), `mesa`, `chat`, `metrica`, `consulta` |
 | Prisma | `schema.prisma`, 15 migraciones, `seed.js` (superusuario), `seed-demo.js` (datos de prueba), `fix_search_vector.sql` |
-| Scripts | `importarTramites.js`, `reindexar-faltantes.js`, `eval-chat.js` |
+| Scripts | `importarTramites.js`, `reindexar-faltantes.js`, `reindexar-todo.js`, `eval-chat.js` |
 | Tests | `validators.test.js`, `middlewares.test.js`, `rutas.test.js`, `esquema.test.js` |
 
 ### 2.2 Servicios y clientes externos
@@ -345,9 +345,11 @@ La caché se limpia al crear, editar, borrar, publicar o despublicar un trámite
 
 ### Indexación
 
-- Al crear o editar un trámite, el embedding se genera en segundo plano a partir del nombre, la descripción y los requisitos. Si falla, solo se loguea.
+- Al crear o editar un trámite, el embedding se genera en segundo plano a partir del nombre, el organismo (sector con su jurisdicción y localidad efectivas), la descripción y los requisitos. Si falla, solo se loguea.
+- Al cambiar el nombre, el padre, la jurisdicción o la localidad de un sector se reindexan en segundo plano los trámites del sector y de sus descendientes; el import reindexa además los trámites que cambiaron de sector.
 - Al publicar, si el trámite no tiene embedding, se genera.
 - `node scripts/reindexar-faltantes.js` genera los que falten.
+- `node scripts/reindexar-todo.js` regenera todo el catálogo en lotes de 100 (un pedido de embeddings y un `UPDATE` por lote, 3 reintentos por lote, `--desde` para retomar, `--estimar` para ver tokens y costo sin llamar a la API).
 
 ### Catálogo real
 

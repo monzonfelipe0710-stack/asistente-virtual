@@ -7,6 +7,7 @@
  *
  * @typedef {Object} ProveedorIA
  * @property {(texto: string, opciones?: { signal?: AbortSignal }) => Promise<number[]>} generarEmbedding
+ * @property {(textos: string[], opciones?: { signal?: AbortSignal, timeout?: number }) => Promise<{ vectores: number[][], tokens: number | null }>} generarEmbeddings
  * @property {(args: { instruccionSistema: string, turnos: Turno[], esquema?: object, signal?: AbortSignal }) => Promise<string>} generarRespuesta
  * @property {(args: { instruccionSistema: string, turnos: Turno[], signal?: AbortSignal }) => AsyncGenerator<string>} generarRespuestaStream
  * @property {{ modelo: string, dimensiones: number }} infoEmbedding

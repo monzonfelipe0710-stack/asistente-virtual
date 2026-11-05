@@ -84,13 +84,23 @@ describe('importarCatalogo con jerarquía de sectores', () => {
   it('reimportar no duplica y actualiza la jurisdicción y la localidad de un sector existente', async () => {
     const segunda = await importar(catalogo({ municipalidad: { localidad: 'Formosa capital' } }));
     assert.equal(segunda.sectores.creados, 0);
+    assert.equal(segunda.sectores.actualizados, 1);
     assert.deepEqual(segunda.tramites, { creados: 0, actualizados: 3, salteados: 1 });
-    assert.equal(segunda.indexados.length, 0);
     assert.deepEqual(segunda.sectorIds.map((s) => s.id), primera.sectorIds.map((s) => s.id));
 
     const municipalidad = await prisma.sector.findUnique({ where: { id: idDe(primera, MUNICIPALIDAD) } });
     assert.equal(municipalidad.localidad, 'Formosa capital');
     assert.equal(municipalidad.jurisdiccion, 'MUNICIPAL');
+
+    // La localidad entra en el embedding: se reindexan los trámites de las dos secretarías.
+    const deFormosa = await prisma.tramite.findMany({ where: { fuenteUrl: { in: [url(1), url(2)] } }, select: { id: true } });
+    assert.deepEqual([...segunda.indexados].sort(), deFormosa.map((t) => t.id).sort());
+  });
+
+  it('sin cambios no reindexa nada', async () => {
+    const tercera = await importar(catalogo({ municipalidad: { localidad: 'Formosa capital' } }));
+    assert.equal(tercera.sectores.actualizados, 0);
+    assert.equal(tercera.indexados.length, 0);
   });
 
   it('un sector existente conserva lo que el JSON no trae', async () => {

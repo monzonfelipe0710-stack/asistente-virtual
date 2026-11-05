@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import * as cache from './cache.service.js';
+import { indexarTramite, tramitesDeSectores } from './embedding.service.js';
 import { JURISDICCION_POR_DEFECTO, leerSectoresParaResolver, municipalSinLocalidad } from './jurisdiccion.service.js';
 
 const NUEVO = 0;
@@ -39,13 +40,32 @@ export const obtenerSectorPorId = async (id) => {
   return prisma.sector.findUnique({ where: { id } });
 };
 
+// El nombre, la jurisdicción, la localidad y el padre entran en el texto del embedding de los
+// trámites del sector y de sus descendientes: si cambian, se reindexan en segundo plano.
+const CAMPOS_DEL_EMBEDDING = ['nombre', 'jurisdiccion', 'localidad', 'parentId'];
+
+const reindexarTramitesDe = async (id) => {
+  for (const tramiteId of await tramitesDeSectores([id])) {
+    try {
+      await indexarTramite(tramiteId);
+    } catch (err) {
+      console.error(`Error al reindexar el trámite ${tramiteId} por el cambio del sector ${id}`, err.message);
+    }
+  }
+  cache.limpiar();
+};
+
 export const actualizarSector = async (id, datos) => {
   await validarLocalidad(id, datos);
+  const anterior = await prisma.sector.findUnique({ where: { id } });
   const sector = await prisma.sector.update({
     where: { id },
     data: datos,
   });
   cache.limpiar();
+  if (CAMPOS_DEL_EMBEDDING.some((campo) => campo in datos && anterior?.[campo] !== sector[campo])) {
+    reindexarTramitesDe(id).catch((err) => console.error(`Error al reindexar los trámites del sector ${id}`, err.message));
+  }
   return sector;
 };
 
