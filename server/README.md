@@ -441,6 +441,13 @@ trámites de la provincia. Contame qué trámite necesitás.", sin saludo ni enl
 solo `delta` y el `fin`. No se cachea ni se registra; se loguea la categoría y los primeros 80
 caracteres.
 
+**Chequeo de salida.** Si la respuesta copia 40 caracteres seguidos (normalizados) de la parte
+fija de las instrucciones del sistema, se reemplaza por el mismo mensaje fijo y se loguea. Se
+compara solo contra el texto estático del prompt, no contra el resumen del catálogo ni los
+trámites, y no cuentan las frases que el prompt le pide decir (las que van entre comillas, quién
+es el asistente y adónde derivar). **El chequeo de salida aplica solo a `POST /api/chat`:** en
+`/api/chat/stream` el texto ya se transmitió y no se puede retractar.
+
 **Conversación y temas ajenos.** Una conversación (saludo, pregunta sobre el asistente o el
 catálogo, tema ajeno) solo nombra trámites del resumen del catálogo: para un tema ajeno da dos
 ejemplos de "Algunos trámites". Si el texto del modelo nombra un candidato de la búsqueda que no

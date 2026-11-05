@@ -9,7 +9,7 @@ import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo
 import { cortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
-import { MENSAJE_FUERA_DE_ALCANCE, revisarMensajes } from "./guardrail.service.js";
+import { MENSAJE_FUERA_DE_ALCANCE, crearDetectorDeFuga, revisarMensajes } from "./guardrail.service.js";
 
 export const MENSAJE_SIN_RESPUESTA =
   "No encontramos información sobre esta consulta. Probá reformular tu pregunta o consultá directamente en una mesa de entrada.";
@@ -227,6 +227,21 @@ const nombraCandidato = (texto, tramites, ejemplos) => {
 const INSTRUCCION_SIN_CANDIDATOS = `
 IMPORTANTE: este mensaje no pide un trámite. "tipo" DEBE ser "conversacion" y solo podés nombrar trámites del RESUMEN DEL CATÁLOGO.`;
 
+// Contra la parte fija de las instrucciones; el resumen del catálogo y los candidatos no cuentan.
+// Las permitidas son frases del prompt que el modelo dice casi textual en respuestas legítimas.
+const FRASES_DE_RESPUESTA = [
+  "el asistente virtual de la administración pública de Formosa",
+  "consultar en una mesa de entrada o en la fuente oficial",
+];
+let detectorDeFuga = null;
+export const buscarFugaDeInstrucciones = (texto) => {
+  detectorDeFuga ??= crearDetectorDeFuga(
+    [SYSTEM_PROMPT_MULTIVUELTA, SYSTEM_PROMPT_STREAM_MULTIVUELTA, INSTRUCCION_TOPE, INSTRUCCION_SIN_CANDIDATOS],
+    { permitidas: FRASES_DE_RESPUESTA },
+  );
+  return detectorDeFuga(texto);
+};
+
 const textoDeConversacion = async (cuerpo, { tramites, mensajes, saludo, alCorregirTuteo }) => {
   const { ejemplos } = await obtenerResumenCatalogo();
   if (!nombraCandidato(cuerpo, tramites, ejemplos)) return limitarConversacion(cuerpo);
@@ -297,8 +312,18 @@ const tramitesConFuente = async (tramitesEncontrados) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-// `alCorregirTuteo` es opcional: lo usa el eval para contar cuántas veces el modelo tuteó.
-export const responderConsulta = async (mensajes, usuario = null, { alCorregirTuteo } = {}) => {
+// Chequeo de salida, solo sin streaming (en streaming el texto ya salió): si la respuesta copia
+// las instrucciones fijas, se reemplaza por el mensaje fijo, sin cachear ni registrar.
+const copiaInstrucciones = (texto, alDetectarFuga) => {
+  const fragmento = buscarFugaDeInstrucciones(texto);
+  if (fragmento === null) return false;
+  console.warn(`Chat: respuesta reemplazada, copiaba las instrucciones: "${fragmento}"`);
+  alDetectarFuga?.(fragmento);
+  return true;
+};
+
+// `alCorregirTuteo` y `alDetectarFuga` son opcionales: los usan los evals para medir.
+export const responderConsulta = async (mensajes, usuario = null, { alCorregirTuteo, alDetectarFuga } = {}) => {
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
@@ -349,9 +374,11 @@ export const responderConsulta = async (mensajes, usuario = null, { alCorregirTu
   const salida = JSON.parse(salidaRaw);
   const saludo = saludoPara(preguntaActual, salida.saludo);
   const cuerpoModelo = limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo });
+  if (copiaInstrucciones(cuerpoModelo, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
 
   if (salida.tipo === "conversacion") {
     const texto = await textoDeConversacion(cuerpoModelo, { tramites, mensajes, saludo, alCorregirTuteo });
+    if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     return respuestaConversacional(conSaludo(texto, saludo, usuario));
   }
 

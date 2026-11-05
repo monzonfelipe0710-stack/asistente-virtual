@@ -97,6 +97,35 @@ export const revisarEntrada = (texto) => {
   return coincidencia ? { bloqueada: true, categoria: coincidencia.categoria } : { bloqueada: false, categoria: null };
 };
 
+// Chequeo de salida: una respuesta que copia 40 caracteres seguidos (normalizados) de las
+// instrucciones fijas es una fuga. Se arma solo con el texto estático del prompt, nunca con el
+// contexto dinámico: un listado legítimo de trámites no es una fuga. Las frases entre comillas
+// son ejemplos de lo que el modelo puede decir tal cual ("¡De nada! …", el mensaje fijo), así
+// que el texto se corta ahí y no cuentan; lo mismo con las `permitidas`, frases sin comillas que
+// el prompt le pide decir (quién es, adónde derivar).
+export const LARGO_DE_FUGA = 40;
+const paraComparar = (texto) => normalizarParaRevisar(texto).replace(/[^a-z0-9]+/g, ' ').trim();
+
+export const crearDetectorDeFuga = (textosFijos, { permitidas = [], largo = LARGO_DE_FUGA } = {}) => {
+  const cortes = permitidas.map(paraComparar);
+  const pedazos = textosFijos
+    .flatMap((t) => t.split(/"[^"\n]*"/))
+    .map(paraComparar)
+    .flatMap((p) => cortes.reduce((partes, corte) => partes.flatMap((x) => x.split(corte)), [p]));
+  const fragmentos = new Set();
+  for (const pedazo of pedazos) {
+    for (let i = 0; i + largo <= pedazo.length; i++) fragmentos.add(pedazo.slice(i, i + largo));
+  }
+  // Devuelve el primer fragmento copiado, o null.
+  return (respuesta) => {
+    const texto = paraComparar(respuesta);
+    for (let i = 0; i + largo <= texto.length; i++) {
+      if (fragmentos.has(texto.slice(i, i + largo))) return texto.slice(i, i + largo);
+    }
+    return null;
+  };
+};
+
 // Revisa todos los turnos de la persona (no los del asistente). Devuelve el primero bloqueado.
 export const revisarMensajes = (mensajes) => {
   for (const { rol, texto } of mensajes) {
