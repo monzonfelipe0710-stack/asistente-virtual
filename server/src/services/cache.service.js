@@ -39,7 +39,18 @@ export const guardarCatalogo = (valor) => {
   catalogo = { valor, expira: Date.now() + TTL_MS };
 };
 
+// La jurisdicción y la localidad efectivas de cada sector (ver jurisdiccion.service.js).
+let jurisdicciones = null;
+
+export const obtenerJurisdicciones = () =>
+  jurisdicciones && Date.now() <= jurisdicciones.expira ? jurisdicciones.valor : null;
+
+export const guardarJurisdicciones = (valor) => {
+  jurisdicciones = { valor, expira: Date.now() + TTL_MS };
+};
+
 export const limpiar = () => {
   cache.clear();
   catalogo = null;
+  jurisdicciones = null;
 };

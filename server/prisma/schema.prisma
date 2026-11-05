@@ -27,6 +27,12 @@ enum TipoSector {
   ORGANISMO
 }
 
+enum Jurisdiccion {
+  PROVINCIAL
+  MUNICIPAL
+  NACIONAL
+}
+
 enum EstadoUsuario {
   PENDIENTE
   APROBADO
@@ -44,6 +50,9 @@ model Sector {
   id        Int @id @default(autoincrement())
   nombre    String
   tipo      TipoSector
+  // null en los dos: igual que el sector padre (en un sector raíz, provincial y sin localidad).
+  jurisdiccion Jurisdiccion?
+  localidad    String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

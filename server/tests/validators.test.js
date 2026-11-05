@@ -128,6 +128,18 @@ describe('crearSectorSchema', () => {
   it('el schema de actualización deja todos los campos opcionales', () => {
     assert.equal(actualizarSectorSchema.safeParse({}).success, true);
   });
+
+  it('acepta jurisdicción y localidad, y null para heredarlas del padre', () => {
+    const r = crearSectorSchema.parse({ nombre: 'X', tipo: 'ORGANISMO', jurisdiccion: 'MUNICIPAL', localidad: '  Clorinda ' });
+    assert.equal(r.jurisdiccion, 'MUNICIPAL');
+    assert.equal(r.localidad, 'Clorinda');
+    assert.equal(actualizarSectorSchema.safeParse({ jurisdiccion: null, localidad: null }).success, true);
+  });
+
+  it('rechaza una jurisdicción fuera del enum y una localidad vacía', () => {
+    assert.match(mensaje(crearSectorSchema, { nombre: 'X', tipo: 'ORGANISMO', jurisdiccion: 'COMUNAL' }), /La jurisdicción debe ser una de/);
+    assert.equal(crearSectorSchema.safeParse({ nombre: 'X', tipo: 'ORGANISMO', localidad: '   ' }).success, false);
+  });
 });
 
 describe('crearTramiteSchema', () => {

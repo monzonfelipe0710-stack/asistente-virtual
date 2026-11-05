@@ -90,9 +90,35 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `npx prisma migrate deploy` | Aplica las migraciones pendientes |
 | `npx prisma db seed` | Crea el superusuario inicial |
 | `npm run seed:demo` | Carga (o recarga) los datos de prueba |
-| `node scripts/importarTramites.js [archivo]` | Importa el catálogo real (default `ingestion/data/tramites_normalizado.json` del repo) |
+| `node scripts/importarTramites.js [archivo]` | Importa el catálogo real (default `ingestion/data/tramites_normalizado.json` del repo). Formato en [Importar el catálogo](#importar-el-catálogo) |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen |
 | `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
+
+### Importar el catálogo
+
+```json
+{
+  "sectores": [
+    { "nombre": "Municipalidad de la Ciudad de Formosa", "tipo": "ORGANISMO", "jurisdiccion": "MUNICIPAL", "localidad": "Formosa" },
+    { "nombre": "Secretaría de Gobierno", "tipo": "DEPARTAMENTO", "padre": "Municipalidad de la Ciudad de Formosa" }
+  ],
+  "tramites": [
+    { "nombre": "Habilitación comercial", "descripcion": "...", "sector": "Secretaría de Gobierno", "sectorPadre": "Municipalidad de la Ciudad de Formosa", "fuenteUrl": "https://..." }
+  ]
+}
+```
+
+- Un sector se identifica por `(nombre, padre)`. `padre` es el nombre de otro sector del mismo
+  JSON (se crea antes que sus hijos); sin `padre`, es raíz. Un padre que no está en el JSON o
+  que es ambiguo deja el sector salteado, con un aviso.
+- `jurisdiccion` y `localidad` son opcionales. En un sector nuevo, sin `jurisdiccion` una raíz
+  queda `PROVINCIAL` y un hijo hereda. En un sector existente se actualiza solo lo que el JSON
+  trae: lo que no viene se conserva.
+- Un trámite nombra su sector; `sectorPadre` hace falta solo si el nombre se repite bajo
+  distintos padres (`null` para el de la raíz). Si no se puede saber cuál es, se saltea.
+- Los trámites se actualizan por `fuenteUrl` (sin `fuenteUrl` se crean de nuevo cada vez) y
+  solo se reindexan los que cambiaron. El script corre aparte: el server en marcha sigue con la
+  caché anterior hasta reiniciarlo o hasta que venza.
 
 ## Estructura
 
@@ -122,7 +148,7 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | Modelo (tabla) | Descripción |
 |---|---|
 | `Usuario` (`usuarios`) | Rol `SUPERUSUARIO`, `ADMINISTRADOR` o `CIUDADANO`; estado `PENDIENTE`, `APROBADO`, `RECHAZADO` o `SUSPENDIDO`. `email` único; `dni` único (los empleados no tienen); `genero` `M`, `F` o `X`; `cuil` del padrón (11 dígitos o `null`) |
-| `Sector` (`sectores`) | Jerarquía (`MINISTERIO`, `SUBSECRETARIA`, `DEPARTAMENTO`, `ORGANISMO`) con `parentId`. Nombre único bajo un mismo padre |
+| `Sector` (`sectores`) | Jerarquía (`MINISTERIO`, `SUBSECRETARIA`, `DEPARTAMENTO`, `ORGANISMO`) con `parentId`. Nombre único bajo un mismo padre. `jurisdiccion` (`PROVINCIAL`, `MUNICIPAL` o `NACIONAL`) y `localidad`, los dos opcionales: `null` es igual que el padre (ver abajo) |
 | `UsuarioSector` (`usuario_sector`) | Sectores asignados a cada administrador |
 | `Tramite` (`tramites`) | Nombre, descripción, costo, sector, encargado, `publicado`, `embedding vector(1536)`, `fuenteUrl` (catálogo importado) |
 | `Requisito` (`requisitos`) | Requisitos de un trámite, con dónde se consigue y costo |
@@ -136,6 +162,15 @@ en español sobre nombre y descripción). En el schema figura como `Unsupported(
 pero su definición real, el índice HNSW sobre `embedding` y el GIN sobre `search_vector`
 están en el SQL de la migración `20261017193000_search_vector_indices`. `tests/esquema.test.js`
 verifica que existan.
+
+**Jurisdicción y localidad de un sector.** Cada campo sale del propio sector o, si es `null`,
+del ancestro más cercano que lo tenga; si ninguno lo tiene, el sector es provincial y sin
+localidad. Se resuelven por separado: "Municipalidad de la Ciudad de Formosa" (`MUNICIPAL`,
+localidad `Formosa`) pasa las dos cosas a sus secretarías, y una delegación provincial puede
+tener localidad propia. Un sector raíz nuevo se crea `PROVINCIAL` si no se indica otra cosa, y
+un sector municipal tiene que tener localidad, propia o heredada (400 si no). La resolución
+está en [`jurisdiccion.service.js`](src/services/jurisdiccion.service.js) y queda en memoria
+junto con la caché del chat, que se limpia al crear, editar o borrar un sector.
 
 Reglas de borrado: un trámite borra en cascada sus requisitos, documentos (y sus archivos
 en R2) y vínculos con mesas; sus consultas quedan con `tramiteId = null`. No se puede
@@ -302,8 +337,8 @@ Respuesta 201:
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
 | GET | `/api/sectores`, `/api/sectores/:id` | SU, ADM | |
-| POST | `/api/sectores` | SU | `{ nombre, tipo, parentId? }` → 201 |
-| PATCH | `/api/sectores/:id` | SU | Parcial. `parentId` ausente no lo toca; `null` lo vuelve raíz. 409 si genera un ciclo |
+| POST | `/api/sectores` | SU | `{ nombre, tipo, parentId?, jurisdiccion?, localidad? }` → 201. Raíz sin `jurisdiccion`: `PROVINCIAL`. 400 si queda municipal sin localidad |
+| PATCH | `/api/sectores/:id` | SU | Parcial. `parentId` ausente no lo toca; `null` lo vuelve raíz. `jurisdiccion` y `localidad` en `null` pasan a heredarse del padre. 409 si genera un ciclo; 400 si el sector o uno de sus descendientes queda municipal sin localidad |
 | DELETE | `/api/sectores/:id` | SU | 204. 409 si tiene trámites |
 
 ### Mesas de entrada

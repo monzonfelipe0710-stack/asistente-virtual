@@ -75,7 +75,9 @@
 | Archivo | Qué hace |
 |---|---|
 | `services/usuario.service.js` | Búsquedas de usuarios, listado sin hash, cambio de estado, sectores asignados (reemplazo en transacción), registro de ciudadano y alta de empleado (bcrypt, 10 rondas), tokens de recuperación y cambio de contraseña (actualiza `passwordCambiadaEn`) |
-| `services/sector.service.js` | CRUD de sectores y `generariaCiclo` (recorre ancestros con `WITH RECURSIVE`, tope 100) |
+| `services/sector.service.js` | CRUD de sectores y `generariaCiclo` (recorre ancestros con `WITH RECURSIVE`, tope 100). Rechaza un sector municipal sin localidad propia ni heredada y limpia la caché del chat al cambiar un sector |
+| `services/jurisdiccion.service.js` | Resuelve la jurisdicción y la localidad efectivas de cada sector (herencia del padre) y las deja en memoria con la caché |
+| `services/importacion.service.js` | Importa el catálogo: sectores por `(nombre, padre)` con jurisdicción y localidad, trámites por `fuenteUrl` |
 | `services/tramite.service.js` | CRUD de trámites con requisitos y mesas en transacción, publicar/despublicar, dispara la indexación en segundo plano, borra los archivos de R2 al borrar el trámite y limpia la caché |
 | `services/mesa.service.js` | CRUD de mesas, verifica que las mesas sean generales o del sector, cuenta los trámites que usan una mesa |
 | `services/documento.service.js` | **R2:** sube con `PutObject` a la key `documentos/<uuid>.<ext>`, genera la URL firmada de `GetObject` (300 s), borra con `DeleteObject`; lista los documentos sin exponer la key |
@@ -197,6 +199,7 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 |---|---|
 | `Rol` | `SUPERUSUARIO`, `ADMINISTRADOR`, `CIUDADANO` |
 | `TipoSector` | `MINISTERIO`, `SUBSECRETARIA`, `DEPARTAMENTO`, `ORGANISMO` |
+| `Jurisdiccion` | `PROVINCIAL`, `MUNICIPAL`, `NACIONAL` |
 | `EstadoUsuario` | `PENDIENTE`, `APROBADO`, `RECHAZADO`, `SUSPENDIDO` |
 | `Genero` | `M`, `F` |
 
@@ -204,7 +207,7 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 
 | Modelo (tabla) | Campos | Relaciones (al borrar el padre) |
 |---|---|---|
-| `Sector` (`sectores`) | `nombre`, `tipo`, `parentId?`, timestamps. Único `(nombre, parentId)` | `parent` → `Sector` (SET NULL); `hijos`, `tramites`, `mesasEntrada`, `usuarios` |
+| `Sector` (`sectores`) | `nombre`, `tipo`, `parentId?`, `jurisdiccion?`, `localidad?`, timestamps. Único `(nombre, parentId)`. `jurisdiccion` y `localidad` en `null` se heredan del ancestro más cercano que las tenga (sin ninguno: provincial y sin localidad), ver `services/jurisdiccion.service.js` | `parent` → `Sector` (SET NULL); `hijos`, `tramites`, `mesasEntrada`, `usuarios` |
 | `Tramite` (`tramites`) | `nombre`, `descripcion`, `costo?` Decimal(12,2), `publicado` (false), `embedding?` vector(1536), `searchVector?` tsvector, `fuenteUrl?` único, timestamps | `encargado` → `Usuario` (RESTRICT), `sector` → `Sector` (RESTRICT); `requisitos`, `documentos`, `mesas`, `consultas` |
 | `Requisito` (`requisitos`) | `descripcion`, `dondeSeConsigue?`, `costo?` | `tramite` (CASCADE) |
 | `MesaEntrada` (`mesas_entrada`) | `nombre`, `direccion?`, `localidad?`, `horario?`, `esGeneral` (false) | `sector?` (SET NULL); `tramites` |
@@ -247,6 +250,9 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 | 13 | `20261019000000_reset_password` | `738bc20` | `reset_token_hash`, `reset_token_expira` |
 | 14 | `20261021000000_alta_empleados` | `763066f` | `debe_cambiar_password`, `password_cambiada_en` |
 | 15 | `20261026000000_mesa_horario` | `b7f7656` | `mesas_entrada.horario` |
+| 16 | `20261030000000_genero_x_dni_unico` | `d48ed8f` | Agrega `X` a `Genero` y hace único el DNI (SQL a mano, idempotente) |
+| 17 | `20261104000000_columnas_cuil_calificacion` | `28ec27e` | `usuarios.cuil` y las columnas de calificación de `consultas` (SQL a mano, idempotente) |
+| 18 | `20261105000000_jurisdiccion_sector` | — | Enum `Jurisdiccion`, `sectores.jurisdiccion` y `sectores.localidad`; los sectores raíz quedan `PROVINCIAL` (SQL a mano, idempotente) |
 
 **Las de tu compañero (Felipe) están solo en otras ramas** y no existen en `dev-nata`:
 
@@ -346,6 +352,8 @@ La caché se limpia al crear, editar, borrar, publicar o despublicar un trámite
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se actualizan por `fuenteUrl` y solo se reindexan los que cambiaron.
+
+Los sectores se buscan y se crean por `(nombre, padre)`: el JSON puede traer `padre` (otro sector del mismo JSON), `jurisdiccion` y `localidad`, y en un sector existente se actualiza solo lo que viene. Un trámite cuyo sector se repite bajo distintos padres trae `sectorPadre`. La lógica está en `services/importacion.service.js` y el formato, en el README ("Importar el catálogo").
 
 ---
 
