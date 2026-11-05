@@ -94,6 +94,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding |
 | `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
+| `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
 
 ### Importar el catálogo
 
@@ -792,7 +793,19 @@ además el texto de cada corrida; con `--corridas N` cambia la cantidad de corri
 `--solo "<pregunta>"` (repetible) corre solo esos casos. Además de lo esperado de cada caso, en todas las respuestas
 chequea que no haya tuteo, que no empiece con la palabra "respuesta", que no diga "tiene un
 costo sin costo", que toda URL del texto sea la fuente oficial de un trámite publicado y que
-una respuesta encontrada incluya el enlace a la fuente oficial de su trámite.
+una respuesta encontrada incluya el enlace a la fuente oficial de su trámite, y que una respuesta con un
+trámite que existe en varias jurisdicciones o localidades sea la de lo que nombró la persona (que no
+se ate a un municipio que no dijo).
+
+Los casos de "licencia de conducir" dependen del catálogo: sin trámites publicados con ese nombre se
+espera "no encontrado"; con un solo par (jurisdicción, localidad), la respuesta con ese trámite; con
+más de uno, la aclaración por jurisdicción o localidad con una opción por par.
+
+`--catalogo sintetico` corre solo los casos de trámites repetidos en distintos municipios (y los que
+dependen del catálogo) y se niega a correr si `DATABASE_URL` no es el Postgres temporal de Docker
+(`localhost:55432`). Para armarlo: `docker run -d --rm --name chatap-temporal -e POSTGRES_PASSWORD=... -p 55432:5432 pgvector/pgvector:pg17`,
+`npx prisma migrate deploy`, el import del catálogo real y el de
+`scripts/generar-catalogo-sintetico.js`, todo con `DATABASE_URL` apuntando a esa base.
 
 ## Notas de diseño
 

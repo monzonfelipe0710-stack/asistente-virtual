@@ -6,7 +6,7 @@ import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { describirJurisdiccion, obtenerJurisdicciones } from "./jurisdiccion.service.js";
-import { aclaracionDeGrupo, formatearGrupo, localidadesConocidas, loQueNombro, resolverGrupos } from "./variantes.service.js";
+import { aclaracionDeGrupo, formatearGrupo, localidadesConocidas, loQueNombro, quitarLocalidades, resolverGrupos } from "./variantes.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
@@ -406,12 +406,14 @@ const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Se
 
 const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
   traza.etapa("busqueda");
-  const encontrados = await buscarTramites(consultaBusqueda, { signal });
+  const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
+  const localidades = localidadesConocidas(jurisdicciones);
+  const textoDeBusqueda = quitarLocalidades(consultaBusqueda, localidades) || consultaBusqueda;
+  const encontrados = await buscarTramites(textoDeBusqueda, { signal });
   if (encontrados.length === 0) return SIN_CANDIDATOS;
 
   traza.etapa("detalle");
-  const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
-  const nombrado = loQueNombro(consultaBusqueda, localidadesConocidas(jurisdicciones));
+  const nombrado = loQueNombro(consultaBusqueda, localidades);
   const resueltos = resolverGrupos(encontrados, jurisdicciones, nombrado);
   const ids = resueltos.filter((c) => !c.sinResolver).map((c) => c.id);
   const tramites = ids.length > 0 ? await conSenal(cargarDetalle(ids), signal) : [];
@@ -434,8 +436,14 @@ const opcionesDeLaAclaracion = (ids, candidatos) =>
 // La persona pidió un trámite que existe con el mismo nombre en distintos organismos y no dijo
 // cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones), no la cachea
 // ni la registra.
-const grupoElegido = (salida, candidatos) =>
-  salida?.tipo === "respuesta" ? candidatos.grupos.get(salida.tramiteId) ?? null : null;
+// Cuenta también una aclaración del modelo cuya única opción es el grupo: el modelo a veces pregunta
+// la localidad por su cuenta en vez de devolver el grupo en "tramiteId".
+const grupoElegido = (salida, candidatos) => {
+  if (salida?.tipo === "respuesta") return candidatos.grupos.get(salida.tramiteId) ?? null;
+  if (salida?.tipo !== "aclaracion") return null;
+  const opciones = (salida.opciones ?? []).filter((id) => candidatos.ids.has(id));
+  return opciones.length === 1 ? candidatos.grupos.get(opciones[0]) ?? null : null;
+};
 
 const crearPlazo = (signal) => combinarSenales(AbortSignal.timeout(TIEMPOS_IA.plazoChat), signal);
 

@@ -180,6 +180,14 @@ describe('chat con trámites repetidos en distintos municipios', () => {
     ]);
   });
 
+  it('una aclaración del modelo con el grupo como única opción pasa a ser la pregunta del servidor', async () => {
+    salidaModelo = salida({ tipo: 'aclaracion', opciones: [enClorinda.id], respuesta: '¿De qué localidad?' });
+    const r = await responderConsulta(turno('libre deuda'));
+    assert.equal(r.tipo, 'aclaracion');
+    assert.deepEqual(r.opciones.map((o) => o.localidad), ['Clorinda', 'Pirané']);
+    assert.match(r.respuesta, /Está cargado para: Clorinda o Pirané/);
+  });
+
   it('una conversación no se convierte en aclaración', async () => {
     salidaModelo = salida({ tipo: 'conversacion', respuesta: '¡Hola! ¿En qué trámite te ayudo?' });
     const r = await responderConsulta(turno('hola'));

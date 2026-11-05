@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { aclaracionDeGrupo, formatearGrupo, loQueNombro, resolverGrupos } from '../src/services/variantes.service.js';
+import { aclaracionDeGrupo, formatearGrupo, loQueNombro, quitarLocalidades, resolverGrupos } from '../src/services/variantes.service.js';
 
 const LOCALIDADES = ['Clorinda', 'Pirané', 'Las Lomitas', 'Laguna Blanca', 'Formosa', 'Villa Formosa'];
 
@@ -42,6 +42,18 @@ describe('loQueNombro', () => {
     assert.equal(loQueNombro('el provincial', []).jurisdiccion, 'PROVINCIAL');
     assert.equal(loQueNombro('el nacional', []).jurisdiccion, 'NACIONAL');
     assert.equal(loQueNombro('la provincia', []).jurisdiccion, null);
+  });
+});
+
+describe('quitarLocalidades', () => {
+  it('saca las localidades conocidas del texto de búsqueda, sin importar acentos ni mayúsculas', () => {
+    assert.equal(quitarLocalidades('habilitación de taxi en LAGUNA BLANCA', LOCALIDADES), 'habilitación de taxi en');
+    assert.equal(quitarLocalidades('libre deuda de Pirane', LOCALIDADES), 'libre deuda de');
+  });
+
+  it('solo palabras completas y deja el resto igual', () => {
+    assert.equal(quitarLocalidades('trámites de clorindas', LOCALIDADES), 'trámites de clorindas');
+    assert.equal(quitarLocalidades('pasaporte', LOCALIDADES), 'pasaporte');
   });
 });
 
@@ -111,6 +123,11 @@ describe('aclaracionDeGrupo', () => {
   it('avisa cuando la localidad nombrada no está', () => {
     const [g] = resolverGrupos([grupo('Habilitación comercial', [1, 2])], jurisdicciones, { localidad: 'Laguna Blanca', jurisdiccion: null });
     assert.match(aclaracionDeGrupo(g).texto, /^No tengo cargado «Habilitación comercial» para Laguna Blanca\. /);
+  });
+
+  it('el contexto del grupo avisa al modelo si la localidad pedida no está', () => {
+    const [g] = resolverGrupos([grupo('Habilitación comercial', [1, 2])], jurisdicciones, { localidad: 'Laguna Blanca', jurisdiccion: null });
+    assert.match(formatearGrupo(g), /La persona lo pidió para Laguna Blanca, que no está entre esas: si pregunta por este trámite, igual es tipo "respuesta" con este ID/);
   });
 
   it('el contexto del grupo no trae la descripción de ninguna variante', () => {

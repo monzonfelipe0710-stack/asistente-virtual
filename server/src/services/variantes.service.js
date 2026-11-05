@@ -46,6 +46,24 @@ export const loQueNombro = (texto, localidades) => {
 export const localidadesConocidas = (jurisdicciones) =>
   new Set([...jurisdicciones.values()].map((j) => j.localidad).filter(Boolean));
 
+const ACENTOS = { a: '[aáàäâã]', e: '[eéèëê]', i: '[iíìïî]', o: '[oóòöôõ]', u: '[uúùüû]', n: '[nñ]' };
+const patronSinAcentos = (frase) =>
+  normalizar(frase)
+    .trim()
+    .split('')
+    .map((c) => ACENTOS[c] ?? (c === ' ' ? '\\s+' : c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    .join('');
+
+// La localidad se usa para elegir la variante, no para buscar: si queda en el texto, la búsqueda
+// trae trámites de esa localidad antes que el que la persona pidió.
+export const quitarLocalidades = (texto, localidades) => {
+  let limpio = String(texto ?? '');
+  for (const l of localidades) {
+    limpio = limpio.replace(new RegExp(`(?<![\\p{L}\\p{N}])${patronSinAcentos(l)}(?![\\p{L}\\p{N}])`, 'giu'), ' ');
+  }
+  return limpio.replace(/\s+/g, ' ').trim();
+};
+
 const mismaLocalidad = (a, b) => normalizar(a) === normalizar(b);
 const clavePar = ({ jurisdiccion, localidad }) => `${jurisdiccion}|${localidad ? normalizar(localidad) : ''}`;
 
@@ -125,10 +143,13 @@ export const aclaracionDeGrupo = (grupo) => {
   };
 };
 
-// Para el contexto del modelo: sin descripción, para que no use los datos de una variante.
-export const formatearGrupo = ({ id, nombre, opciones }) =>
+// Para el contexto del modelo: sin descripción, para que no use los datos de una variante. Si la
+// persona pidió una localidad que no está, se dice: si no, el modelo lo toma como "no encontrado".
+export const formatearGrupo = ({ id, nombre, opciones, noEncontrado }) =>
   [
     `Trámite (id ${id}): ${nombre}`,
     `Está cargado para varias jurisdicciones o localidades: ${opciones.map((o) => describirJurisdiccion(o)).join('; ')}.`,
-    'La persona no dijo cuál: si pregunta por este trámite, el sistema le pregunta cuál necesita.',
+    noEncontrado
+      ? `La persona lo pidió ${describirNoEncontrado(noEncontrado)}, que no está entre esas: si pregunta por este trámite, igual es tipo "respuesta" con este ID; el sistema le avisa y le ofrece las que hay.`
+      : 'La persona no dijo cuál: si pregunta por este trámite, el sistema le pregunta cuál necesita.',
   ].join('\n');

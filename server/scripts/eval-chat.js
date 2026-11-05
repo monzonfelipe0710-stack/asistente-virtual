@@ -6,6 +6,10 @@
 //   node scripts/eval-chat.js --detalle   además, el texto de cada corrida
 //   node scripts/eval-chat.js --corridas 5 --solo "cómo renuevo el pasaporte" --solo "..."
 //                                         otra cantidad de corridas, o solo esos casos
+//   DATABASE_URL=<base temporal> node scripts/eval-chat.js --catalogo sintetico
+//                                         solo los casos de trámites repetidos en distintos
+//                                         municipios (catálogo de scripts/generar-catalogo-sintetico.js)
+//                                         y los que dependen del catálogo. Se niega con otra base.
 //
 // responderConsulta registra las consultas en `consultas`; al terminar se borran
 // por id las que creó esta corrida para no ensuciar las métricas.
@@ -15,12 +19,17 @@ import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, MENSAJE_SIN_RESPUESTA } from '../src/services/chat.service.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 import { leerSectoresParaResolver, resolverJurisdicciones } from '../src/services/jurisdiccion.service.js';
+import { localidadesConocidas, loQueNombro } from '../src/services/variantes.service.js';
 
 const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [process.argv[i + 1]] : []));
 
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 3);
 const DETALLE = process.argv.includes('--detalle');
 const SOLO = argumento('--solo');
+const SINTETICO = argumento('--catalogo')[0] === 'sintetico';
+if (SINTETICO && !/@(localhost|127\.0\.0\.1):55432\//.test(process.env.DATABASE_URL ?? '')) {
+  throw new Error('--catalogo sintetico corre solo contra la base temporal de Docker (localhost:55432), nunca contra la real.');
+}
 
 const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
 // El mensaje fijo de seguridad es para pedidos sobre las instrucciones, no para un tema ajeno.
@@ -105,6 +114,28 @@ const casos = [
     turnos: ['cómo renuevo el pasaporte', '¿y cuánto cuesta?'],
     esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] },
   },
+
+  // Catálogo sintético (--catalogo sintetico): los mismos trámites en 8 municipios. Sin localidad,
+  // aclaración por municipio; con localidad, la de esa localidad; nunca atarse a un municipio que
+  // la persona no dijo (chequeo transversal).
+  { catalogo: 'sintetico', pregunta: 'habilitación comercial', esperado: { segunCatalogo: 'Habilitación comercial' } },
+  { catalogo: 'sintetico', pregunta: 'cómo saco la habilitación comercial', esperado: { segunCatalogo: 'Habilitación comercial' } },
+  { catalogo: 'sintetico', pregunta: 'habilitación comercial en Las Lomitas', esperado: { tipo: 'respuesta', encontrado: true, localidad: 'Las Lomitas' } },
+  { catalogo: 'sintetico', pregunta: 'libre deuda', esperado: { segunCatalogo: 'Libre deuda municipal' } },
+  { catalogo: 'sintetico', pregunta: 'necesito el libre deuda de Clorinda', esperado: { tipo: 'respuesta', encontrado: true, localidad: 'Clorinda' } },
+  { catalogo: 'sintetico', pregunta: 'licencia de conducir en Laguna Blanca', esperado: { tipo: 'respuesta', encontrado: true, localidad: 'Laguna Blanca' } },
+  { catalogo: 'sintetico', pregunta: 'cómo saco el permiso de obra en la municipalidad de Formosa', esperado: { tipo: 'respuesta', encontrado: true, localidad: 'Formosa' } },
+  { catalogo: 'sintetico', pregunta: 'habilitación de taxi en Laguna Blanca', esperado: { tipo: 'aclaracion', aclaracionPorJurisdiccion: 7, avisaNoCargado: true } },
+  { catalogo: 'sintetico', pregunta: 'certificado de domicilio', esperado: { segunCatalogo: 'Certificado de domicilio' } },
+  { catalogo: 'sintetico', pregunta: 'certificado de domicilio provincial', esperado: { tipo: 'respuesta', encontrado: true, jurisdiccion: 'PROVINCIAL' } },
+  { catalogo: 'sintetico', pregunta: 'cómo me inscribo en el registro de apicultores', esperado: { segunCatalogo: 'Inscripción en el registro de apicultores' } },
+  {
+    catalogo: 'sintetico',
+    pregunta: 'seguimiento: habilitación comercial → Pirané',
+    turnos: ['habilitación comercial', 'Pirané'],
+    esperado: { tipo: 'respuesta', encontrado: true, localidad: 'Pirané' },
+  },
+  { catalogo: 'sintetico', pregunta: 'hola', esperado: CONVERSACION },
 ];
 
 const { sectores, ejemplos } = await obtenerResumenCatalogo();
@@ -158,9 +189,12 @@ const enOtroIdioma = (texto) => (texto.match(INGLES)?.length ?? 0) >= 3;
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, sinConocimientoGeneral, aclaracionPorJurisdiccion }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, sinConocimientoGeneral, aclaracionPorJurisdiccion, localidad, jurisdiccion, avisaNoCargado }) =>
   [
     tipo,
+    localidad && `de ${localidad}`,
+    jurisdiccion && `jurisdicción ${jurisdiccion}`,
+    avisaNoCargado && 'avisa que no está cargado ahí',
     aclaracionPorJurisdiccion && `por jurisdicción o localidad (${aclaracionPorJurisdiccion} opciones)`,
     contesta && 'respuesta encontrada o aclaracion',
     conversacional !== undefined && `conv=${conversacional}`,
@@ -201,12 +235,12 @@ const paresDelNombre = (nombre) => {
   for (const t of publicados.filter((p) => normalizar(p.nombre) === normalizar(nombre))) {
     const { jurisdiccion, localidad } = jurisdicciones.get(t.sectorId);
     const clave = `${jurisdiccion}|${localidad ? normalizar(localidad) : ''}`;
-    if (!pares.has(clave)) pares.set(clave, t.id);
+    if (!pares.has(clave)) pares.set(clave, { id: t.id, jurisdiccion, localidad });
   }
   return [...pares.values()];
 };
 const esperadoSegunCatalogo = ({ segunCatalogo, siNoHay = {} }) => {
-  const ids = paresDelNombre(segunCatalogo);
+  const ids = paresDelNombre(segunCatalogo).map((p) => p.id);
   if (ids.length === 0) return { tipo: 'respuesta', encontrado: false, ...siNoHay };
   if (ids.length === 1) return { tipo: 'respuesta', encontrado: true, incluye: ids };
   return { tipo: 'aclaracion', aclaracionPorJurisdiccion: ids.length };
@@ -239,8 +273,33 @@ const SALUDO_INICIAL = /^[¡¿]?\s*(hola|buen\s+d[ií]a|buenos\s+d[ií]as|buenas
 const empiezaConSaludo = (texto) => SALUDO_INICIAL.test(texto);
 const saludoDoble = (texto) => empiezaConSaludo(texto) && empiezaConSaludo(texto.replace(SALUDO_INICIAL, ''));
 
+// Una respuesta con un trámite que existe en varios pares (jurisdicción, localidad) tiene que ser
+// el de lo que nombró la persona: si lo que dijo no alcanza para elegirlo, se ató a un municipio
+// (o a una jurisdicción) que no dijo.
+const sectorPorId = new Map(publicados.map((t) => [t.id, t.sectorId]));
+const localidades = localidadesConocidas(jurisdicciones);
+const seAtoSinQueLoDiga = (r, textoDeLaPersona) => {
+  if (r.tipo !== 'respuesta' || !r.encontrado) return false;
+  const nombrado = loQueNombro(textoDeLaPersona, localidades);
+  return r.tramitesEncontrados.some((t) => {
+    const pares = paresDelNombre(t.nombre);
+    if (pares.length < 2) return false;
+    const propio = jurisdicciones.get(sectorPorId.get(t.id));
+    const coinciden = pares.filter(
+      (p) =>
+        (!nombrado.localidad || (p.localidad && normalizar(p.localidad) === normalizar(nombrado.localidad))) &&
+        (!nombrado.jurisdiccion || p.jurisdiccion === nombrado.jurisdiccion),
+    );
+    const esElNombrado = coinciden.length === 1 && coinciden[0].jurisdiccion === propio.jurisdiccion &&
+      normalizar(coinciden[0].localidad ?? '') === normalizar(propio.localidad ?? '');
+    return !(nombrado.localidad || nombrado.jurisdiccion) || !esElNombrado;
+  });
+};
+const localidadDe = (id) => jurisdicciones.get(sectorPorId.get(id))?.localidad ?? null;
+const jurisdiccionDe = (id) => jurisdicciones.get(sectorPorId.get(id))?.jurisdiccion ?? null;
+
 // Chequeos que valen para cualquier respuesta, también los turnos intermedios.
-const fallasTransversales = (r) => {
+const fallasTransversales = (r, textoDeLaPersona) => {
   const enlaces = enlacesDe(r.respuesta);
   const fuentesDeLaRespuesta = r.tramitesEncontrados.map((t) => fuentePorId.get(t.id)).filter(Boolean);
   return [
@@ -253,6 +312,7 @@ const fallasTransversales = (r) => {
     r.tipo === 'respuesta' && r.encontrado && nombradosSinUsar(r).length > 0 && `nombra sin usar: ${nombradosSinUsar(r).join(' / ')}`,
     r.encontrado && fuentesDeLaRespuesta.length > 0 &&
       !fuentesDeLaRespuesta.some((u) => r.respuesta.includes(`](${u})`)) && 'sin fuente',
+    seAtoSinQueLoDiga(r, textoDeLaPersona) && 'se ató a una localidad o jurisdicción que la persona no dijo',
   ];
 };
 
@@ -281,6 +341,9 @@ const fallas = (esperado, r) => {
     esperado.aclaracionPorJurisdiccion &&
       (r.opciones.length !== esperado.aclaracionPorJurisdiccion || r.opciones.some((o) => !o.jurisdiccion)) &&
       `${r.opciones.length} opciones por jurisdicción o localidad`,
+    esperado.localidad && !(r.encontrado && r.tramitesEncontrados.every((t) => normalizar(localidadDe(t.id) ?? '') === normalizar(esperado.localidad))) && 'otra localidad',
+    esperado.jurisdiccion && !(r.encontrado && r.tramitesEncontrados.every((t) => jurisdiccionDe(t.id) === esperado.jurisdiccion)) && 'otra jurisdicción',
+    esperado.avisaNoCargado && !/^(¡[^!]{1,60}! )?No tengo cargado/.test(texto) && 'no avisa',
     repiteNombres(r.opciones) && 'opciones repetidas',
   ].filter(Boolean);
 };
@@ -300,7 +363,7 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
       mensajes.push({ rol: 'usuario', texto });
       r = await responderConsulta(mensajes, null, { alCorregirTuteo });
       if (r.consultaId) consultasCreadas.push(r.consultaId);
-      transversales.push(...fallasTransversales(r));
+      transversales.push(...fallasTransversales(r, mensajes.filter((m) => m.rol === 'usuario').map((m) => m.texto).join(' ')));
       mensajes.push({ rol: 'asistente', texto: r.respuesta });
     }
     return {
@@ -334,8 +397,11 @@ const filas = [];
 const detalle = [];
 const tuteoPorCaso = [];
 
-const elegidos = SOLO.length > 0 ? casos.filter((c) => SOLO.includes(c.pregunta)) : casos;
-const desconocidos = SOLO.filter((p) => !casos.some((c) => c.pregunta === p));
+// Los casos del catálogo sintético corren solo con --catalogo sintetico; los que dependen del
+// catálogo, en los dos modos.
+const delModo = casos.filter((c) => (SINTETICO ? c.catalogo === 'sintetico' || c.esperado.segunCatalogo : c.catalogo !== 'sintetico'));
+const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunta)) : delModo;
+const desconocidos = SOLO.filter((p) => !delModo.some((c) => c.pregunta === p));
 if (desconocidos.length > 0) throw new Error(`Casos que no existen: ${desconocidos.join(' | ')}`);
 
 for (const caso of elegidos) {
