@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { TOPES_CAMPOS } from '../services/sanitizacion.service.js';
+import { textoExterno } from './texto.js';
 
 export const esUrlHttp = (valor) => {
   try {
@@ -9,11 +11,7 @@ export const esUrlHttp = (valor) => {
   }
 };
 
-const nombre = z
-  .string()
-  .trim()
-  .min(1, 'El nombre no puede estar vacío.')
-  .max(200, 'El nombre es demasiado largo.');
+const nombre = textoExterno({ tope: TOPES_CAMPOS.documento, vacio: 'El nombre no puede estar vacío.', largo: 'El nombre es demasiado largo.' });
 
 const urlExterna = z
   .string()

@@ -6,6 +6,7 @@ import { reindexarCatalogo, tramitesDeSectores } from './embedding.service.js';
 import { JURISDICCION_POR_DEFECTO, leerSectoresParaResolver, resolverJurisdicciones, subarbol } from './jurisdiccion.service.js';
 import { normalizarNombre } from '../utils/texto.js';
 import { marcarCatalogoCambiado } from './version-catalogo.service.js';
+import { TOPES_CAMPOS, instruccionesEn, limpiarTexto } from './sanitizacion.service.js';
 
 const JURISDICCIONES = new Set(Object.values(Jurisdiccion));
 export const EMAIL_SISTEMA = 'sistema@chatap.local';
@@ -133,8 +134,40 @@ const textoValido = (v) => typeof v === 'string' && v.trim().length > 0;
 
 const reindexarPorDefecto = (ids, { lote, log }) => reindexarCatalogo({ ids, lote, log, continuarSiFalla: true });
 
+// Los textos del JSON vienen de afuera: se limpian antes de comparar y de guardar. Los nombres de
+// sectores se limpian igual en los sectores y en las referencias de los trámites, para que sigan
+// coincidiendo. Lo que no es texto queda como vino (lo rechaza la validación de cada trámite).
+const limpiarCatalogo = (datos) => {
+  const recortados = [];
+  const campo = (valor, campoNombre, de, { tope, multilinea = false }) => {
+    if (typeof valor !== 'string') return valor;
+    const { texto, recortado } = limpiarTexto(valor, { tope, multilinea });
+    if (recortado) recortados.push({ nombre: de, campo: campoNombre, tope });
+    return texto;
+  };
+  const nombre = { tope: TOPES_CAMPOS.nombre };
+  const sectores = datos.sectores.map((s) => ({
+    ...s,
+    nombre: campo(s.nombre, 'nombre del sector', s.nombre, nombre),
+    padre: campo(s.padre, 'padre', s.nombre, nombre),
+    localidad: campo(s.localidad, 'localidad', s.nombre, { tope: TOPES_CAMPOS.localidad }),
+  }));
+  const tramites = datos.tramites.map((t) => (t && typeof t === 'object'
+    ? {
+      ...t,
+      nombre: campo(t.nombre, 'nombre', t.nombre, nombre),
+      descripcion: campo(t.descripcion, 'descripcion', t.nombre, { tope: TOPES_CAMPOS.descripcion, multilinea: true }),
+      sector: campo(t.sector, 'sector', t.nombre, nombre),
+      sectorPadre: campo(t.sectorPadre, 'sectorPadre', t.nombre, nombre),
+    }
+    : t));
+  return { datos: { ...datos, sectores, tramites }, recortados };
+};
+
 // Importa sectores y trámites sin cortar la corrida: lo que no se puede escribir queda en
-// `fallidos` y lo que pisaría un trámite ajeno, en `conflictos`.
+// `fallidos` y lo que pisaría un trámite ajeno, en `conflictos`. Un trámite cuyo nombre o
+// descripción trae una frase con forma de instrucción para el asistente se crea o se actualiza sin
+// publicar y queda en `paraRevisar`; uno sin cambios no se toca, pero también se informa.
 //
 // - `simular`: calcula el informe sin escribir ni llamar a la API de embeddings.
 // - `despublicarFaltantes` (exige `completa`): despublica los trámites del importador que no
@@ -142,7 +175,7 @@ const reindexarPorDefecto = (ids, { lote, log }) => reindexarCatalogo({ ids, lot
 //   trámites cargados a mano.
 // - `publicar` en false deja los trámites nuevos como borradores (lo usan los tests).
 // - `reindexar(ids, { lote, log })` devuelve `{ reindexados, fallidos }`.
-export const importarCatalogo = async (datos, {
+export const importarCatalogo = async (crudos, {
   reindexar = reindexarPorDefecto,
   log = console,
   publicar = true,
@@ -155,6 +188,7 @@ export const importarCatalogo = async (datos, {
     throw new Error('despublicar faltantes exige una importación completa (--completa): con un JSON parcial se despublicaría el resto del catálogo.');
   }
 
+  const { datos, recortados } = limpiarCatalogo(crudos);
   const sistema = await obtenerUsuarioSistema({ simular });
   const { ids, resumen: sectores, cambiados } = await upsertSectores(datos.sectores, log, { simular });
   if (!simular) await avisarMunicipalesSinLocalidad(ids, log);
@@ -170,7 +204,7 @@ export const importarCatalogo = async (datos, {
   // El texto del embedding incluye el sector: si cambió la jurisdicción o la localidad de un
   // sector, se reindexan sus trámites y los de sus descendientes.
   const aIndexar = new Set(cambiados.length > 0 ? await tramitesDeSectores(cambiados) : []);
-  const informe = { creados: [], actualizados: [], sinCambios: 0, reindexados: [], fallidos: [], conflictos: [], despublicados: [], despublicacion: null };
+  const informe = { creados: [], actualizados: [], sinCambios: 0, reindexados: [], fallidos: [], conflictos: [], paraRevisar: [], recortados, despublicados: [], despublicacion: null };
   const vistos = new Set();
   const urlsDelJson = new Set();
   const clavesDelJson = new Set();
@@ -193,6 +227,11 @@ export const importarCatalogo = async (datos, {
     if (!textoValido(t.nombre) || !textoValido(t.descripcion)) {
       return marcar(porUrl.get(fuenteUrl)?.id ?? null, () => fallido('falta el nombre o la descripción'), { identificable: Boolean(porUrl.get(fuenteUrl)) });
     }
+
+    const sospechas = instruccionesEn({ nombre: t.nombre, descripcion: t.descripcion });
+    const revisar = (id, accion) => {
+      if (sospechas.length > 0) informe.paraRevisar.push({ id, nombre: t.nombre, fuenteUrl, frases: sospechas, accion });
+    };
 
     const clave = claveDe(sectorId, t.nombre);
     const delSectorSinUrl = (porClave.get(clave) ?? []).filter((c) => !c.fuenteUrl);
@@ -228,11 +267,14 @@ export const importarCatalogo = async (datos, {
       const cambio = Object.entries(datosNuevos).some(([campo, valor]) => existente[campo] !== valor);
       if (!cambio) {
         informe.sinCambios++;
+        revisar(existente.id, existente.publicado ? 'sin cambios, sigue publicado' : 'sin cambios, sin publicar');
         if (sinEmbedding.has(existente.id)) aIndexar.add(existente.id);
         return;
       }
-      if (!simular) await prisma.tramite.update({ where: { id: existente.id }, data: datosNuevos });
+      const data = sospechas.length > 0 ? { ...datosNuevos, publicado: false } : datosNuevos;
+      if (!simular) await prisma.tramite.update({ where: { id: existente.id }, data });
       informe.actualizados.push({ id: existente.id, nombre: t.nombre });
+      revisar(existente.id, 'actualizado sin publicar');
       aIndexar.add(existente.id);
       return;
     }
@@ -240,12 +282,14 @@ export const importarCatalogo = async (datos, {
     marcar(null);
     if (simular) {
       informe.creados.push({ id: null, nombre: t.nombre });
+      revisar(null, 'creado sin publicar');
       return;
     }
     const creado = await prisma.tramite.create({
-      data: { nombre: t.nombre.trim(), descripcion: t.descripcion, sectorId, encargadoId: sistema.id, publicado: publicar, fuenteUrl },
+      data: { nombre: t.nombre.trim(), descripcion: t.descripcion, sectorId, encargadoId: sistema.id, publicado: publicar && sospechas.length === 0, fuenteUrl },
     });
     informe.creados.push({ id: creado.id, nombre: t.nombre });
+    revisar(creado.id, 'creado sin publicar');
     aIndexar.add(creado.id);
   };
 
@@ -318,9 +362,12 @@ const lista = (titulo, items, formato) =>
 export const formatearInforme = (r) => [
   r.simulado ? 'SIMULACIÓN (--dry-run): no se escribió nada.' : 'Importación terminada.',
   `Sectores: ${r.sectores.creados} ${r.simulado ? 'a crear' : 'creados'}, ${r.sectores.actualizados} ${r.simulado ? 'a actualizar' : 'actualizados'}`,
-  `Trámites: ${r.creados.length} creados, ${r.actualizados.length} actualizados, ${r.sinCambios} sin cambios, ${r.reindexados.length} ${r.simulado ? 'a reindexar' : 'reindexados'}, ${r.fallidos.length} fallidos, ${r.conflictos.length} conflictos`,
+  `Trámites: ${r.creados.length} creados, ${r.actualizados.length} actualizados, ${r.sinCambios} sin cambios, ${r.reindexados.length} ${r.simulado ? 'a reindexar' : 'reindexados'}, ${r.fallidos.length} fallidos, ${r.conflictos.length} conflictos, ${r.paraRevisar.length} para revisión`,
   ...(r.despublicacion ? [`Despublicación de faltantes: ${r.despublicacion}${r.despublicacion.startsWith('omitida') ? '' : ` (${r.despublicados.length})`}`] : []),
   ...lista('Fallidos', r.fallidos, (f) => `${f.nombre ?? `id ${f.id}`}${f.fuenteUrl ? ` <${f.fuenteUrl}>` : ''}: ${f.motivo}`),
   ...lista('Conflictos', r.conflictos, (c) => `${c.nombre}${c.fuenteUrl ? ` <${c.fuenteUrl}>` : ''}: ${c.motivo}`),
+  ...lista('Para revisión (frases con forma de instrucción para el asistente)', r.paraRevisar, (p) =>
+    `${p.id ?? 'nuevo'} ${p.nombre}${p.fuenteUrl ? ` <${p.fuenteUrl}>` : ''}: ${p.frases.map((f) => `"${f.frase}" (${f.campo})`).join(', ')}; ${p.accion}`),
+  ...lista('Recortados', r.recortados, (x) => `${x.nombre}: ${x.campo} a ${x.tope} caracteres`),
   ...lista(r.simulado ? 'Se despublicarían' : 'Despublicados', r.despublicados, (d) => `${d.id} ${d.nombre}`),
 ].join('\n');

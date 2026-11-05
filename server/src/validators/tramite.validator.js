@@ -1,14 +1,16 @@
 import { z } from 'zod';
+import { TOPES_CAMPOS } from '../services/sanitizacion.service.js';
+import { textoExterno } from './texto.js';
 
 const requisitoSchema = z.object({
-  descripcion: z.string().min(1, 'La descripción del requisito es obligatoria.'),
-  dondeSeConsigue: z.string().optional(),
+  descripcion: textoExterno({ tope: TOPES_CAMPOS.requisito, multilinea: true, vacio: 'La descripción del requisito es obligatoria.' }),
+  dondeSeConsigue: textoExterno({ tope: TOPES_CAMPOS.dondeSeConsigue }).optional(),
   costo: z.number().nonnegative().optional(),
 });
 
 const tramiteSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es obligatorio.'),
-  descripcion: z.string().min(1, 'La descripción es obligatoria.'),
+  nombre: textoExterno({ tope: TOPES_CAMPOS.nombre, vacio: 'El nombre es obligatorio.' }),
+  descripcion: textoExterno({ tope: TOPES_CAMPOS.descripcion, multilinea: true, vacio: 'La descripción es obligatoria.' }),
   costo: z.number().nonnegative().optional(),
   sectorId: z.number().int().positive('El sector es obligatorio.'),
   requisitos: z.array(requisitoSchema),

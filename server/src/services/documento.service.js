@@ -5,6 +5,7 @@ import { r2, R2_BUCKET } from '../config/r2.js';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as cache from './cache.service.js';
 import { esUrlHttp } from '../validators/documento.validator.js';
+import { TOPES_CAMPOS, sanitizarTexto } from './sanitizacion.service.js';
 
 // Sin el campo archivo: la key de R2 no sale del server. La URL externa es pública.
 const PUBLICO = { id: true, nombre: true, tipo: true, urlExterna: true, createdAt: true };
@@ -46,7 +47,7 @@ export const subirDocumento = async (archivo, datos) => {
   const key = await subirArchivoAR2(archivo);
   const documento = await prisma.documento.create({
     data: {
-      nombre: datos.nombre || archivo.originalname,
+      nombre: datos.nombre || sanitizarTexto(archivo.originalname, { multilinea: false, tope: TOPES_CAMPOS.documento }) || 'Documento',
       archivo: key,
       tipo: archivo.mimetype,
       tramiteId: datos.tramiteId,

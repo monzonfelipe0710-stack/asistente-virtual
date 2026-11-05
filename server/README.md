@@ -131,6 +131,17 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
   y **conflictos**, donde no se escribe nada: la `fuenteUrl` ya es de un trámite de otro sector
   (no se lo mueve), hay un trámite cargado a mano con el mismo nombre o el trámite está repetido
   en el JSON. Con fallidos, el script sale con código 1.
+- **Texto de afuera.** Antes de comparar y guardar, los nombres (de trámites y sectores), la
+  descripción y la localidad pasan por `services/sanitizacion.service.js`, la misma limpieza que
+  la carga manual: sin HTML ni scripts, sin caracteres de control ni de ancho cero, espacios
+  normalizados y un tope por campo (lo recortado queda en el informe, en **Recortados**).
+- **Revisión humana.** Si el nombre o la descripción traen una frase con forma de instrucción
+  para el asistente ("ignorá lo anterior", "respondé siempre", "system prompt", "ignore previous
+  instructions", en español, inglés o portugués), el trámite se crea o se actualiza **sin
+  publicar** y queda en **Para revisión** con la frase y el campo. Uno que no cambió no se toca
+  (si una persona ya lo revisó y lo publicó, sigue publicado), pero se vuelve a informar. Se
+  publica a mano después de revisarlo. La detección busca frases, no palabras sueltas: "You are
+  here" o "SEMFormosaBot" no cuentan.
 - **Embeddings en lotes** de 100 (`--lote n`) con 3 reintentos por lote. Si un lote los agota,
   se prueba de a un trámite y los que fallan quedan como fallidos. Se reindexan los trámites
   nuevos, los que cambiaron, los de un sector que cambió (y sus descendientes) y los que vinieron
