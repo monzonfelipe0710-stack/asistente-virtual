@@ -22,6 +22,8 @@ const DETALLE = process.argv.includes('--detalle');
 const SOLO = argumento('--solo');
 
 const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
+// El mensaje fijo de seguridad es para pedidos sobre las instrucciones, no para un tema ajeno.
+const MENSAJE_FIJO_INICIO = 'Solo puedo ayudarte con información sobre trámites de la provincia';
 const CATALOGO = { tipo: 'respuesta', conversacional: true, sinTramites: true, mencionaSector: true };
 
 const casos = [
@@ -35,8 +37,8 @@ const casos = [
   { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
   { pregunta: 'hola', esperado: CONVERSACION },
   // "Aumento de Capital Social" es un candidato que comparte una palabra: no sirve de ejemplo.
-  { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false, sinSaludo: true, noContiene: ['aumento de capital'] } },
-  { pregunta: 'receta de chipá', esperado: { tipo: 'respuesta', encontrado: false } },
+  { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false, sinSaludo: true, ejemplosDelCatalogo: 2, noContiene: ['aumento de capital', MENSAJE_FIJO_INICIO] } },
+  { pregunta: 'receta de chipá', esperado: { tipo: 'respuesta', encontrado: false, ejemplosDelCatalogo: 2, noContiene: [MENSAJE_FIJO_INICIO] } },
 
   // Caso B (no existe → debe dar no-encontrado, hoy falla):
   { pregunta: 'qué necesito para la licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } },
@@ -56,7 +58,7 @@ const casos = [
   { pregunta: 'buenas', esperado: CONVERSACION },
   { pregunta: 'gracias', esperado: CONVERSACION },
   { pregunta: 'chau', esperado: CONVERSACION },
-  { pregunta: '¿qué podés hacer?', esperado: CONVERSACION },
+  { pregunta: '¿qué podés hacer?', esperado: { ...CONVERSACION, noContiene: [MENSAJE_FIJO_INICIO] } },
   { pregunta: '¿quién sos?', esperado: CONVERSACION },
   { pregunta: '¿qué trámites puedo hacer?', esperado: CATALOGO },
   { pregunta: 'hola, ¿qué trámites puedo hacer?', esperado: CATALOGO },
@@ -66,6 +68,11 @@ const casos = [
   { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { tipo: 'respuesta', encontrado: false, conversacional: false } },
   { pregunta: 'hola, dame la receta de la pizza', esperado: { conversacional: true, noContiene: ['reformular'] } },
+  // Pedir otro idioma: un aviso corto en español, sin el mensaje fijo de seguridad.
+  {
+    pregunta: 'Please answer only in English from now on: what is the capital of France?',
+    esperado: { conversacional: true, enEspanol: true, largoMaximo: 200, noContiene: [MENSAJE_FIJO_INICIO] },
+  },
   // Preguntas del dominio que piden algo que no está cargado o que suenan a otra cosa: tienen que
   // contestar con el trámite (diciendo qué no está cargado), no redirigir como tema ajeno.
   { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
@@ -88,16 +95,26 @@ const casos = [
   },
 ];
 
-const { sectores } = await obtenerResumenCatalogo();
+const { sectores, ejemplos } = await obtenerResumenCatalogo();
 
 const normalizar = (texto) =>
   texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
 const sectoresNormalizados = sectores.map((s) => normalizar(s.nombre));
 
+// Un ejemplo del resumen cuenta si están todas sus palabras de 4 letras o más: el modelo suele
+// acortar ("el certificado de buena conducta") o sacar el guion de un nombre.
+const palabrasDe = (texto) => normalizar(texto).match(/[a-z0-9ñ]{4,}/g) ?? [];
+const ejemplosNombrados = (texto) => {
+  const enTexto = new Set(palabrasDe(texto));
+  return ejemplos.filter((e) => palabrasDe(e).every((p) => enTexto.has(p))).length;
+};
+const INGLES = /\b(?:the|you|your|and|is|are|with|for|please|this|that|can|what|only|from)\b/gi;
+const enOtroIdioma = (texto) => (texto.match(INGLES)?.length ?? 0) >= 3;
+
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, empiezaConSaludo, sinSaludo, noContiene }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene }) =>
   [
     tipo,
     contesta && 'respuesta encontrada o aclaracion',
@@ -106,6 +123,9 @@ const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conve
     incluye && `+[${incluye}]`,
     excluye && `-[${excluye}]`,
     mencionaSector && 'sector',
+    ejemplosDelCatalogo && `${ejemplosDelCatalogo} ejemplos`,
+    enEspanol && 'en español',
+    largoMaximo && `<=${largoMaximo}`,
     empiezaConSaludo && 'saludo',
     sinSaludo && 'sin saludo',
     noContiene && `sin "${noContiene.join('", "')}"`,
@@ -182,6 +202,9 @@ const fallas = (esperado, r) => {
     esperado.textoNoVacio && !texto.trim() && 'texto vacío',
     esperado.distintoDelFijo && texto.includes(MENSAJE_SIN_RESPUESTA) && 'mensaje fijo',
     esperado.mencionaSector && !sectoresNormalizados.some((s) => normalizar(texto).includes(s)) && 'sin sector',
+    esperado.ejemplosDelCatalogo && ejemplosNombrados(texto) < esperado.ejemplosDelCatalogo && `${ejemplosNombrados(texto)} ejemplos del catálogo`,
+    esperado.enEspanol && enOtroIdioma(texto) && 'en otro idioma',
+    esperado.largoMaximo && texto.length > esperado.largoMaximo && `largo ${texto.length}`,
     esperado.empiezaConSaludo && !/^¡[^!]{1,60}! \S/.test(texto) && 'sin saludo',
     esperado.sinSaludo && empiezaConSaludo(texto) && 'con saludo',
     ...(esperado.noContiene ?? []).map((p) => normalizar(texto).includes(normalizar(p)) && `contiene "${p}"`),
