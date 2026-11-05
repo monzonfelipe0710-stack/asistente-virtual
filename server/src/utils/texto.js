@@ -18,3 +18,6 @@ export const cortarEnOracion = (texto, tope) => {
   const espacio = texto.lastIndexOf(' ', tope - 1);
   return `${texto.slice(0, espacio > 0 ? espacio : tope - 1).trimEnd()}…`;
 };
+
+export const normalizarNombre = (nombre) =>
+  String(nombre ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();

@@ -69,9 +69,30 @@ export const tramitesDeSectores = async (sectorIds) => {
 const PRECIO_USD_POR_MILLON = 0.02;
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const conReintentos = async (textos, { reintentos, esperaBase, log, etiqueta }) => {
+  for (let intento = 1; ; intento++) {
+    try {
+      return await ia.generarEmbeddings(textos);
+    } catch (err) {
+      if (intento > reintentos) throw err;
+      log.warn(`${etiqueta}: intento ${intento} falló (${err.message}), se reintenta`);
+      await pausa(esperaBase * 2 ** (intento - 1));
+    }
+  }
+};
+
+const guardarLote = async (ids, vectores) => {
+  await prisma.$executeRaw`
+    UPDATE tramites AS t SET embedding = d.e::vector
+    FROM unnest(${ids}::int[], ${vectores.map((v) => `[${v.join(',')}]`)}::text[]) AS d(id, e)
+    WHERE t.id = d.id
+  `;
+};
+
 // Reindexa en lotes (un pedido de embeddings y un UPDATE por lote), con reintentos por lote.
 // `ids` limita a esos trámites; `desde` retoma a partir de un id. Con `estimar` no llama a la API:
-// el costo sale de ~3,5 caracteres por token.
+// el costo sale de ~3,5 caracteres por token. Con `continuarSiFalla`, un lote que agota los
+// reintentos se prueba de a un trámite y los que fallan quedan en `fallidos` en vez de cortar.
 export const reindexarCatalogo = async ({
   ids,
   desde = 0,
@@ -79,6 +100,7 @@ export const reindexarCatalogo = async ({
   reintentos = 3,
   esperaBase = 2000,
   estimar = false,
+  continuarSiFalla = false,
   log = console,
 } = {}) => {
   const tramites = await prisma.tramite.findMany({
@@ -95,27 +117,31 @@ export const reindexarCatalogo = async ({
   }
 
   let tokens = 0;
+  const reindexados = [];
+  const fallidos = [];
   for (let i = 0; i < tramites.length; i += lote) {
     const parte = tramites.slice(i, i + lote);
-    let resultado;
-    for (let intento = 1; ; intento++) {
-      try {
-        resultado = await ia.generarEmbeddings(textos.slice(i, i + lote));
-        break;
-      } catch (err) {
-        if (intento > reintentos) throw new Error(`Falló el lote que empieza en el trámite ${parte[0].id}: reanudá con --desde ${parte[0].id}`, { cause: err });
-        log.warn(`Lote desde ${parte[0].id}: intento ${intento} falló (${err.message}), se reintenta`);
-        await pausa(esperaBase * 2 ** (intento - 1));
+    const textosParte = textos.slice(i, i + lote);
+    try {
+      const resultado = await conReintentos(textosParte, { reintentos, esperaBase, log, etiqueta: `Lote desde ${parte[0].id}` });
+      await guardarLote(parte.map((t) => t.id), resultado.vectores);
+      tokens += resultado.tokens ?? 0;
+      reindexados.push(...parte.map((t) => t.id));
+    } catch (err) {
+      if (!continuarSiFalla) throw new Error(`Falló el lote que empieza en el trámite ${parte[0].id}: reanudá con --desde ${parte[0].id}`, { cause: err });
+      log.warn(`Lote desde ${parte[0].id} falló (${err.message}): se prueba de a un trámite`);
+      for (const [j, t] of parte.entries()) {
+        try {
+          const resultado = await conReintentos([textosParte[j]], { reintentos: 1, esperaBase, log, etiqueta: `Trámite ${t.id}` });
+          await guardarLote([t.id], resultado.vectores);
+          tokens += resultado.tokens ?? 0;
+          reindexados.push(t.id);
+        } catch (errTramite) {
+          fallidos.push({ id: t.id, nombre: t.nombre, motivo: `embedding: ${errTramite.message}` });
+        }
       }
     }
-    const vectores = resultado.vectores.map((v) => `[${v.join(',')}]`);
-    await prisma.$executeRaw`
-      UPDATE tramites AS t SET embedding = d.e::vector
-      FROM unnest(${parte.map((t) => t.id)}::int[], ${vectores}::text[]) AS d(id, e)
-      WHERE t.id = d.id
-    `;
-    tokens += resultado.tokens ?? 0;
     log.log(`  ${Math.min(i + lote, tramites.length)}/${tramites.length} (hasta el id ${parte.at(-1).id})`);
   }
-  return { tramites: tramites.length, tokens, costoUsd: (tokens / 1e6) * PRECIO_USD_POR_MILLON };
+  return { tramites: tramites.length, tokens, costoUsd: (tokens / 1e6) * PRECIO_USD_POR_MILLON, reindexados, fallidos };
 };

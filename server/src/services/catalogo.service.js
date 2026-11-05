@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import * as cache from './cache.service.js';
+import { normalizarNombre } from '../utils/texto.js';
 
 const CANTIDAD_SECTORES = 12;
 const CANTIDAD_EJEMPLOS = 8;
@@ -7,9 +8,6 @@ const CANTIDAD_EJEMPLOS = 8;
 // Trámites generales y conocidos: van primero entre los ejemplos (si están publicados), porque
 // son los que el chat usa para redirigir un tema ajeno. Nombres tal cual están en la base.
 export const TRAMITES_DESTACADOS = ['Pasaporte', 'Solicitud de Certificado de Buena Conducta', 'Nuevo Ejemplar para Argentinos'];
-
-const normalizarNombre = (nombre) =>
-  nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
 // El catálogo tiene trámites con el mismo nombre en distintos organismos: se cuentan una vez.
 const agregarSinRepetir = (destino, nombres) => {

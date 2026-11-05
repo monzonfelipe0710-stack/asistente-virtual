@@ -1,17 +1,35 @@
+// Importa el catálogo. Formato del JSON y opciones: README, sección "Importar el catálogo".
+//
+//   node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa --despublicar-faltantes]
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import prisma from '../src/config/prisma.js';
-import { importarCatalogo } from '../src/services/importacion.service.js';
+import { importarCatalogo, formatearInforme } from '../src/services/importacion.service.js';
 
-// Formato del JSON: README, sección "Importar el catálogo".
-const ARCHIVO = process.argv[2]
-  ?? new URL('../../ingestion/data/tramites_normalizado.json', import.meta.url);
+const args = process.argv.slice(2);
+const bandera = (nombre) => args.includes(nombre);
+const valor = (nombre) => {
+  const i = args.indexOf(nombre);
+  return i === -1 ? undefined : args[i + 1];
+};
+const posicionales = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lote');
+
+const ARCHIVO = posicionales[0] ?? new URL('../../ingestion/data/tramites_normalizado.json', import.meta.url);
+const opciones = {
+  simular: bandera('--dry-run'),
+  completa: bandera('--completa'),
+  despublicarFaltantes: bandera('--despublicar-faltantes'),
+  lote: Number(valor('--lote') ?? 100),
+};
 
 try {
-  await importarCatalogo(JSON.parse(readFileSync(ARCHIVO, 'utf-8')));
-  console.log('Listo. El servidor en marcha sigue con la caché anterior hasta reiniciarlo o hasta que venza (1 hora).');
+  if (!Number.isInteger(opciones.lote) || opciones.lote < 1) throw new Error('--lote tiene que ser un entero positivo.');
+  const informe = await importarCatalogo(JSON.parse(readFileSync(ARCHIVO, 'utf-8')), opciones);
+  console.log(formatearInforme(informe));
+  if (!informe.simulado) console.log('El servidor en marcha sigue con la caché anterior hasta reiniciarlo o hasta que venza (1 hora).');
+  if (informe.fallidos.length > 0) process.exitCode = 1;
 } catch (e) {
-  console.error(e);
+  console.error(e.message);
   process.exitCode = 1;
 } finally {
   await prisma.$disconnect();

@@ -17,6 +17,7 @@ mock.module(new URL('../src/core/ai/index.js', import.meta.url).href, {
       generarEmbedding: async (texto) => vectorPara(texto),
       generarEmbeddings: async (textos) => {
         llamadasLote.push(textos);
+        if (textos.some((t) => t.includes('FALLA-SIEMPRE'))) throw new Error('texto rechazado');
         if (fallarPrimera) {
           fallarPrimera = false;
           throw new Error('falla simulada');
@@ -99,5 +100,24 @@ describe('reindexarCatalogo', () => {
     const r = await reindexarCatalogo({ ids, desde: ids[2], log: silencioso });
     assert.equal(r.tramites, 1);
     assert.equal(llamadasLote.length, 1);
+  });
+
+  it('con continuarSiFalla prueba de a uno el lote que falla y registra solo el trámite rechazado', async () => {
+    const malo = await prisma.tramite.create({ data: { nombre: `FALLA-SIEMPRE ${SUFIJO}`, descripcion: 'x', sectorId: sector.id, encargadoId: (await prisma.tramite.findUnique({ where: { id: ids[0] } })).encargadoId } });
+    ids.push(malo.id);
+    await prisma.$executeRaw`UPDATE tramites SET embedding = NULL WHERE id = ANY(${ids}::int[])`;
+    llamadasLote = [];
+    const r = await reindexarCatalogo({ ids: [ids[0], malo.id, ids[1]], lote: 3, reintentos: 1, esperaBase: 1, continuarSiFalla: true, log: silencioso });
+    assert.deepEqual(r.reindexados.sort(), [ids[0], ids[1]].sort());
+    assert.deepEqual(r.fallidos.map((f) => [f.id, f.motivo]), [[malo.id, 'embedding: texto rechazado']]);
+    const filas = await prisma.$queryRaw`SELECT id, embedding IS NULL AS falta FROM tramites WHERE id = ANY(${[ids[0], ids[1], malo.id]}::int[]) ORDER BY id`;
+    assert.deepEqual(filas.map((f) => f.falta), [false, false, true]);
+  });
+
+  it('sin continuarSiFalla corta e indica desde dónde retomar', async () => {
+    await assert.rejects(
+      reindexarCatalogo({ ids: [ids.at(-1)], reintentos: 0, esperaBase: 1, log: silencioso }),
+      /reanudá con --desde/,
+    );
   });
 });
