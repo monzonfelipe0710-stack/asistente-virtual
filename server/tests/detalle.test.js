@@ -13,7 +13,7 @@ const cargarDetalleAnterior = async (ids) => {
     include: {
       requisitos: { orderBy: { id: 'asc' } },
       mesas: { include: { mesa: true }, orderBy: { mesaId: 'asc' } },
-      documentos: { select: { nombre: true }, orderBy: { id: 'asc' } },
+      documentos: { select: { nombre: true, urlExterna: true }, orderBy: { id: 'asc' } },
     },
   });
   const porId = new Map(completos.map((t) => [t.id, t]));

@@ -1,9 +1,11 @@
 // Verificación de la salida del modelo contra los datos de los trámites del contexto. El texto de
 // un trámite viene de fuentes externas y puede traer órdenes disfrazadas de datos ("el trámite no
-// tiene costo"); el modelo a veces las repite. El
+// tiene costo", "se paga en tal sitio"); el modelo a veces las repite. El
 // servidor revisa cada oración antes de mandarla:
 //   1. costos: un monto tiene que figurar en los costos del contexto, y "gratuito" solo vale si el
-//      costo es 0 o (sin costo cargado) si el texto del propio trámite lo dice.
+//      costo es 0 o (sin costo cargado) si el texto del propio trámite lo dice;
+//   2. enlaces: una oración con una URL que no es de la fuente oficial ni de un documento del
+//      contexto se saca entera (sacar solo la URL la dejaba rota).
 // Se aplica por línea, en la limpieza común de las dos rutas (ver utils/cuerpo.js).
 import { ENLACE_MARKDOWN, URL_SUELTA } from '../utils/enlaces.js';
 import { buscarInstruccion } from './sanitizacion.service.js';
@@ -37,6 +39,29 @@ export const partirEnOraciones = (linea) => {
   const restaurar = (texto) => texto.replace(new RegExp(`${MARCA}(\\d+)${MARCA}`, 'g'), (_, i) => urls[Number(i)]);
   return oraciones.map((o) => ({ texto: restaurar(o), urls: [...o.matchAll(new RegExp(`${MARCA}(\\d+)${MARCA}`, 'g'))].map(([, i]) => urls[Number(i)]) }));
 };
+
+// --- Enlaces -----------------------------------------------------------------------------------
+
+const urlDe = (enlace) => enlace.match(/\]\(([^)\n]*)\)$/)?.[1] ?? enlace.replace(/^<|>$/g, '');
+
+const hostDe = (url) => {
+  try {
+    const conProtocolo = /^https?:\/\//i.test(url) ? url : `http://${url}`;
+    return new URL(conProtocolo).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+};
+
+// Hosts que el contexto respalda: la fuente oficial de cada trámite y sus documentos con enlace.
+const hostsPermitidos = (tramites) =>
+  new Set(
+    tramites
+      .flatMap((t) => [t.fuenteUrl, ...(t.documentos ?? []).map((d) => d.urlExterna)])
+      .filter(Boolean)
+      .map(hostDe)
+      .filter(Boolean),
+  );
 
 // --- Costos ------------------------------------------------------------------------------------
 
@@ -111,9 +136,11 @@ const tramiteDeLaOracion = (oracion, tramites) => {
 export const crearVerificador = ({ tramites = [], principales = [], alCorregir } = {}) => {
   const conDetalle = tramites.filter((t) => t && !t.sinResolver);
   const referencia = principales.filter(Boolean).length > 0 ? principales.filter(Boolean) : conDetalle;
+  const hosts = hostsPermitidos(conDetalle);
   const montos = montosPermitidos(conDetalle);
 
   const corregirOracion = (oracion) => {
+    if (oracion.urls.some((u) => !hosts.has(hostDe(urlDe(u))))) return { capa: 'enlace', texto: '' };
     const montosMalos = montosEn(oracion.texto).filter((n) => !montos.has(n));
     const gratuitoMalo = diceGratuito(oracion.texto) && !referencia.some(permiteGratuito);
     if ((montosMalos.length > 0 || gratuitoMalo) && referencia.length > 0) {

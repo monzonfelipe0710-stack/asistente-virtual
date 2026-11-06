@@ -63,4 +63,19 @@ describe('verificación de la salida', () => {
       assert.equal(verificar('La licencia de pesca es gratuita.', [a, b]).texto, 'El costo del trámite Licencia de Pesca es $900.');
     });
   });
+
+  describe('enlaces', () => {
+    it('saca la oración entera con una URL que no es del contexto y deja las otras', () => {
+      assert.deepEqual(verificar('Se paga en la mesa. También podés pagar en https://pagos.example.com/x con tus datos.', [tramite()]), {
+        texto: 'Se paga en la mesa.',
+        capas: ['enlace'],
+      });
+      assert.equal(verificar('- Pagá en [el portal](http://inventado.ar).', [tramite()]).texto, '');
+    });
+
+    it('acepta la fuente oficial y los documentos con enlace del contexto', () => {
+      const t = tramite({ documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] });
+      assert.deepEqual(verificar('Está en https://www.formosa.gob.ar/tramite/1 y el formulario en https://docs.formosa.gob.ar/f.pdf.', [t]).capas, []);
+    });
+  });
 });

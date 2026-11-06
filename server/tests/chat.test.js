@@ -646,7 +646,9 @@ describe('chat', () => {
   describe('fuente oficial', () => {
     const fuente = `https://example.invalid/${SUFIJO}/detalle`;
     const enlace = () => `[Fuente oficial: ${tramite.nombre}](${fuente})`;
-    const conEnlaceInventado = 'Así se hace: [Ver el trámite](http://inventado.ar/x).\nMás info en https://otro.ar/y';
+    // Una oración con un enlace que no es de la fuente oficial se va entera: sacar solo la URL la
+    // dejaba rota ("Más info en").
+    const conEnlaceInventado = 'Así se hace. Pagá en [el portal](http://inventado.ar/x).\nMás info en https://otro.ar/y\nLlevá el DNI.';
 
     before(async () => {
       await prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: fuente } });
@@ -655,10 +657,16 @@ describe('chat', () => {
       await prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: null } });
     });
 
-    it('saca los enlaces del modelo y agrega al final el de la fuente del trámite usado', async () => {
+    it('saca las oraciones con enlaces que no son del trámite y agrega al final el de la fuente del trámite usado', async () => {
       salidaModelo = salida({ tipo: 'respuesta', respuesta: conEnlaceInventado, tramiteId: tramite.id });
       const r = await responderConsulta(turno('cómo hago el trámite'));
-      assert.equal(r.respuesta, `Así se hace.\nMás info en\n\n${enlace()}`);
+      assert.equal(r.respuesta, `Así se hace.\nLlevá el DNI.\n\n${enlace()}`);
+    });
+
+    it('un enlace a la fuente oficial del trámite no saca la oración, solo la URL', async () => {
+      salidaModelo = salida({ tipo: 'respuesta', respuesta: `Está todo en la fuente oficial: ${fuente}. Llevá el DNI.`, tramiteId: tramite.id });
+      const r = await responderConsulta(turno('dónde está la info del trámite'));
+      assert.equal(r.respuesta, `Está todo en la fuente oficial. Llevá el DNI.\n\n${enlace()}`);
     });
 
     it('la caché y consultas guardan el cuerpo sin enlaces; la fuente se agrega al servir', async () => {
@@ -680,8 +688,8 @@ describe('chat', () => {
       salidaModelo = salida({ tipo: 'aclaracion', respuesta: '¿Cuál? [x](http://a.ar)', opciones: [tramite.id] });
       assert.equal((await responderConsulta(turno('trámite'))).respuesta, '¿Cuál?');
 
-      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Mirá https://a.ar/b para más.' });
-      assert.equal((await responderConsulta(turno('hola'))).respuesta, 'Mirá para más.');
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Te ayudo con trámites. Mirá https://a.ar/b para más.' });
+      assert.equal((await responderConsulta(turno('hola'))).respuesta, 'Te ayudo con trámites.');
 
       salidaModelo = salida({ tipo: 'respuesta', respuesta: 'x' });
       assert.equal((await responderConsulta(turno('licencia de conducir'))).respuesta, MENSAJE_SIN_RESPUESTA);
@@ -696,15 +704,15 @@ describe('chat', () => {
       for await (const e of responderConsultaStream(turno('cómo hago el trámite'))) eventos.push(e);
       const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
 
-      assert.ok(deltas.every((d) => !d.includes('inventado') && !d.includes('otro.ar')));
+      assert.ok(deltas.every((d) => !d.includes('inventado') && !d.includes('otro.ar') && !d.includes('Pagá') && !d.includes('Más info')));
       assert.equal(deltas.at(-1), `\n\n${enlace()}`);
-      assert.equal(deltas.join(''), `Así se hace.\nMás info en\n\n${enlace()}`);
+      assert.equal(deltas.join(''), `Así se hace.\nLlevá el DNI.\n\n${enlace()}`);
       assert.equal(eventos.at(-1).tipo, 'fin');
-      assert.equal(registros[0].respuesta, 'Así se hace.\nMás info en');
+      assert.equal(registros[0].respuesta, 'Así se hace.\nLlevá el DNI.');
     });
 
     it('las dos rutas devuelven el mismo texto', async () => {
-      const texto = '¡Hola! Te cuento:\n\n\n- uno [a](http://a.ar)\n- dos\n\n[Ver](http://b.ar)\n';
+      const texto = `¡Hola! Te cuento:\n\n\n- uno [a](${fuente})\n- dos\n- tres [b](http://a.ar)\n\n[Ver](http://b.ar)\n`;
       salidaModelo = salida({ tipo: 'respuesta', saludo: 'Hola', respuesta: texto, tramiteId: tramite.id });
       const { respuesta } = await responderConsulta(turno('hola, cómo hago'));
 

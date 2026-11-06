@@ -262,7 +262,8 @@ const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
 const aDecimal = (valor) => (valor === null ? null : new Prisma.Decimal(valor));
 
 // Un solo viaje a la base: el include de Prisma hacía una consulta por relación, en serie.
-// Devuelve lo mismo que findMany con requisitos (por id), mesas con su mesa y nombres de documentos.
+// Devuelve lo mismo que findMany con requisitos (por id), mesas con su mesa y los documentos (nombre y
+// enlace externo, que la verificación de la salida acepta como enlace del trámite).
 export const cargarDetalle = async (ids) => {
   const filas = await prisma.$queryRaw`
     SELECT
@@ -289,7 +290,7 @@ export const cargarDetalle = async (ids) => {
         WHERE tm.tramite_id = t.id
       ), '[]') AS mesas,
       COALESCE((
-        SELECT json_agg(json_build_object('nombre', d.nombre) ORDER BY d.id)
+        SELECT json_agg(json_build_object('nombre', d.nombre, 'urlExterna', d.url_externa) ORDER BY d.id)
         FROM documentos d WHERE d.tramite_id = t.id
       ), '[]') AS documentos
     FROM tramites t
