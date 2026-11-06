@@ -38,9 +38,22 @@ export function formatearCosto(costo: string | null, vacio = "—") {
   return `$ ${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}`;
 }
 
+type ArchivoSeleccionado = ArchivoElegido & { size?: number };
+
 function extensionDe(nombre: string) {
   const partes = nombre.split(".");
-  return partes.length > 1 ? partes.pop()!.toLowerCase() : "";
+  if (partes.length > 1) return partes.pop()!.toLowerCase();
+  return "";
+}
+
+function mensajeDeArchivoInvalido(archivo: ArchivoSeleccionado) {
+  if (!EXTENSIONES_PERMITIDAS.includes(extensionDe(archivo.name))) {
+    return "Solo se permiten archivos PDF o DOCX";
+  }
+  if (archivo.size != null && archivo.size > MAX_ARCHIVO) {
+    return "El archivo supera los 10 MB";
+  }
+  return null;
 }
 
 export function TramiteDetalle({
@@ -70,7 +83,7 @@ export function TramiteDetalle({
   const [tramite, setTramite] = useState<TramiteDetalleApi | null>(null);
   const [documentos, setDocumentos] = useState<DocumentoApi[]>([]);
   const [error, setError] = useState("");
-  const [archivo, setArchivo] = useState<(ArchivoElegido & { size?: number }) | null>(null);
+  const [archivo, setArchivo] = useState<ArchivoSeleccionado | null>(null);
   const [nombreDocumento, setNombreDocumento] = useState("");
   const [subiendo, setSubiendo] = useState(false);
   const [borrandoDocumento, setBorrandoDocumento] = useState<DocumentoApi | null>(null);
@@ -116,12 +129,9 @@ export function TramiteDetalle({
       push("Elegí un archivo PDF o DOCX");
       return;
     }
-    if (!EXTENSIONES_PERMITIDAS.includes(extensionDe(archivo.name))) {
-      push("Solo se permiten archivos PDF o DOCX");
-      return;
-    }
-    if (archivo.size != null && archivo.size > MAX_ARCHIVO) {
-      push("El archivo supera los 10 MB");
+    const mensajeInvalido = mensajeDeArchivoInvalido(archivo);
+    if (mensajeInvalido) {
+      push(mensajeInvalido);
       return;
     }
     setSubiendo(true);
@@ -160,33 +170,37 @@ export function TramiteDetalle({
     }
   }
 
+  function armarPie() {
+    if (puedeGestionar && tramite) {
+      return <Btn label="Editar" onPress={() => onEditar?.(tramite)} disabled={trabajando} />;
+    }
+    if (tramite && onAceptar && onRechazar) {
+      return [
+        <Btn
+          key="rechazar"
+          label="Rechazar"
+          variant="danger"
+          onPress={() => onRechazar(tramite)}
+          disabled={trabajando || !tramite.publicado}
+        />,
+        <Btn
+          key="aceptar"
+          label="Aceptar"
+          onPress={() => onAceptar(tramite)}
+          disabled={trabajando || tramite.publicado}
+        />,
+      ];
+    }
+    return <Btn label="Cerrar" variant="secondary" onPress={onClose} />;
+  }
+
   return (
     <>
       <Modal
         open={borrandoDocumento === null}
         title={tramite?.nombre ?? "Trámite"}
         onClose={onClose}
-        footer={
-          puedeGestionar && tramite
-            ? <Btn label="Editar" onPress={() => onEditar?.(tramite)} disabled={trabajando} />
-            : tramite && onAceptar && onRechazar
-              ? [
-                  <Btn
-                    key="rechazar"
-                    label="Rechazar"
-                    variant="danger"
-                    onPress={() => onRechazar(tramite)}
-                    disabled={trabajando || !tramite.publicado}
-                  />,
-                  <Btn
-                    key="aceptar"
-                    label="Aceptar"
-                    onPress={() => onAceptar(tramite)}
-                    disabled={trabajando || tramite.publicado}
-                  />,
-                ]
-              : <Btn label="Cerrar" variant="secondary" onPress={onClose} />
-        }
+        footer={armarPie()}
       >
         {!tramite && !error && <ActivityIndicator color={C.accent} />}
         {!!error && <Text style={[Type.meta, { color: C.danger }]}>{error}</Text>}

@@ -12,6 +12,12 @@ import { Spacing, Type, useColors } from "@/constants/theme";
 import { assertValidPassword, isValidEmail, normalizeEmail } from "@/lib/auth";
 import { pedirSectores, type EmpleadoDatos, type SectorApi } from "@/lib/backend";
 
+function validarDatosDeEmpleado(nombre: string, correo: string, password: string) {
+  if (!nombre.trim()) throw new Error("Ingresá el nombre.");
+  if (!isValidEmail(correo)) throw new Error("Ingresá un correo electrónico válido.");
+  assertValidPassword(password);
+}
+
 export function NuevoEmpleadoModal({
   open,
   onClose,
@@ -46,9 +52,10 @@ export function NuevoEmpleadoModal({
   }, [open]);
 
   function alternar(id: number) {
-    setElegidos((actuales) =>
-      actuales.includes(id) ? actuales.filter((x) => x !== id) : [...actuales, id]
-    );
+    setElegidos((actuales) => {
+      if (actuales.includes(id)) return actuales.filter((x) => x !== id);
+      return [...actuales, id];
+    });
   }
 
   function cerrar() {
@@ -64,9 +71,7 @@ export function NuevoEmpleadoModal({
     setError("");
     const correo = normalizeEmail(email);
     try {
-      if (!nombre.trim()) throw new Error("Ingresá el nombre.");
-      if (!isValidEmail(correo)) throw new Error("Ingresá un correo electrónico válido.");
-      assertValidPassword(password);
+      validarDatosDeEmpleado(nombre, correo, password);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Revisá los datos.");
       return;

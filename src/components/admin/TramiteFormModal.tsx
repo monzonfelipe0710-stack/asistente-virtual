@@ -8,6 +8,7 @@ import {
   pedirMesas,
   type ArchivoElegido,
   type MesaApi,
+  type RequisitoDatos,
   type SectorApi,
   type TramiteDatos,
   type TramiteDetalleApi,
@@ -60,29 +61,124 @@ function numeroValido(texto: string) {
   return limpio === "" || (Number.isFinite(Number(limpio)) && Number(limpio) >= 0);
 }
 
+function requisitoTieneContenido(requisito: RequisitoForm) {
+  if (requisito.descripcion.trim()) return true;
+  if (requisito.dondeSeConsigue.trim()) return true;
+  if (requisito.costo.trim()) return true;
+  return false;
+}
+
 function tieneContenido(f: FormState) {
-  return Boolean(
-    f.nombre.trim() ||
-      f.descripcion.trim() ||
-      f.costo.trim() ||
-      f.sector ||
-      f.requisitos.some((r) => r.descripcion.trim() || r.dondeSeConsigue.trim() || r.costo.trim())
-  );
+  if (f.nombre.trim()) return true;
+  if (f.descripcion.trim()) return true;
+  if (f.costo.trim()) return true;
+  if (f.sector) return true;
+  return f.requisitos.some(requisitoTieneContenido);
+}
+
+function costoATexto(costo: string | null) {
+  if (costo != null) return String(costo);
+  return "";
 }
 
 function desdeTramite(tramite: TramiteDetalleApi): FormState {
   return {
     nombre: tramite.nombre,
     descripcion: tramite.descripcion,
-    costo: tramite.costo != null ? String(tramite.costo) : "",
+    costo: costoATexto(tramite.costo),
     sector: tramite.sector.nombre,
     requisitos: tramite.requisitos.map((r) => ({
       descripcion: r.descripcion,
       dondeSeConsigue: r.dondeSeConsigue ?? "",
-      costo: r.costo != null ? String(r.costo) : "",
+      costo: costoATexto(r.costo),
     })),
     mesaIds: tramite.mesas.map((m) => m.mesaId),
   };
+}
+
+function formDesdeBorrador(guardado: FormState): FormState {
+  const requisitos = (guardado.requisitos ?? []).slice(0, MAX_REQUISITOS);
+  return { ...FORM_VACIO, ...guardado, requisitos };
+}
+
+function estadoDeBorrador(guardadoConExito: boolean, form: FormState): "idle" | "guardado" | "error" {
+  if (!guardadoConExito) return "error";
+  if (tieneContenido(form)) return "guardado";
+  return "idle";
+}
+
+function armarOpcionesDeSector(sectores: SectorApi[], sectorElegido: string) {
+  const nombres = sectores.map((s) => s.nombre);
+  const sectorConocido = sectores.some((s) => s.nombre === sectorElegido);
+  if (sectorConocido || !sectorElegido) return nombres;
+  return [sectorElegido, ...nombres];
+}
+
+function separarArchivos(assets: DocumentPicker.DocumentPickerAsset[]) {
+  const validos: ArchivoAdjunto[] = [];
+  const rechazados: string[] = [];
+  for (const asset of assets) {
+    const excedeTamano = asset.size != null && asset.size > MAX_ARCHIVO;
+    if (!extensionValida(asset.name) || excedeTamano) {
+      rechazados.push(asset.name);
+    } else {
+      validos.push({
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? "application/octet-stream",
+        size: asset.size ?? undefined,
+      });
+    }
+  }
+  return { validos, rechazados };
+}
+
+function mensajeDeRechazados(rechazados: string[]) {
+  if (rechazados.length === 0) return "";
+  return `No se agregaron (solo PDF o DOCX de hasta 10 MB): ${rechazados.join(", ")}`;
+}
+
+function validarDatosPrincipales(form: FormState, tieneSector: boolean, nuevos: Record<string, string>) {
+  const nombre = form.nombre.trim();
+  const descripcion = form.descripcion.trim();
+
+  if (nombre.length < 3) nuevos.nombre = "Mínimo 3 caracteres";
+  else if (nombre.length > 200) nuevos.nombre = "Máximo 200 caracteres";
+  if (descripcion.length < 5) nuevos.descripcion = "Mínimo 5 caracteres";
+  else if (descripcion.length > 2000) nuevos.descripcion = "Máximo 2000 caracteres";
+  if (!numeroValido(form.costo)) nuevos.costo = "Ingresá un número mayor o igual a 0";
+  if (!tieneSector) nuevos.sector = "Elegí un sector";
+}
+
+function validarRequisitos(requisitos: RequisitoForm[], nuevos: Record<string, string>) {
+  requisitos.forEach((r, i) => {
+    const d = r.descripcion.trim();
+    if (!d) nuevos[`descripcion${i}`] = "Describí el requisito";
+    else if (d.length > 300) nuevos[`descripcion${i}`] = "Máximo 300 caracteres";
+    if (r.dondeSeConsigue.trim().length > 300) nuevos[`donde${i}`] = "Máximo 300 caracteres";
+    if (!numeroValido(r.costo)) nuevos[`costo${i}`] = "Ingresá un número mayor o igual a 0";
+  });
+}
+
+function armarRequisitosDatos(requisitos: RequisitoForm[]) {
+  return requisitos.map((r) => {
+    const requisito: RequisitoDatos = { descripcion: r.descripcion.trim() };
+    if (r.dondeSeConsigue.trim()) requisito.dondeSeConsigue = r.dondeSeConsigue.trim();
+    if (r.costo.trim() !== "") requisito.costo = Number(r.costo);
+    return requisito;
+  });
+}
+
+function armarDatos(form: FormState, sectorId: number, mesaIds: number[]) {
+  const datos: Partial<TramiteDatos> = {
+    nombre: form.nombre.trim(),
+    descripcion: form.descripcion.trim(),
+  };
+  if (form.costo.trim() !== "") datos.costo = Number(form.costo);
+  datos.sectorId = sectorId;
+  datos.requisitos = armarRequisitosDatos(form.requisitos);
+  datos.mesaIds = mesaIds;
+  return datos as TramiteDatos;
 }
 
 export function TramiteFormModal({
@@ -139,36 +235,22 @@ export function TramiteFormModal({
       copyToCacheDirectory: true,
     });
     if (res.canceled) return;
-    const validos: ArchivoAdjunto[] = [];
-    const rechazados: string[] = [];
-    for (const a of res.assets) {
-      if (!extensionValida(a.name) || (a.size != null && a.size > MAX_ARCHIVO)) rechazados.push(a.name);
-      else
-        validos.push({
-          uri: a.uri,
-          name: a.name,
-          mimeType: a.mimeType ?? "application/octet-stream",
-          size: a.size ?? undefined,
-        });
-    }
+    const { validos, rechazados } = separarArchivos(res.assets);
     setArchivos((lista) => [...lista, ...validos]);
-    setErrores((e) => ({
-      ...e,
-      archivos: rechazados.length
-        ? `No se agregaron (solo PDF o DOCX de hasta 10 MB): ${rechazados.join(", ")}`
-        : "",
-    }));
+    setErrores((e) => ({ ...e, archivos: mensajeDeRechazados(rechazados) }));
   }
 
-  const opcionesDeSector = sectores.some((s) => s.nombre === form.sector) || !form.sector
-    ? sectores.map((s) => s.nombre)
-    : [form.sector, ...sectores.map((s) => s.nombre)];
+  function quitarArchivo(indice: number) {
+    setArchivos((lista) => lista.filter((_, idx) => idx !== indice));
+  }
+
+  const opcionesDeSector = armarOpcionesDeSector(sectores, form.sector);
 
   useEffect(() => {
     if (!claveBorrador) return;
     readJSON<FormState | null>(claveBorrador, null).then((guardado) => {
       if (guardado && typeof guardado === "object" && tieneContenido({ ...FORM_VACIO, ...guardado })) {
-        setForm({ ...FORM_VACIO, ...guardado, requisitos: (guardado.requisitos ?? []).slice(0, MAX_REQUISITOS) });
+        setForm(formDesdeBorrador(guardado));
         setHabiaBorrador(true);
         setEstadoBorrador("guardado");
       }
@@ -179,9 +261,8 @@ export function TramiteFormModal({
   useEffect(() => {
     if (!claveBorrador || !borradorLeido.current) return;
     const id = setTimeout(() => {
-      writeJSON(claveBorrador, tieneContenido(form) ? form : null).then((ok) =>
-        setEstadoBorrador(!ok ? "error" : tieneContenido(form) ? "guardado" : "idle")
-      );
+      const contenidoAGuardar = tieneContenido(form) ? form : null;
+      writeJSON(claveBorrador, contenidoAGuardar).then((ok) => setEstadoBorrador(estadoDeBorrador(ok, form)));
     }, 500);
     return () => clearTimeout(id);
   }, [claveBorrador, form]);
@@ -197,6 +278,14 @@ export function TramiteFormModal({
     }));
   }
 
+  function agregarRequisito() {
+    cambiar({ requisitos: [...form.requisitos, { descripcion: "", dondeSeConsigue: "", costo: "" }] });
+  }
+
+  function quitarRequisito(indice: number) {
+    cambiar({ requisitos: form.requisitos.filter((_, idx) => idx !== indice) });
+  }
+
   function descartarBorrador() {
     setForm(FORM_VACIO);
     setErrores({});
@@ -205,26 +294,17 @@ export function TramiteFormModal({
     if (claveBorrador) writeJSON(claveBorrador, null);
   }
 
+  function mesasAEnviar() {
+    if (mesas.length === 0) return form.mesaIds;
+    return form.mesaIds.filter((id) => mesasDelSector.some((m) => m.id === id));
+  }
+
   async function enviar() {
     const nuevos: Record<string, string> = {};
-    const nombre = form.nombre.trim();
-    const descripcion = form.descripcion.trim();
     const sectorElegido = sectores.find((s) => s.nombre === form.sector);
 
-    if (nombre.length < 3) nuevos.nombre = "Mínimo 3 caracteres";
-    else if (nombre.length > 200) nuevos.nombre = "Máximo 200 caracteres";
-    if (descripcion.length < 5) nuevos.descripcion = "Mínimo 5 caracteres";
-    else if (descripcion.length > 2000) nuevos.descripcion = "Máximo 2000 caracteres";
-    if (!numeroValido(form.costo)) nuevos.costo = "Ingresá un número mayor o igual a 0";
-    if (!sectorElegido) nuevos.sector = "Elegí un sector";
-
-    form.requisitos.forEach((r, i) => {
-      const d = r.descripcion.trim();
-      if (!d) nuevos[`descripcion${i}`] = "Describí el requisito";
-      else if (d.length > 300) nuevos[`descripcion${i}`] = "Máximo 300 caracteres";
-      if (r.dondeSeConsigue.trim().length > 300) nuevos[`donde${i}`] = "Máximo 300 caracteres";
-      if (!numeroValido(r.costo)) nuevos[`costo${i}`] = "Ingresá un número mayor o igual a 0";
-    });
+    validarDatosPrincipales(form, !!sectorElegido, nuevos);
+    validarRequisitos(form.requisitos, nuevos);
 
     setErrores(nuevos);
     if (Object.keys(nuevos).length > 0 || !sectorElegido) return;
@@ -232,18 +312,7 @@ export function TramiteFormModal({
 
     setGuardando(true);
     try {
-      await onSave({
-        nombre,
-        descripcion,
-        ...(form.costo.trim() !== "" ? { costo: Number(form.costo) } : {}),
-        sectorId: sectorElegido.id,
-        requisitos: form.requisitos.map((r) => ({
-          descripcion: r.descripcion.trim(),
-          ...(r.dondeSeConsigue.trim() ? { dondeSeConsigue: r.dondeSeConsigue.trim() } : {}),
-          ...(r.costo.trim() !== "" ? { costo: Number(r.costo) } : {}),
-        })),
-        mesaIds: mesas.length === 0 ? form.mesaIds : form.mesaIds.filter((id) => mesasDelSector.some((m) => m.id === id)),
-      }, adjuntos);
+      await onSave(armarDatos(form, sectorElegido.id, mesasAEnviar()), adjuntos);
       if (claveBorrador) await writeJSON(claveBorrador, null);
     } catch (e) {
       setErrores({ general: e instanceof Error ? e.message : "No se pudo guardar el trámite." });
@@ -346,9 +415,7 @@ export function TramiteFormModal({
           size="md"
           icon="plus"
           disabled={form.requisitos.length >= MAX_REQUISITOS}
-          onPress={() =>
-            cambiar({ requisitos: [...form.requisitos, { descripcion: "", dondeSeConsigue: "", costo: "" }] })
-          }
+          onPress={agregarRequisito}
         />
       </View>
       {form.requisitos.length === 0 && (
@@ -360,7 +427,7 @@ export function TramiteFormModal({
           <View style={styles.filaTitulo}>
             <Text style={[Type.meta, { color: C.ink2, flex: 1 }]}>Requisito {i + 1}</Text>
             <Pressable
-              onPress={() => cambiar({ requisitos: form.requisitos.filter((_, idx) => idx !== i) })}
+              onPress={() => quitarRequisito(i)}
               accessibilityRole="button"
               accessibilityLabel="Quitar requisito"
               hitSlop={8}
@@ -403,7 +470,7 @@ export function TramiteFormModal({
               </Text>
               <Text style={[Type.meta, { color: C.ink3 }]}>{formatFileSize(archivo.size)}</Text>
               <Pressable
-                onPress={() => setArchivos((lista) => lista.filter((_, idx) => idx !== i))}
+                onPress={() => quitarArchivo(i)}
                 accessibilityRole="button"
                 accessibilityLabel={`Quitar ${archivo.name}`}
                 hitSlop={8}
