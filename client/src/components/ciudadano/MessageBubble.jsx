@@ -193,8 +193,10 @@ function MessageBubble({
 
   const actionList = Array.isArray(message.actions)
     ? message.actions
-    : message.action
-      ? [message.action]
+    : Array.isArray(message.action)
+      ? message.action
+      : message.action
+        ? [message.action]
       : [];
 
   async function rateResponse(value, motivoElegido = "") {
