@@ -42,7 +42,7 @@ export default function ProfileHeader() {
 
   return (
     <>
-      <header className="card overflow-hidden bg-paper">
+      <header className="card overflow-hidden">
         <div className="px-6 sm:px-10 pt-10 pb-8 relative overflow-hidden">
           <span
             className="pointer-events-none select-none absolute -right-6 -top-8 text-ink/5 text-[11rem] font-black tracking-tighter"

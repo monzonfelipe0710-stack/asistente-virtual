@@ -99,7 +99,7 @@ export default function ProfileLayout() {
         <ProfileHeader />
 
         {/* Pestañas */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mt-10 -mx-1 px-1" aria-label="Secciones del perfil">
+        <div className="mt-10 flex gap-2 overflow-x-auto rounded-2xl border border-line/70 bg-white/80 p-1.5 shadow-[0_8px_24px_rgba(15,23,48,0.05)] backdrop-blur-sm dark:bg-mist/40 dark:shadow-none" aria-label="Secciones del perfil">
           {nav.map((n) => {
             const isActive = target.key === n.key;
             return (
@@ -111,8 +111,8 @@ export default function ProfileLayout() {
                 }}
                 className={`inline-flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold rounded-full border whitespace-nowrap transition cursor-pointer ${
                   isActive
-                    ? "bg-ink text-paper border-ink"
-                    : "bg-paper text-muted border-line hover:text-ink hover:bg-mist"
+                    ? "bg-ink text-paper border-ink shadow-sm"
+                    : "border-transparent bg-transparent text-muted hover:bg-mist hover:text-ink"
                 }`}
               >
                 <Icon path={n.icon} className="w-4 h-4" />
