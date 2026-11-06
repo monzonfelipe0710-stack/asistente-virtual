@@ -140,9 +140,19 @@ describe('resumen del catálogo (base)', () => {
     const primero = await obtenerResumenCatalogo();
     assert.equal(await obtenerResumenCatalogo(), primero);
 
-    cache.limpiar();
-    const despues = await obtenerResumenCatalogo();
-    assert.notEqual(despues, primero);
-    assert.deepEqual(despues, primero);
+    // Otros archivos de test publican trámites en paralelo: se comparan dos resúmenes armados
+    // seguidos solo si el catálogo no cambió entre los dos.
+    const contar = () => prisma.tramite.count({ where: { publicado: true } });
+    let antes, uno, otro;
+    for (let intento = 0; intento < 10; intento++) {
+      antes = await contar();
+      cache.limpiar();
+      uno = await obtenerResumenCatalogo();
+      cache.limpiar();
+      otro = await obtenerResumenCatalogo();
+      if (antes === (await contar())) break;
+    }
+    assert.notEqual(otro, uno);
+    assert.deepEqual(otro, uno);
   });
 });
