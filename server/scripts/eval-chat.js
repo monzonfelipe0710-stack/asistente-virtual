@@ -138,7 +138,9 @@ const casos = [
   { catalogo: 'sintetico', pregunta: 'hola', esperado: CONVERSACION },
 ];
 
-const { sectores, ejemplos } = await obtenerResumenCatalogo();
+// Los ejemplos del resumen se eligen por consultas y las de la evaluación se borran recién al final,
+// así que pueden cambiar a mitad de la corrida: `correr` los vuelve a leer antes de cada caso.
+let { sectores, ejemplos } = await obtenerResumenCatalogo();
 
 const normalizar = (texto) =>
   texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
@@ -355,6 +357,7 @@ const consultasCreadas = [];
 const correr = async ({ pregunta, turnos, esperado: crudo }) => {
   const esperado = resolverEsperado(crudo);
   cache.limpiar();
+  ({ ejemplos } = await obtenerResumenCatalogo());
   try {
     const mensajes = [];
     const transversales = [];
