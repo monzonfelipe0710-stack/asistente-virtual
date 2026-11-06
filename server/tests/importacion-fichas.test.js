@@ -145,6 +145,55 @@ describe('importarCatalogo con la ficha del portal', () => {
     assert.deepEqual(r.paraRevisar.map((p) => p.frases.map((f) => f.campo)), [['requisitos']]);
   });
 
+  describe('trámites que siguen en el XML pero no figuran en el listado del sitio', () => {
+    const publicado = async (n) => (await leer(n)).publicado;
+
+    before(async () => {
+      await importar([tramite(6), tramite(7), tramite(8)], { publicar: true });
+    });
+
+    it('sin --completa solo se informan', async () => {
+      const r = await importar([tramite(6, { enListado: false, organismoIndexado: true })], { publicar: true });
+      assert.equal(await publicado(6), true);
+      assert.deepEqual(r.fueraDelListado.map((f) => f.accion), ['se despublica con --completa']);
+      assert.match(formatearInforme(r), /0 despublicados por no figurar en el listado/);
+    });
+
+    it('--dry-run con --completa dice cuáles despublicaría sin escribir', async () => {
+      const r = await importar([tramite(6, { enListado: false, organismoIndexado: true })], { publicar: true, completa: true, simular: true });
+      assert.equal(await publicado(6), true);
+      assert.deepEqual(r.fueraDelListado.map((f) => [f.accion, f.despublica]), [['se despublicaría hasta revisión', true]]);
+      assert.match(formatearInforme(r), /1 a despublicar por no figurar en el listado/);
+    });
+
+    it('con --completa despublica los del importador, y deja como están los de un organismo no indexado y los manuales', async () => {
+      const r = await importar([
+        tramite(6, { enListado: false, organismoIndexado: true, errorFicha: 'la ficha responde con la página de error del sitio', detalle: undefined }),
+        tramite(7, { enListado: false, organismoIndexado: false }),
+        tramite(3, { enListado: false, organismoIndexado: true }),
+        tramite(8),
+      ], { publicar: true, completa: true });
+
+      assert.deepEqual([await publicado(6), await publicado(7), await publicado(8)], [false, true, true]);
+      assert.deepEqual((await leer(3)).huellaImportacion, null, 'el manual no se toca');
+      const porNombre = Object.fromEntries(r.fueraDelListado.map((f) => [f.nombre, f]));
+      assert.deepEqual(porNombre[tramite(6).nombre], {
+        id: (await leer(6)).id, nombre: tramite(6).nombre, sector: SECTOR, despublica: true,
+        motivo: 'no figura en el listado y la ficha responde con la página de error del sitio', accion: 'despublicado hasta revisión',
+      });
+      assert.equal(porNombre[tramite(7).nombre].accion, 'queda como está (el sitio no indexa su organismo)');
+      assert.equal(porNombre[tramite(7).nombre].motivo, 'su organismo no figura en el listado de organismos del sitio');
+      const idManual = (await leer(3)).id;
+      assert.equal(r.fueraDelListado.find((f) => f.id === idManual).accion, 'manual, no se toca');
+      assert.match(formatearInforme(r), /1 despublicados por no figurar en el listado/);
+      assert.match(formatearInforme(r), /Fuera del listado del sitio \(3\):/);
+
+      // Una segunda corrida no lo vuelve a contar.
+      const otra = await importar([tramite(6, { enListado: false, organismoIndexado: true, detalle: undefined })], { publicar: true, completa: true });
+      assert.deepEqual(otra.fueraDelListado.map((f) => f.accion), ['ya estaba sin publicar']);
+    });
+  });
+
   it('--dry-run informa sin escribir', async () => {
     const antes = await prisma.mesaEntrada.count({ where: { origenId: { startsWith: SUFIJO } } });
     const r = await importar([tramite(5, { detalle: detalle({ oficinas: [oficina(9)] }) })], { simular: true });

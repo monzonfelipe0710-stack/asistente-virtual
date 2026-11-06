@@ -176,6 +176,11 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
   en la corrida con `embedding` en `null`, aunque no hayan cambiado.
 - `--dry-run` hace todo el cálculo e imprime el informe sin escribir en la base ni llamar a la
   API de embeddings.
+- **Fuera del listado del sitio.** Un trámite del JSON con `enListado: false` sigue en el XML
+  pero el sitio ya no lo lista. Con `--completa` se despublica hasta revisión (o se crea sin
+  publicar), salvo que su organismo sea uno que el sitio no indexa (`organismoIndexado: false`),
+  que queda como está. Nunca toca un trámite cargado a mano. Sin `--completa` solo se informa.
+  Todos quedan en **Fuera del listado del sitio** con su sector, el motivo y lo que se hizo.
 - `--despublicar-faltantes` exige `--completa`; sin ella, el script termina con un error.
   Despublica los trámites **del importador** que no vinieron en el JSON, solo dentro de los
   sectores del JSON y sus descendientes: importar con `--completa` el catálogo municipal no toca

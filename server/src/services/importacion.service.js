@@ -197,6 +197,12 @@ const limpiarCatalogo = (datos) => {
 
 // --- Datos de la ficha del portal --------------------------------------------------------------
 
+const motivoFueraDelListado = (t) => {
+  if (t.organismoIndexado === false) return 'su organismo no figura en el listado de organismos del sitio';
+  if (t.errorFicha) return 'no figura en el listado y la ficha responde con la página de error del sitio';
+  return 'no figura en el listado del sitio, aunque la ficha sigue completa';
+};
+
 // Grupos que vienen de la ficha. Los tres primeros entran en el texto del embedding.
 const GRUPOS_FICHA = ['costo', 'informacionAdicional', 'requisitos', 'mesas', 'documentos'];
 const DEL_EMBEDDING = new Set(['descripcion', 'costo', 'informacionAdicional', 'requisitos']);
@@ -304,7 +310,7 @@ export const importarCatalogo = async (crudos, {
   const aIndexar = new Set(cambiados.length > 0 ? await tramitesDeSectores(cambiados) : []);
   const informe = {
     creados: [], actualizados: [], sinCambios: 0, reindexados: [], fallidos: [], conflictos: [], paraRevisar: [], recortados,
-    despublicados: [], despublicacion: null, manuales: [], conservados: [], enlacesRotos: [],
+    despublicados: [], despublicacion: null, manuales: [], conservados: [], enlacesRotos: [], fueraDelListado: [],
     mesas: { creadas: 0, actualizadas: 0, conservadas: [] },
   };
 
@@ -372,6 +378,20 @@ export const importarCatalogo = async (crudos, {
     // El nombre del sector también le llega al modelo ("Organismo"), así que se revisa con el trámite,
     // igual que todo lo que viene de la ficha.
     const sospechas = instruccionesEn({ nombre: t.nombre, descripcion: t.descripcion, sector: t.sector, ...textosDeFicha(t.ficha) });
+
+    // Sigue en el XML pero el sitio ya no lo lista: con --completa se despublica hasta revisión. Los
+    // de un organismo que el sitio no indexa quedan como están.
+    const fuera = t.enListado === false;
+    const despublicarPorListado = fuera && completa && t.organismoIndexado !== false;
+    const informarFuera = (id, accion) => {
+      if (fuera) informe.fueraDelListado.push({ id, nombre: t.nombre, sector: t.sector, motivo: motivoFueraDelListado(t), accion, despublica: /^(?:despublicado|se despublicaría) hasta revisión$/.test(accion) });
+    };
+    const accionFuera = (publicado) => {
+      if (t.organismoIndexado === false) return 'queda como está (el sitio no indexa su organismo)';
+      if (!completa) return 'se despublica con --completa';
+      if (!publicado) return 'ya estaba sin publicar';
+      return simular ? 'se despublicaría hasta revisión' : 'despublicado hasta revisión';
+    };
     const revisar = (id, accion) => {
       if (sospechas.length > 0) informe.paraRevisar.push({ id, nombre: t.nombre, fuenteUrl, frases: sospechas, accion });
     };
@@ -384,6 +404,7 @@ export const importarCatalogo = async (crudos, {
       existente = porUrl.get(fuenteUrl) ?? null;
       // Un trámite cargado a mano (sin huella y con otro encargado) no se toca aunque tenga la URL.
       if (existente && !delImportador(existente)) {
+        informarFuera(existente.id, 'manual, no se toca');
         return marcar(existente.id, () => informe.manuales.push({ id: existente.id, nombre: existente.nombre, fuenteUrl, motivo: 'manual, no se toca' }));
       }
       if (existente && existente.sectorId !== sectorId) {
@@ -459,6 +480,8 @@ export const importarCatalogo = async (crudos, {
       const extra = {};
       if (f?.verificadoEn && existente.verificadoEn?.getTime() !== f.verificadoEn.getTime()) extra.verificadoEn = f.verificadoEn;
       if (JSON.stringify(huella) !== JSON.stringify(existente.huellaImportacion ?? {})) extra.huellaImportacion = huella;
+      informarFuera(existente.id, accionFuera(existente.publicado));
+      if (despublicarPorListado && existente.publicado) extra.publicado = false;
 
       if (gruposCambiados.length === 0) {
         informe.sinCambios++;
@@ -476,7 +499,9 @@ export const importarCatalogo = async (crudos, {
     }
 
     marcar(null);
+    const accionNuevo = despublicarPorListado ? 'creado sin publicar hasta revisión' : accionFuera(false);
     if (simular) {
+      informarFuera(null, accionNuevo);
       informe.creados.push({ id: null, nombre: t.nombre });
       revisar(null, 'creado sin publicar');
       return;
@@ -486,7 +511,7 @@ export const importarCatalogo = async (crudos, {
     const creado = await prisma.$transaction(async (tx) => {
       const tramite = await tx.tramite.create({
         data: {
-          nombre: t.nombre.trim(), descripcion: t.descripcion, sectorId, encargadoId: sistema.id, publicado: publicar && sospechas.length === 0, fuenteUrl,
+          nombre: t.nombre.trim(), descripcion: t.descripcion, sectorId, encargadoId: sistema.id, publicado: publicar && sospechas.length === 0 && !despublicarPorListado, fuenteUrl,
           huellaImportacion: huella,
           ...(nuevos && {
             costo: nuevos.costo, costoDetalle: nuevos.costoDetalle, informacionAdicional: nuevos.informacionAdicional, verificadoEn: f.verificadoEn,
@@ -498,6 +523,7 @@ export const importarCatalogo = async (crudos, {
       if (nuevos?.mesaIds.length > 0) await tx.tramiteMesa.createMany({ data: nuevos.mesaIds.map((mesaId) => ({ tramiteId: tramite.id, mesaId })), skipDuplicates: true });
       return tramite;
     });
+    informarFuera(creado.id, accionNuevo);
     informe.creados.push({ id: creado.id, nombre: t.nombre });
     revisar(creado.id, 'creado sin publicar');
     aIndexar.add(creado.id);
@@ -552,7 +578,8 @@ export const importarCatalogo = async (crudos, {
   }
 
   const huboCambios = sectores.creados + sectores.actualizados + informe.creados.length + informe.actualizados.length
-    + informe.reindexados.length + informe.despublicados.length + informe.mesas.creadas + informe.mesas.actualizadas > 0;
+    + informe.reindexados.length + informe.despublicados.length + informe.mesas.creadas + informe.mesas.actualizadas
+    + informe.fueraDelListado.filter((f) => f.despublica).length > 0;
   let cache = { invalidada: false, version: null, error: null };
   if (!simular && huboCambios) {
     try {
@@ -572,7 +599,7 @@ const lista = (titulo, items, formato) =>
 export const formatearInforme = (r) => [
   r.simulado ? 'SIMULACIÓN (--dry-run): no se escribió nada.' : 'Importación terminada.',
   `Sectores: ${r.sectores.creados} ${r.simulado ? 'a crear' : 'creados'}, ${r.sectores.actualizados} ${r.simulado ? 'a actualizar' : 'actualizados'}`,
-  `Trámites: ${r.creados.length} creados, ${r.actualizados.length} actualizados, ${r.sinCambios} sin cambios, ${r.reindexados.length} ${r.simulado ? 'a reindexar' : 'reindexados'}, ${r.fallidos.length} fallidos, ${r.conflictos.length} conflictos, ${r.paraRevisar.length} para revisión`,
+  `Trámites: ${r.creados.length} creados, ${r.actualizados.length} actualizados, ${r.sinCambios} sin cambios, ${r.fueraDelListado.filter((f) => f.despublica).length} ${r.simulado ? 'a despublicar' : 'despublicados'} por no figurar en el listado, ${r.reindexados.length} ${r.simulado ? 'a reindexar' : 'reindexados'}, ${r.fallidos.length} fallidos, ${r.conflictos.length} conflictos, ${r.paraRevisar.length} para revisión`,
   `Mesas de entrada del portal: ${r.mesas.creadas} ${r.simulado ? 'a crear' : 'creadas'}, ${r.mesas.actualizadas} ${r.simulado ? 'a actualizar' : 'actualizadas'}, ${r.mesas.conservadas.length} editadas a mano (no se tocan)`,
   ...(r.despublicacion ? [`Despublicación de faltantes: ${r.despublicacion}${r.despublicacion.startsWith('omitida') ? '' : ` (${r.despublicados.length})`}`] : []),
   ...lista('Fallidos', r.fallidos, (f) => `${f.nombre ?? `id ${f.id}`}${f.fuenteUrl ? ` <${f.fuenteUrl}>` : ''}: ${f.motivo}`),
@@ -584,5 +611,6 @@ export const formatearInforme = (r) => [
   ...lista('Conservados (editados a mano, no se pisan)', r.conservados, (c) => `${c.id} ${c.nombre}: ${c.grupos.join(', ')}`),
   ...lista('Mesas editadas a mano (no se pisan)', r.mesas.conservadas, (m) => `${m.id} ${m.nombre}`),
   ...lista('Enlaces rotos (no se importan)', r.enlacesRotos, (e) => `${e.tramite}: ${e.tipo} "${e.nombre}" <${e.url}>`),
+  ...lista(`Fuera del listado del sitio (${r.fueraDelListado.length})`, r.fueraDelListado, (f) => `${f.id ?? 'nuevo'} ${f.nombre} [${f.sector}]: ${f.motivo}; ${f.accion}`),
   ...lista(r.simulado ? 'Se despublicarían' : 'Despublicados', r.despublicados, (d) => `${d.id} ${d.nombre}`),
 ].join('\n');
