@@ -4,8 +4,23 @@ import {
   crearEmpleadoSchema,
   asignarSectoresSchema,
   registroCiudadanoSchema,
+  GENEROS_PADRON,
 } from "../validators/usuario.validator.js";
 import * as turnosService from "../services/turnos.service.js";
+import { coincideConPadron } from "../utils/nombres.js";
+
+// Con M o F se consulta el padrón con ese sexo. Con X el padrón no tiene contra qué
+// cruzarlo: se prueba con M y con F, y la persona tiene que coincidir con el nombre
+// y apellido tipeados para no registrar a alguien con un DNI ajeno.
+const buscarEnPadron = async (datos) => {
+  if (datos.genero !== "X") return turnosService.buscarPersona(datos.dni, datos.genero);
+
+  for (const sexo of GENEROS_PADRON) {
+    const persona = await turnosService.buscarPersona(datos.dni, sexo);
+    if (persona && coincideConPadron(datos, persona)) return persona;
+  }
+  return null;
+};
 
 export const listar = async (req, res) => {
   const { estado } = filtroUsuariosSchema.parse(req.query);
@@ -117,7 +132,7 @@ export const asignarSectores = async (req, res) => {
 
   if (usuario.rol !== "ADMINISTRADOR") {
     const error = new Error(
-      "Los sectores solo pueden ser asignados a adminstradores.",
+      "Los sectores solo pueden ser asignados a administradores.",
     );
     error.statusCode = 409;
     throw error;
@@ -144,7 +159,7 @@ export const registrarCiudadano = async (req, res) => {
     throw error;
   }
 
-  if (await usuarioService.buscarPorDni(datos.dni, datos.genero)) {
+  if (await usuarioService.buscarPorDni(datos.dni)) {
     const error = new Error("Ya existe una cuenta registrada con ese DNI.");
     error.statusCode = 409;
     throw error;
@@ -152,7 +167,7 @@ export const registrarCiudadano = async (req, res) => {
 
   let persona;
   try {
-    persona = await turnosService.buscarPersona(datos.dni, datos.genero);
+    persona = await buscarEnPadron(datos);
   } catch {
     const error = new Error(
       "No pudimos verificar tu identidad ahora mismo porque el servicio de padrón no está disponible. Probá de nuevo en unos minutos.",
@@ -169,9 +184,14 @@ export const registrarCiudadano = async (req, res) => {
     throw error;
   }
 
+  // Se guarda el nombre del padrón, no el tipeado.
   const usuario = await usuarioService.registrarCiudadano({
-    ...datos,
+    dni: datos.dni,
+    genero: datos.genero,
+    email: datos.email,
+    password: datos.password,
     nombre: persona.nombreCompleto,
+    cuil: /^\d{11}$/.test(persona.cuil ?? "") ? persona.cuil : null,
   });
 
   res.status(201).json({

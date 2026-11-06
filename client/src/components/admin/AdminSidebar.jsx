@@ -66,7 +66,7 @@ const sections = [
       {
         to: "/admin/calificacion",
         label: "Calificaciones",
-        perm: "reportes",
+        perm: "calificaciones",
         icon: "M7 10h10M7 14h6m-8 6 3.5-3H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v11a3 3 0 003 3z",
       },
       {

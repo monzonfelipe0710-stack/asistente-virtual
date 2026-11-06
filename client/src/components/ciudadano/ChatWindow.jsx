@@ -570,13 +570,20 @@ export default function ChatWindow({ initialQuery = null }) {
   function presentBotMessage(
     finalText,
     finalActions,
-    { error = false, consultaId = null, canRate = false, calificacion = null } = {}
+    {
+      error = false,
+      consultaId = null,
+      calificarToken = null,
+      canRate = false,
+      calificacion = null,
+    } = {}
   ) {
     setIsTyping(false);
     clearInterval(typingTimerRef.current);
 
     const id = addMessage("bot", finalText, finalActions || undefined, {
       consultaId,
+      calificarToken,
       canRate,
       calificacion,
       publicRating: !token,
@@ -760,13 +767,19 @@ export default function ChatWindow({ initialQuery = null }) {
     }
 
     const effectiveId = userId || "ciudadano_anonimo";
+    const hasConsultaId =
+      consultationData?.consultaId !== null &&
+      consultationData?.consultaId !== undefined;
+    const isConversational = consultationData?.conversacional === true;
     rememberAnswer(effectiveId, {
       label: userText,
       topic: detectTopic(userText),
       kind: error ? "error" : "chat",
     });
 
-    if (consultationData?.consultaId && token) {
+    if (isConversational && immediateConsultaId) {
+      removeConsulta(immediateConsultaId);
+    } else if (hasConsultaId && token) {
       if (userMessageId) {
         updateMessage(userMessageId, { consultaId: consultationData.consultaId });
       }
@@ -807,7 +820,11 @@ export default function ChatWindow({ initialQuery = null }) {
     const responseMetadata = {
       error,
       consultaId: consultationData?.consultaId,
-      canRate: Boolean(consultationData?.consultaId),
+      calificarToken: consultationData?.calificarToken ?? null,
+      canRate:
+        !isConversational &&
+        hasConsultaId &&
+        (Boolean(token) || Boolean(consultationData?.calificarToken)),
       publicRating: !token,
       calificacion: null,
     };
@@ -822,7 +839,9 @@ export default function ChatWindow({ initialQuery = null }) {
         action: finalActions || undefined,
         timestamp: new Date().toISOString(),
         consultaId: consultationData?.consultaId,
-        canRate: Boolean(consultationData?.consultaId && token),
+        calificarToken: consultationData?.calificarToken ?? null,
+        canRate: responseMetadata.canRate,
+        publicRating: !token,
         calificacion: null,
       };
       setSavedThreads((previous) => {

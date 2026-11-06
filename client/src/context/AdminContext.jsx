@@ -15,6 +15,7 @@ export const PERMISSION_LABELS = {
   usuarios: { label: "Gestionar usuarios", desc: "Listar, suspender y reactivar empleados." },
   sectores: { label: "Gestionar sectores", desc: "Crear y editar el organigrama (ministerios, subsecretarías, departamentos)." },
   reportes: { label: "Métricas y reportes", desc: "Consultas por trámite y consultas sin respuesta." },
+  calificaciones: { label: "Ver calificaciones", desc: "Consultar las valoraciones de las respuestas dentro del alcance de tus sectores." },
   mesa_entrada: { label: "Mesa de Entradas", desc: "Ingreso y seguimiento de trámites y expedientes." },
   conocimiento: { label: "Gestionar conocimiento", desc: "Editar la base de respuestas del chatbot." },
   siged: { label: "Integración SIGED", desc: "Consultar y sincronizar expedientes." },
@@ -31,12 +32,13 @@ const PERMISSIONS = {
     "usuarios",
     "sectores",
     "reportes",
+    "calificaciones",
     "mesa_entrada",
     "conocimiento",
     "siged",
     "configuracion",
   ],
-  ADMINISTRADOR: ["dashboard", "tramites", "mesa_entrada"],
+  ADMINISTRADOR: ["dashboard", "tramites", "mesa_entrada", "calificaciones"],
   CIUDADANO: [],
 };
 

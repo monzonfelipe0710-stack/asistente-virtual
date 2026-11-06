@@ -1,13 +1,17 @@
+import crypto from 'node:crypto';
 import prisma from '../config/prisma.js';
 
-export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId }) => {
+export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId, respuesta }) => {
   return prisma.consulta.create({
     data: {
       textoConsulta,
       tramiteId: tramiteId ?? null,
       encontrado,
       usuarioId: usuarioId ?? null,
+      respuesta: respuesta ?? null,
+      calificarToken: crypto.randomBytes(16).toString('hex'),
     },
+    select: { id: true, calificarToken: true },
   });
 };
 
@@ -45,6 +49,8 @@ export const consultasSinRespuesta = async () => {
     where: { encontrado: false },
     orderBy: { fecha: 'desc' },
     take: 50,
+    // Sin usuarioId: quién preguntó no le corresponde a quien mira las métricas.
+    select: { id: true, textoConsulta: true, encontrado: true, fecha: true, tramiteId: true },
   });
 };
 
@@ -58,6 +64,7 @@ export const consultasDeUsuario = async (usuarioId) => {
       textoConsulta: true,
       encontrado: true,
       fecha: true,
+      respuesta: true,
       calificacion: true,
       motivoCalificacion: true,
       tramite: { select: { id: true, nombre: true } },

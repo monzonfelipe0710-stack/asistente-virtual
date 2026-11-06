@@ -1,4 +1,5 @@
 import * as chatService from '../services/chat.service.js';
+import { ClienteDesconectadoError } from '../utils/plazo.js';
 import { z } from 'zod';
 
 const mensajeSchema = z.object({
@@ -21,7 +22,7 @@ export const consultar = async (req, res) => {
     throw error;
   }
 
-  const resultado = await chatService.responderConsulta(mensajes, req.usuario?.id ?? null);
+  const resultado = await chatService.responderConsulta(mensajes, req.usuario ?? null);
   res.json(resultado);
 };
 
@@ -41,19 +42,26 @@ export const consultarStream = async (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
-  let clienteDesconectado = false;
-  res.on('close', () => { clienteDesconectado = true; });
+  // `close` también llega al terminar bien: solo es desconexión si la respuesta no se cerró.
+  // Se cancela la llamada al modelo para no seguir gastando tokens.
+  const cancelacion = new AbortController();
+  res.on('close', () => {
+    if (!res.writableEnded) cancelacion.abort(new ClienteDesconectadoError());
+  });
 
   try {
-    for await (const evento of chatService.responderConsultaStream(mensajes, req.usuario?.id ?? null)) {
-      if (clienteDesconectado) break;
+    const eventos = chatService.responderConsultaStream(mensajes, req.usuario ?? null, { signal: cancelacion.signal });
+    for await (const evento of eventos) {
+      if (cancelacion.signal.aborted) break;
       res.write(`data: ${JSON.stringify(evento)}\n\n`);
     }
   } catch (err) {
-    console.error('Error en streaming del chat:', err.message);
-    if (!clienteDesconectado) {
-      res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje: 'Ocurrió un error procesando la consulta.' })}\n\n`);
-    }
+    if (cancelacion.signal.aborted) return;
+    // La causa de una falla del modelo ya quedó en el log del servicio.
+    const noDisponible = err instanceof chatService.AsistenteNoDisponibleError;
+    if (!noDisponible) console.error('Error en streaming del chat:', err);
+    const mensaje = noDisponible ? err.message : 'Ocurrió un error procesando la consulta.';
+    res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje })}\n\n`);
   } finally {
     res.end();
   }

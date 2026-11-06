@@ -27,6 +27,12 @@ enum TipoSector {
   ORGANISMO
 }
 
+enum Jurisdiccion {
+  PROVINCIAL
+  MUNICIPAL
+  NACIONAL
+}
+
 enum EstadoUsuario {
   PENDIENTE
   APROBADO
@@ -37,12 +43,16 @@ enum EstadoUsuario {
 enum Genero {
   M
   F
+  X
 }
 
 model Sector {
   id        Int @id @default(autoincrement())
   nombre    String
   tipo      TipoSector
+  // null en los dos: igual que el sector padre (en un sector raíz, provincial y sin localidad).
+  jurisdiccion Jurisdiccion?
+  localidad    String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -83,6 +93,13 @@ model Tramite {
 
   fuenteUrl   String?  @unique @map("fuente_url")
 
+  // De la ficha del portal (ver la migración fichas_del_portal).
+  informacionAdicional String?   @map("informacion_adicional")
+  costoDetalle         String?   @map("costo_detalle")
+  verificadoEn         DateTime? @map("verificado_en")
+  // Hash de lo que escribió el importador, por grupo de campos (ver src/utils/huella.js).
+  huellaImportacion    Json?     @map("huella_importacion")
+
   @@index([sectorId])
   @@index([embedding], map: "tramites_embedding_idx")
   @@index([searchVector], map: "tramites_search_idx", type: Gin)
@@ -108,7 +125,12 @@ model MesaEntrada {
   direccion String?
   localidad String?
   horario   String?
+  telefono  String?
+  email     String?
   esGeneral Boolean @default(false) @map("es_general")
+  // Identificador de la oficina en el portal (collapse_NNN): evita duplicarla entre trámites.
+  origenId  String? @unique @map("origen_id")
+  huellaImportacion Json? @map("huella_importacion")
 
   sectorId  Int? @map("sector_id")
   sector    Sector? @relation(fields: [sectorId], references: [id], onDelete: SetNull)
@@ -133,7 +155,9 @@ model TramiteMesa {
 model Documento {
   id        Int @id @default(autoincrement())
   nombre    String
-  archivo   String
+  // Exactamente uno de los dos (CHECK en la migración): clave del archivo en R2 o enlace http(s).
+  archivo    String?
+  urlExterna String? @map("url_externa")
   tipo      String?
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -153,8 +177,9 @@ model Usuario {
   estado        EstadoUsuario @default(PENDIENTE)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  dni           String?
+  dni           String? @unique
   genero        Genero?
+  cuil          String? @unique @db.VarChar(11)
   resetTokenHash String?  @map("reset_token_hash")
   resetTokenExpira DateTime?  @map("reset_token_expira")
   debeCambiarPassword Boolean @default(false) @map("debe_cambiar_password")
@@ -162,9 +187,8 @@ model Usuario {
 
   sectores      UsuarioSector[]
   tramitesACargo Tramite[]
-  consultar     Consulta[]
+  consultas     Consulta[]
 
-  @@unique([dni, genero])
   @@map("usuarios")
 }
 
@@ -184,8 +208,11 @@ model Consulta {
   textoConsulta   String @map("texto_consulta")
   encontrado      Boolean @default(false)
   fecha           DateTime @default(now())
+  respuesta       String?
+  topico          String?
   calificacion    Int?
   motivoCalificacion String? @map("motivo_calificacion")
+  calificarToken  String? @unique @map("calificar_token")
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)
@@ -195,4 +222,13 @@ model Consulta {
   @@index([tramiteId])
   @@index([usuarioId])
   @@map("consultas")
+}
+
+// Una sola fila (id = 1). Ver version-catalogo.service.js.
+model CatalogoVersion {
+  id            Int      @id @default(1)
+  version       BigInt   @default(0)
+  actualizadoEn DateTime @default(now()) @map("actualizado_en")
+
+  @@map("catalogo_version")
 }

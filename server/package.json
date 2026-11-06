@@ -22,6 +22,9 @@
     "prisma": "6.19.3"
   },
   "name": "server",
+  "engines": {
+    "node": ">=22.3.0"
+  },
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -29,9 +32,11 @@
     "start": "node index.js",
     "predev": "prisma generate",
     "dev": "nodemon index.js",
-    "test": "node --test \"tests/**/*.test.js\"",
+    "test": "node scripts/test.js",
+    "test:real": "node scripts/test.js --real",
     "postinstall": "prisma generate",
-    "seed:demo": "node prisma/seed-demo.js"
+    "seed:demo": "node prisma/seed-demo.js",
+    "base:temporal": "node scripts/base-temporal.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

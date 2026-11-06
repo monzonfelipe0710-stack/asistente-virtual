@@ -111,6 +111,8 @@ export default function AppRoutes({ location }) {
           </Route>
           <Route element={<PermissionRoute permission="reportes" />}>
             <Route path="reportes" element={<Lazy><ReportsPage /></Lazy>} />
+          </Route>
+          <Route element={<PermissionRoute permission="calificaciones" />}>
             <Route path="calificacion" element={<Lazy><CalificacionPage /></Lazy>} />
           </Route>
         </Route>

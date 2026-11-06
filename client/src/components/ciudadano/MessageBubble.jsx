@@ -177,6 +177,7 @@ function MessageBubble({
   const typing = speaking && typedText.length < message.text.length;
   const motivoGroupName = `rating-motivo-${message.id}`;
   const pideDetalle = motivo === OTRO_MOTIVO;
+  const tieneConsultaId = message.consultaId !== null && message.consultaId !== undefined;
   // Los mensajes históricos o de ejemplo pueden llegar sin timestamp o con
   // un valor que Date no reconoce. Nunca convertir una fecha inválida a ISO.
   const parsedTimestamp = message.timestamp == null || message.timestamp === ""
@@ -202,8 +203,8 @@ function MessageBubble({
     setRatingError("");
     try {
       const result = await calificarConsulta(message.consultaId, value, {
-        publico: message.publicRating,
         motivo: motivoElegido,
+        token: message.publicRating ? message.calificarToken : undefined,
       });
       setRatingSubmitted(true);
       setPendingDislike(false);
@@ -231,17 +232,12 @@ function MessageBubble({
   }
 
   function handleEnviarMotivo() {
-    if (!motivo) {
-      setRatingError("Elegí un motivo para continuar.");
-      return;
-    }
     const detalle = motivoDetalle.trim();
-    if (pideDetalle && !detalle) {
-      setRatingError("Escribí brevemente qué pasó para poder ayudarte mejor.");
-      motivoDetalleRef.current?.focus();
+    if (pideDetalle && detalle.length > 300) {
+      setRatingError("El motivo no puede superar los 300 caracteres.");
       return;
     }
-    rateResponse(0, pideDetalle ? detalle : motivo);
+    rateResponse(0, pideDetalle ? detalle || motivo : motivo);
   }
 
   function handleCancelarMotivo() {
@@ -292,7 +288,7 @@ function MessageBubble({
             }
             return null;
           })}
-          {!typing && isBot && message.canRate && (
+          {!typing && isBot && message.canRate && tieneConsultaId && (
             <div className="mt-3 border-t border-line/70 pt-2.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted">¿Te sirvió esta respuesta?</span>
@@ -369,7 +365,7 @@ function MessageBubble({
                         htmlFor={`${motivoGroupName}-detalle`}
                         className="block text-sm font-medium text-ink"
                       >
-                        Contanos qué pasó (obligatorio)
+                        Contanos qué pasó (opcional)
                       </label>
                       <textarea
                         id={`${motivoGroupName}-detalle`}
@@ -386,7 +382,7 @@ function MessageBubble({
                         id={`${motivoGroupName}-detalle-ayuda`}
                         className="mt-1 flex items-center justify-between gap-3 text-xs text-muted"
                       >
-                        <span>Cuanto más detalle, mejor podemos mejorar la respuesta.</span>
+                        <span>Podés dejarlo en blanco para indicar solo “Otro motivo”.</span>
                         <span aria-hidden="true">{motivoDetalle.length}/300</span>
                       </div>
                     </div>
@@ -395,10 +391,10 @@ function MessageBubble({
                     <button
                       type="button"
                       onClick={handleEnviarMotivo}
-                      disabled={ratingBusy || !motivo || (pideDetalle && !motivoDetalle.trim())}
+                      disabled={ratingBusy}
                       className="inline-flex min-h-11 items-center justify-center rounded-full bg-brand-deep px-4 text-sm font-semibold text-white transition-colors hover:bg-brand disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {ratingBusy ? "Enviando…" : "Enviar opinión"}
+                      {ratingBusy ? "Enviando…" : motivo ? "Enviar opinión" : "Enviar sin motivo"}
                     </button>
                     <button
                       type="button"

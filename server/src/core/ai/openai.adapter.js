@@ -1,4 +1,8 @@
+import { APIError } from 'openai';
 import { openai } from '../../config/openai.js';
+import { TIEMPOS_IA } from '../../config/ia.js';
+import { combinarSenales } from '../../utils/plazo.js';
+import { ErrorProveedorIA } from './errores.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
 const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
@@ -17,33 +21,115 @@ const construirMensajes = (instruccionSistema, turnos) => [
   })),
 ];
 
+// Solo tipo y código: los mensajes pueden traer partes del pedido o de la respuesta. Los de red
+// (TypeError de fetch: "terminated", "fetch failed") son fijos y se dejan.
+const describir = (err) => {
+  if (err instanceof APIError) return `${err.constructor.name}${err.status ? ` ${err.status}` : ''}`;
+  const codigo = err?.code ?? err?.cause?.code;
+  return [err?.name ?? 'Error', codigo, err instanceof TypeError ? err.message : null].filter(Boolean).join(' ');
+};
+
+// Un abort propio (plazo, desconexión, inactividad) sale con su motivo; lo demás, como falla del proveedor.
+const comoFalla = (err, signal, operacion) => {
+  if (signal?.aborted) return signal.reason;
+  if (err instanceof ErrorProveedorIA) return err;
+  return new ErrorProveedorIA(describir(err), { operacion, original: err });
+};
+
 /** @type {import('./proveedor.js').ProveedorIA} */
 export const openaiAdapter = {
-  async generarEmbedding(texto) {
-    const r = await openai.embeddings.create({ model: MODELO_EMBEDDING, input: texto });
-    return r.data[0].embedding;
+  async generarEmbedding(texto, { signal } = {}) {
+    try {
+      const r = await openai.embeddings.create(
+        { model: MODELO_EMBEDDING, input: texto },
+        { ...TIEMPOS_IA.embedding, signal },
+      );
+      return r.data[0].embedding;
+    } catch (err) {
+      throw comoFalla(err, signal, 'embedding');
+    }
   },
 
-  async generarRespuesta({ instruccionSistema, turnos, esquema }) {
-    const completion = await openai.chat.completions.create({
-      model: MODELO_CHAT,
-      temperature: TEMPERATURA,
-      messages: construirMensajes(instruccionSistema, turnos),
-      ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
-    });
-    return completion.choices[0].message.content;
+  // Para reindexar en lotes: un pedido con varios textos tarda más que uno solo.
+  async generarEmbeddings(textos, { signal, timeout = TIEMPOS_IA.embedding.timeout * 5 } = {}) {
+    try {
+      const r = await openai.embeddings.create(
+        { model: MODELO_EMBEDDING, input: textos },
+        { ...TIEMPOS_IA.embedding, timeout, signal },
+      );
+      return {
+        vectores: [...r.data].sort((a, b) => a.index - b.index).map((d) => d.embedding),
+        tokens: r.usage?.total_tokens ?? null,
+      };
+    } catch (err) {
+      throw comoFalla(err, signal, 'embedding_lote');
+    }
   },
 
-  async *generarRespuestaStream({ instruccionSistema, turnos }) {
-    const stream = await openai.chat.completions.create({
-      model: MODELO_CHAT,
-      temperature: TEMPERATURA,
-      stream: true,
-      messages: construirMensajes(instruccionSistema, turnos),
-    });
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content ?? '';
-      if (delta) yield delta;
+  async generarRespuesta({ instruccionSistema, turnos, esquema, signal }) {
+    let completion;
+    try {
+      completion = await openai.chat.completions.create(
+        {
+          model: MODELO_CHAT,
+          temperature: TEMPERATURA,
+          messages: construirMensajes(instruccionSistema, turnos),
+          ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
+        },
+        { ...TIEMPOS_IA.chat, signal },
+      );
+    } catch (err) {
+      throw comoFalla(err, signal, 'chat');
+    }
+    const { finish_reason: finishReason, message } = completion.choices[0];
+    if (finishReason !== 'stop') {
+      throw new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion: 'chat' });
+    }
+    return message.content;
+  },
+
+  // El SDK termina el stream sin error si se corta sin [DONE] o si se lo aborta: por eso un abort
+  // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
+  async *generarRespuestaStream({ instruccionSistema, turnos, signal }) {
+    const inactividad = new AbortController();
+    const senal = combinarSenales(signal, inactividad.signal);
+    let temporizador;
+    const rearmar = () => {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(
+        () => inactividad.abort(new ErrorProveedorIA('stream inactivo', { operacion: 'chat_stream' })),
+        TIEMPOS_IA.inactividadStream,
+      );
+    };
+
+    let finishReason = null;
+    try {
+      const stream = await openai.chat.completions.create(
+        {
+          model: MODELO_CHAT,
+          temperature: TEMPERATURA,
+          stream: true,
+          messages: construirMensajes(instruccionSistema, turnos),
+        },
+        { ...TIEMPOS_IA.chat, signal: senal },
+      );
+      rearmar();
+      for await (const chunk of stream) {
+        rearmar();
+        const opcion = chunk.choices[0];
+        finishReason = opcion?.finish_reason ?? finishReason;
+        const delta = opcion?.delta?.content ?? '';
+        if (delta) yield delta;
+      }
+    } catch (err) {
+      throw comoFalla(err, senal, 'chat_stream');
+    } finally {
+      clearTimeout(temporizador);
+    }
+
+    if (senal.aborted) throw senal.reason;
+    if (finishReason !== 'stop') {
+      throw new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion: 'chat_stream' });
     }
   },
 
