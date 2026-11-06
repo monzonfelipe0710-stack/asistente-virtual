@@ -16,6 +16,7 @@ import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo
 import { cortarEnOracion, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { costoDelPortal } from "../utils/huella.js";
+import { MENSAJE_SOLO_ESPANOL, esOtroIdioma, pareceEspanol } from "../utils/idioma.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
 import { MENSAJE_INFORMACION_OCULTA, crearVerificador, quedoSinContenido, sinContenidoPropio } from "./verificacion.service.js";
 import {
@@ -512,6 +513,21 @@ const copiaInstrucciones = (texto, alDetectarFuga) => {
   return true;
 };
 
+// Si el texto salió en otro idioma se reemplaza entero, sin saludo, sin cachear ni registrar.
+const avisarOtroIdioma = (texto, alCorregir) => {
+  console.warn(`Chat: respuesta reemplazada, estaba en otro idioma: "${texto.slice(0, 80)}"`);
+  alCorregir?.({ capa: "idioma", original: texto, corregida: MENSAJE_SOLO_ESPANOL });
+};
+const enOtroIdioma = (texto, alCorregir) => {
+  if (!esOtroIdioma(texto)) return false;
+  avisarOtroIdioma(texto, alCorregir);
+  return true;
+};
+// En streaming se retienen al menos estas palabras antes de mandar, que alcanzan para ver el
+// idioma, salvo que lo retenido ya se vea en español.
+const PALABRAS_PARA_EL_IDIOMA = 12;
+const cuantasPalabras = (texto) => texto.match(/\p{L}+/gu)?.length ?? 0;
+
 const textoDeLaPersona = (mensajes) =>
   mensajes
     .filter((m) => m.rol === "usuario")
@@ -665,12 +681,14 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
   // El mensaje fijo sale sin saludo, igual que cuando lo frena la regla de entrada.
   if (cuerpoModelo === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
   if (copiaInstrucciones(cuerpoModelo, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
+  if (enOtroIdioma(cuerpoModelo, alCorregirSalida)) return respuestaConversacional(MENSAJE_SOLO_ESPANOL);
 
   if (salida.tipo === "conversacion") {
     traza.etapa("conversacion");
     const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
+    if (enOtroIdioma(texto, alCorregirSalida)) return respuestaConversacional(MENSAJE_SOLO_ESPANOL);
     return respuestaConversacional(conSaludo(texto, saludo, usuario));
   }
 
@@ -819,17 +837,27 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
   let limpiador = null;
   let verificar = null;
   let sinTramite = false;
-  // Una respuesta con trámite se retiene hasta su primera oración con contenido: si la verificación
-  // saca todo lo que respondía, sale el mensaje seguro sin haber mandado el resto.
+  // El texto se retiene hasta tener las palabras que alcanzan para ver el idioma y, si es una
+  // respuesta con trámite, hasta su primera oración con contenido: si la verificación saca todo lo
+  // que respondía, o si está en otro idioma, sale el mensaje que corresponde sin haber mandado nada.
+  // El saludo sale con lo primero que se libera.
   let retenido = "";
-  let conContenido = false;
+  let liberado = false;
+  let otroIdioma = false;
+  let prefijoPendiente = "";
   const paraMandar = (texto) => {
-    if (!texto || meta.tipo === "conversacion") return "";
-    if (meta.tipo !== "respuesta" || conContenido) return texto;
+    if (!texto || meta.tipo === "conversacion" || otroIdioma) return "";
+    if (liberado) return texto;
     retenido += texto;
-    if (sinContenidoPropio(retenido)) return "";
-    conContenido = true;
-    const todo = retenido;
+    if (meta.tipo === "respuesta" && sinContenidoPropio(retenido)) return "";
+    if (cuantasPalabras(retenido) < PALABRAS_PARA_EL_IDIOMA && !pareceEspanol(retenido)) return "";
+    if (esOtroIdioma(retenido)) {
+      otroIdioma = true;
+      return "";
+    }
+    liberado = true;
+    const todo = prefijoPendiente + retenido;
+    prefijoPendiente = "";
     retenido = "";
     return todo;
   };
@@ -887,8 +915,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
       verificar = verificadorPara(tramites, meta.idsUsados, alCorregirSalida, { contexto, fijo, pregunta: textoDeLaPersona(mensajes) });
       limpiador = crearLimpiador({ saludo, alCorregirTuteo, verificar });
       // El saludo de una conversación sale al final: si es el mensaje fijo, va sin saludo.
-      const prefijo = componerSaludo(saludo, nombre);
-      if (prefijo && meta.tipo !== "conversacion") yield { tipo: "delta", texto: prefijo };
+      if (meta.tipo !== "conversacion") prefijoPendiente = componerSaludo(saludo, nombre);
       delta = buffer.slice(nl + 1);
     }
 
@@ -908,7 +935,15 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
     if (salida) yield { tipo: "delta", texto: salida };
   }
 
-  if (meta?.tipo === "respuesta" && meta.encontrado && !conContenido) {
+  if (otroIdioma || (limpiador !== null && !liberado && meta.tipo !== "conversacion" && esOtroIdioma(retenido))) {
+    avisarOtroIdioma(retenido, alCorregirSalida);
+    yield { tipo: "delta", texto: MENSAJE_SOLO_ESPANOL };
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
+
+  if (meta?.tipo === "respuesta" && meta.encontrado && !liberado) {
+    if (prefijoPendiente) yield { tipo: "delta", texto: prefijoPendiente };
     if (quedoSinContenido(verificar, cuerpo)) {
       const usados = meta.idsUsados.map((id) => tramites.find((x) => x.id === id));
       avisarSinContenido(usados);
@@ -918,8 +953,11 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
       yield FIN_SIN_CONTENIDO;
       return;
     }
-    // Solo relleno escrito así por el modelo: sale tal cual.
+    // Una respuesta corta, o solo relleno escrito así por el modelo: sale tal cual.
     if (retenido) yield { tipo: "delta", texto: retenido };
+  } else if (meta?.tipo === "aclaracion" && !liberado) {
+    const todo = prefijoPendiente + retenido;
+    if (todo) yield { tipo: "delta", texto: todo };
   }
 
   // Sin salto de línea no hubo META separada: el buffer entero puede ser el JSON.
@@ -928,9 +966,10 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
+    const conversado = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
+    const texto = enOtroIdioma(conversado, alCorregirSalida) ? MENSAJE_SOLO_ESPANOL : conversado;
     const prefijo = componerSaludo(saludo, nombre);
-    if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE) yield { tipo: "delta", texto: prefijo };
+    if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE && texto !== MENSAJE_SOLO_ESPANOL) yield { tipo: "delta", texto: prefijo };
     yield { tipo: "delta", texto };
     yield FIN_CONVERSACIONAL;
     return;
