@@ -14,6 +14,7 @@ import {
   enviarSolicitudDeAcceso,
   fijarToken,
   iniciarSesion,
+  pedirMisConsultas,
   restablecerPassword,
   solicitarRecuperacion,
   type UsuarioApi,
@@ -105,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sesion?.token && sesion.usuario) {
         fijarToken(sesion.token);
         setUser(usuarioDesdeApi(sesion.usuario));
+        pedirMisConsultas().catch(() => {});
       }
       setLoading(false);
     });
