@@ -1003,12 +1003,22 @@ o el rate limiting ve siempre la IP del proxy. Activarlo sin proxy permite false
 **El rate limiting y la caché son en memoria.** Con más de una instancia, cada una lleva
 los suyos. Los scripts de importación corren en otro proceso y no limpian la caché del server.
 
+**La base real tiene en `_prisma_migrations` 9 registros que no están en este repo.** Son de las
+ramas de Felipe y no hay que tocarlos ni borrarlos: `migrate deploy` los ignora y aplica igual lo
+pendiente de este repo. Al 06/11/2026 son 6 aplicadas (`20261014120000_rol_ciudadano`,
+`20261015130000_cuil_solicitudes_empleados`, `20261020000000_consulta_respuesta_calificacion_topico`,
+`20261021120000_genero_otro_prefiero_no_decirlo`, `20261022180000_usuario_cuil_y_calificacion_consulta`,
+`20261028000000_motivo_calificacion_consulta`) y 3 intentos revertidos (`20261017221501_rol_ciudadano`,
+`20261014120000_rol_ciudadano` y `20261022180000_usuario_cuil_y_calificacion_consulta`, que después
+se aplicaron). `migrate status` no los muestra y dice que la base está al día: para verlos hay que
+consultar la tabla.
+
 ## Pendiente
 
 - Estados `PENDIENTE` y `RECHAZADO` sin flujo (no hay endpoints de aprobar o rechazar).
 - Editar un trámite publicado no vuelve a pasar por la aprobación del supervisor.
 - Editar una mesa no revalida los trámites que ya la usan.
-- Alinear las migraciones con las de otras ramas.
+- Alinear las migraciones con las de otras ramas (los 9 registros de las ramas de Felipe, ver arriba).
 - Migrar `package.json#prisma` a `prisma.config.ts` antes de Prisma 7.
 - Aplicar en la base real `20261105120000_catalogo_version` y `20261105130000_documento_url_externa` (antes, un branch de respaldo en Neon), antes o junto con el deploy: sin `catalogo_version` el server avisa una vez en el log y la caché vuelve a durar hasta 1 hora, pero sin `url_externa` fallan los endpoints de documentos.
 - Un trámite que `--despublicar-faltantes` bajó no se vuelve a publicar solo si reaparece en el JSON.
