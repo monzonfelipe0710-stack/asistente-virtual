@@ -283,12 +283,12 @@ export const cargarDetalle = async (ids) => {
             'id', m.id, 'nombre', m.nombre, 'direccion', m.direccion, 'localidad', m.localidad,
             'horario', m.horario, 'esGeneral', m.es_general, 'sectorId', m.sector_id
           )
-        ))
+        ) ORDER BY m.id)
         FROM tramite_mesa tm JOIN mesas_entrada m ON m.id = tm.mesa_id
         WHERE tm.tramite_id = t.id
       ), '[]') AS mesas,
       COALESCE((
-        SELECT json_agg(json_build_object('nombre', d.nombre))
+        SELECT json_agg(json_build_object('nombre', d.nombre) ORDER BY d.id)
         FROM documentos d WHERE d.tramite_id = t.id
       ), '[]') AS documentos
     FROM tramites t
