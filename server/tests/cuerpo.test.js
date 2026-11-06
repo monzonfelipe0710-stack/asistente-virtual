@@ -45,22 +45,40 @@ describe('limpiarCuerpo', () => {
   });
 });
 
-describe('encabezado de una lista', () => {
+describe('listas', () => {
   const sacaItemsConEnlace = (linea) => (/^\s*- .*www\./.test(linea) ? '' : linea);
+  const FRASE = 'No puedo mostrar el listado completo. Consultá en el Registro Civil de la provincia que corresponda o en la fuente oficial.';
+  const enTodoTamano = (texto, opciones, esperado) => {
+    for (const largo of [texto.length, 7, 1]) assert.equal(enPedazos(texto, largo, opciones), esperado, `pedazos de ${largo}`);
+    assert.equal(limpiarCuerpo(texto, opciones), esperado);
+  };
 
-  it('se descarta si la verificación sacó todos sus ítems, en una pieza o en pedazos', () => {
-    const texto = 'Ingresá a las siguientes direcciones:\n- Buenos Aires: www.gba.gob.ar\n- CABA: www.buenosaires.gob.ar\n\nLa solicitud es personal.';
-    for (const largo of [texto.length, 3]) {
-      assert.equal(enPedazos(texto, largo, { verificar: sacaItemsConEnlace }), 'La solicitud es personal.');
-    }
+  it('si se pierde un ítem, la lista entera y su encabezado se reemplazan por la frase fija', () => {
+    const texto = 'Ingresá a las siguientes direcciones:\n- Catamarca: portal.catamarca.gob.ar\n- Buenos Aires: www.gba.gob.ar\n- Chaco: mapadelestado.chaco.gob.ar\n\nLa solicitud es personal.';
+    enTodoTamano(texto, { verificar: sacaItemsConEnlace }, `${FRASE}\n\nLa solicitud es personal.`);
   });
 
-  it('queda si sobrevive algún ítem o si lo que sigue no es una lista', () => {
-    assert.equal(
-      limpiarCuerpo('Requisitos:\n- DNI vigente\n- Buenos Aires: www.gba.gob.ar', { verificar: sacaItemsConEnlace }),
-      'Requisitos:\n- DNI vigente',
-    );
-    assert.equal(limpiarCuerpo('Requisitos:\nEl DNI vigente.', { verificar: sacaItemsConEnlace }), 'Requisitos:\nEl DNI vigente.');
-    assert.equal(limpiarCuerpo('Te cuento:', { verificar: sacaItemsConEnlace }), 'Te cuento:');
+  it('con numeración también, y la frase sale una sola vez aunque haya dos listas', () => {
+    const texto = '1. Uno www.x\n2. Dos\nTexto.\n- Tres www.y\n- Cuatro';
+    enTodoTamano(texto, { verificar: (l) => (/www\./.test(l) ? '' : l) }, `${FRASE}\nTexto.`);
+  });
+
+  it('una lista que sobrevive entera, con su encabezado, no se toca', () => {
+    const texto = 'Requisitos:\n- DNI vigente\n- Partida de nacimiento\n\nLlevá todo.';
+    enTodoTamano(texto, { verificar: sacaItemsConEnlace }, texto);
+  });
+
+  it('un ítem que queda sin contenido útil cuenta como perdido', () => {
+    enTodoTamano('Provincias:\n- Chaco: mapadelestado.chaco.gob.ar\n- **San Luis**: (más información en la fuente oficial).', {}, FRASE);
+    enTodoTamano('- Buenos Aires:\n- Chaco: web', {}, FRASE);
+  });
+
+  it('un encabezado sin lista, o con texto normal debajo, queda', () => {
+    enTodoTamano('Requisitos:\nEl DNI vigente.', { verificar: sacaItemsConEnlace }, 'Requisitos:\nEl DNI vigente.');
+    enTodoTamano('Te cuento:', { verificar: sacaItemsConEnlace }, 'Te cuento:');
+  });
+
+  it('el saludo inicial se saca de una línea, no de un ítem', () => {
+    enTodoTamano('¡Hola! Te cuento:\n- uno\n- dos', { saludo: 'Hola' }, 'Te cuento:\n- uno\n- dos');
   });
 });

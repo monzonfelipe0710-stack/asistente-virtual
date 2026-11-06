@@ -287,6 +287,25 @@ const quedaRota = ({ texto, urls }) =>
     return PIDE_COMPLEMENTO.has(normalizar(antes.match(/([\p{L}]+)$/u)?.[1] ?? ''));
   });
 
+// --- Listas incompletas ------------------------------------------------------------------------
+
+// Va en lugar de una lista (viñetas o números) a la que se le perdió algún ítem: una lista parcial
+// parece completa. La respuesta conserva el enlace a la fuente oficial que agrega el servidor.
+export const MENSAJE_LISTA_COLAPSADA = 'No puedo mostrar el listado completo. Consultá en el Registro Civil de la provincia que corresponda o en la fuente oficial.';
+
+// Lo que queda de un ítem "Provincia: (más información en la fuente oficial)" no informa nada.
+const RELLENO_DE_ITEM = /^(?:para\s+)?(?:mas|mayor)\s+(?:informacion|detalles)\b|^(?:ver|consulta\w*)\s+(?:en\s+)?(?:la\s+)?fuente\s+oficial\b/;
+
+// true si el ítem, ya limpio, quedó sin contenido útil: solo el rótulo ("Buenos Aires:") o un rótulo
+// con un relleno que manda a otro lado.
+export const itemVacio = (item) => {
+  const texto = item.replace(PREFIJO_DE_LISTA, '').replace(/\*\*|__/g, '').trim();
+  const i = texto.indexOf(':');
+  if (i === -1) return !/[\p{L}\d]/u.test(texto);
+  const resto = normalizar(texto.slice(i + 1)).replace(/^[()\s.,;:–-]+|[()\s.,;:–-]+$/g, '');
+  return resto === '' || RELLENO_DE_ITEM.test(resto);
+};
+
 // --- Respuestas que quedaron sin contenido ---------------------------------------------------
 
 // Si al sacar oraciones no queda nada que responda, va este mensaje (con el enlace a la fuente

@@ -17,7 +17,7 @@ import 'dotenv/config';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
-import { montosEn } from '../src/services/verificacion.service.js';
+import { MENSAJE_LISTA_COLAPSADA, montosEn } from '../src/services/verificacion.service.js';
 import { costoDelPortal } from '../src/utils/huella.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 import { leerSectoresParaResolver, resolverJurisdicciones } from '../src/services/jurisdiccion.service.js';
@@ -109,8 +109,9 @@ const casos = [
   { pregunta: 'dónde saco el pasaporte en Clorinda', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas', localidad: 'Clorinda' } } },
   { pregunta: 'dónde hago el nuevo ejemplar del DNI para argentinos', esperado: { contesta: true, incluye: [90], ...DOMINIO, segunBase: { id: 90, dato: 'mesas' } } },
   // Sin oficinas, con un vecino del mismo organismo que sí tiene (la 273, con 69): no tomar las del vecino.
-  // También es correcto responder con su descripción: se pide en la web del registro civil de cada provincia.
-  { pregunta: 'dónde hago la solicitud de actas a otras provincias', esperado: { contesta: true, incluye: [92], ...DOMINIO, segunBase: { id: 92, dato: 'mesas' }, oRemiteA: REMITE_AL_REGISTRO_DE_CADA_PROVINCIA } },
+  // También es correcto responder con su descripción (se pide en la web del registro civil de cada provincia) o,
+  // si la lista de sitios que arma el modelo pierde algún ítem, con la frase fija del colapso más la fuente oficial.
+  { pregunta: 'dónde hago la solicitud de actas a otras provincias', esperado: { contesta: true, incluye: [92], ...DOMINIO, segunBase: { id: 92, dato: 'mesas' }, oRemiteA: REMITE_AL_REGISTRO_DE_CADA_PROVINCIA, oColapsa: true } },
   // DNI: responder con el trámite o pedir que elija entre las variantes son correctos.
   { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
   { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
@@ -204,11 +205,13 @@ const CONOCIMIENTO_GENERAL = [
   'pedi un turno',
   'lleva tu documento anterior',
 ];
+// La frase fija que reemplaza una lista incompleta, con el enlace de la fuente oficial que agrega el servidor.
+const colapsoConFuente = (texto) => texto.includes(MENSAJE_LISTA_COLAPSADA) && /\[Fuente oficial: [^\]]+\]\(https?:\/\/[^)]+\)/.test(texto);
 const enOtroIdioma = (texto) => (texto.match(INGLES)?.length ?? 0) >= 3;
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, oRemiteA, mencionaDato, aclaraPortal, sinConocimientoGeneral, aclaracionPorJurisdiccion, localidad, jurisdiccion, avisaNoCargado }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, oRemiteA, oColapsa, mencionaDato, aclaraPortal, sinConocimientoGeneral, aclaracionPorJurisdiccion, localidad, jurisdiccion, avisaNoCargado }) =>
   [
     tipo,
     localidad && `de ${localidad}`,
@@ -224,7 +227,7 @@ const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conve
     ejemplosDelCatalogo && `${ejemplosDelCatalogo} ejemplos`,
     enEspanol && 'en español',
     largoMaximo && `<=${largoMaximo}`,
-    datoNoCargado && `dice que no está cargado${oRemiteA ? ' o remite a donde se hace' : ''}`,
+    datoNoCargado && `dice que no está cargado${oRemiteA ? ' o remite a donde se hace' : ''}${oColapsa ? ' o colapsa la lista con la fuente' : ''}`,
     mencionaDato && `nombra ${mencionaDato.dato}${mencionaDato.localidad ? ` de ${mencionaDato.localidad}` : ''}`,
     aclaraPortal && 'aclara portal y confirmar',
     sinConocimientoGeneral && 'sin conocimiento general',
@@ -401,7 +404,7 @@ const fallas = (esperado, r) => {
     esperado.ejemplosDelCatalogo && ejemplosNombrados(texto) < esperado.ejemplosDelCatalogo && `${ejemplosNombrados(texto)} ejemplos del catálogo`,
     esperado.enEspanol && enOtroIdioma(texto) && 'en otro idioma',
     esperado.largoMaximo && texto.length > esperado.largoMaximo && `largo ${texto.length}`,
-    esperado.datoNoCargado && r.tipo !== 'aclaracion' && !DICE_NO_CARGADO.test(normalizar(texto)) && !esperado.oRemiteA?.test(normalizar(texto)) && 'no dice que no está cargado',
+    esperado.datoNoCargado && r.tipo !== 'aclaracion' && !DICE_NO_CARGADO.test(normalizar(texto)) && !esperado.oRemiteA?.test(normalizar(texto)) && !(esperado.oColapsa && colapsoConFuente(texto)) && 'no dice que no está cargado',
     esperado.mencionaDato && r.tipo !== 'aclaracion' && !nombraDato(texto, esperado.mencionaDato) && `no nombra ${esperado.mencionaDato.dato === 'mesas' ? 'la mesa' : `el dato (${esperado.mencionaDato.dato})`}`,
     esperado.aclaraPortal && r.tipo !== 'aclaracion' && !(ACLARA_PORTAL.test(normalizar(texto)) && PIDE_CONFIRMAR.test(normalizar(texto))) && 'no aclara que es del portal ni pide confirmarlo',
     ...(esperado.sinConocimientoGeneral ? CONOCIMIENTO_GENERAL.filter((f) => normalizar(texto).includes(f)).map((f) => `inventa: "${f}"`) : []),

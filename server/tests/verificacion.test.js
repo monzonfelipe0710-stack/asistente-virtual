@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { NOMBRES_DE_LUGAR, SIN_OFICINAS, crearVerificador, diceGratuito, montosEn, nombresDeLugar, partirEnOraciones, pideDatoSensible, quedoSinContenido, sinContenidoPropio } from '../src/services/verificacion.service.js';
+import { limpiarCuerpo } from '../src/utils/cuerpo.js';
+import { MENSAJE_LISTA_COLAPSADA, NOMBRES_DE_LUGAR, SIN_OFICINAS, crearVerificador, itemVacio, diceGratuito, montosEn, nombresDeLugar, partirEnOraciones, pideDatoSensible, quedoSinContenido, sinContenidoPropio } from '../src/services/verificacion.service.js';
 
 const tramite = (datos) => ({ id: 1, nombre: 'Permiso de Feria', costo: null, descripcion: 'Se presenta el DNI.', requisitos: [], documentos: [], fuenteUrl: 'https://www.formosa.gob.ar/tramite/1', ...datos });
 
@@ -166,6 +167,54 @@ describe('verificación de la salida', () => {
       );
       assert.deepEqual(verificar('Ingresá a las siguientes direcciones: www.gba.gob.ar/registro.', [tramite()]).capas, ['enlace']);
       assert.deepEqual(verificar('Podés consultarlo en la fuente oficial: https://www.formosa.gob.ar/tramite/1.', [tramite()]).capas, []);
+    });
+  });
+
+  describe('listas con enlaces', () => {
+    const FRASE = 'No puedo mostrar el listado completo. Consultá en el Registro Civil de la provincia que corresponda o en la fuente oficial.';
+    const limpiar = (texto) => {
+      const t = tramite();
+      return limpiarCuerpo(texto, { verificar: crearVerificador({ tramites: [t], principales: [t] }) });
+    };
+    const ENCABEZADO = 'Ingresá a las siguientes direcciones según la provincia:';
+
+    it('la frase fija es la del brief', () => {
+      assert.equal(MENSAJE_LISTA_COLAPSADA, FRASE);
+    });
+
+    it('una lista con dominios oficiales sueltos, todos, no se toca', () => {
+      const lista = `${ENCABEZADO}\n- Catamarca: portal.catamarca.gob.ar/organismos\n- Chaco: mapadelestado.chaco.gob.ar/dependencia/ver/248\n- Corrientes: registrocivilctes.gob.ar`;
+      assert.equal(limpiar(lista), lista);
+    });
+
+    it('una lista con un dominio que no es oficial se colapsa entera', () => {
+      const r = limpiar(`${ENCABEZADO}\n- Catamarca: portal.catamarca.gob.ar/organismos\n- Pagos: pagos-formosa.example.org\n- Chaco: mapadelestado.chaco.gob.ar`);
+      assert.equal(r, FRASE);
+    });
+
+    it('una lista con dominios sueltos mezclados con enlaces con www o https se colapsa entera', () => {
+      const r = limpiar(`${ENCABEZADO}\n- Catamarca: portal.catamarca.gob.ar\n- Buenos Aires: www.gba.gob.ar/registrodelaspersonas\n- Jujuy: https://jujuy.gob.ar/home/\n- Chaco: mapadelestado.chaco.gob.ar\n\nLa solicitud es personal.`);
+      assert.equal(r, `${FRASE}\n\nLa solicitud es personal.`);
+    });
+
+    it('un ítem sin contenido útil dispara el colapso aunque los demás sean oficiales', () => {
+      const r = limpiar(`${ENCABEZADO}\n- Catamarca: portal.catamarca.gob.ar\n- **San Luis**: (más información en la fuente oficial).`);
+      assert.equal(r, FRASE);
+    });
+
+    it('un dominio oficial suelto dentro de una oración (industria.formosa.gob.ar) no se arrastra', () => {
+      const oracion = 'Para realizar el trámite, accedé a la plataforma online en industria.formosa.gob.ar.';
+      assert.equal(limpiar(oracion), oracion);
+      assert.equal(limpiar(`Se hace así:\n- Entrá a industria.formosa.gob.ar\n- Cargá los datos`), 'Se hace así:\n- Entrá a industria.formosa.gob.ar\n- Cargá los datos');
+    });
+
+    it('itemVacio: solo el rótulo o un rótulo con relleno; un ítem con dato no', () => {
+      for (const item of ['- Buenos Aires:', '- **San Luis**: (más información en la fuente oficial).', '1. Chaco: Para más detalles, consultar', '- Salta: Consultar en la fuente oficial', '- ---']) {
+        assert.ok(itemVacio(item), item);
+      }
+      for (const item of ['- Catamarca: portal.catamarca.gob.ar', '- Llevá el DNI vigente.', '- DNI', '- Costo: $3000', '- Horario: de 7 a 13']) {
+        assert.ok(!itemVacio(item), item);
+      }
     });
   });
 

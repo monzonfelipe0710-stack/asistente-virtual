@@ -1,6 +1,7 @@
 import { quitarEnlaces } from './enlaces.js';
 import { quitarSaludosIniciales } from './saludo.js';
 import { corregirTuteo } from './voseo.js';
+import { MENSAJE_LISTA_COLAPSADA, itemVacio } from '../services/verificacion.service.js';
 
 // El texto del modelo se limpia por líneas completas: así un enlace o una forma de tuteo nunca
 // quedan partidos entre dos deltas del streaming, y las dos rutas limpian exactamente igual. Una
@@ -10,8 +11,10 @@ import { corregirTuteo } from './voseo.js';
 // `alCorregirTuteo` recibe las formas de tuteo que se corrigieron (sirve para medir el prompt).
 // `verificar` revisa la línea contra los datos de los trámites antes de sacar los enlaces (ver
 // services/verificacion.service.js): puede corregir una oración o sacarla.
-// Una línea que anuncia una lista ("…las siguientes direcciones:") espera a la siguiente: si la
-// verificación sacó los ítems que venían y no quedó ninguno, se descarta.
+// Una lista (ítems con viñeta o numerados) se retiene entera hasta que termina: si se perdió un
+// ítem (la verificación lo sacó o quedó sin contenido útil) no sale la lista incompleta, sino una
+// frase fija en su lugar, con la línea que la anunciaba ("…las siguientes direcciones:"). Una lista
+// que sobrevive entera no se toca.
 const ITEM = /^\s*(?:[-*•]|\d+[.)])\s+/;
 
 export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {}) => {
@@ -19,6 +22,8 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {})
   let enBlanco = 0;
   let empezo = false;
   let encabezado = null;
+  let lista = null;
+  let colapsada = false;
 
   const emitir = (texto, blancos) => {
     const separacion = empezo ? '\n'.repeat(Math.min(blancos + 1, 2)) : '';
@@ -26,38 +31,64 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {})
     return separacion + texto;
   };
 
-  const resolverEncabezado = (quedaItem) => {
+  const soltarEncabezado = () => {
     if (encabezado === null) return '';
-    const { texto, blancos, itemsQuitados } = encabezado;
+    const { texto, blancos } = encabezado;
     encabezado = null;
-    return quedaItem || !itemsQuitados ? emitir(texto, blancos) : '';
+    return emitir(texto, blancos);
+  };
+
+  const cerrarLista = () => {
+    if (lista === null) return '';
+    const { encabezado: anuncio, lineas, perdido, blancos } = lista;
+    lista = null;
+    if (perdido) {
+      if (colapsada) return '';
+      colapsada = true;
+      return emitir(MENSAJE_LISTA_COLAPSADA, blancos);
+    }
+    const cabecera = anuncio ? emitir(anuncio.texto, anuncio.blancos) : '';
+    return cabecera + lineas.map((l) => emitir(l.texto, l.blancos)).join('');
   };
 
   const limpiarLinea = (cruda) => {
     if (!cruda.trim()) {
-      if (empezo || encabezado) enBlanco++;
+      if (empezo || encabezado || lista) enBlanco++;
       return '';
     }
+    const esItem = ITEM.test(cruda);
     const verificada = verificar ? verificar(cruda) : cruda;
-    if (!verificada.trim()) {
-      if (encabezado && ITEM.test(cruda)) encabezado.itemsQuitados = true;
+    let limpia = '';
+    if (verificada.trim()) {
+      const { texto: enVoseo, formas } = corregirTuteo(quitarEnlaces(verificada));
+      if (formas.length > 0) alCorregirTuteo?.(formas);
+      limpia = enVoseo;
+      if (!empezo && !esItem) limpia = quitarSaludosIniciales(limpia.trimStart(), saludo);
+      limpia = limpia.trimEnd();
+    }
+
+    if (esItem) {
+      if (lista === null) {
+        lista = { encabezado, lineas: [], perdido: false, blancos: encabezado ? encabezado.blancos : enBlanco };
+        encabezado = null;
+        if (lista.lineas.length === 0 && lista.encabezado) enBlanco = 0;
+      }
+      if (!limpia.trim() || itemVacio(limpia)) lista.perdido = true;
+      else lista.lineas.push({ texto: limpia, blancos: enBlanco });
+      enBlanco = 0;
       return '';
     }
-    const { texto: enVoseo, formas } = corregirTuteo(quitarEnlaces(verificada));
-    if (formas.length > 0) alCorregirTuteo?.(formas);
-    let limpia = enVoseo;
-    if (!empezo) limpia = quitarSaludosIniciales(limpia.trimStart(), saludo);
-    limpia = limpia.trimEnd();
-    if (!limpia.trim()) return '';
 
-    const antes = resolverEncabezado(ITEM.test(limpia));
+    const antesLista = cerrarLista();
+    if (!limpia.trim()) return antesLista;
+    const antesEncabezado = soltarEncabezado();
     const blancos = enBlanco;
     enBlanco = 0;
     if (limpia.endsWith(':')) {
-      encabezado = { texto: limpia, blancos, itemsQuitados: false };
-      return antes;
+      encabezado = { texto: limpia, blancos };
+      return antesLista + antesEncabezado;
     }
-    return antes + emitir(limpia, blancos);
+    return antesLista + antesEncabezado + emitir(limpia, blancos);
   };
 
   return {
@@ -69,7 +100,7 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {})
     cerrar() {
       const ultima = limpiarLinea(pendiente);
       pendiente = '';
-      return ultima + resolverEncabezado(false);
+      return ultima + cerrarLista() + soltarEncabezado();
     },
   };
 };

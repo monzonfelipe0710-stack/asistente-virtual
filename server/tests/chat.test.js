@@ -54,7 +54,7 @@ const { obtenerResumenCatalogo } = await import('../src/services/catalogo.servic
 const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
   await import('../src/services/chat.service.js');
 const { MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
-const { MENSAJE_INFORMACION_OCULTA } = await import('../src/services/verificacion.service.js');
+const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA } = await import('../src/services/verificacion.service.js');
 const { MENSAJE_SOLO_ESPANOL } = await import('../src/utils/idioma.js');
 
 const DOMINIO = '@chat.test.invalid';
@@ -849,8 +849,8 @@ describe('chat', () => {
       pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', tramiteId: tramite.id }), ...texto.match(/.{1,3}/gs)];
       const { texto: stream } = await consumir(responderConsultaStream(turno('hola, cómo hago otra vez')));
       assert.equal(stream, respuesta);
-      // Un ítem de lista con enlace se saca entero: sin el enlace, el ítem queda incompleto.
-      assert.equal(respuesta, `¡Hola! Te cuento:\n\n- dos\n\n${enlace()}`);
+      // Si a una lista se le saca un ítem, sale la frase fija en lugar de la lista incompleta.
+      assert.equal(respuesta, `¡Hola! ${MENSAJE_LISTA_COLAPSADA}\n\n${enlace()}`);
     });
   });
 
@@ -987,27 +987,45 @@ describe('chat', () => {
       }
     });
 
-    it('una lista de direcciones por provincia pierde los ítems con enlace; si no queda nada, mensaje seguro', async () => {
-      const lista =
-        'Para solicitar actas a otras provincias, ingresá a las siguientes direcciones según la provincia:\n' +
-        '- Buenos Aires: www.gba.gob.ar/registrodelaspersonas\n' +
-        '- Catamarca: portal.catamarca.gob.ar/organismos/registro\n' +
-        'La solicitud es estrictamente personal.';
-      const r = await enLasDosRutas('dónde pido actas de otras provincias', lista);
-      // El dominio suelto (oficial) no se saca del texto, así que su ítem queda.
-      assert.equal(r.normal, 'Para solicitar actas a otras provincias, ingresá a las siguientes direcciones según la provincia:\n- Catamarca: portal.catamarca.gob.ar/organismos/registro\nLa solicitud es estrictamente personal.');
-      assert.equal(r.stream, r.normal);
+    describe('una lista a la que se le pierde un ítem', () => {
+      const fuente = `https://example.invalid/${SUFIJO}/actas`;
+      const enlace = () => `[Fuente oficial: ${tramite.nombre}](${fuente})`;
+      before(() => prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: fuente } }));
+      after(() => prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: null } }));
 
-      cache.limpiar();
-      const sinDominios = await enLasDosRutas('dónde pido actas a otras provincias', lista.replace('portal.catamarca', 'www.catamarca'));
-      assert.equal(sinDominios.normal, 'La solicitud es estrictamente personal.');
-      assert.equal(sinDominios.stream, sinDominios.normal);
+      const encabezado = 'Para solicitar actas a otras provincias, ingresá a las siguientes direcciones según la provincia:\n';
 
-      const soloLista = 'Por ejemplo, para Buenos Aires es www.gba.gob.ar/registro, y para CABA es www.buenosaires.gob.ar/rc.\n- Chaco: www.chaco.gob.ar/dependencia/ver/248';
-      cache.limpiar();
-      const vacia = await enLasDosRutas('y para otras provincias', soloLista);
-      assert.equal(vacia.normal, MENSAJE_INFORMACION_OCULTA);
-      assert.equal(vacia.stream, MENSAJE_INFORMACION_OCULTA);
+      it('sale la frase fija con el enlace de la fuente, en las dos rutas, la caché y consultas', async () => {
+        const lista = `${encabezado}- Buenos Aires: www.gba.gob.ar/registrodelaspersonas\n- Catamarca: portal.catamarca.gob.ar/organismos/registro\n- Chubut: www.chubut.gob.ar\n\nLa solicitud es estrictamente personal.`;
+        const r = await enLasDosRutas('dónde pido actas de otras provincias', lista);
+        const esperado = `${MENSAJE_LISTA_COLAPSADA}\n\nLa solicitud es estrictamente personal.\n\n${enlace()}`;
+        assert.equal(r.normal, esperado);
+        assert.equal(r.stream, esperado);
+        assert.ok(r.normal.includes(enlace()) && r.stream.includes(enlace()), 'el enlace de la fuente sigue');
+        assert.equal(r.cacheado, `${MENSAJE_LISTA_COLAPSADA}\n\nLa solicitud es estrictamente personal.`);
+        assert.deepEqual(r.registradas, [r.cacheado, r.cacheado]);
+      });
+
+      it('si la respuesta es solo la lista, queda la frase con la fuente', async () => {
+        const soloLista = `${encabezado}- Buenos Aires: www.gba.gob.ar/registro\n- Chaco: mapadelestado.chaco.gob.ar/dependencia/ver/248`;
+        const r = await enLasDosRutas('y para otras provincias', soloLista);
+        assert.equal(r.normal, `${MENSAJE_LISTA_COLAPSADA}\n\n${enlace()}`);
+        assert.equal(r.stream, r.normal);
+      });
+
+      it('un ítem que queda sin contenido útil también la colapsa', async () => {
+        const r = await enLasDosRutas('actas de otras provincias', `${encabezado}- Chaco: mapadelestado.chaco.gob.ar\n- San Luis: (más información en la fuente oficial).`);
+        assert.equal(r.normal, `${MENSAJE_LISTA_COLAPSADA}\n\n${enlace()}`);
+        assert.equal(r.stream, r.normal);
+      });
+
+      it('una lista con todos los dominios oficiales sueltos no se toca', async () => {
+        const lista = `${encabezado}- Catamarca: portal.catamarca.gob.ar/organismos/registro\n- Chaco: mapadelestado.chaco.gob.ar/dependencia/ver/248`;
+        const r = await enLasDosRutas('actas otras provincias', lista);
+        assert.equal(r.normal, `${lista}\n\n${enlace()}`);
+        assert.equal(r.stream, r.normal);
+        assert.deepEqual(r.correcciones, []);
+      });
     });
 
     it('una respuesta en inglés se reemplaza en las dos rutas, sin saludo, sin cachear ni registrar', async () => {
