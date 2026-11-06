@@ -228,7 +228,8 @@ export const importarCatalogo = async (crudos, {
       return marcar(porUrl.get(fuenteUrl)?.id ?? null, () => fallido('falta el nombre o la descripción'), { identificable: Boolean(porUrl.get(fuenteUrl)) });
     }
 
-    const sospechas = instruccionesEn({ nombre: t.nombre, descripcion: t.descripcion });
+    // El nombre del sector también le llega al modelo ("Organismo"), así que se revisa con el trámite.
+    const sospechas = instruccionesEn({ nombre: t.nombre, descripcion: t.descripcion, sector: t.sector });
     const revisar = (id, accion) => {
       if (sospechas.length > 0) informe.paraRevisar.push({ id, nombre: t.nombre, fuenteUrl, frases: sospechas, accion });
     };

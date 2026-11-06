@@ -1,5 +1,6 @@
 import * as documentoService from '../services/documento.service.js';
 import { usuarioTieneSector } from '../services/usuario.service.js';
+import { buscarInstruccion } from '../services/sanitizacion.service.js';
 import { subirDocumentoSchema, actualizarDocumentoSchema } from '../validators/documento.validator.js';
 
 const conEstado = (statusCode, mensaje) => {
@@ -50,6 +51,11 @@ export const subir = async (req, res) => {
   if (req.file && urlExterna) throw conEstado(400, 'Enviá un archivo o una URL externa, no los dos.');
   if (!req.file && !urlExterna) throw conEstado(400, 'No se envió ningún archivo ni URL externa.');
   if (urlExterna && !nombre) throw conEstado(400, 'Un enlace necesita un nombre.');
+  // Sin nombre se usa el del archivo, que también le llega al modelo: se revisa como cualquier texto.
+  const hallazgo = req.file && !nombre ? buscarInstruccion(req.file.originalname) : null;
+  if (hallazgo) {
+    throw conEstado(400, `El nombre del archivo tiene una frase con forma de instrucción para el asistente ("${hallazgo.frase}"). Mandá un nombre para el documento.`);
+  }
 
   const documento = req.file
     ? await documentoService.subirDocumento(req.file, { nombre, tramiteId: req.tramite.id })
