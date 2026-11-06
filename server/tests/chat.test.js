@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { describe, it, before, beforeEach, after, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { Prisma } from '@prisma/client';
 import prisma from '../src/config/prisma.js';
+import { huellaDeGrupo } from '../src/utils/huella.js';
 
 // El modelo, la búsqueda y el registro de consultas se simulan; el trámite de prueba
 // se crea en la base (sin publicar) y se borra al terminar.
@@ -376,6 +378,32 @@ describe('chat', () => {
       await prisma.tramite.update({ where: { id: tramite.id }, data: { costoDetalle: null, informacionAdicional: null, fuenteUrl: null } });
       await prisma.tramiteMesa.deleteMany({ where: { mesaId: mesa.id } });
       await prisma.mesaEntrada.delete({ where: { id: mesa.id } });
+    }
+  });
+
+  it('el costo del portal va con la fecha de la captura y el prompt pide confirmarlo; uno editado a mano, no', async () => {
+    const contextoDelTramite = async () => {
+      llamadasModelo = [];
+      cache.limpiar();
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('cuánto cuesta'));
+      return llamadasModelo[0].instruccionSistema;
+    };
+    const verificadoEn = new Date('2026-11-06T04:00:00Z');
+    try {
+      await prisma.tramite.update({
+        where: { id: tramite.id },
+        data: { costo: 35000, verificadoEn, huellaImportacion: { costo: huellaDeGrupo('costo', { costo: 35000, costoDetalle: null }) } },
+      });
+      const instruccion = await contextoDelTramite();
+      assert.match(instruccion, /^Costo: \$35000 \(según el portal oficial, consultado el 06\/11\/2026\)$/m);
+      assert.match(instruccion, /conviene confirmarlo en la fuente oficial/);
+
+      // Un empleado lo cambió desde el panel: la huella ya no coincide y deja de ser "del portal".
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: 40000 } });
+      assert.match(await contextoDelTramite(), /^Costo: \$40000$/m);
+    } finally {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: null, verificadoEn: null, huellaImportacion: Prisma.DbNull } });
     }
   });
 

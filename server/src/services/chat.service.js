@@ -15,6 +15,7 @@ import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
 import { cortarEnOracion, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
+import { costoDelPortal } from "../utils/huella.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
 import { MENSAJE_INFORMACION_OCULTA, crearVerificador, quedoSinContenido, sinContenidoPropio } from "./verificacion.service.js";
 import {
@@ -79,6 +80,7 @@ Reglas:
 - No empieces el texto con un saludo ni con el nombre de la persona: el saludo lo agrega el sistema a partir del campo "saludo". Tampoco inventes ni preguntes el nombre.
 - Si listás requisitos, hacelo conciso, con dónde se consigue y cuánto cuesta cuando el contexto lo diga.
 - Costo: si dice "no informado", decí que ese dato no está cargado y que lo consulte en la mesa de entrada; nunca digas que no tiene costo. Solo "gratuito" significa que no tiene costo.
+- Si el costo dice "según el portal oficial, consultado el" y una fecha, decilo así (que es el costo según el portal oficial a esa fecha) y aclará que conviene confirmarlo en la fuente oficial, porque puede haber cambiado.
 - Tono cercano, amable y breve: respondé directo a lo que se pidió, sin repetir la pregunta. Máximo 4-6 oraciones; los requisitos, en lista corta. Lenguaje simple (el público incluye adultos mayores).
 - Usá siempre voseo rioplatense, nunca tuteo. Formas PROHIBIDAS y su forma correcta: tienes → tenés; puedes → podés; debes → debés; necesitas → necesitás; quieres → querés; asegúrate → asegurate; acércate → acercate; fíjate → fijate; ten en cuenta → tené en cuenta.
 - Formato: podés usar listas con viñetas ("- "), listas numeradas ("1. ") y **negrita** para lo importante. Nada más de markdown: sin títulos (#), tablas, bloques de código, citas (>), cursivas ni enlaces.
@@ -180,9 +182,19 @@ const enUnaLinea = (texto) => texto.replace(/\s*\n+\s*/g, "; ");
 
 // null es "no se cargó", no "gratis": solo un 0 explícito es gratuito. Lo que no entra en un monto
 // (varias filas, importes en UT) va como texto.
-const formatearCosto = ({ costo, costoDetalle }) => {
+const valorDelCosto = ({ costo, costoDetalle }) => {
   if (costo == null) return costoDetalle ? recortarEnOracion(enUnaLinea(costoDetalle), TOPES_CONTEXTO.costoDetalle) : "no informado";
   return Number(costo) === 0 ? "gratuito" : `$${costo}`;
+};
+
+const FECHA_AR = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina/Buenos_Aires", day: "2-digit", month: "2-digit", year: "numeric" });
+
+// Un costo que vino de la ficha del portal (y nadie lo cambió desde el panel) se marca con la fecha
+// de la captura: el modelo tiene que aclarar que conviene confirmarlo en la fuente oficial.
+export const formatearCosto = (t) => {
+  const valor = valorDelCosto(t);
+  if (valor === "no informado" || !costoDelPortal(t)) return valor;
+  return `${valor} (según el portal oficial, consultado el ${FECHA_AR.format(new Date(t.verificadoEn))})`;
 };
 
 const normalizarLocalidad = (l) => normalizarNombre(l ?? "");

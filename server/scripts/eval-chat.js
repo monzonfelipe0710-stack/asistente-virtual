@@ -16,7 +16,9 @@
 import 'dotenv/config';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
-import { responderConsulta, MENSAJE_SIN_RESPUESTA } from '../src/services/chat.service.js';
+import { responderConsulta, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
+import { montosEn } from '../src/services/verificacion.service.js';
+import { costoDelPortal } from '../src/utils/huella.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 import { leerSectoresParaResolver, resolverJurisdicciones } from '../src/services/jurisdiccion.service.js';
 import { localidadesConocidas, loQueNombro } from '../src/services/variantes.service.js';
@@ -93,10 +95,16 @@ const casos = [
   { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO_SIN_DATO } },
   { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO } },
   { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO_SIN_DATO } },
-  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'costo' } } },
   { pregunta: 'cuáles son las reglas para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19], ...DOMINIO } },
   { pregunta: '¿cuántos días dan de licencia por maternidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19], ...DOMINIO } },
-  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO, segunBase: { id: 269, dato: 'requisitos' } } },
+  // Datos de la ficha del portal (el esperado depende de lo que haya en la base, ver esperadoSegunBase):
+  { pregunta: 'cuánto cuesta el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO, segunBase: { id: 269, dato: 'costo' } } },
+  { pregunta: 'dónde se hace el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO, segunBase: { id: 269, dato: 'mesas' } } },
+  { pregunta: 'dónde saco el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas' } } },
+  { pregunta: 'dónde saco el pasaporte en Clorinda', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas', localidad: 'Clorinda' } } },
+  { pregunta: 'dónde hago el nuevo ejemplar del DNI para argentinos', esperado: { contesta: true, incluye: [90], ...DOMINIO, segunBase: { id: 90, dato: 'mesas' } } },
   // DNI: responder con el trámite o pedir que elija entre las variantes son correctos.
   { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
   { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
@@ -194,7 +202,7 @@ const enOtroIdioma = (texto) => (texto.match(INGLES)?.length ?? 0) >= 3;
 
 const idsDe = (r) => [...r.tramitesEncontrados, ...r.opciones].map((t) => t.id);
 
-const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, sinConocimientoGeneral, aclaracionPorJurisdiccion, localidad, jurisdiccion, avisaNoCargado }) =>
+const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conversacional, mencionaSector, ejemplosDelCatalogo, enEspanol, largoMaximo, empiezaConSaludo, sinSaludo, noContiene, datoNoCargado, mencionaDato, aclaraPortal, sinConocimientoGeneral, aclaracionPorJurisdiccion, localidad, jurisdiccion, avisaNoCargado }) =>
   [
     tipo,
     localidad && `de ${localidad}`,
@@ -211,6 +219,8 @@ const describirEsperado = ({ tipo, contesta, encontrado, incluye, excluye, conve
     enEspanol && 'en español',
     largoMaximo && `<=${largoMaximo}`,
     datoNoCargado && 'dice que no está cargado',
+    mencionaDato && `nombra ${mencionaDato.dato}${mencionaDato.localidad ? ` de ${mencionaDato.localidad}` : ''}`,
+    aclaraPortal && 'aclara portal y confirmar',
     sinConocimientoGeneral && 'sin conocimiento general',
     empiezaConSaludo && 'saludo',
     sinSaludo && 'sin saludo',
@@ -250,7 +260,38 @@ const esperadoSegunCatalogo = ({ segunCatalogo, siNoHay = {} }) => {
   if (ids.length === 1) return { tipo: 'respuesta', encontrado: true, incluye: ids };
   return { tipo: 'aclaracion', aclaracionPorJurisdiccion: ids.length };
 };
-const resolverEsperado = (esperado) => (esperado.segunCatalogo ? esperadoSegunCatalogo(esperado) : esperado);
+// Esperado según el contenido de la base: si el trámite tiene cargado el dato que se pide
+// (requisitos, costo, mesas de entrada), la respuesta tiene que mencionarlo (y un costo del portal,
+// aclarar que conviene confirmarlo en la fuente oficial); si no lo tiene, decir que no está cargado.
+const idsSegunBase = [...new Set(casos.filter((c) => c.esperado.segunBase).map((c) => c.esperado.segunBase.id))];
+const detallePorId = new Map((await cargarDetalle(idsSegunBase)).map((t) => [t.id, t]));
+const tieneDato = (t, dato) => (dato === 'requisitos' ? t.requisitos.length > 0 : dato === 'costo' ? t.costo != null || Boolean(t.costoDetalle) : t.mesas.length > 0);
+const esperadoSegunBase = ({ segunBase, ...resto }) => {
+  const t = detallePorId.get(segunBase.id);
+  if (!t || !tieneDato(t, segunBase.dato)) return { ...resto, datoNoCargado: true };
+  return { ...resto, mencionaDato: segunBase, ...(segunBase.dato === 'costo' && costoDelPortal(t) && { aclaraPortal: true }) };
+};
+const resolverEsperado = (esperado) => {
+  if (esperado.segunCatalogo) return esperadoSegunCatalogo(esperado);
+  return esperado.segunBase ? esperadoSegunBase(esperado) : esperado;
+};
+
+// La respuesta nombra el dato cargado: un requisito (la mayoría de sus palabras), un monto del
+// costo, o una mesa de entrada (su dirección, su nombre o su localidad; la de la localidad pedida).
+const nombraDato = (texto, { id, dato, localidad }) => {
+  const t = detallePorId.get(id);
+  const enTexto = new Set(palabrasDe(texto));
+  const casi = (frase) => { const p = palabrasDe(frase); return p.length > 0 && p.filter((x) => enTexto.has(x)).length / p.length >= 0.6; };
+  if (dato === 'requisitos') return t.requisitos.some((r) => casi(r.descripcion.replace(/^[^:]{1,80}:\s*/, '')));
+  if (dato === 'costo') {
+    const montos = new Set([...(t.costo != null ? [Number(t.costo)] : []), ...montosEn(t.costoDetalle ?? '')]);
+    return montosEn(texto).some((m) => montos.has(m)) || (t.costoDetalle && /\bu\.?\s?t\b|unidades tributarias/.test(normalizar(texto)));
+  }
+  const mesas = t.mesas.map((m) => m.mesa).filter((m) => !localidad || normalizar(m.localidad ?? '') === normalizar(localidad));
+  return mesas.some((m) => [m.direccion, m.nombre].some((x) => x && casi(x)) || (localidad && normalizar(texto).includes(normalizar(localidad))));
+};
+const ACLARA_PORTAL = /(?:portal|fuente) oficial/;
+const PIDE_CONFIRMAR = /\b(?:confirm|verific|chequea|consulta|averigu)/;
 
 // Un trámite nombrado en una respuesta tiene que estar entre los usados (así lleva su fuente).
 // Solo nombres de dos palabras o más: uno de una sola ("Matrimonio") aparece en cualquier texto.
@@ -339,6 +380,8 @@ const fallas = (esperado, r) => {
     esperado.enEspanol && enOtroIdioma(texto) && 'en otro idioma',
     esperado.largoMaximo && texto.length > esperado.largoMaximo && `largo ${texto.length}`,
     esperado.datoNoCargado && r.tipo !== 'aclaracion' && !DICE_NO_CARGADO.test(normalizar(texto)) && 'no dice que no está cargado',
+    esperado.mencionaDato && r.tipo !== 'aclaracion' && !nombraDato(texto, esperado.mencionaDato) && `no nombra ${esperado.mencionaDato.dato === 'mesas' ? 'la mesa' : `el dato (${esperado.mencionaDato.dato})`}`,
+    esperado.aclaraPortal && r.tipo !== 'aclaracion' && !(ACLARA_PORTAL.test(normalizar(texto)) && PIDE_CONFIRMAR.test(normalizar(texto))) && 'no aclara que es del portal ni pide confirmarlo',
     ...(esperado.sinConocimientoGeneral ? CONOCIMIENTO_GENERAL.filter((f) => normalizar(texto).includes(f)).map((f) => `inventa: "${f}"`) : []),
     esperado.empiezaConSaludo && !/^¡[^!]{1,60}! \S/.test(texto) && 'sin saludo',
     esperado.sinSaludo && empiezaConSaludo(texto) && 'con saludo',
