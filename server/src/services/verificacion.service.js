@@ -104,6 +104,8 @@ const PEDIDO = [
   // El pedido dicho como procedimiento: "la reserva se hace con el número de tarjeta".
   String.raw`\bse\s+(?:hace|hacen|realiza|realizan|reserva|confirma|completa|valida|gestiona)\s+(?:\S+\s+){0,2}?con\b`,
   String.raw`\bcon\s+(?:tu|su|el|la)\s+(?:numero|codigo|pin|clave|fecha\s+de\s+vencimiento)\b`,
+  // Dicho como requisito de algo: "un sistema que requiere tu número de tarjeta", "exige los datos".
+  String.raw`\b(?:requiere|requieren|requerira|exige|exigen|exigira|pide|piden|pedira)\s+(?:\S+\s+){0,2}?(?:tu|tus|su|sus|el|la|los|las)\b`,
 ];
 // Pedidos de entregar el dato a alguien: los únicos que cuentan para una contraseña.
 const ENTREGA = [

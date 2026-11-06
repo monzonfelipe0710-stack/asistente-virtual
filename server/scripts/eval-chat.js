@@ -91,8 +91,8 @@ const casos = [
   },
   // Preguntas del dominio que piden algo que no está cargado o que suenan a otra cosa: tienen que
   // contestar con el trámite (diciendo qué no está cargado), no redirigir como tema ajeno.
-  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO_SIN_DATO } },
-  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO_SIN_DATO } },
+  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO, segunBase: { id: 166, dato: 'informacionAdicional' } } },
+  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO, segunBase: { id: 166, dato: 'informacionAdicional' } } },
   { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO } },
   { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO_SIN_DATO } },
   { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'costo' } } },
@@ -265,7 +265,13 @@ const esperadoSegunCatalogo = ({ segunCatalogo, siNoHay = {} }) => {
 // aclarar que conviene confirmarlo en la fuente oficial); si no lo tiene, decir que no está cargado.
 const idsSegunBase = [...new Set(casos.filter((c) => c.esperado.segunBase).map((c) => c.esperado.segunBase.id))];
 const detallePorId = new Map((await cargarDetalle(idsSegunBase)).map((t) => [t.id, t]));
-const tieneDato = (t, dato) => (dato === 'requisitos' ? t.requisitos.length > 0 : dato === 'costo' ? t.costo != null || Boolean(t.costoDetalle) : t.mesas.length > 0);
+const tieneDato = (t, dato) => {
+  if (dato === 'requisitos') return t.requisitos.length > 0;
+  if (dato === 'costo') return t.costo != null || Boolean(t.costoDetalle);
+  if (dato === 'informacionAdicional') return Boolean(t.informacionAdicional);
+  return t.mesas.length > 0;
+};
+let palabrasDeLaPregunta = new Set();
 const esperadoSegunBase = ({ segunBase, ...resto }) => {
   const t = detallePorId.get(segunBase.id);
   if (!t || !tieneDato(t, segunBase.dato)) return { ...resto, datoNoCargado: true };
@@ -287,8 +293,18 @@ const nombraDato = (texto, { id, dato, localidad }) => {
     const montos = new Set([...(t.costo != null ? [Number(t.costo)] : []), ...montosEn(t.costoDetalle ?? '')]);
     return montosEn(texto).some((m) => montos.has(m)) || (t.costoDetalle && /\bu\.?\s?t\b|unidades tributarias/.test(normalizar(texto)));
   }
+  if (dato === 'informacionAdicional') {
+    // Al menos cuatro palabras propias de la información adicional (no de la pregunta) en la respuesta.
+    const propias = new Set(palabrasDe(t.informacionAdicional ?? '').filter((p) => p.length >= 5 && !palabrasDeLaPregunta.has(p)));
+    return [...enTexto].filter((p) => propias.has(p)).length >= 4;
+  }
+  // Una mesa cuenta si la respuesta trae su dirección, su localidad o dos palabras propias de su
+  // nombre ("Seccional Cuarta Formosa, Barrio Eva Perón").
+  const GENERICAS = new Set(['seccional', 'oficina', 'direccion', 'departamento', 'delegacion', 'mesa', 'entradas']);
   const mesas = t.mesas.map((m) => m.mesa).filter((m) => !localidad || normalizar(m.localidad ?? '') === normalizar(localidad));
-  return mesas.some((m) => [m.direccion, m.nombre].some((x) => x && casi(x)) || (localidad && normalizar(texto).includes(normalizar(localidad))));
+  return mesas.some((m) => (m.direccion && casi(m.direccion))
+    || (m.localidad && normalizar(texto).includes(normalizar(m.localidad)) && (localidad || normalizar(m.localidad) !== 'formosa'))
+    || palabrasDe(m.nombre).filter((p) => !GENERICAS.has(p) && enTexto.has(p)).length >= 2);
 };
 const ACLARA_PORTAL = /(?:portal|fuente) oficial/;
 const PIDE_CONFIRMAR = /\b(?:confirm|verific|chequea|consulta|averigu)/;
@@ -400,6 +416,7 @@ const consultasCreadas = [];
 
 const correr = async ({ pregunta, turnos, esperado: crudo }) => {
   const esperado = resolverEsperado(crudo);
+  palabrasDeLaPregunta = new Set(palabrasDe((turnos ?? [pregunta]).join(' ')));
   cache.limpiar();
   ({ ejemplos } = await obtenerResumenCatalogo());
   try {
