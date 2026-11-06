@@ -120,9 +120,9 @@ class Formatos(unittest.TestCase):
         formato, d, _ = ficha("libre.html", sector="Tránsito, Transporte y Emergencia")
         self.assertEqual(formato, "libre")
         self.assertIn("- Título de propiedad o cédula del automotor Original.; Fotocopia.", d["requisitos"])
-        self.assertEqual(d["costos"], [{"concepto": "Costo del trámite por primera vez", "importe": "$ 6.247,12"}])
+        self.assertEqual(d["costos"], [{"concepto": "Costo del trámite por primera vez", "importe": f"$ 6.247,12 ({m.ADVERTENCIA})"}])
         self.assertEqual(d["oficinas"][0]["domicilio"], "Rivadavia 546 - Planta baja")
-        self.assertEqual(d["oficinas"][0]["telefono"], "3704-012377")
+        self.assertNotIn("telefono", d["oficinas"][0])
 
     def test_no_reconocida(self):
         formato, d, extra = ficha("no_reconocida.html")
@@ -149,12 +149,12 @@ class Modulo(unittest.TestCase):
         _, d, extra = ficha("secciones.html")
         exencion = d["costos"][0]
         self.assertEqual(exencion["concepto"], "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales")
-        self.assertEqual(exencion["importe"], "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)")
+        self.assertEqual(exencion["importe"], "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026")
 
     def test_concepto_sin_categoria_queda_solo_con_la_cantidad(self):
         _, d, extra = ficha("secciones.html")
         plan = d["costos"][1]
-        self.assertEqual(plan["importe"], "3 módulos (según el portal oficial, consultado el 06/11/2026; el valor del módulo en pesos no está cargado)")
+        self.assertEqual(plan["importe"], "3 módulos (el valor en pesos no está cargado; fuente: portal oficial, consultado el 06/11/2026)")
         self.assertNotIn("$", plan["importe"])
         self.assertEqual(extra["modulos"][0]["motivo"], "el concepto no está en la tabla de conceptos del Código Tarifario")
 
@@ -179,6 +179,62 @@ class Modulo(unittest.TestCase):
         self.assertEqual(m.categoria_de("Plan de Pago en cuotas"), (None, None))
 
 
+class PesosDelPortal(unittest.TestCase):
+    def costos(self, lineas, titulo="Trámite"):
+        avisos, viejos = [], []
+        return m.costos_de(lineas, MODULO, CONSULTA, avisos, titulo, viejos), viejos
+
+    def test_pesos_con_concepto_del_codigo_se_recalculan(self):
+        filas, viejos = self.costos(["$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)", "$85 Libre deuda emitida por Tribunal de Faltas"])
+        self.assertEqual(filas[0]["importe"], "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026")
+        self.assertEqual(filas[1], {"concepto": "Libre deuda emitida por Tribunal de Faltas", "importe": f"$ 85 ({m.ADVERTENCIA})"})
+        self.assertEqual([v["texto"] for v in viejos], ["$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)"])
+
+    def test_unidades_tributarias(self):
+        filas, viejos = self.costos(["1 U.T (1 U.T $250) por actividades administrativas (Estudio de Dominio)", "Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)"])
+        self.assertEqual(filas[0]["concepto"], "Por actividades administrativas (Estudio de Dominio)")
+        self.assertTrue(filas[0]["importe"].startswith("6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios"))
+        self.assertEqual(filas[1]["importe"], m.ADVERTENCIA)
+        self.assertEqual(len(viejos), 1)
+
+    def test_costo_generico_usa_el_titulo(self):
+        filas, viejos = self.costos(["Costo del trámite por primera vez: $ 6.247,12."], titulo="Requisitos para obtener Carnet de Sanidad")
+        self.assertTrue(filas[0]["importe"].startswith("8 módulos: $8.058,80, calculado"))
+        self.assertEqual(len(viejos), 1)
+
+    def test_modulos_con_pesos_viejos_en_la_misma_linea(self):
+        filas, viejos = self.costos(["SEGÚN DIMENSIONES DEL LOCAL A HABILITAR ART. 36 INC. A ($100)", "Hasta 25 m 2 : 3 Módulos $ 730.00", "EMISIÓN DEL CERTIFICADO DE HABILITACIÓN: 5 Módulos ($49,08) = $ 245.40."])
+        self.assertEqual(filas[0]["concepto"], "Según dimensiones del local a habilitar (hasta 25 m 2)")
+        self.assertTrue(filas[0]["importe"].startswith("3 módulos: $15.110,28, calculado con el valor del módulo (habilitaciones: $5.036,76)"))
+        self.assertEqual(filas[1]["concepto"], "Emisión del certificado de habilitación")
+        self.assertNotIn("245", filas[1]["importe"])
+        self.assertEqual(len(viejos), 3)
+
+    def test_estampilla_en_los_requisitos(self):
+        viejos = []
+        requisitos = "\n".join([
+            "1.- Estudio de Dominio del Inmueble. Estampilla de $295.00.-",
+            "5.- Certificado de Libre Falta. Estampilla de $122.70-",
+            "Póliza por el monto de $22.000.000",
+        ])
+        texto = m.pesos_en_requisitos(requisitos, MODULO, CONSULTA, [], "Habilitación", viejos)
+        lineas = texto.split("\n")
+        self.assertIn("Estampilla de 6 módulos: $6.044,10, calculado", lineas[0])
+        self.assertNotIn("295", lineas[0])
+        self.assertEqual(lineas[1], f"5.- Certificado de Libre Falta. Estampilla de $122.70 ({m.ADVERTENCIA})-")
+        self.assertEqual(lineas[2], "Póliza por el monto de $22.000.000")
+        self.assertEqual(len(viejos), 1)
+
+
+class Telefonos(unittest.TestCase):
+    def test_celulares_fuera_y_fijos_adentro(self):
+        descartes = []
+        t = m.sin_datos_personales("Tel: 4436181 Cel: 3704-336465/336516/336372. Contacto: 3704-012377 (solo whatsapp). Call Center: 0800 9999 147. (0370) 442-0000", descartes)
+        self.assertEqual(t, f"Tel: 4436181 {m.SIN_TELEFONO}. Contacto: {m.SIN_TELEFONO}. Call Center: 0800 9999 147. (0370) 442-0000")
+        self.assertEqual([d["tipo"] for d in descartes], ["teléfono celular", "teléfono celular"])
+        self.assertNotIn("336465", repr(descartes))
+
+
 class Privacidad(unittest.TestCase):
     def setUp(self):
         _, self.d, self.extra = ficha("libre.html", sector="Tránsito, Transporte y Emergencia")
@@ -196,7 +252,7 @@ class Privacidad(unittest.TestCase):
         self.assertIn("transito@formosatuciudad.gob.ar", self.todo)
         self.assertIn(m.SIN_CORREO, self.todo)
         tipos = sorted(x["tipo"] for x in self.extra["descartes"])
-        self.assertEqual(tipos, ["correo no institucional", "nombre de persona", "responsable"])
+        self.assertEqual(tipos, ["correo no institucional", "nombre de persona", "responsable", "teléfono celular", "teléfono celular"])
 
     def test_el_informe_de_descartes_tampoco_los_guarda(self):
         valores = repr(self.extra["descartes"])

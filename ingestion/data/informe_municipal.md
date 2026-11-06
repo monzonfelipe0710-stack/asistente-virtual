@@ -1,6 +1,6 @@
 # Informe del recorrido de formosatuciudad.gob.ar
 
-Consultado el 06/11/2026 (2026-11-06T16:55:26+00:00). Pedidos al sitio: 0; leídos de la caché local: 72.
+Consultado el 06/11/2026 (2026-11-06T17:07:13+00:00). Pedidos al sitio: 0; leídos de la caché local: 72.
 
 ## Totales
 
@@ -74,29 +74,57 @@ Los montos en pesos calculados caducan cuando la AIM publica un valor nuevo del 
 
 - Pago de Tributos por financiación hasta en 12 cuotas: Plan de Pago en cuotas, 3 módulos (el concepto no está en la tabla de conceptos del Código Tarifario)
 
-## Montos en pesos viejos del sitio (descartados al calcular con el módulo vigente)
+## Montos viejos del sitio (pesos o unidades tributarias descartados al calcular con el módulo vigente)
 
-- Requisitos de habilitaciones comerciales: SEGÚN DIMENSIONES DEL LOCAL A HABILITAR ART. 36 INC. A ($100)
-- Requisitos de habilitaciones comerciales: Hasta 25 m 2 : 3 Módulos   $ 730.00
-- Requisitos de habilitaciones comerciales: Más de 25 m 2 hasta 50 m 2 : 5,5 Módulos   $ 1.350.00
-- Requisitos de habilitaciones comerciales: Más de 50 m 2 hasta 100 m 2 : 9 Módulos   $ 2.200.00
-- Requisitos de habilitaciones comerciales: Más de 100 m 2 hasta 300 m 2 : 12 Módulos   $ 2.940.00
-- Requisitos de habilitaciones comerciales: Más de 300 m 2 hasta 500 m 2 : 14 Módulos   $ 3.430.00
-- Requisitos de habilitaciones comerciales: Más de 500 m 2 hasta 750 m 2 : 19 Módulos   $ 4.650.00
-- Requisitos de habilitaciones comerciales: Más de 750 m 2 hasta 1.000 m 2 : 25 Módulos   $ 6.120.00
-- Requisitos de habilitaciones comerciales: Más de 1.000 m 2 hasta 1.500 m 2 : 32 Módulos   $ 7.830.00
-- Requisitos de habilitaciones comerciales: Más de 1.500 m 2 hasta 2.000 m 2 : 38,50 Módulos   $ 9.4200.00
-- Requisitos de habilitaciones comerciales: Más de 2.000 m 2 hasta 2.500 m 2 : 45 Módulos   $ 11.020.00
-- Requisitos de habilitaciones comerciales: Más de 2.500 m 2 hasta 3.000 m 2 : 54 Módulos   $ 13.220.00
-- Requisitos de habilitaciones comerciales: Más de 3.000 m 2 hasta 5.000 m 2 : 62 Módulos   $ 15.180.00
-- Requisitos de habilitaciones comerciales: Más de 5.000 m 2 hasta 10.000 m 2 : 76 Módulos   $ 18.600.00
-- Requisitos de habilitaciones comerciales: Más de 10.000 m 2 : 82 Módulos   $ 20.070.00
-- Requisitos de habilitaciones comerciales: EMISIÓN DEL CERTIFICADO DE HABILITACIÓN: 5 Módulos ($49,08) = $ 245.40.
-- Requisitos de habilitaciones comerciales: EMISIÓN DEL CERTIFICADO DE RENOVACIÓN: 5 Módulos ($40,90) = $ 245.00.
-- Requisitos de habilitaciones comerciales: POR CERTIFICACIONES, COPIAS DE DOCUMENTOS, CONSTANCIAS VARIAS: 2,5 Módulos ($49,08) = $ 122.70 cada una.-
+- Certificado de Libre Deuda de la Tasa de Utilización de la Vía Pública: «Libre Deuda Administración de Ingresos Municipales (AIM): Tasa administrativa de 6 Unidades Tributarias (1UT: $10)» → 4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+- Libre Deuda del Impuesto Inmobiliario y Tasa Única de Servicios: «1 U.T (1 U.T $250) por actividades administrativas (Estudio de Dominio)» → 6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+- Libre Deuda del Impuesto Inmobiliario y Tasa Única de Servicios: «6 U.T (1 U.T $136) Certificado de Libre Deuda» → 4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+- Baja del Automotor por Robo / Destrucción total: «$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)» → 4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+- Certificado de Baja del Automotor por cambio de Radicación: «$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)» → 4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+- Requisitos para obtener Carnet de Sanidad: «Costo del trámite por primera vez: $ 6.247,12.» → 8 módulos: $8.058,80, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+- Requisitos de habilitaciones comerciales: «SEGÚN DIMENSIONES DEL LOCAL A HABILITAR ART. 36 INC. A ($100)»
+- Requisitos de habilitaciones comerciales: «Hasta 25 m 2 : 3 Módulos   $ 730.00»
+- Requisitos de habilitaciones comerciales: «Más de 25 m 2 hasta 50 m 2 : 5,5 Módulos   $ 1.350.00»
+- Requisitos de habilitaciones comerciales: «Más de 50 m 2 hasta 100 m 2 : 9 Módulos   $ 2.200.00»
+- Requisitos de habilitaciones comerciales: «Más de 100 m 2 hasta 300 m 2 : 12 Módulos   $ 2.940.00»
+- Requisitos de habilitaciones comerciales: «Más de 300 m 2 hasta 500 m 2 : 14 Módulos   $ 3.430.00»
+- Requisitos de habilitaciones comerciales: «Más de 500 m 2 hasta 750 m 2 : 19 Módulos   $ 4.650.00»
+- Requisitos de habilitaciones comerciales: «Más de 750 m 2 hasta 1.000 m 2 : 25 Módulos   $ 6.120.00»
+- Requisitos de habilitaciones comerciales: «Más de 1.000 m 2 hasta 1.500 m 2 : 32 Módulos   $ 7.830.00»
+- Requisitos de habilitaciones comerciales: «Más de 1.500 m 2 hasta 2.000 m 2 : 38,50 Módulos   $ 9.4200.00»
+- Requisitos de habilitaciones comerciales: «Más de 2.000 m 2 hasta 2.500 m 2 : 45 Módulos   $ 11.020.00»
+- Requisitos de habilitaciones comerciales: «Más de 2.500 m 2 hasta 3.000 m 2 : 54 Módulos   $ 13.220.00»
+- Requisitos de habilitaciones comerciales: «Más de 3.000 m 2 hasta 5.000 m 2 : 62 Módulos   $ 15.180.00»
+- Requisitos de habilitaciones comerciales: «Más de 5.000 m 2 hasta 10.000 m 2 : 76 Módulos   $ 18.600.00»
+- Requisitos de habilitaciones comerciales: «Más de 10.000 m 2 : 82 Módulos   $ 20.070.00»
+- Requisitos de habilitaciones comerciales: «EMISIÓN DEL CERTIFICADO DE HABILITACIÓN: 5 Módulos ($49,08) = $ 245.40.»
+- Requisitos de habilitaciones comerciales: «EMISIÓN DEL CERTIFICADO DE RENOVACIÓN: 5 Módulos ($40,90) = $ 245.00.»
+- Requisitos de habilitaciones comerciales: «POR CERTIFICACIONES, COPIAS DE DOCUMENTOS, CONSTANCIAS VARIAS: 2,5 Módulos ($49,08) = $ 122.70 cada una.-»
+- Requisitos de habilitaciones comerciales: «1.- Estudio de Dominio del Inmueble. (Dir. de Catastro y Tierras Fiscales). Estampilla de $295.00.-» → 6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026
+
+## Montos publicados que no se pueden contrastar con el módulo (quedan con la advertencia)
+
+- Certificado de Libre Deuda de la Tasa de Utilización de la Vía Pública: Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)
+- Certificado de Libre Deuda de la Tasa de Utilización de la Vía Pública: Libre Deuda Dir. Tránsito: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)
+- Plan de Pago: por actividad administrativa + la 1er Cuota del Plan: $ 66
+- Baja del Automotor por Robo / Destrucción total: Libre deuda emitida por Tribunal de Faltas: $ 85
+- Baja del Automotor por Robo / Destrucción total: Libre deuda emitida por Direccion de Transito: $ 68
+- Certificado de Baja del Automotor por cambio de Radicación: Libre deuda emitida por Tribunal de Faltas: $ 85
+- Certificado de Baja del Automotor por cambio de Radicación: Libre deuda emitida por Direccion de Transito: $ 68
+- Pagos por Inhumaciones: Bajo Tierra: $ 255
+- Pagos por Inhumaciones: Nicho o Tierra: $ 290
+- Pagos por Inhumaciones: Pago por Arrendamiento: $ 120
+- Pagos por Resolución de Concesión de Terreno: Estampillado por Resolucion: $ 55
+- Pagos por Resolución de Concesión de Terreno: $72 xm2 Estampillado por Dcho. Cementerio (segun cada expediente el monto que varia por la dimension y otros criterios).
+- Requisitos de habilitaciones comerciales: (requisito) 5.- Certificado de Libre Falta (Tribunal de Faltas – Rivadavia Esq. Pringles). Válido por 48 hs. Estampilla de $122.70-
 
 ## Datos personales descartados
 
+- teléfono celular: Cel: ****-******/******/****** <https://formosatuciudad.gob.ar/lugares-de-atencion-y-pagos-habilitados>
+- teléfono celular: ****-****** (solo whatsapp) <https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites>
+- teléfono celular: WhatsApp: ****-****** <https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites>
+- teléfono celular: WhatsApp: ****-****** <https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites>
+- teléfono celular: ****-****** (solo whatsapp) <https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites>
 - correo no institucional: ***@gmail.com <https://formosatuciudad.gob.ar/requisitos-para-obtener-la-licencia-nacional-de-conducir>
 - correo no institucional: ***@gmail.com <https://formosatuciudad.gob.ar/requisitos-para-obtener-la-licencia-nacional-de-conducir>
 - correo no institucional: ***@gmail.com <https://formosatuciudad.gob.ar/requisitos-para-obtener-la-licencia-nacional-de-conducir>

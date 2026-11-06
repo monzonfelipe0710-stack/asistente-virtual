@@ -1,6 +1,6 @@
 {
   "fuente": "municipalidad-formosa",
-  "capturadoEn": "2026-11-06T16:55:26+00:00",
+  "capturadoEn": "2026-11-06T17:07:13+00:00",
   "consultadoEl": "06/11/2026",
   "parcial": false,
   "modulo": {
@@ -183,7 +183,7 @@
         "secciones": [
           {
             "titulo": "Información del portal",
-            "texto": "-Cajas recaudadoras Municipales:\n- Administración de Ingresos Municipales (AIM): calle Fotheringham Nº 1364 Lunes a Viernes de 08:00 a 12:00 y de 16:00 a 20:00.\n- Salón de Pringles y Rivadavia Lunes a Viernes de 08:00 a 12:00 y de 16:00 a 20:00.\n- Palacio de Intendencia: calle San Martín 750 Lunes a Viernes de 08:00 a 12:00.\n- Dirección de Transito: calle Pringles casi Rivadavia Lunes a Viernes de 08:00 a 12:00.\n- Centro Cívico Municipal Nº 1 (C 5) B° Eva Perón Mz. 05 Casa 22 Lunes a Viernes de 08:00 a 12:00 y de 16:00 a 20:00.\nOTROS MEDIOS DE PAGO EN:\n- Cajas del Banco Formosa. Sistemas Bapro Pagos, PagoFacil, RapiPago y Red Link.\n- Por Home-Banking con CLAVE FISCAL MUNICIPAL desde la Pagina Web de la Administración de Ingresos Municipales (AIM) www.ingresosmunicipfsa.com.ar\nFormas de Pago: Contado Efectivo. Cheque al día emitido a nombre de la Municipalidad de Formosa. Con TODAS las Tarjetas de débito. Con TARJETA DE CREDITO CHIGUE (CABAL) hasta en 12 cuotas sin interés. Plan de Pagos Permanente de Tributos Municipales hasta en 12 cuotas.\nCONTACTOS:\nCall Center: 0800 9999 147\nTel: 4436181 Cel: 3704-336465/336516/336372.\nCorreo electrónico: aim@formosatuciudad.gob.ar"
+            "texto": "-Cajas recaudadoras Municipales:\n- Administración de Ingresos Municipales (AIM): calle Fotheringham Nº 1364 Lunes a Viernes de 08:00 a 12:00 y de 16:00 a 20:00.\n- Salón de Pringles y Rivadavia Lunes a Viernes de 08:00 a 12:00 y de 16:00 a 20:00.\n- Palacio de Intendencia: calle San Martín 750 Lunes a Viernes de 08:00 a 12:00.\n- Dirección de Transito: calle Pringles casi Rivadavia Lunes a Viernes de 08:00 a 12:00.\n- Centro Cívico Municipal Nº 1 (C 5) B° Eva Perón Mz. 05 Casa 22 Lunes a Viernes de 08:00 a 12:00 y de 16:00 a 20:00.\nOTROS MEDIOS DE PAGO EN:\n- Cajas del Banco Formosa. Sistemas Bapro Pagos, PagoFacil, RapiPago y Red Link.\n- Por Home-Banking con CLAVE FISCAL MUNICIPAL desde la Pagina Web de la Administración de Ingresos Municipales (AIM) www.ingresosmunicipfsa.com.ar\nFormas de Pago: Contado Efectivo. Cheque al día emitido a nombre de la Municipalidad de Formosa. Con TODAS las Tarjetas de débito. Con TARJETA DE CREDITO CHIGUE (CABAL) hasta en 12 cuotas sin interés. Plan de Pagos Permanente de Tributos Municipales hasta en 12 cuotas.\nCONTACTOS:\nCall Center: 0800 9999 147\nTel: 4436181 (el teléfono figura en la fuente oficial).\nCorreo electrónico: aim@formosatuciudad.gob.ar"
           }
         ],
         "modalidad": [],
@@ -234,30 +234,33 @@
         "costos": [
           {
             "concepto": "Certificados de Libre Deuda",
-            "importe": "4 módulos ($4.029,40, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
             "monto": 4029.4,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Certificaciones de Libre Deuda por Infracciones y/o Multas al Tránsito",
-            "importe": "2 módulos ($2.014,70, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2 módulos: $2.014,70, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.7",
             "monto": 2014.7,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Certificaciones, copias de Documentos, Constancias Varias",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.3",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -303,12 +306,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -363,12 +367,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -427,12 +432,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -490,16 +496,22 @@
         },
         "costos": [
           {
-            "concepto": "Libre Deuda Administración de Ingresos Municipales (AIM): Tasa administrativa de 6 Unidades Tributarias (1UT: $10)",
-            "importe": null
+            "concepto": "Libre Deuda Administración de Ingresos Municipales (AIM)",
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "modulos": 4,
+            "categoria": "servicios_varios",
+            "articulo": "art. 24 inc. t.5",
+            "monto": 4029.4,
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)",
-            "importe": null
+            "importe": "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
           },
           {
             "concepto": "Libre Deuda Dir. Tránsito: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)",
-            "importe": null
+            "importe": "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
           }
         ],
         "oficinas": [
@@ -648,12 +660,24 @@
         },
         "costos": [
           {
-            "concepto": "1 U.T (1 U.T $250) por actividades administrativas (Estudio de Dominio)",
-            "importe": null
+            "concepto": "Por actividades administrativas (Estudio de Dominio)",
+            "importe": "6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "modulos": 6,
+            "categoria": "servicios_varios",
+            "articulo": "art. 24 inc. n.3",
+            "monto": 6044.1,
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "6 U.T (1 U.T $136) Certificado de Libre Deuda",
-            "importe": null
+            "concepto": "Certificado de Libre Deuda",
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "modulos": 4,
+            "categoria": "servicios_varios",
+            "articulo": "art. 24 inc. t.5",
+            "monto": 4029.4,
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -728,7 +752,7 @@
         "costos": [
           {
             "concepto": "por actividad administrativa + la 1er Cuota del Plan",
-            "importe": "$ 66"
+            "importe": "$ 66 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           }
         ],
         "oficinas": [
@@ -944,30 +968,33 @@
         "costos": [
           {
             "concepto": "Certificados de Libre Deuda",
-            "importe": "4 módulos ($4.029,40, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
             "monto": 4029.4,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Certificaciones de Libre Deuda por Infracciones y/o Multas al Tránsito",
-            "importe": "2 módulos ($2.014,70, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2 módulos: $2.014,70, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.7",
             "monto": 2014.7,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Certificaciones, copias de Documentos, Constancias Varias",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.3",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -1013,19 +1040,21 @@
         "costos": [
           {
             "concepto": "Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
-            "importe": "$ 125"
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "modulos": 4,
+            "categoria": "servicios_varios",
+            "articulo": "art. 24 inc. t.5",
+            "monto": 4029.4,
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Libre deuda emitida por Tribunal de Faltas",
-            "importe": "$ 85"
+            "importe": "$ 85 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           },
           {
             "concepto": "Libre deuda emitida por Direccion de Transito",
-            "importe": "$ 68"
-          },
-          {
-            "concepto": "Montos en pesos según el portal oficial, consultado el 06/11/2026.",
-            "importe": null
+            "importe": "$ 68 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           }
         ],
         "oficinas": [
@@ -1079,19 +1108,21 @@
         "costos": [
           {
             "concepto": "Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
-            "importe": "$ 125"
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "modulos": 4,
+            "categoria": "servicios_varios",
+            "articulo": "art. 24 inc. t.5",
+            "monto": 4029.4,
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Libre deuda emitida por Tribunal de Faltas",
-            "importe": "$ 85"
+            "importe": "$ 85 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           },
           {
             "concepto": "Libre deuda emitida por Direccion de Transito",
-            "importe": "$ 68"
-          },
-          {
-            "concepto": "Montos en pesos según el portal oficial, consultado el 06/11/2026.",
-            "importe": null
+            "importe": "$ 68 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           }
         ],
         "oficinas": [
@@ -1137,21 +1168,23 @@
         "costos": [
           {
             "concepto": "Estudio de dominio de inmuebles, por cada parcela",
-            "importe": "6 módulos ($6.044,10, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 6.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. n.3",
             "monto": 6044.1,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Certificado de Libre Deuda",
-            "importe": "4 módulos ($4.029,40, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
             "monto": 4029.4,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -1193,12 +1226,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -1253,12 +1287,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -1313,12 +1348,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -1377,12 +1413,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [
@@ -1437,12 +1474,13 @@
         "costos": [
           {
             "concepto": "Certificados de Libre Deuda",
-            "importe": "4 módulos ($4.029,40, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
             "monto": 4029.4,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -1484,12 +1522,13 @@
         "costos": [
           {
             "concepto": "Por cualquier presentación, solicitud o nota simple",
-            "importe": "1,5 módulos ($1.511,03, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "1,5 módulos: $1.511,03, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 1.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.1",
             "monto": 1511.03,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -1535,12 +1574,13 @@
         "costos": [
           {
             "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.2",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -1578,7 +1618,7 @@
         "costos": [
           {
             "concepto": "Plan de Pago en cuotas",
-            "importe": "3 módulos (según el portal oficial, consultado el 06/11/2026; el valor del módulo en pesos no está cargado)",
+            "importe": "3 módulos (el valor en pesos no está cargado; fuente: portal oficial, consultado el 06/11/2026)",
             "modulos": 3.0,
             "categoria": null
           }
@@ -1626,19 +1666,15 @@
         "costos": [
           {
             "concepto": "Bajo Tierra",
-            "importe": "$ 255"
+            "importe": "$ 255 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           },
           {
             "concepto": "Nicho o Tierra",
-            "importe": "$ 290"
+            "importe": "$ 290 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           },
           {
             "concepto": "Pago por Arrendamiento",
-            "importe": "$ 120"
-          },
-          {
-            "concepto": "Montos en pesos según el portal oficial, consultado el 06/11/2026.",
-            "importe": null
+            "importe": "$ 120 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           }
         ],
         "oficinas": [
@@ -1692,15 +1728,11 @@
         "costos": [
           {
             "concepto": "Estampillado por Resolucion",
-            "importe": "$ 55"
+            "importe": "$ 55 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
           },
           {
             "concepto": "$72 xm2 Estampillado por Dcho. Cementerio (segun cada expediente el monto que varia por la dimension y otros criterios).",
-            "importe": null
-          },
-          {
-            "concepto": "Montos en pesos según el portal oficial, consultado el 06/11/2026.",
-            "importe": null
+            "importe": "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
           }
         ],
         "oficinas": [
@@ -1887,7 +1919,13 @@
         "costos": [
           {
             "concepto": "Costo del trámite por primera vez",
-            "importe": "$ 6.247,12"
+            "importe": "8 módulos: $8.058,80, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "modulos": 8,
+            "categoria": "servicios_varios",
+            "articulo": "art. 24 inc. u.3",
+            "monto": 8058.8,
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -3561,7 +3599,7 @@
         "secciones": [
           {
             "titulo": "Información del portal",
-            "texto": "Dirección: Rivadavia 546 - Primer piso\nContacto: 3704-012377 (solo whatsapp)\nComo una forma de agilizar tiempos y en el marco de las medidas preventivas de distanciamiento social, se implementan nuevas modalidades de atención que se están aplicando con el fin de agilizar los trámites de consulta de infracciones, pago voluntario de las mismas y presentación de descargo vía correo electrónico.-\nMedios de atención habilitados\nJUZGADO DE FALTAS Nº 1:\njuzgadodefaltas1@formosatuciudad.gob.ar\n3704-012377\nJUZGADO DE FALTAS Nº 2:\njuzgadodefaltas2@formosatuciudad.gob.ar\n3704-012377\nJUZGADO DE FALTAS Nº 3:\njuzgadodefaltas3@formosatuciudad.gob.ar\nEl Juzgado de Faltas interviene en todas aquellas infracciones a las Normas Municipales dictadas en el ejercicio del poder de Policía y las normas Nacionales y Provinciales cuya aplicación corresponda al Municipio, garantizando a los ciudadanos la defensa en juicio y el debido proceso legal.\nLa competencia de los juzgados la determinará el lugar de comisión de la infracción (Decreto Nº 4995/20).\nDependiendo de que barrio sos te debes dirigir a distintos juzgados de falta:\nBarrios Juzgados de Faltas Nº 1\nSan Martin Sur\nGuadalupe\nSan Jorge\nDon Bosco\nSan Cayetano\nParque Industrial\nBernardino Rivadavia\nHipólito Irigoyen\nLaguna Siam\nLote 4\nComplejo las Américas\nLaura Vicuña\nSan Jose Obrero\nJardines de Formosa\nAeropuerto el Pucú\nVilla Hermosa\nLa Alborada\nVilla del Carmen Sur\nSanta Rosa\nIncone\nCarlitos Menem JR.\nObrero\nMariano Moreno\nNueva Pompeya\nVirgen del Pilar\nVirgen del Rosario\nSanta Isabel Sur\nCovifol\nSan Juan Bautista\nFontana\nBarrios Juzgados de Faltas Nº 2\nSan Martín Norte\nEmilio Tomás\nVilla Lourdes\nIndependencia\nEl Resguardo\nSan Juan 1 y 2\nSan Miguel\nSan Francisco\nParque Urbano 1 y 2\nFleming\nVial\nSan Pedro\n2 de Abril\nLa Estrella\n25 de Mayo\nGuayaibi\nSolano Lima\nDivino Niño Jesús\nEl Mistol 1 y 2\nMalvinas\n12 de Octubre\nEl Palmar\nLibertad\nLote 111\nIbira Pitá\nColluccio\nNueva Formosa\nTimbó 1 y 2\nSan Isidro Labrador\nNueva Italia\nGuayacanes\nEvita\nVirgen Niña\nQuebrachito\nVirgen de Itatí\nSagrado Corazón de María\nUrunday\nSan Antonio\nEl Pucú\n8 de Marzo\nSan Andrés\n16 de Julio\nTobias Acosta\nSanta Lucía\nProcrear\nRoberto Sotelo\nAndrés L Rivira\nVilla del Carmen Norte\nJuna Manuel de Rosas\n17 de Octubre\nParaje San Hilario\nLa Paz\nCono Sur\nParaje San Hilario\nVenezuela\nSan Agustín Sur\nSanta Isabel Norte\nBarrios Juzgados de Faltas Nº 3\nNamcom\nUrbanización Maradona\nLos Inmigrantes\nBarrio Norte\nSimón Bolívar\nVilla Belgrano\nLuján\n20 de Julio\nJuann Domingo Perón\n8 de Marzo\nEva Perón\n6 de Enero\nEl Mbigua\n8 de Octubre\nLa Espereanza\n8 de Octubre Bis\n7 de Mayo\nBenedetto Fachini (Ricardo Balbín)\nAntenor Gauna\nLa Floresta\nSan Isidro\nSan Agustín\n1 de Mayo\nEl Palomar\nEl Porvenir\nLa Maroma\nRepública Argentina\nStella Maris\nTrámites en General\n- Para todo tipo de trámite deberá, adjuntar al correo electrónico, copia de DNI (ambos lados) en caso de Infracciones de Tránsito Cedula del Automotor.-\nConsulta de Infracciones:\n- Copia de DNI ambos lados\n- Número de Acta o Imagen de la Misma o Imagen de CEDULA de Citación\n- Dirección Interviniente (Dirección de Obras Privadas, Bromatología, Transito, SEM, Servicio Públicos)\n- Para los casos de Infracciones de Tránsito adjuntar Cedula del Automotor\nDescargos:\n- Modelo de Descargo, firmado por el presentante (P.D.F)\n- Número de Acta o Imagen de la Misma, o Imagen de CEDULA de Citación\n- Adjuntar según corresponda, documentación imágenes etc, de las pruebas que considere.-\n- Copia de DNI ambos lados\nEn todos los casos Indicar en el ASUNTO el trámite a solicitar, junto con el nombre completo del solicitante"
+            "texto": "Dirección: Rivadavia 546 - Primer piso\nContacto: (el teléfono figura en la fuente oficial)\nComo una forma de agilizar tiempos y en el marco de las medidas preventivas de distanciamiento social, se implementan nuevas modalidades de atención que se están aplicando con el fin de agilizar los trámites de consulta de infracciones, pago voluntario de las mismas y presentación de descargo vía correo electrónico.-\nMedios de atención habilitados\nJUZGADO DE FALTAS Nº 1:\njuzgadodefaltas1@formosatuciudad.gob.ar\n(el teléfono figura en la fuente oficial)\nJUZGADO DE FALTAS Nº 2:\njuzgadodefaltas2@formosatuciudad.gob.ar\n(el teléfono figura en la fuente oficial)\nJUZGADO DE FALTAS Nº 3:\njuzgadodefaltas3@formosatuciudad.gob.ar\nEl Juzgado de Faltas interviene en todas aquellas infracciones a las Normas Municipales dictadas en el ejercicio del poder de Policía y las normas Nacionales y Provinciales cuya aplicación corresponda al Municipio, garantizando a los ciudadanos la defensa en juicio y el debido proceso legal.\nLa competencia de los juzgados la determinará el lugar de comisión de la infracción (Decreto Nº 4995/20).\nDependiendo de que barrio sos te debes dirigir a distintos juzgados de falta:\nBarrios Juzgados de Faltas Nº 1\nSan Martin Sur\nGuadalupe\nSan Jorge\nDon Bosco\nSan Cayetano\nParque Industrial\nBernardino Rivadavia\nHipólito Irigoyen\nLaguna Siam\nLote 4\nComplejo las Américas\nLaura Vicuña\nSan Jose Obrero\nJardines de Formosa\nAeropuerto el Pucú\nVilla Hermosa\nLa Alborada\nVilla del Carmen Sur\nSanta Rosa\nIncone\nCarlitos Menem JR.\nObrero\nMariano Moreno\nNueva Pompeya\nVirgen del Pilar\nVirgen del Rosario\nSanta Isabel Sur\nCovifol\nSan Juan Bautista\nFontana\nBarrios Juzgados de Faltas Nº 2\nSan Martín Norte\nEmilio Tomás\nVilla Lourdes\nIndependencia\nEl Resguardo\nSan Juan 1 y 2\nSan Miguel\nSan Francisco\nParque Urbano 1 y 2\nFleming\nVial\nSan Pedro\n2 de Abril\nLa Estrella\n25 de Mayo\nGuayaibi\nSolano Lima\nDivino Niño Jesús\nEl Mistol 1 y 2\nMalvinas\n12 de Octubre\nEl Palmar\nLibertad\nLote 111\nIbira Pitá\nColluccio\nNueva Formosa\nTimbó 1 y 2\nSan Isidro Labrador\nNueva Italia\nGuayacanes\nEvita\nVirgen Niña\nQuebrachito\nVirgen de Itatí\nSagrado Corazón de María\nUrunday\nSan Antonio\nEl Pucú\n8 de Marzo\nSan Andrés\n16 de Julio\nTobias Acosta\nSanta Lucía\nProcrear\nRoberto Sotelo\nAndrés L Rivira\nVilla del Carmen Norte\nJuna Manuel de Rosas\n17 de Octubre\nParaje San Hilario\nLa Paz\nCono Sur\nParaje San Hilario\nVenezuela\nSan Agustín Sur\nSanta Isabel Norte\nBarrios Juzgados de Faltas Nº 3\nNamcom\nUrbanización Maradona\nLos Inmigrantes\nBarrio Norte\nSimón Bolívar\nVilla Belgrano\nLuján\n20 de Julio\nJuann Domingo Perón\n8 de Marzo\nEva Perón\n6 de Enero\nEl Mbigua\n8 de Octubre\nLa Espereanza\n8 de Octubre Bis\n7 de Mayo\nBenedetto Fachini (Ricardo Balbín)\nAntenor Gauna\nLa Floresta\nSan Isidro\nSan Agustín\n1 de Mayo\nEl Palomar\nEl Porvenir\nLa Maroma\nRepública Argentina\nStella Maris\nTrámites en General\n- Para todo tipo de trámite deberá, adjuntar al correo electrónico, copia de DNI (ambos lados) en caso de Infracciones de Tránsito Cedula del Automotor.-\nConsulta de Infracciones:\n- Copia de DNI ambos lados\n- Número de Acta o Imagen de la Misma o Imagen de CEDULA de Citación\n- Dirección Interviniente (Dirección de Obras Privadas, Bromatología, Transito, SEM, Servicio Públicos)\n- Para los casos de Infracciones de Tránsito adjuntar Cedula del Automotor\nDescargos:\n- Modelo de Descargo, firmado por el presentante (P.D.F)\n- Número de Acta o Imagen de la Misma, o Imagen de CEDULA de Citación\n- Adjuntar según corresponda, documentación imágenes etc, de las pruebas que considere.-\n- Copia de DNI ambos lados\nEn todos los casos Indicar en el ASUNTO el trámite a solicitar, junto con el nombre completo del solicitante"
           }
         ],
         "modalidad": [],
@@ -3577,7 +3615,6 @@
           {
             "nombre": "Tribunal de Administración de Faltas",
             "domicilio": "Rivadavia 546 - Primer piso",
-            "telefono": "3704-012377 (solo whatsapp)",
             "localidad": "Formosa",
             "origenId": "fsatuciudad:tribunal-de-administracion-de-faltas:6a31a4d6"
           }
@@ -3785,7 +3822,7 @@
       "detalle": {
         "titulo": "Requisitos de habilitaciones comerciales",
         "descripcion": "Requisitos de habilitaciones comerciales (Habilitaciones Comerciales, Municipalidad de la Ciudad de Formosa).",
-        "requisitos": "REQUISITOS GENERALES SEGÚN ORDENANZA 7458/20 (R1 DE RIESGO BAJO, R2 DE MEDIO Y R3 DE ALTO)\nRIESGO BAJO (R1)\n1.- Estudio de Dominio del Inmueble. (Dir. de Catastro y Tierras Fiscales). Estampilla de $295.00.-\n2.- DNI del / los Titular /es 1ª y 2ª hoja o CUIT en caso de Persona Jurídica y Contrato Social inscripto en el Registro Público de Comercio de la Provincia de Formosa (Maipú entre Moreno y Rivadavia).\n3.- Tres (4) copias de planos actualizados (conforme a lo edificado actualmente), y fotocopias de: Carátula (4) y Planta General (4) en la que se resalte el área a afectar comercialmente.\nCuando el local supere los 100 m2 de superficie, deberá retirar de las oficinas de Seguridad de Locales Comerciales, copia de planos y Formulario de Localización para llevar a Bomberos y su posterior devolución con la Aprobación Técnica del Sistema de Prevención contra Incendio.\n*REQUERIRAN SOLO CROQUIS EN LAS SIGUIENTES SITUACIONES:\na) Viviendas del I.P.V. (con Resolución del I.P.V.).\nb) Terrenos Fiscales – Edificación sin Título de Propiedad.\nRespecto de la Titularidad del inmueble por el cual solicita la Habilitación Comercial: completar, con carácter de Declaración Jurada, el derecho de ocupación del inmueble.-\nCroquis de ubicación (4 copias). (Manzana, Parcela, Calles).\nPlanta General (4 copias), del área a habilitar comercialmente (medidas del local, puertas, ventanas, baños, tablero de Energía Eléctrica, matafuegos).\n4.- Original y Copia del Contrato de Locación del Inmueble (24 meses, firmas certificadas por Escribano Público), Contrato de Comodato y/o Formulario de Declaración Jurada de uso del inmueble.-\n5.- Certificado de Libre Falta (Tribunal de Faltas – Rivadavia Esq. Pringles). Válido por 48 hs. Estampilla de $122.70-\n6.- Constancia de Inscripción al Impuesto a los Ingresos Brutos, de las actividades que desarrolla (D.G. de Rentas de la Provincia – Fontana esq. Ayacucho).-\n7.- Constancia de Inscripción según su actividad AFIP ( Brandzen entre Deán Funes y Padre Patiño) Internet, www.afip.gov.ar.-\nRIESGO MEDIO (R2) ESPECÍFICOS SEGÚN LA ACTIVIDAD\n1.- Veterinarias: Título del Profesional a Cargo-Certificado del Consejo Profesional de Médicos Veterinarios, contrato de locación de servicios con el profesional certificado por escribano (Av. González Lelong Nº 445).\n2.- Droguerías: Título del Profesional a Cargo-Contrato de Locación de Servicios con el farmacéutico-Resolución del Ministerio de Desarrollo Humano.\n3.- Gimnasios: Título del Profesional a Cargo (Profesor de Educación Física)-Cobertura Médica-Ord.4740/04. Contrato de Locación de Servicios (firmas certificadas por Escribanía). Pilates: Título del Instructor.-\n4.- Elaboración de Productos Alimentarios: Autorización de Bromatología de la Provincia Pringles N° 355- (entre Moreno y Deán Funes).-\n5.- Farmacias, consultorios, sanatorios, ópticas, laboratorios, etc: Título del Profesional a Cargo -Resolución del Ministerio de Desarrollo Humano. Contrato de Locación de Servicios (firmas certificadas por Escribanía). FACTIBILIDAD.\n6.- Ventas de Armas: Autorización del ANMaC (ex RENAR).\n7.- Servicios de Radio y Televisión: Inscripción en ENACOM. Maipú N° 432.\n8.- Fumigación y ventas de carnadas: Autorización del Ministerio de la Producción y Ambiente, en el caso de fumigación se requerirá Título del Profesional a Cargo.\n9.- Productores y Asesores de Seguro: Autorización de la Superintendencia de Seguros de la Nación.( Según art.7 de la ley N°22400)\n10.- Cooperativas, Consorcios: Resolución y matricula de inscripción en el Ministerio de Economía y Hacienda-\n11.- Mutuales: Resolución y matricula de inscripción en el Ministerio de Economía y Hacienda (Inaes)- Autorización de la Superintendencia de Seguros de la Nación.\n12.- Agencias de quinielas: Autorización del IAS.\n13.- Servicios de Agencias de Viajes: Autorización del Ministerio de Turismo de Nación.\n14.- Envasadoras de Agua: Autorización de Bromatología de la provincia y Certificado del SPAP o laboratorio privado.\n15.- Servicios de Peluquería y Salón de belleza: (estética – pedir un informe emitido por el Ministerio de Desarrollo Humano): Copia del Título Profesional- Contrato de servicio certificado por escribano.-\n16.- Chatarrería: Certificado de Factibilidad de Localización y Uso Favorable y Estudio de Impacto Ambiental.-\n17.- Empresas de Seguridad: Solicitar Resolución del Dpto. de Informaciones Policiales (José María Uriburu e/ Libertad y Yunka).\n18.- Servicio de Enseñanza: Resolución del Ministerio de Cultura y Educación. Según Decreto 173/87.-\n19.- Canchas de Futbol 5: Cobertura Médica-Ord.4740/04.\n20.- Depósito de Envase de Gas (G.L.P): Certificado de Aptitud Técnica y de Seguridad (Emitido por TIXO S.A.).\n21.- Residuos Patogénicos: FACTIBILIDAD- Autorización de Bromatología de la Provincia- Autorización del Ministerio de la Producción y Ambiente.\n22.- Productos agroquimicos para huertas (fertilizantes, sulfato, insecticidas, humus) necesita habilitación para productos agroquímicos del SENASA – Av. Gob. Gutnisky Nº3966.-\n23.- Guarderias y Jaridnes Maternales: FACTIBILIDAD Y Autorización o Registro en la Dirección de Educación Privada (J.A.ROCA Y BRANDZEN).\n24.- Depósitos: Certificado de Factibilidad emitido por la Autoridad de aplicación: Dirección de Planeamiento. Planos Aprobados por la Municipalidad de la Ciudad de Formosa.-\nRIESGO MEDIO – RIESGO ALTO (R2-R3)\nPlan de Contingencia y de Evacuación\n.-Deberán presentar Certificado de Factibilidad de Localización y Uso “FAVORABLE” SEGUN ORDENANZA 6959/16, expedido por la Dirección de Planeamiento Urbano las siguientes actividades: Farmacias, Consultorios, Sanatorios, Ópticas, industrias o fabricas de cualquier índole, boliches, bares con espectáculos, salón de eventos, natatorios, gimnasios, canchas de futbol 5, talleres mecánicos, gomerías, carpinterías, herrerías, playas de estacionamiento, envasadoras de agua y gas, estaciones de servicios, hoteles, moteles, bancos, agencias de autos, lavaderos, fabricas, depósitos y toda actividad con grado de molestias similares.\nNOTA: Una vez completado los formularios y adjuntada la documentación requerida con anterioridad, le será entregada una CONSTANCIA DE INICIO DEL TRÁMITE, QUE NO ES LEGALMENTE LA HABILITACIÓN COMERCIAL.-\nAl entregarle dicha constancia deberá retirar CLAVE FISCAL para abonar la Tasa de Registro e Inspección (TRI).\nPARA PODER RETIRAR EL CERTIFICADO DE HABILITACION CON LA DISPOSICIÓN, EL SOLICITANTE DE LA HABILITACIÓN Y EL INMUEBLE OBJETO DEL PERMISO, NO DEBERÁN REGISTRAR DEUDAS DE TRIBUTOS MUNICIPALES, O EN SU DEFECTO DEBERÁN CONTRAER UN COMPROMISO FORMAL DE PAGO ACORDE A LAS MODALIDADES VIGENTES.\nMEDIDAS DE SEGURIDAD PARA HABILITAR UN LOCAL COMERCIAL\n1. PLANOS ACTUALIZADOS.\n2. LOCALES HASTA 100M2 DEBERÁN CONTAR CON UN EXTINTOR O EXTINGUIDOR DE INCENDIOS CLASE ABC PORTATIL DE 5 (CINCO) KG COLOCADO EN LUGAR ACCESIBLE A UNA ALTURA DE 1,5 MTS DEL SUELO CON LA CARGA ACTUALIZADA.\n3. LOCALES MAYORES A 100 M2 DEBERÁN LLEVAR SUS PLANOS AL CUERPO DE BOMBEROS DE LA POLICIA DE LA PROVINCIA (calle Santa Fé Nº 1254) CON EL PROYECTO DE PREVENCIÓN MOVIL PARA SER APROBADOS.\n4. LOCALES MAYORES A 1000 M2 DEBERÁN LLEVAR SUS PLANOS AL CUERPO DE BOMBEROS DE LA POLICIA DE LA PROVINCIA (calle Santa Fé Nº 1254) CON EL PROYECTO DE PREVENCIÓN FIJA PARA SER APROBADOS.\n5. LAS SALIDAS DE EMERGENCIA DERÁN ABRIR HACIA AFUERA Y ESTAR LIBERADAS DE CUALQUIER OBSTACULO Y DEBIDAMENTE SEÑALIZADAS.\n6. LAS INSTALACIONES ELÉCTRICAS EN CONDICIONES, DEBEN CONTAR CON UN INTERRUPTOR DIFERENCIAL O DISYUNTOR EN FUNCIONAMIENTO Y NO TENER CONDUCTORES-CABLES- SUELTOS NI CON POSIBLE CONTACTO A LAS PERSONAS. LOS TABLEROS CON PICTOGRAFIAS DE SEGURIDAD.\n7. BAÑOS COMO MINIMO 1 (UNO) EN COMUNICACIÓN DIRECTA CON EL LOCAL A HABILITAR –\nbares, confiterías, gimnasios, salones de fiesta, etc. deberán tener como mínimo 2 (dos) baños diferenciados por sexos.\n8. PANADERIAS, PIZERIAS, ETC. QUE POSEEN HORNOS HACIA MEDIANERAS O PASILLOS DE CIRCULACION, LOS MISMOS DEBERAN TENER PARED CON CÁMARA DE AIRE Y REVESTIMIENTO DE CERAMICOS REFRACTARIOS.\n9. LAVADEROS DE ACUERDO A LA ORDENANZA Nº 4723/04.\n10. GIMNASIOS DE ACUERDO A LA ORDENANZA Nº 4740/04.\n11. NATATORIOS DE ACUERDO A LA ORDENANZA Nº 4723/04.\n12. LOCALES BAILABLES Y EVENTOS DE CONCURRENCIA MASIVA DE ACUERDO A LA ORDENANZA Nº 4633/04 Y DECRETO Nº 2188/04.\n13. MARQUESINAS Y CARTELERÍA DE ACUERDO A LA ORDENANZA Nº 5547/08.\n14. VEREDA Y PARTERRE LIBRE DE OBJETOS –CARTELES, MERCADERIAS, CARRITOS, ETC. DE ACUERDO A LA ORDENANZA Nº 4413/01 Y 5547/08.\n15. REBAJE DE CORDÓN UNICAMENTE PODRÁ COINCIDIR CON EL ACCESO VEHICULAR AL INMUEBLE-ORDENANZA Nº5547/08.\n16. ESTACIONAMIENTO EN VEREDA Y EN PARTERRE ESTA PROHIBIDO -ORDENANZA Nº 4413/04 Y 5547/08.\nSEGÚN CÓDIGO TARIFARIO ART. 40.\nTRAER CORREO ELECTRÓNICO, PARA RETIRAR CLAVE DE GESTIÓN MUNICIPAL.",
+        "requisitos": "REQUISITOS GENERALES SEGÚN ORDENANZA 7458/20 (R1 DE RIESGO BAJO, R2 DE MEDIO Y R3 DE ALTO)\nRIESGO BAJO (R1)\n1.- Estudio de Dominio del Inmueble. (Dir. de Catastro y Tierras Fiscales). Estampilla de 6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.-\n2.- DNI del / los Titular /es 1ª y 2ª hoja o CUIT en caso de Persona Jurídica y Contrato Social inscripto en el Registro Público de Comercio de la Provincia de Formosa (Maipú entre Moreno y Rivadavia).\n3.- Tres (4) copias de planos actualizados (conforme a lo edificado actualmente), y fotocopias de: Carátula (4) y Planta General (4) en la que se resalte el área a afectar comercialmente.\nCuando el local supere los 100 m2 de superficie, deberá retirar de las oficinas de Seguridad de Locales Comerciales, copia de planos y Formulario de Localización para llevar a Bomberos y su posterior devolución con la Aprobación Técnica del Sistema de Prevención contra Incendio.\n*REQUERIRAN SOLO CROQUIS EN LAS SIGUIENTES SITUACIONES:\na) Viviendas del I.P.V. (con Resolución del I.P.V.).\nb) Terrenos Fiscales – Edificación sin Título de Propiedad.\nRespecto de la Titularidad del inmueble por el cual solicita la Habilitación Comercial: completar, con carácter de Declaración Jurada, el derecho de ocupación del inmueble.-\nCroquis de ubicación (4 copias). (Manzana, Parcela, Calles).\nPlanta General (4 copias), del área a habilitar comercialmente (medidas del local, puertas, ventanas, baños, tablero de Energía Eléctrica, matafuegos).\n4.- Original y Copia del Contrato de Locación del Inmueble (24 meses, firmas certificadas por Escribano Público), Contrato de Comodato y/o Formulario de Declaración Jurada de uso del inmueble.-\n5.- Certificado de Libre Falta (Tribunal de Faltas – Rivadavia Esq. Pringles). Válido por 48 hs. Estampilla de $122.70 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)-\n6.- Constancia de Inscripción al Impuesto a los Ingresos Brutos, de las actividades que desarrolla (D.G. de Rentas de la Provincia – Fontana esq. Ayacucho).-\n7.- Constancia de Inscripción según su actividad AFIP ( Brandzen entre Deán Funes y Padre Patiño) Internet, www.afip.gov.ar.-\nRIESGO MEDIO (R2) ESPECÍFICOS SEGÚN LA ACTIVIDAD\n1.- Veterinarias: Título del Profesional a Cargo-Certificado del Consejo Profesional de Médicos Veterinarios, contrato de locación de servicios con el profesional certificado por escribano (Av. González Lelong Nº 445).\n2.- Droguerías: Título del Profesional a Cargo-Contrato de Locación de Servicios con el farmacéutico-Resolución del Ministerio de Desarrollo Humano.\n3.- Gimnasios: Título del Profesional a Cargo (Profesor de Educación Física)-Cobertura Médica-Ord.4740/04. Contrato de Locación de Servicios (firmas certificadas por Escribanía). Pilates: Título del Instructor.-\n4.- Elaboración de Productos Alimentarios: Autorización de Bromatología de la Provincia Pringles N° 355- (entre Moreno y Deán Funes).-\n5.- Farmacias, consultorios, sanatorios, ópticas, laboratorios, etc: Título del Profesional a Cargo -Resolución del Ministerio de Desarrollo Humano. Contrato de Locación de Servicios (firmas certificadas por Escribanía). FACTIBILIDAD.\n6.- Ventas de Armas: Autorización del ANMaC (ex RENAR).\n7.- Servicios de Radio y Televisión: Inscripción en ENACOM. Maipú N° 432.\n8.- Fumigación y ventas de carnadas: Autorización del Ministerio de la Producción y Ambiente, en el caso de fumigación se requerirá Título del Profesional a Cargo.\n9.- Productores y Asesores de Seguro: Autorización de la Superintendencia de Seguros de la Nación.( Según art.7 de la ley N°22400)\n10.- Cooperativas, Consorcios: Resolución y matricula de inscripción en el Ministerio de Economía y Hacienda-\n11.- Mutuales: Resolución y matricula de inscripción en el Ministerio de Economía y Hacienda (Inaes)- Autorización de la Superintendencia de Seguros de la Nación.\n12.- Agencias de quinielas: Autorización del IAS.\n13.- Servicios de Agencias de Viajes: Autorización del Ministerio de Turismo de Nación.\n14.- Envasadoras de Agua: Autorización de Bromatología de la provincia y Certificado del SPAP o laboratorio privado.\n15.- Servicios de Peluquería y Salón de belleza: (estética – pedir un informe emitido por el Ministerio de Desarrollo Humano): Copia del Título Profesional- Contrato de servicio certificado por escribano.-\n16.- Chatarrería: Certificado de Factibilidad de Localización y Uso Favorable y Estudio de Impacto Ambiental.-\n17.- Empresas de Seguridad: Solicitar Resolución del Dpto. de Informaciones Policiales (José María Uriburu e/ Libertad y Yunka).\n18.- Servicio de Enseñanza: Resolución del Ministerio de Cultura y Educación. Según Decreto 173/87.-\n19.- Canchas de Futbol 5: Cobertura Médica-Ord.4740/04.\n20.- Depósito de Envase de Gas (G.L.P): Certificado de Aptitud Técnica y de Seguridad (Emitido por TIXO S.A.).\n21.- Residuos Patogénicos: FACTIBILIDAD- Autorización de Bromatología de la Provincia- Autorización del Ministerio de la Producción y Ambiente.\n22.- Productos agroquimicos para huertas (fertilizantes, sulfato, insecticidas, humus) necesita habilitación para productos agroquímicos del SENASA – Av. Gob. Gutnisky Nº3966.-\n23.- Guarderias y Jaridnes Maternales: FACTIBILIDAD Y Autorización o Registro en la Dirección de Educación Privada (J.A.ROCA Y BRANDZEN).\n24.- Depósitos: Certificado de Factibilidad emitido por la Autoridad de aplicación: Dirección de Planeamiento. Planos Aprobados por la Municipalidad de la Ciudad de Formosa.-\nRIESGO MEDIO – RIESGO ALTO (R2-R3)\nPlan de Contingencia y de Evacuación\n.-Deberán presentar Certificado de Factibilidad de Localización y Uso “FAVORABLE” SEGUN ORDENANZA 6959/16, expedido por la Dirección de Planeamiento Urbano las siguientes actividades: Farmacias, Consultorios, Sanatorios, Ópticas, industrias o fabricas de cualquier índole, boliches, bares con espectáculos, salón de eventos, natatorios, gimnasios, canchas de futbol 5, talleres mecánicos, gomerías, carpinterías, herrerías, playas de estacionamiento, envasadoras de agua y gas, estaciones de servicios, hoteles, moteles, bancos, agencias de autos, lavaderos, fabricas, depósitos y toda actividad con grado de molestias similares.\nNOTA: Una vez completado los formularios y adjuntada la documentación requerida con anterioridad, le será entregada una CONSTANCIA DE INICIO DEL TRÁMITE, QUE NO ES LEGALMENTE LA HABILITACIÓN COMERCIAL.-\nAl entregarle dicha constancia deberá retirar CLAVE FISCAL para abonar la Tasa de Registro e Inspección (TRI).\nPARA PODER RETIRAR EL CERTIFICADO DE HABILITACION CON LA DISPOSICIÓN, EL SOLICITANTE DE LA HABILITACIÓN Y EL INMUEBLE OBJETO DEL PERMISO, NO DEBERÁN REGISTRAR DEUDAS DE TRIBUTOS MUNICIPALES, O EN SU DEFECTO DEBERÁN CONTRAER UN COMPROMISO FORMAL DE PAGO ACORDE A LAS MODALIDADES VIGENTES.\nMEDIDAS DE SEGURIDAD PARA HABILITAR UN LOCAL COMERCIAL\n1. PLANOS ACTUALIZADOS.\n2. LOCALES HASTA 100M2 DEBERÁN CONTAR CON UN EXTINTOR O EXTINGUIDOR DE INCENDIOS CLASE ABC PORTATIL DE 5 (CINCO) KG COLOCADO EN LUGAR ACCESIBLE A UNA ALTURA DE 1,5 MTS DEL SUELO CON LA CARGA ACTUALIZADA.\n3. LOCALES MAYORES A 100 M2 DEBERÁN LLEVAR SUS PLANOS AL CUERPO DE BOMBEROS DE LA POLICIA DE LA PROVINCIA (calle Santa Fé Nº 1254) CON EL PROYECTO DE PREVENCIÓN MOVIL PARA SER APROBADOS.\n4. LOCALES MAYORES A 1000 M2 DEBERÁN LLEVAR SUS PLANOS AL CUERPO DE BOMBEROS DE LA POLICIA DE LA PROVINCIA (calle Santa Fé Nº 1254) CON EL PROYECTO DE PREVENCIÓN FIJA PARA SER APROBADOS.\n5. LAS SALIDAS DE EMERGENCIA DERÁN ABRIR HACIA AFUERA Y ESTAR LIBERADAS DE CUALQUIER OBSTACULO Y DEBIDAMENTE SEÑALIZADAS.\n6. LAS INSTALACIONES ELÉCTRICAS EN CONDICIONES, DEBEN CONTAR CON UN INTERRUPTOR DIFERENCIAL O DISYUNTOR EN FUNCIONAMIENTO Y NO TENER CONDUCTORES-CABLES- SUELTOS NI CON POSIBLE CONTACTO A LAS PERSONAS. LOS TABLEROS CON PICTOGRAFIAS DE SEGURIDAD.\n7. BAÑOS COMO MINIMO 1 (UNO) EN COMUNICACIÓN DIRECTA CON EL LOCAL A HABILITAR –\nbares, confiterías, gimnasios, salones de fiesta, etc. deberán tener como mínimo 2 (dos) baños diferenciados por sexos.\n8. PANADERIAS, PIZERIAS, ETC. QUE POSEEN HORNOS HACIA MEDIANERAS O PASILLOS DE CIRCULACION, LOS MISMOS DEBERAN TENER PARED CON CÁMARA DE AIRE Y REVESTIMIENTO DE CERAMICOS REFRACTARIOS.\n9. LAVADEROS DE ACUERDO A LA ORDENANZA Nº 4723/04.\n10. GIMNASIOS DE ACUERDO A LA ORDENANZA Nº 4740/04.\n11. NATATORIOS DE ACUERDO A LA ORDENANZA Nº 4723/04.\n12. LOCALES BAILABLES Y EVENTOS DE CONCURRENCIA MASIVA DE ACUERDO A LA ORDENANZA Nº 4633/04 Y DECRETO Nº 2188/04.\n13. MARQUESINAS Y CARTELERÍA DE ACUERDO A LA ORDENANZA Nº 5547/08.\n14. VEREDA Y PARTERRE LIBRE DE OBJETOS –CARTELES, MERCADERIAS, CARRITOS, ETC. DE ACUERDO A LA ORDENANZA Nº 4413/01 Y 5547/08.\n15. REBAJE DE CORDÓN UNICAMENTE PODRÁ COINCIDIR CON EL ACCESO VEHICULAR AL INMUEBLE-ORDENANZA Nº5547/08.\n16. ESTACIONAMIENTO EN VEREDA Y EN PARTERRE ESTA PROHIBIDO -ORDENANZA Nº 4413/04 Y 5547/08.\nSEGÚN CÓDIGO TARIFARIO ART. 40.\nTRAER CORREO ELECTRÓNICO, PARA RETIRAR CLAVE DE GESTIÓN MUNICIPAL.",
         "observaciones": null,
         "secciones": [],
         "modalidad": [],
@@ -3802,157 +3839,174 @@
             "importe": null
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (hasta 25 m 2)",
-            "importe": "3 módulos ($15.110,28, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (hasta 25 m 2)",
+            "importe": "3 módulos: $15.110,28, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 3.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 15110.28,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 25 m 2 hasta 50 m 2)",
-            "importe": "5,5 módulos ($27.702,18, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 25 m 2 hasta 50 m 2)",
+            "importe": "5,5 módulos: $27.702,18, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 5.5,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 27702.18,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 50 m 2 hasta 100 m 2)",
-            "importe": "9 módulos ($45.330,84, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 50 m 2 hasta 100 m 2)",
+            "importe": "9 módulos: $45.330,84, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 9.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 45330.84,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 100 m 2 hasta 300 m 2)",
-            "importe": "12 módulos ($60.441,12, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 100 m 2 hasta 300 m 2)",
+            "importe": "12 módulos: $60.441,12, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 12.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 60441.12,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 300 m 2 hasta 500 m 2)",
-            "importe": "14 módulos ($70.514,64, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 300 m 2 hasta 500 m 2)",
+            "importe": "14 módulos: $70.514,64, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 14.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 70514.64,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 500 m 2 hasta 750 m 2)",
-            "importe": "19 módulos ($95.698,44, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 500 m 2 hasta 750 m 2)",
+            "importe": "19 módulos: $95.698,44, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 19.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 95698.44,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 750 m 2 hasta 1.000 m 2)",
-            "importe": "25 módulos ($125.919,00, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 750 m 2 hasta 1.000 m 2)",
+            "importe": "25 módulos: $125.919,00, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 25.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 125919.0,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 1.000 m 2 hasta 1.500 m 2)",
-            "importe": "32 módulos ($161.176,32, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 1.000 m 2 hasta 1.500 m 2)",
+            "importe": "32 módulos: $161.176,32, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 32.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 161176.32,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 1.500 m 2 hasta 2.000 m 2)",
-            "importe": "38,5 módulos ($193.915,26, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 1.500 m 2 hasta 2.000 m 2)",
+            "importe": "38,5 módulos: $193.915,26, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 38.5,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 193915.26,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 2.000 m 2 hasta 2.500 m 2)",
-            "importe": "45 módulos ($226.654,20, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 2.000 m 2 hasta 2.500 m 2)",
+            "importe": "45 módulos: $226.654,20, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 45.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 226654.2,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 2.500 m 2 hasta 3.000 m 2)",
-            "importe": "54 módulos ($271.985,04, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 2.500 m 2 hasta 3.000 m 2)",
+            "importe": "54 módulos: $271.985,04, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 54.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 271985.04,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 3.000 m 2 hasta 5.000 m 2)",
-            "importe": "62 módulos ($312.279,12, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 3.000 m 2 hasta 5.000 m 2)",
+            "importe": "62 módulos: $312.279,12, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 62.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 312279.12,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 5.000 m 2 hasta 10.000 m 2)",
-            "importe": "76 módulos ($382.793,76, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 5.000 m 2 hasta 10.000 m 2)",
+            "importe": "76 módulos: $382.793,76, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 76.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 382793.76,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar art. 36 inc. a (más de 10.000 m 2)",
-            "importe": "82 módulos ($413.014,32, con módulo a $5.036,76 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "concepto": "Según dimensiones del local a habilitar (más de 10.000 m 2)",
+            "importe": "82 módulos: $413.014,32, calculado con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 82.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
             "monto": 413014.32,
-            "valorModulo": 5036.76
+            "valorModulo": 5036.76,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Emisión del certificado de habilitación",
-            "importe": "5 módulos ($5.036,75, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "5 módulos: $5.036,75, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 5.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.9",
             "monto": 5036.75,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Emisión del certificado de renovación",
-            "importe": "5 módulos ($5.036,75, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "5 módulos: $5.036,75, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 5.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.10",
             "monto": 5036.75,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           },
           {
             "concepto": "Por certificaciones, copias de documentos, constancias varias",
-            "importe": "2,5 módulos ($2.518,38, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)",
+            "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.3",
             "monto": 2518.38,
-            "valorModulo": 1007.35
+            "valorModulo": 1007.35,
+            "desde": "01/10/2026"
           }
         ],
         "oficinas": [],
@@ -4137,6 +4191,42 @@
     ],
     "pesosViejos": [
       {
+        "tramite": "Certificado de Libre Deuda de la Tasa de Utilización de la Vía Pública",
+        "texto": "Libre Deuda Administración de Ingresos Municipales (AIM): Tasa administrativa de 6 Unidades Tributarias (1UT: $10)",
+        "reemplazo": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/certificado-de-libre-deuda-de-la-tasa-de-utilizaci%C3%B3n-de-la-v%C3%ADa-p%C3%BAblica"
+      },
+      {
+        "tramite": "Libre Deuda del Impuesto Inmobiliario y Tasa Única de Servicios",
+        "texto": "1 U.T (1 U.T $250) por actividades administrativas (Estudio de Dominio)",
+        "reemplazo": "6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/libre-deuda-del-impuesto-inmobiliario-y-tasa-%C3%BAnica-de-servicios"
+      },
+      {
+        "tramite": "Libre Deuda del Impuesto Inmobiliario y Tasa Única de Servicios",
+        "texto": "6 U.T (1 U.T $136) Certificado de Libre Deuda",
+        "reemplazo": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/libre-deuda-del-impuesto-inmobiliario-y-tasa-%C3%BAnica-de-servicios"
+      },
+      {
+        "tramite": "Baja del Automotor por Robo / Destrucción total",
+        "texto": "$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
+        "reemplazo": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/baja-del-automotor-por-robo-destrucci%C3%B3n-total"
+      },
+      {
+        "tramite": "Certificado de Baja del Automotor por cambio de Radicación",
+        "texto": "$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
+        "reemplazo": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/certificado-de-baja-del-automotor-por-cambio-de-radicaci%C3%B3n"
+      },
+      {
+        "tramite": "Requisitos para obtener Carnet de Sanidad",
+        "texto": "Costo del trámite por primera vez: $ 6.247,12.",
+        "reemplazo": "8 módulos: $8.058,80, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/requisitos-para-obtener-carnet-de-sanidad"
+      },
+      {
         "tramite": "Requisitos de habilitaciones comerciales",
         "texto": "SEGÚN DIMENSIONES DEL LOCAL A HABILITAR ART. 36 INC. A ($100)",
         "url": "https://formosatuciudad.gob.ar/requisitos-de-habilitaciones-comerciales"
@@ -4225,9 +4315,40 @@
         "tramite": "Requisitos de habilitaciones comerciales",
         "texto": "POR CERTIFICACIONES, COPIAS DE DOCUMENTOS, CONSTANCIAS VARIAS: 2,5 Módulos ($49,08) = $ 122.70 cada una.-",
         "url": "https://formosatuciudad.gob.ar/requisitos-de-habilitaciones-comerciales"
+      },
+      {
+        "tramite": "Requisitos de habilitaciones comerciales",
+        "texto": "1.- Estudio de Dominio del Inmueble. (Dir. de Catastro y Tierras Fiscales). Estampilla de $295.00.-",
+        "reemplazo": "6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+        "url": "https://formosatuciudad.gob.ar/requisitos-de-habilitaciones-comerciales"
       }
     ],
     "descartes": [
+      {
+        "tipo": "teléfono celular",
+        "valor": "Cel: ****-******/******/******",
+        "url": "https://formosatuciudad.gob.ar/lugares-de-atencion-y-pagos-habilitados"
+      },
+      {
+        "tipo": "teléfono celular",
+        "valor": "****-****** (solo whatsapp)",
+        "url": "https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites"
+      },
+      {
+        "tipo": "teléfono celular",
+        "valor": "WhatsApp: ****-******",
+        "url": "https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites"
+      },
+      {
+        "tipo": "teléfono celular",
+        "valor": "WhatsApp: ****-******",
+        "url": "https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites"
+      },
+      {
+        "tipo": "teléfono celular",
+        "valor": "****-****** (solo whatsapp)",
+        "url": "https://formosatuciudad.gob.ar/juzgados-de-faltas-tramites"
+      },
       {
         "tipo": "correo no institucional",
         "valor": "***@gmail.com",

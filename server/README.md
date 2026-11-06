@@ -949,8 +949,16 @@ migraciones e importa el catálogo real). Hace falta Docker Desktop abierto. Se 
 `DATABASE_URL_TEST` apunta a la misma base que el `.env`.
 
 **Tests del scraper.** La corrida completa (sin archivos) también corre `ingestion/tests` (Python,
-sin red ni base: parsers de las fichas, lectura del módulo, privacidad) con `ingestion/.venv`; si no
-existe, avisa y los saltea. El código de salida es el peor de los dos.
+sin red ni base: parsers de las fichas, lectura del módulo, costos, privacidad) con
+`ingestion/.venv`. Si el venv no existe, avisa "falta ingestion/.venv, se omiten N tests" y
+`npm test` no falla por eso; si existe y un test de Python falla, `npm test` sale con error. Para
+crear el venv (una vez, con Python 3.11 o más nuevo):
+
+```bash
+cd ingestion
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt   # en Linux/macOS: .venv/bin/python
+```
 
 `npm run test:real` corre los mismos tests contra la base del `.env`, para verificar las
 migraciones antes de un deploy. Pide escribir el host de la base para confirmar y no corre sin

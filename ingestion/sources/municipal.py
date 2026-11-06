@@ -98,6 +98,14 @@ CARGOS = r"(?:Intendent[ea]|Director|Directora|Secretari[oa]|Subsecretari[oa]|Je
 PERSONA = re.compile(rf"\s*\b{TITULOS}\s*(?!{CARGOS})(?:{NOMBRE_PROPIO}\s*){{1,4}}")
 RESPONSABLE = re.compile(r"(?im)^\s*(?:[-•*]\s*)?(?:responsable|a cargo|encargad[oa])\s*:.*$\n?")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+SIN_TELEFONO = "(el teléfono figura en la fuente oficial)"
+# Celulares: rotulados ("Cel:", "WhatsApp") o con la forma 3704-NNNNNN y sus continuaciones
+# "/336516". Los fijos de siete cifras (4436181) y los 0800 quedan.
+NUMERO_CEL = r"(?:\+?54\s?9?\s?)?\(?0?370\)?[\s.-]?(?:4[\s.-]?\d{6}|\d{6})(?:\s?/\s?\d{6})*|\b15[\s-]?\d{6}\b"
+CELULAR = re.compile(
+    rf"(?i)\b(?:cel(?:ular)?|whats?app|wsp|m[oó]vil)\b\.?\s*:?\s*(?:{NUMERO_CEL})(?:\s*\(\s*solo\s+whats?app\s*\))?"
+    rf"|(?<![\d-])(?:{NUMERO_CEL})(?![\d-])(?:\s*\(\s*solo\s+whats?app\s*\))?"
+)
 
 
 def es_institucional(email):
@@ -110,6 +118,8 @@ def enmascarar(valor):
     valor = valor.strip()
     if "@" in valor:
         return f"***@{valor.rsplit('@', 1)[1]}"
+    if CELULAR.fullmatch(valor):
+        return re.sub(r"\d", "*", valor)
     rotulo = re.match(r"^(?:[-•*]\s*)?([^:]+:)", valor) or re.match(rf"^({TITULOS})", valor)
     return f"{rotulo.group(1)} ***" if rotulo else "***"
 
@@ -134,6 +144,13 @@ def sin_datos_personales(texto, descartes=None):
     t = RESPONSABLE.sub(lambda m: (descartes.append({"tipo": "responsable", "valor": enmascarar(m.group(0))}), "")[1], texto)
     t = PERSONA.sub(persona, t)
     t = EMAIL.sub(correo, t)
+
+    def celular(m):
+        descartes.append({"tipo": "teléfono celular", "valor": re.sub(r"\d", "*", m.group(0))})
+        return SIN_TELEFONO
+
+    t = CELULAR.sub(celular, t)
+    t = re.sub(rf"(?:{re.escape(SIN_TELEFONO)}[\s/,y-]*){{2,}}", SIN_TELEFONO + " ", t)
     t = re.sub(r"[ \t]+([).,;:])", r"\1", re.sub(r"\(\s*\)", "", t))
     return re.sub(r"[ \t]{2,}", " ", t).strip()
 
@@ -155,6 +172,8 @@ def preparar_cuerpo(cuerpo, descartes):
             if email:
                 descartes.append({"tipo": "correo no institucional", "valor": enmascarar(email)})
             span.replace_with(SIN_CORREO)
+    for img in cuerpo.find_all("img", alt=re.compile(r"(?i)whats?app|celular")):
+        img.replace_with("WhatsApp: ")
     for basura in cuerpo.find_all(["script", "style", "img", "hr"]):
         basura.decompose()
     for a in cuerpo.find_all("a", href=lambda h: h and h.startswith("#")):
@@ -329,28 +348,43 @@ def valor_modulo(modulo, categoria):
     return modulo["categorias"][categoria][modulo["vigente"]["indice"]], modulo["vigente"]["desde"]
 
 
-# Conceptos del Código Tarifario 2026 (Ord. 7147/17 y modificatorias) y el tributo cuyo módulo los
-# valoriza. Un concepto que no está acá queda con la cantidad de módulos, sin monto.
+# Conceptos del Código Tarifario 2026 (Ord. 7147/17 y modificatorias): el tributo cuyo módulo los
+# valoriza y, si el Código la fija, la cantidad de módulos. Un concepto que no está acá queda con lo
+# que publica la ficha (la cantidad de módulos sin monto, o los pesos con una advertencia).
+CODIGO_TARIFARIO = "Código Tarifario 2026"
 CONCEPTOS = [
-    (r"libre deuda por infracciones", "servicios_varios", "art. 24 inc. t.7"),
-    (r"certificados? de libre deuda", "servicios_varios", "art. 24 inc. t.5"),
-    (r"certificaciones?,? copias de documentos", "servicios_varios", "art. 24 inc. t.3"),
-    (r"acogimiento y/?o renovacion de exencion", "servicios_varios", "art. 24 inc. t.2"),
-    (r"cualquier presentacion,? solicitud o nota simple", "servicios_varios", "art. 24 inc. t.1"),
-    (r"estudio de dominio", "servicios_varios", "art. 24 inc. n.3"),
-    (r"emision del certificado (?:o permiso )?de renovacion", "servicios_varios", "art. 24 inc. t.10"),
-    (r"emision del certificado (?:o permiso )?de habilitacion", "servicios_varios", "art. 24 inc. t.9"),
-    (r"(?:superficie|dimensiones) del local a habilitar", "habilitaciones", "art. 25"),
+    (r"libre deuda por infracciones", "servicios_varios", "art. 24 inc. t.7", 2),
+    (r"certificados? de libre deuda", "servicios_varios", "art. 24 inc. t.5", 4),
+    (r"libre deuda (?:emitida por )?(?:la )?administracion de ingresos municipales", "servicios_varios", "art. 24 inc. t.5", 4),
+    (r"certificaciones?,? copias de documentos", "servicios_varios", "art. 24 inc. t.3", 2.5),
+    (r"acogimiento y/?o renovacion de exencion", "servicios_varios", "art. 24 inc. t.2", 2.5),
+    (r"cualquier presentacion,? solicitud o nota simple", "servicios_varios", "art. 24 inc. t.1", 1.5),
+    (r"estudio de dominio", "servicios_varios", "art. 24 inc. n.3", 6),
+    (r"emision del certificado (?:o permiso )?de renovacion", "servicios_varios", "art. 24 inc. t.10", 5),
+    (r"emision del certificado (?:o permiso )?de habilitacion", "servicios_varios", "art. 24 inc. t.9", 5),
+    (r"renovacion (?:semestral )?de (?:la )?(?:libreta|carnet) de sanidad", "servicios_varios", "art. 24 inc. u.4", 5),
+    (r"(?:libreta|carnet) de sanidad", "servicios_varios", "art. 24 inc. u.3", 8),
+    (r"(?:superficie|dimensiones) del local a habilitar", "habilitaciones", "art. 25", None),
 ]
+NOMBRES_CATEGORIA = {"servicios_varios": "servicios varios", "habilitaciones": "habilitaciones"}
+
+
+def _plano(texto):
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFD", texto or "").encode("ascii", "ignore").decode().lower())
+
+
+def concepto_del_codigo(concepto):
+    """(categoría, artículo, cantidad o None) del concepto en el Código Tarifario, o None."""
+    plano = _plano(concepto)
+    for patron, categoria, articulo, cantidad in CONCEPTOS:
+        if re.search(patron, plano):
+            return categoria, articulo, cantidad
+    return None
 
 
 def categoria_de(concepto):
-    plano = unicodedata.normalize("NFD", concepto).encode("ascii", "ignore").decode().lower()
-    plano = re.sub(r"\s+", " ", plano)
-    for patron, categoria, articulo in CONCEPTOS:
-        if re.search(patron, plano):
-            return categoria, articulo
-    return None, None
+    hallado = concepto_del_codigo(concepto)
+    return hallado[:2] if hallado else (None, None)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -359,28 +393,67 @@ def categoria_de(concepto):
 NO_COSTO = re.compile(r"\bno tiene costo\b|\bsin costo\b|\bgratuit[oa]\b", re.I)
 MODULOS = re.compile(r"(\d+(?:[.,]\d+)?)\s*m[óo]dulos?\b", re.I)
 PESOS_VIEJOS = re.compile(r"\(?\$\s?[\d.,]+\)?(?:\s*=\s*\$\s?[\d.,]+)?\.?")
+UNIDADES_TRIBUTARIAS = re.compile(
+    r"(?i)(?:tasa administrativa de\s+)?\d+(?:[.,]\d+)?\s*(?:unidades tributarias|u\.?\s?t\.?)(?=[\s(:]|$)"
+    r"\s*(?:\(\s*1\s*u\.?\s?t\.?\s*:?\s*\$\s?[\d.,]+\s*\))?"
+)
 MONTO_AL_INICIO = re.compile(r"^\$\s?(\d[\d.,]*\d|\d)\s+(?!x\s?m)(\S.*)$", re.I)
 MONTO_AL_FINAL = re.compile(r"^(.*\S)\s*:\s*\$\s?(\d[\d.,]*\d|\d)\s*\.?$")
+CONTEXTO_DE_PAGO = re.compile(r"(?i)\b(?:estampillas?|sellados?|estampillado|arancel|tasa|costo)\b")
+ADVERTENCIA = "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
+GENERICO = re.compile(r"(?i)^(?:el\s+)?(?:costo|valor)(?:\s+del\s+tr[áa]mite)?\b")
 
 
-def fila_de_modulos(concepto, cantidad, modulo, consulta, avisos, titulo):
-    leyenda = f"según el portal oficial, consultado el {consulta}"
-    n_txt = cantidad_ar(cantidad)
-    categoria, articulo = categoria_de(concepto)
-    valor = valor_modulo(modulo, categoria) if categoria else None
+def calculado(cantidad, categoria, modulo, consulta):
+    """'4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente
+    desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el ...', o
+    (None, None) si no hay un valor legible del módulo de esa categoría."""
+    valor = valor_modulo(modulo, categoria)
     if valor is None:
+        return None, None
+    precio, desde = valor
+    monto = round(cantidad * precio + 1e-9, 2)
+    nombre = NOMBRES_CATEGORIA.get(categoria, categoria.replace("_", " "))
+    texto = (f"{cantidad_ar(cantidad)} módulos: ${numero_ar(monto)}, calculado con el valor del módulo "
+             f"({nombre}: ${numero_ar(precio)}) vigente desde {desde}, según el {CODIGO_TARIFARIO}; "
+             f"fuente: portal oficial, consultado el {consulta}")
+    return texto, {"monto": monto, "valorModulo": precio, "desde": desde}
+
+
+def fila_de_modulos(concepto, cantidad, modulo, consulta, avisos, titulo, categoria=None, articulo=None):
+    n_txt = cantidad_ar(cantidad)
+    if categoria is None:
+        categoria, articulo = categoria_de(concepto)
+    texto, datos = calculado(cantidad, categoria, modulo, consulta) if categoria else (None, None)
+    if texto is None:
         motivo = ("no se pudo leer el valor del módulo" if modulo is None or not modulo.get("legible")
                   else "el concepto no está en la tabla de conceptos del Código Tarifario" if categoria is None
                   else f"no se pudo leer el valor del módulo de {categoria}")
         avisos.append({"tramite": titulo, "concepto": concepto, "modulos": n_txt, "motivo": motivo})
-        return {"concepto": concepto, "importe": f"{n_txt} módulos ({leyenda}; el valor del módulo en pesos no está cargado)", "modulos": cantidad, "categoria": categoria}
-    precio, desde = valor
-    monto = round(cantidad * precio + 1e-9, 2)
-    return {
-        "concepto": concepto,
-        "importe": f"{n_txt} módulos (${numero_ar(monto)}, con módulo a ${numero_ar(precio)} vigente desde el {desde}; {leyenda})",
-        "modulos": cantidad, "categoria": categoria, "articulo": articulo, "monto": monto, "valorModulo": precio,
-    }
+        return {"concepto": concepto, "importe": f"{n_txt} módulos (el valor en pesos no está cargado; fuente: portal oficial, consultado el {consulta})", "modulos": cantidad, "categoria": categoria}
+    return {"concepto": concepto, "importe": texto, "modulos": cantidad, "categoria": categoria, "articulo": articulo, **datos}
+
+
+def _concepto_limpio(linea):
+    t = UNIDADES_TRIBUTARIAS.sub(" ", linea)
+    t = re.sub(r"\(?\$\s?[\d.,]+\)?", " ", t)
+    t = re.sub(r"\(\s*\)", " ", t)
+    t = re.sub(r"\s+", " ", t).strip(" :-.")
+    return t[:1].upper() + t[1:]
+
+
+def fila_en_pesos(linea, concepto, importe, modulo, consulta, avisos, titulo, viejos):
+    """Pesos (o unidades tributarias) que publica la ficha. Si el Código Tarifario fija la cantidad
+    de módulos del concepto, se calcula con el módulo vigente y lo viejo va al informe; si no, queda
+    como está, con la advertencia."""
+    hallado = concepto_del_codigo(concepto) or (concepto_del_codigo(titulo) if GENERICO.match(concepto) else None)
+    if hallado and hallado[2] is not None:
+        categoria, articulo, cantidad = hallado
+        fila = fila_de_modulos(concepto, cantidad, modulo, consulta, avisos, titulo, categoria, articulo)
+        if "monto" in fila:
+            viejos.append({"tramite": titulo, "texto": linea, "reemplazo": fila["importe"]})
+            return fila
+    return {"concepto": concepto, "importe": f"{importe} ({ADVERTENCIA})" if importe else ADVERTENCIA}
 
 
 def costos_de(lineas, modulo, consulta, avisos, titulo, viejos):
@@ -403,24 +476,48 @@ def costos_de(lineas, modulo, consulta, avisos, titulo, viejos):
         if NO_COSTO.search(linea):
             filas.append({"concepto": linea, "importe": None, "sinCosto": True})
             continue
+        ut = UNIDADES_TRIBUTARIAS.search(linea)
         inicio, final = MONTO_AL_INICIO.match(linea), MONTO_AL_FINAL.match(linea)
-        if inicio:
-            filas.append({"concepto": inicio.group(2).rstrip(". "), "importe": f"$ {inicio.group(1)}"})
-        elif final:
-            filas.append({"concepto": final.group(1), "importe": f"$ {final.group(2)}"})
+        mayusculas = linea.upper() == linea and re.search(r"[A-ZÁÉÍÓÚÑ]{4}", linea)
+        if inicio and not ut:
+            filas.append(fila_en_pesos(linea, inicio.group(2).rstrip(". "), f"$ {inicio.group(1)}", modulo, consulta, avisos, titulo, viejos))
+        elif final and not ut:
+            filas.append(fila_en_pesos(linea, final.group(1), f"$ {final.group(2)}", modulo, consulta, avisos, titulo, viejos))
+        elif linea.endswith(":") or mayusculas or (len(linea) <= 80 and not re.search(r"\d", linea)):
+            if PESOS_VIEJOS.search(linea):
+                viejos.append({"tramite": titulo, "texto": linea})
+            sin_pesos = re.sub(r"(?i)\s*art\.?\s*\d+\s*inc\.?\s*[a-z]\b", "", PESOS_VIEJOS.sub("", linea))
+            encabezado = sin_mayusculas_sostenidas(sin_pesos.strip(" :-"))
+        elif ut or re.search(r"\$\s?\d", linea):
+            hallado = concepto_del_codigo(linea)
+            if hallado and hallado[2] is not None:
+                filas.append(fila_en_pesos(linea, _concepto_limpio(linea), None, modulo, consulta, avisos, titulo, viejos))
+            else:
+                filas.append({"concepto": linea, "importe": ADVERTENCIA})
         else:
-            mayusculas = linea.upper() == linea and re.search(r"[A-ZÁÉÍÓÚÑ]{4}", linea)
-            if linea.endswith(":") or mayusculas or (len(linea) <= 80 and not re.search(r"\$|\d", linea)):
-                if PESOS_VIEJOS.search(linea):
-                    viejos.append({"tramite": titulo, "texto": linea})
-                encabezado = sin_mayusculas_sostenidas(PESOS_VIEJOS.sub("", linea).strip(" :-"))
-                continue
             filas.append({"concepto": linea, "importe": None})
     if len(filas) == 1 and filas[0].get("sinCosto"):
         return [{"concepto": filas[0]["concepto"], "importe": "$ 0"}]
-    if len(filas) > 1 and any(f["importe"] and f["importe"].startswith("$") for f in filas):
-        filas.append({"concepto": f"Montos en pesos según el portal oficial, consultado el {consulta}.", "importe": None})
     return filas
+
+
+def pesos_en_requisitos(texto, modulo, consulta, avisos, titulo, viejos):
+    """Los pesos de una estampilla o un sellado dentro de los requisitos: calculados si el Código
+    fija el concepto, con la advertencia si no."""
+    if not texto:
+        return texto
+    salida = []
+    for linea in texto.split("\n"):
+        if CONTEXTO_DE_PAGO.search(linea) and re.search(r"\$\s?\d", linea):
+            hallado = concepto_del_codigo(linea)
+            fila = fila_de_modulos(linea, hallado[2], modulo, consulta, avisos, titulo, hallado[0], hallado[1]) if hallado and hallado[2] is not None else {}
+            if "monto" in fila:
+                viejos.append({"tramite": titulo, "texto": linea, "reemplazo": fila["importe"]})
+                linea = re.sub(r"\$\s?\d[\d.,]*\d", lambda _: fila["importe"], linea, count=1)
+            else:
+                linea = re.sub(r"(\$\s?\d[\d.,]*\d)", lambda m: f"{m.group(1)} ({ADVERTENCIA})", linea, count=1)
+        salida.append(linea)
+    return "\n".join(salida)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -721,6 +818,7 @@ def parsear_ficha(html, titulo_listado, sector, area, modulo, consulta):
     requisitos = datos["requisitos"]
     if requisitos and requisitos.count("\n- ") == 0 and requisitos.startswith("- "):
         requisitos = requisitos[2:]
+    requisitos = pesos_en_requisitos(requisitos, modulo, consulta, avisos_modulo, titulo, viejos)
 
     limpio = lambda t: sin_datos_personales(t, descartes)  # noqa: E731
     detalle = {
@@ -739,6 +837,8 @@ def parsear_ficha(html, titulo_listado, sector, area, modulo, consulta):
     for o in detalle["oficinas"]:
         if o.get("email") and not es_institucional(o["email"]):
             descartes.append({"tipo": "correo no institucional", "valor": enmascarar(o.pop("email"))})
+        if o.get("telefono") and SIN_TELEFONO in o["telefono"]:
+            o.pop("telefono")
     return formato, detalle, {"modulos": avisos_modulo, "pesosViejos": viejos, "descartes": descartes}
 
 

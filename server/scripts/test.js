@@ -9,7 +9,7 @@
 //
 // Los tests leen DATABASE_URL: este script la fija antes de lanzarlos y `dotenv` no la pisa.
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
@@ -77,7 +77,12 @@ if (archivos.length === 0) {
     console.log('\nTests del scraper (ingestion/tests)...');
     python = spawnSync(interprete, ['-m', 'unittest', 'discover', '-s', 'tests'], { cwd: INGESTION, stdio: 'inherit', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } }).status ?? 1;
   } else {
-    console.log('\nSin ingestion/.venv: no se corren los tests del scraper (ver el README, "Importar el catálogo").');
+    const carpeta = join(INGESTION, 'tests');
+    const cantidad = existsSync(carpeta)
+      ? readdirSync(carpeta).filter((f) => /^test.*\.py$/.test(f))
+        .reduce((n, f) => n + (readFileSync(join(carpeta, f), 'utf8').match(/^\s+def test_/gm) ?? []).length, 0)
+      : 0;
+    console.log(`\nFalta ingestion/.venv, se omiten ${cantidad} tests del scraper (para crearlo, ver el README, "Tests del scraper").`);
   }
 }
 process.exit((r.status ?? 1) || python);

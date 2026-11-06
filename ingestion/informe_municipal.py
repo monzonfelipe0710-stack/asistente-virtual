@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from sources.municipal import CATEGORIAS, clave, numero_ar
+from sources.municipal import ADVERTENCIA, CATEGORIAS, clave, numero_ar
 
 FORMATOS = {
     "secciones": "rótulos div.texto.tema (Descripción, Dónde se realiza, Requisitos, Documentación a presentar, Valor del trámite) o preguntas numeradas (1 ¿En qué consiste...? a 6 ¿Qué otro dato...?)",
@@ -61,6 +61,19 @@ def temas(municipales, provinciales):
         if mu:
             filas.append((tema, mu, pr))
     return filas
+
+
+def sin_contrastar(tramites):
+    salida = []
+    for t in tramites:
+        d = t["detalle"]
+        for c in d["costos"]:
+            if ADVERTENCIA in (c.get("importe") or ""):
+                salida.append((t["nombre"], f"{c['concepto']}: {c['importe'].replace(f' ({ADVERTENCIA})', '').replace(ADVERTENCIA, '').strip()}".rstrip(": ")))
+        for linea in (d.get("requisitos") or "").split("\n"):
+            if ADVERTENCIA in linea:
+                salida.append((t["nombre"], f"(requisito) {linea.replace(f' ({ADVERTENCIA})', '')}"))
+    return salida
 
 
 def armar(datos, provincial=None):
@@ -124,9 +137,13 @@ def armar(datos, provincial=None):
         "",
         *([f"- {x['tramite']}: {x['concepto']}, {x['modulos']} módulos ({x['motivo']})" for x in inf["modulos"]] or ["Ninguno."]),
         "",
-        "## Montos en pesos viejos del sitio (descartados al calcular con el módulo vigente)",
+        "## Montos viejos del sitio (pesos o unidades tributarias descartados al calcular con el módulo vigente)",
         "",
-        *([f"- {x['tramite']}: {x['texto'].replace(chr(10), ' ')}" for x in inf["pesosViejos"]] or ["Ninguno."]),
+        *([f"- {x['tramite']}: «{x['texto'].replace(chr(10), ' ')}»" + (f" → {x['reemplazo']}" if x.get("reemplazo") else "") for x in inf["pesosViejos"]] or ["Ninguno."]),
+        "",
+        "## Montos publicados que no se pueden contrastar con el módulo (quedan con la advertencia)",
+        "",
+        *([f"- {n}: {linea}" for n, linea in sin_contrastar(t)] or ["Ninguno."]),
         "",
         "## Datos personales descartados",
         "",

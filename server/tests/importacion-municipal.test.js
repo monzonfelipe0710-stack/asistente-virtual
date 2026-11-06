@@ -24,7 +24,7 @@ const sectores = [
   { nombre: OBRAS, tipo: 'DEPARTAMENTO', padre: RAIZ, jurisdiccion: null, localidad: null },
   { nombre: PRIVADAS, tipo: 'DEPARTAMENTO', padre: OBRAS, jurisdiccion: null, localidad: null },
 ];
-const modulos = (n, monto) => `${n} módulos (${monto}, con módulo a $1.007,35 vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)`;
+const modulos = (n, monto) => `${n} módulos: ${monto}, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026`;
 const detalle = (extra = {}) => ({
   requisitos: '- Fotocopia del DNI.\n- Título del automotor.',
   costos: [{ concepto: 'Certificados de Libre Deuda', importe: modulos(4, '$4.029,40') }],

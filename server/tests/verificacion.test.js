@@ -29,6 +29,23 @@ describe('verificación de la salida', () => {
         capas: ['costo'],
       });
     });
+
+    it('el monto calculado con el módulo del portal municipal se puede decir, con el cálculo y la fuente', () => {
+      const t = tramite({
+        nombre: 'Certificado de Libre Deuda de Tasa Única de Servicios e Impuesto Inmobiliario',
+        fuenteUrl: 'https://formosatuciudad.gob.ar/certificado-de-libre-deuda-de-tasa-unica-de-servicios-e-impuesto-inmobiliario',
+        costoDetalle: 'Certificado de Libre Deuda: 4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026\n'
+          + 'Libre deuda emitida por Tribunal de Faltas: $ 85 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)',
+      });
+      for (const linea of [
+        'El certificado cuesta 4 módulos, que equivalen a $4.029,40 (módulo de servicios varios a $1.007,35 vigente desde el 01/10/2026, según el Código Tarifario 2026).',
+        'Cuesta **$4.029,40**, calculado con el valor del módulo vigente; conviene confirmarlo en la fuente oficial.',
+        'El libre deuda del Tribunal de Faltas figura a $85, un monto que puede estar desactualizado: confirmalo en la oficina.',
+      ]) {
+        assert.deepEqual(verificar(linea, [t]), { texto: linea, capas: [] }, linea);
+      }
+      assert.deepEqual(verificar('Cuesta $4.400.', [t]).capas, ['costo']);
+    });
   });
 
   describe('respuesta sin contenido', () => {
