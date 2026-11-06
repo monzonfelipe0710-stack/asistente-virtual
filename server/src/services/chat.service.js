@@ -363,13 +363,16 @@ const describirOrganismo = ({ jurisdiccion, localidad }) => {
 const formatearCandidato = (c, i, jurisdicciones, opciones) =>
   c.sinResolver ? formatearGrupo(c) : formatearTramite(c, jurisdicciones.get(c.sectorId), { ...opciones, secundario: i > 0 });
 
-// Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta.
+// Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta. Devuelve
+// también el texto de cada candidato y la parte fija, que usa la verificación de atribución.
 const armarInstruccion = async (prompt, topeAlcanzado, candidatos, opciones = {}) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
   const { texto: resumen } = await obtenerResumenCatalogo();
   const jurisdicciones = candidatos.length > 0 ? await obtenerJurisdicciones() : null;
-  const contexto = candidatos.length > 0 ? candidatos.map((c, i) => formatearCandidato(c, i, jurisdicciones, opciones)).join("\n\n") : "(ninguno)";
-  return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
+  const contexto = new Map(candidatos.map((c, i) => [c.id, formatearCandidato(c, i, jurisdicciones, opciones)]));
+  const fijo = `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}`;
+  const texto = contexto.size > 0 ? [...contexto.values()].join("\n\n") : "(ninguno)";
+  return { instruccion: `${fijo}\n\nContexto (trámites candidatos):\n${texto}`, contexto, fijo };
 };
 
 // Una conversación no usa los candidatos, pero el modelo tiende a tomarlos de ejemplo cuando
@@ -413,7 +416,7 @@ const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCor
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
 
-  const instruccion = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []), signal);
+  const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []), signal);
   const salida = JSON.parse(
     await ia.generarRespuesta({
       instruccionSistema: `${instruccion}\n${INSTRUCCION_SIN_CANDIDATOS}`,
@@ -428,9 +431,9 @@ const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCor
 const SIN_REGISTRO = { consultaId: null, calificarToken: null };
 
 // La salida se verifica contra los trámites del contexto; los usados (el de "tramiteId" primero)
-// son a los que se refiere un costo.
-const verificadorPara = (tramites, idsUsados, alCorregir) =>
-  crearVerificador({ tramites, principales: idsUsados.map((id) => tramites.find((t) => t.id === id)), alCorregir });
+// son a los que se refiere un costo. `atribucion` trae el texto que vio el modelo de cada candidato.
+const verificadorPara = (tramites, idsUsados, alCorregir, atribucion) =>
+  crearVerificador({ tramites, principales: idsUsados.map((id) => tramites.find((t) => t.id === id)), atribucion, alCorregir });
 
 // Si la verificación sacó todo lo que respondía, sale un mensaje seguro con la fuente oficial: no
 // es una respuesta útil, así que no se cachea ni se registra. El log deja los trámites para revisarlos.
@@ -646,8 +649,9 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   traza.etapa("modelo");
+  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal);
   const salidaRaw = await ia.generarRespuesta({
-    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal),
+    instruccionSistema: instruccion,
     turnos: mensajes,
     esquema: ESQUEMA_SALIDA,
     signal,
@@ -655,7 +659,8 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
 
   const salida = JSON.parse(salidaRaw);
   const saludo = saludoPara(preguntaActual, salida.saludo);
-  const verificar = verificadorPara(tramites, idsUsadosDe(salida, idsResueltos), alCorregirSalida);
+  const atribucion = { contexto, fijo, pregunta: textoDeLaPersona(mensajes) };
+  const verificar = verificadorPara(tramites, idsUsadosDe(salida, idsResueltos), alCorregirSalida, atribucion);
   const cuerpoModelo = reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo, verificar }));
   // El mensaje fijo sale sin saludo, igual que cuando lo frena la regla de entrada.
   if (cuerpoModelo === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
@@ -800,8 +805,9 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
     mensajes.filter((m) => m.rol === "asistente").length >= 2;
 
   traza.etapa("modelo");
+  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal);
   const deltas = ia.generarRespuestaStream({
-    instruccionSistema: await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal),
+    instruccionSistema: instruccion,
     turnos: mensajes,
     signal,
   });
@@ -878,7 +884,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
         continue;
       }
 
-      verificar = verificadorPara(tramites, meta.idsUsados, alCorregirSalida);
+      verificar = verificadorPara(tramites, meta.idsUsados, alCorregirSalida, { contexto, fijo, pregunta: textoDeLaPersona(mensajes) });
       limpiador = crearLimpiador({ saludo, alCorregirTuteo, verificar });
       // El saludo de una conversación sale al final: si es el mensaje fijo, va sin saludo.
       const prefijo = componerSaludo(saludo, nombre);

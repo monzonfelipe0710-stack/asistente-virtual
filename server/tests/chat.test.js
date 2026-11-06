@@ -848,7 +848,8 @@ describe('chat', () => {
       pedazosStream = [meta({ tipo: 'respuesta', saludo: 'Hola', tramiteId: tramite.id }), ...texto.match(/.{1,3}/gs)];
       const { texto: stream } = await consumir(responderConsultaStream(turno('hola, cómo hago otra vez')));
       assert.equal(stream, respuesta);
-      assert.equal(respuesta, `¡Hola! Te cuento:\n\n- uno\n- dos\n\n${enlace()}`);
+      // Un ítem de lista con enlace se saca entero: sin el enlace, el ítem queda incompleto.
+      assert.equal(respuesta, `¡Hola! Te cuento:\n\n- dos\n\n${enlace()}`);
     });
   });
 
@@ -957,6 +958,55 @@ describe('chat', () => {
         assert.equal(r.stream, r.normal);
         assert.equal(r.cacheado, 'Para más información, consultá en la mesa de entrada.');
       });
+    });
+
+    it('un lugar que viene de otro candidato se reemplaza en las dos rutas si el trámite no tiene oficinas', async () => {
+      const sinOficinas = await prisma.tramite.create({
+        data: { nombre: `Nuevo Ejemplar ${SUFIJO}`, descripcion: 'Trámite personal para el nuevo ejemplar.', sectorId: sector.id, encargadoId: tramite.encargadoId },
+      });
+      const conOficinas = await prisma.tramite.create({
+        data: { nombre: `Pasaporte ${SUFIJO}`, descripcion: 'Se hace en el Centro de Documentación Rápida.', sectorId: sector.id, encargadoId: tramite.encargadoId },
+      });
+      try {
+        candidatos = [{ id: sinOficinas.id }, { id: conOficinas.id }];
+        const respuesta = 'El trámite es personal. Tenés que acercarte a un Centro de Documentación Rápida.';
+        const correcciones = [];
+        const alCorregirSalida = (c) => correcciones.push(c);
+        salidaModelo = salida({ tipo: 'respuesta', respuesta, tramiteId: sinOficinas.id });
+        const normal = await responderConsulta(turno('dónde hago el nuevo ejemplar'), null, { alCorregirSalida });
+        cache.limpiar();
+        pedazosStream = [meta({ tipo: 'respuesta', tramiteId: sinOficinas.id }), ...respuesta.match(/.{1,4}/gs)];
+        const { texto: stream } = await consumir(responderConsultaStream(turno('dónde hago el nuevo ejemplar'), null, { alCorregirSalida }));
+        const esperado = 'El trámite es personal. Las oficinas de este trámite no están cargadas.';
+        assert.equal(normal.respuesta, esperado);
+        assert.equal(stream, esperado);
+        assert.deepEqual(correcciones.map((c) => c.capa), ['atribucion', 'atribucion']);
+      } finally {
+        await prisma.tramite.deleteMany({ where: { id: { in: [sinOficinas.id, conOficinas.id] } } });
+      }
+    });
+
+    it('una lista de direcciones por provincia pierde los ítems con enlace; si no queda nada, mensaje seguro', async () => {
+      const lista =
+        'Para solicitar actas a otras provincias, ingresá a las siguientes direcciones según la provincia:\n' +
+        '- Buenos Aires: www.gba.gob.ar/registrodelaspersonas\n' +
+        '- Catamarca: portal.catamarca.gob.ar/organismos/registro\n' +
+        'La solicitud es estrictamente personal.';
+      const r = await enLasDosRutas('dónde pido actas de otras provincias', lista);
+      // El dominio suelto (oficial) no se saca del texto, así que su ítem queda.
+      assert.equal(r.normal, 'Para solicitar actas a otras provincias, ingresá a las siguientes direcciones según la provincia:\n- Catamarca: portal.catamarca.gob.ar/organismos/registro\nLa solicitud es estrictamente personal.');
+      assert.equal(r.stream, r.normal);
+
+      cache.limpiar();
+      const sinDominios = await enLasDosRutas('dónde pido actas a otras provincias', lista.replace('portal.catamarca', 'www.catamarca'));
+      assert.equal(sinDominios.normal, 'La solicitud es estrictamente personal.');
+      assert.equal(sinDominios.stream, sinDominios.normal);
+
+      const soloLista = 'Por ejemplo, para Buenos Aires es www.gba.gob.ar/registro, y para CABA es www.buenosaires.gob.ar/rc.\n- Chaco: www.chaco.gob.ar/dependencia/ver/248';
+      cache.limpiar();
+      const vacia = await enLasDosRutas('y para otras provincias', soloLista);
+      assert.equal(vacia.normal, MENSAJE_INFORMACION_OCULTA);
+      assert.equal(vacia.stream, MENSAJE_INFORMACION_OCULTA);
     });
 
     it('no toca un trámite que se hace con la contraseña de Mi Portal o se paga con tarjeta', async () => {

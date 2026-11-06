@@ -7,9 +7,14 @@
 //   2. enlaces: una oración con una URL que no es de la fuente oficial ni de un documento del
 //      contexto se saca entera (sacar solo la URL la dejaba rota);
 //   3. datos sensibles: se saca la oración que le pide a la persona la tarjeta, el código de
-//      seguridad, una contraseña, un PIN o los datos de home banking.
+//      seguridad, una contraseña, un PIN o los datos de home banking;
+//   4. atribución: una oración que nombra un lugar (oficina, centro, calle) que solo figura en otro
+//      candidato del contexto se saca, o se reemplaza si el trámite no tiene oficinas cargadas.
+// Además, como el servidor saca los enlaces del modelo (no los dominios sueltos), un ítem de lista
+// al que se le saca un enlace se saca entero y una oración que queda rota sin su enlace ("para
+// Buenos Aires es [url].") también.
 // Se aplica por línea, en la limpieza común de las dos rutas (ver utils/cuerpo.js).
-import { ENLACE_MARKDOWN, URL_SUELTA } from '../utils/enlaces.js';
+import { DOMINIO_SUELTO, ENLACE_MARKDOWN, URL_SUELTA, seQuitaDelTexto } from '../utils/enlaces.js';
 import { buscarInstruccion } from './sanitizacion.service.js';
 
 const normalizar = (texto) => texto.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
@@ -18,9 +23,6 @@ const normalizar = (texto) => texto.toLowerCase().normalize('NFD').replace(/\p{M
 
 const PREFIJO_DE_LISTA = /^(\s*(?:[-*•]|\d+[.)])\s+)/;
 const ABREVIATURAS = new Set(['av', 'avda', 'nro', 'n', 'hs', 'sr', 'sra', 'dr', 'dra', 'ing', 'lic', 'prof', 'etc', 'art', 'inc', 'pje', 'dto', 'tel', 'cel', 'aprox', 'ej', 'sa', 'srl', 'gral', 'pcia', 'bs', 'as']);
-// Un dominio sin "www" ni "http" ("pagos-formosa.example.org") también es un enlace: el modelo lo
-// copia así de la descripción. No cuenta el de un correo ("registrocivil@formosa.gob.ar").
-const DOMINIO_SUELTO = String.raw`(?<![@\w.\/-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|org|net|io|info|online|site|app|xyz|ar)(?:\/[^\s<>()\[\]]*[^\s<>()\[\].,;:!?])?(?![\w@-])`;
 const URL_EN_TEXTO = new RegExp(`${ENLACE_MARKDOWN}|${URL_SUELTA}|${DOMINIO_SUELTO}`, 'gi');
 const MARCA = '\u0001';
 
@@ -196,7 +198,94 @@ const tramiteDeLaOracion = (oracion, tramites) => {
   return mejor;
 };
 
-// --- Verificador -------------------------------------------------------------------------------
+// --- Atribución --------------------------------------------------------------------------------
+
+// Palabras con las que empieza el nombre de un lugar, de la provincia o de un municipio. Solo se
+// miran estos nombres (y una palabra seguida de un número, como una calle, o una sigla): con
+// cualquier frase con mayúscula, "Fotocopia del DNI" o "Documento Nacional de Identidad" dicho con
+// otras palabras que las del trámite se sacaban por figurar en otro candidato.
+export const NOMBRES_DE_LUGAR = new Set([
+  'centro', 'centros', 'oficina', 'oficinas', 'delegacion', 'delegaciones', 'sede', 'sedes', 'sucursal',
+  'sucursales', 'mesa', 'mesas', 'registro', 'direccion', 'subdireccion', 'departamento', 'division',
+  'seccion', 'area', 'coordinacion', 'jefatura', 'dependencia', 'ministerio', 'secretaria',
+  'subsecretaria', 'instituto', 'municipalidad', 'municipio', 'intendencia', 'concejo', 'juzgado',
+  'tribunal', 'hospital', 'comisaria', 'destacamento', 'unidad', 'agencia', 'banco', 'edificio', 'casa',
+  'complejo', 'terminal', 'mercado', 'cementerio', 'polideportivo', 'escuela', 'colegio', 'biblioteca',
+  'puesto', 'barrio', 'calle', 'avenida', 'av', 'pasaje', 'ruta', 'plaza', 'galeria', 'monoblock',
+]);
+const CONECTORES = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'para', 'en', 'a', 'al', 'por']);
+
+const comoFrase = (texto) => normalizar(texto).replace(/[^\p{L}\d]+/gu, ' ').trim();
+const contieneFrase = (pajar, frase) => ` ${pajar} `.includes(` ${frase} `);
+const esMayuscula = (palabra) => /^\p{Lu}/u.test(palabra);
+const esSigla = (palabra) => /^\p{Lu}{2,}$/u.test(palabra);
+const esLugar = (palabras, siguiente) =>
+  NOMBRES_DE_LUGAR.has(comoFrase(palabras[0])) || /^\d/.test(siguiente ?? '') || (palabras.length === 1 && esSigla(palabras[0]));
+
+// Nombres de lugar de una oración: palabras con mayúscula unidas por conectores ("Centro de
+// Documentación Rápida"). La primera palabra de la oración, o la que sigue a ":", no cuenta como
+// mayúscula salvo que sea una sigla: está en mayúscula por empezar.
+export const nombresDeLugar = (oracion) => {
+  const nombres = [];
+  for (const segmento of oracion.replace(/\*\*|__|[¡¿"“”«»()]/g, ' ').split(/[:;]/)) {
+    const palabras = [...segmento.matchAll(/[\p{L}\d][\p{L}\d'’-]*/gu)].map((m) => m[0]);
+    let actual = [];
+    let inicio = 0;
+    const cerrar = (siguiente) => {
+      while (actual.length && CONECTORES.has(actual.at(-1).toLowerCase())) actual.pop();
+      const conMayuscula = actual.filter(esMayuscula).length;
+      const valida = conMayuscula >= 2 || (conMayuscula === 1 && (inicio > 0 || esSigla(actual[0])) && actual[0].length >= 3);
+      if (valida && esLugar(actual, siguiente)) nombres.push(actual.join(' '));
+      actual = [];
+    };
+    palabras.forEach((p, i) => {
+      if (esMayuscula(p) && !(i === 0 && !esSigla(p))) {
+        if (!actual.length) inicio = i;
+        actual.push(p);
+      } else if (actual.length && CONECTORES.has(p)) actual.push(p);
+      else if (actual.length) cerrar(p);
+    });
+    if (actual.length) cerrar();
+  }
+  return nombres;
+};
+
+// `contexto`: id → texto del candidato tal como lo vio el modelo; `fijo`: las reglas y el resumen
+// del catálogo; `pregunta`: lo que escribió la persona. Un nombre de lugar es de otro trámite si no
+// figura en los elegidos, ni en la pregunta, ni en lo fijo, alguna de sus palabras tampoco ("Registro
+// Civil de Formosa" con el organismo "Registro Civil" no cuenta) y figura en un candidato no elegido.
+const crearAtribucion = ({ contexto, fijo = '', pregunta = '' }, principales) => {
+  const elegidos = new Set(principales.map((t) => t.id));
+  if (!contexto?.size || elegidos.size === 0) return () => null;
+  const otros = [...contexto].filter(([id]) => !elegidos.has(id)).map(([, texto]) => comoFrase(texto));
+  if (otros.length === 0) return () => null;
+  const permitido = comoFrase([fijo, pregunta, ...[...elegidos].map((id) => contexto.get(id) ?? '')].join('\n'));
+  const palabrasPermitidas = new Set(permitido.split(' '));
+  return (oracion) =>
+    nombresDeLugar(oracion).find((nombre) => {
+      const frase = comoFrase(nombre);
+      if (!frase || contieneFrase(permitido, frase)) return false;
+      if (frase.split(' ').every((p) => CONECTORES.has(p) || palabrasPermitidas.has(p))) return false;
+      return otros.some((texto) => contieneFrase(texto, frase));
+    }) ?? null;
+};
+
+export const SIN_OFICINAS = 'Las oficinas de este trámite no están cargadas.';
+
+// --- Enlaces que el servidor saca --------------------------------------------------------------
+
+// Palabras que piden lo que venía después: si ahí estaba el enlace, la oración queda rota
+// ("para Buenos Aires es [url]." → "para Buenos Aires es.").
+const PIDE_COMPLEMENTO = new Set([
+  'es', 'son', 'era', 'en', 'a', 'al', 'de', 'del', 'el', 'la', 'los', 'las', 'por', 'para', 'con', 'desde',
+  'ingresa', 'ingresar', 'ingresando', 'visita', 'visitar', 'entra', 'entrar', 'accede', 'acceder', 'mira',
+  'siguiente', 'siguientes', 'aqui', 'aca', 'enlace', 'link', 'direccion', 'direcciones',
+]);
+const quedaRota = ({ texto, urls }) =>
+  urls.filter(seQuitaDelTexto).some((url) => {
+    const antes = texto.slice(0, texto.indexOf(url)).replace(/[\s:]+$/, '');
+    return PIDE_COMPLEMENTO.has(normalizar(antes.match(/([\p{L}]+)$/u)?.[1] ?? ''));
+  });
 
 // --- Respuestas que quedaron sin contenido ---------------------------------------------------
 
@@ -230,17 +319,21 @@ export const sinContenidoPropio = (texto) =>
 // --- Verificador -------------------------------------------------------------------------------
 
 // `tramites`: todos los del contexto (con detalle); `principales`: los que usa la respuesta (el de
-// "tramiteId" primero), o vacío. `alCorregir` recibe { capa, original, corregida } (lo usan los
-// evals y los tests). Devuelve una función que verifica una línea; su `quitadas()` dice cuántas
-// oraciones sacó sin reemplazo (para saber si la respuesta pudo quedar sin contenido).
-export const crearVerificador = ({ tramites = [], principales = [], alCorregir } = {}) => {
+// "tramiteId" primero), o vacío. `atribucion`: { contexto, fijo, pregunta } para la capa 4 (sin
+// él no se aplica). `alCorregir` recibe { capa, original, corregida } (lo usan los evals y los
+// tests). Devuelve una función que verifica una línea; su `quitadas()` dice cuántas oraciones sacó
+// sin reemplazo (para saber si la respuesta pudo quedar sin contenido).
+export const crearVerificador = ({ tramites = [], principales = [], atribucion, alCorregir } = {}) => {
   const conDetalle = tramites.filter((t) => t && !t.sinResolver);
-  const referencia = principales.filter(Boolean).length > 0 ? principales.filter(Boolean) : conDetalle;
+  const elegidos = principales.filter(Boolean);
+  const referencia = elegidos.length > 0 ? elegidos : conDetalle;
   const hosts = hostsPermitidos(conDetalle);
   const montos = montosPermitidos(conDetalle);
+  const deOtroTramite = atribucion ? crearAtribucion(atribucion, elegidos) : () => null;
 
   const corregirOracion = (oracion) => {
     if (oracion.urls.some((u) => !hostPermitido(hostDe(urlDe(u)), hosts))) return { capa: 'enlace', texto: '' };
+    if (quedaRota(oracion)) return { capa: 'enlace', texto: '' };
     if (pideDatoSensible(oracion.texto)) return { capa: 'datos', texto: '' };
     const montosMalos = montosEn(oracion.texto).filter((n) => !montos.has(n));
     const gratuitoMalo = diceGratuito(oracion.texto) && !referencia.some(permiteGratuito);
@@ -248,13 +341,24 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
       return { capa: 'costo', texto: oracionDeCosto(tramiteDeLaOracion(oracion.texto, referencia)) };
     }
     if (montosMalos.length > 0 || gratuitoMalo) return { capa: 'costo', texto: '' };
+    if (deOtroTramite(oracion.texto)) {
+      const t = tramiteDeLaOracion(oracion.texto, elegidos);
+      return { capa: 'atribucion', texto: (t.mesas ?? []).length === 0 ? SIN_OFICINAS : '' };
+    }
     return null;
   };
 
   let quitadas = 0;
+  const reemplazos = new Set();
   const verificar = (linea) => {
     const prefijo = linea.match(PREFIJO_DE_LISTA)?.[1] ?? '';
     const oraciones = partirEnOraciones(linea.slice(prefijo.length));
+    // Un ítem de lista al que se le saca el enlace se saca entero: quedaría "Buenos Aires:" solo.
+    if (prefijo && oraciones.some((o) => o.urls.some(seQuitaDelTexto))) {
+      quitadas++;
+      alCorregir?.({ capa: 'enlace', original: linea.trim(), corregida: '' });
+      return '';
+    }
     let cambio = false;
     const salida = [];
     for (const o of oraciones) {
@@ -266,6 +370,10 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
       cambio = true;
       if (!correccion.texto) quitadas++;
       alCorregir?.({ capa: correccion.capa, original: o.texto.trim(), corregida: correccion.texto });
+      if (correccion.capa === 'atribucion' && correccion.texto) {
+        if (reemplazos.has(correccion.texto)) continue;
+        reemplazos.add(correccion.texto);
+      }
       if (correccion.texto && !salida.some((s) => s.trim() === correccion.texto)) salida.push(correccion.texto);
     }
     if (!cambio) return linea;

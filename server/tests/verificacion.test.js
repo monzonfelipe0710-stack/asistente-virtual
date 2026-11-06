@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { crearVerificador, diceGratuito, montosEn, partirEnOraciones, pideDatoSensible, quedoSinContenido, sinContenidoPropio } from '../src/services/verificacion.service.js';
+import { NOMBRES_DE_LUGAR, SIN_OFICINAS, crearVerificador, diceGratuito, montosEn, nombresDeLugar, partirEnOraciones, pideDatoSensible, quedoSinContenido, sinContenidoPropio } from '../src/services/verificacion.service.js';
 
 const tramite = (datos) => ({ id: 1, nombre: 'Permiso de Feria', costo: null, descripcion: 'Se presenta el DNI.', requisitos: [], documentos: [], fuenteUrl: 'https://www.formosa.gob.ar/tramite/1', ...datos });
 
@@ -125,10 +125,10 @@ describe('verificación de la salida', () => {
     it('acepta como oficiales los hosts gob.ar y gov.ar y sus subdominios, comparando el host', () => {
       const t = tramite({ fuenteUrl: 'https://tramites.example.invalid/1' });
       for (const ok of [
-        'Está en https://formosa.gob.ar/tramites/123.',
-        'Se tramita en http://www.atpformosa.gob.ar ingresando a ATP en línea.',
-        'Iniciá el trámite en http://www.migraciones.gov.ar/radex/index.html.',
-        'Mirá https://gob.ar para más.',
+        'Está en el portal https://formosa.gob.ar/tramites/123.',
+        'Se tramita en el portal http://www.atpformosa.gob.ar ingresando a ATP en línea.',
+        'Iniciá el trámite en el sitio http://www.migraciones.gov.ar/radex/index.html.',
+        'Mirá el portal https://gob.ar para más.',
       ]) {
         assert.deepEqual(verificar(ok, [t]).capas, [], ok);
       }
@@ -145,7 +145,84 @@ describe('verificación de la salida', () => {
 
     it('acepta la fuente oficial y los documentos con enlace del contexto', () => {
       const t = tramite({ documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] });
-      assert.deepEqual(verificar('Está en https://www.formosa.gob.ar/tramite/1 y el formulario en https://docs.formosa.gob.ar/f.pdf.', [t]).capas, []);
+      assert.deepEqual(verificar('Está en el sitio https://www.formosa.gob.ar/tramite/1 y el formulario, en el sitio https://docs.formosa.gob.ar/f.pdf.', [t]).capas, []);
+    });
+  });
+
+  describe('enlaces que el servidor saca', () => {
+    it('un ítem de lista al que se le saca el enlace se saca entero, aunque el enlace sea oficial', () => {
+      assert.deepEqual(verificar('- Buenos Aires: www.gba.gob.ar/registrodelaspersonas', [tramite()]), { texto: '', capas: ['enlace'] });
+      assert.deepEqual(verificar('- Ver [el portal](https://www.formosa.gob.ar/tramite/1)', [tramite()]), { texto: '', capas: ['enlace'] });
+      // Un dominio oficial suelto no se saca del texto: el ítem queda.
+      assert.deepEqual(verificar('- Catamarca: portal.catamarca.gob.ar/organismos/registro', [tramite()]).capas, []);
+      assert.deepEqual(verificar('- Llevá el DNI vigente.', [tramite()]), { texto: '- Llevá el DNI vigente.', capas: [] });
+    });
+
+    it('saca la oración que queda rota sin su enlace y deja la que no', () => {
+      assert.deepEqual(verificar('Accedé a la plataforma online en industria.formosa.gob.ar.', [tramite()]).capas, [], 'dominio suelto');
+      assert.deepEqual(
+        verificar('Se pide por la web de cada provincia. Por ejemplo, para Buenos Aires es www.gba.gob.ar/registro, y para CABA es www.buenosaires.gob.ar/registrocivil.', [tramite()]),
+        { texto: 'Se pide por la web de cada provincia.', capas: ['enlace'] },
+      );
+      assert.deepEqual(verificar('Ingresá a las siguientes direcciones: www.gba.gob.ar/registro.', [tramite()]).capas, ['enlace']);
+      assert.deepEqual(verificar('Podés consultarlo en la fuente oficial: https://www.formosa.gob.ar/tramite/1.', [tramite()]).capas, []);
+    });
+  });
+
+  describe('atribución', () => {
+    const cdr = 'CDR - Centro de Documentación Rápida - Oficina: Sarmiento 968';
+    const dni = tramite({ id: 90, nombre: 'Nuevo Ejemplar para Argentinos', descripcion: 'Trámite personal para obtener un nuevo ejemplar del DNI.', mesas: [] });
+    const pasaporte = tramite({ id: 143, nombre: 'Pasaporte', descripcion: 'Se tramita en el Centro de Documentación Rápida.', mesas: [{ mesa: { nombre: cdr } }] });
+    const contexto = new Map([
+      [90, '### Trámite (id 90): Nuevo Ejemplar para Argentinos\nOrganismo: Dirección del Registro Civil y Capacidad de las Personas\nDescripción: Trámite personal para obtener un nuevo ejemplar del DNI.\nMesas de entrada (oficinas): no cargadas para este trámite'],
+      [143, `### Trámite (id 143): Pasaporte\nOrganismo: Dirección del Registro Civil y Capacidad de las Personas\nDescripción: Se tramita en el Centro de Documentación Rápida.\nMesas de entrada:\n- ${cdr}`],
+    ]);
+    const conAtribucion = (linea, { principales = [dni], pregunta = 'dónde hago el nuevo ejemplar del DNI' } = {}) => {
+      const correcciones = [];
+      const v = crearVerificador({ tramites: [dni, pasaporte], principales, atribucion: { contexto, fijo: 'Sos el asistente.', pregunta }, alCorregir: (c) => correcciones.push(c) });
+      return { texto: v(linea), capas: correcciones.map((c) => c.capa), v };
+    };
+
+    it('un lugar que solo figura en otro candidato se reemplaza si el trámite no tiene oficinas, una sola vez', () => {
+      const { texto, capas } = conAtribucion('El trámite es personal. Tenés que acercarte a una oficina del Registro Civil o a un Centro de Documentación Rápida. También podés ir a la oficina de Sarmiento 968.');
+      assert.equal(texto, `El trámite es personal. ${SIN_OFICINAS}`);
+      assert.deepEqual(capas, ['atribucion', 'atribucion']);
+    });
+
+    it('si el trámite tiene oficinas, la oración se saca', () => {
+      const conMesas = { ...dni, mesas: [{ mesa: { nombre: 'Delegación Clorinda' } }] };
+      const correcciones = [];
+      const v = crearVerificador({ tramites: [conMesas, pasaporte], principales: [conMesas], atribucion: { contexto, fijo: '', pregunta: '' }, alCorregir: (c) => correcciones.push(c) });
+      assert.equal(v('Llevá el DNI. Andá al Centro de Documentación Rápida.'), 'Llevá el DNI.');
+      assert.equal(v.quitadas(), 1);
+    });
+
+    it('no toca lo que figura en el trámite elegido, en la pregunta o en lo fijo, ni el vocabulario común', () => {
+      for (const oracion of [
+        'Se hace en la Dirección del Registro Civil y Capacidad de las Personas.',
+        'Acercate a una oficina del Registro Civil de Formosa.',
+        'Fotocopia del DNI de los padres.',
+        'Documento Nacional de Identidad del titular.',
+        'Centro de Documentación Rápida.',
+      ]) {
+        assert.deepEqual(conAtribucion(oracion).capas, [], oracion);
+      }
+      assert.deepEqual(conAtribucion('Andá al Centro de Documentación Rápida.', { pregunta: '¿lo hago en el Centro de Documentación Rápida?' }).capas, []);
+      assert.deepEqual(conAtribucion('Andá al Centro de Documentación Rápida.', { principales: [dni, pasaporte] }).capas, []);
+    });
+
+    it('sin trámite elegido o sin el contexto no se aplica', () => {
+      assert.deepEqual(conAtribucion('Andá al Centro de Documentación Rápida.', { principales: [] }).capas, []);
+      assert.deepEqual(verificar('Andá al Centro de Documentación Rápida.', [dni, pasaporte], [dni]).capas, []);
+    });
+
+    it('los nombres de lugar incluyen los de los municipios y una calle con número o una sigla', () => {
+      for (const p of ['secretaria', 'municipalidad', 'direccion', 'departamento', 'hospital', 'comisaria', 'delegacion', 'centro', 'oficina']) {
+        assert.ok(NOMBRES_DE_LUGAR.has(p), p);
+      }
+      assert.deepEqual(nombresDeLugar('Andá a la Municipalidad de Clorinda o al Hospital Distrital.'), ['Municipalidad de Clorinda', 'Hospital Distrital']);
+      assert.deepEqual(nombresDeLugar('La oficina queda en Sarmiento 968 y la sede es el CDR.'), ['Sarmiento', 'CDR']);
+      assert.deepEqual(nombresDeLugar('Fotocopia del DNI de los padres. Requisitos: Partida de Nacimiento.'), ['DNI']);
     });
   });
 

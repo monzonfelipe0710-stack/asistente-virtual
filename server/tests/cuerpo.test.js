@@ -44,3 +44,23 @@ describe('limpiarCuerpo', () => {
     assert.equal(limpiador.cerrar(), '\nOtra');
   });
 });
+
+describe('encabezado de una lista', () => {
+  const sacaItemsConEnlace = (linea) => (/^\s*- .*www\./.test(linea) ? '' : linea);
+
+  it('se descarta si la verificación sacó todos sus ítems, en una pieza o en pedazos', () => {
+    const texto = 'Ingresá a las siguientes direcciones:\n- Buenos Aires: www.gba.gob.ar\n- CABA: www.buenosaires.gob.ar\n\nLa solicitud es personal.';
+    for (const largo of [texto.length, 3]) {
+      assert.equal(enPedazos(texto, largo, { verificar: sacaItemsConEnlace }), 'La solicitud es personal.');
+    }
+  });
+
+  it('queda si sobrevive algún ítem o si lo que sigue no es una lista', () => {
+    assert.equal(
+      limpiarCuerpo('Requisitos:\n- DNI vigente\n- Buenos Aires: www.gba.gob.ar', { verificar: sacaItemsConEnlace }),
+      'Requisitos:\n- DNI vigente',
+    );
+    assert.equal(limpiarCuerpo('Requisitos:\nEl DNI vigente.', { verificar: sacaItemsConEnlace }), 'Requisitos:\nEl DNI vigente.');
+    assert.equal(limpiarCuerpo('Te cuento:', { verificar: sacaItemsConEnlace }), 'Te cuento:');
+  });
+});
