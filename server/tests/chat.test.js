@@ -500,6 +500,30 @@ describe('chat', () => {
     }
   });
 
+  it('los candidatos después del primero van con la descripción y la información adicional más cortas', async () => {
+    const oracion = 'Esta es una oración de prueba que se repite para llegar al largo. ';
+    const largo = oracion.repeat(30);
+    const otro = await prisma.tramite.create({
+      data: { nombre: `Otro ${SUFIJO}`, descripcion: largo, informacionAdicional: largo, sectorId: sector.id, encargadoId: tramite.encargadoId },
+    });
+    try {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { descripcion: largo, informacionAdicional: largo } });
+      candidatos = [{ id: tramite.id }, { id: otro.id }];
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('qué necesito'));
+      const contexto = llamadasModelo[0].instruccionSistema.split('Contexto (trámites candidatos):')[1];
+      const [primero, segundo] = contexto.split(/^### /m).slice(1);
+      const largoDe = (seccion, campo) => seccion.match(new RegExp(`^${campo}: (.*?)…? \\((?:descripción )?resumida`, 'm'))[1].length;
+      assert.ok(largoDe(primero, 'Descripción') > TOPES_CONTEXTO.descripcionSecundario);
+      assert.ok(largoDe(primero, 'Información adicional') > TOPES_CONTEXTO.informacionAdicionalSecundario);
+      assert.ok(largoDe(segundo, 'Descripción') <= TOPES_CONTEXTO.descripcionSecundario);
+      assert.ok(largoDe(segundo, 'Información adicional') <= TOPES_CONTEXTO.informacionAdicionalSecundario);
+    } finally {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { descripcion: 'de prueba', informacionAdicional: null } });
+      await prisma.tramite.delete({ where: { id: otro.id } });
+    }
+  });
+
   describe('sin candidatos', () => {
     beforeEach(() => { candidatos = []; });
 

@@ -176,6 +176,7 @@ const entradaBloqueada = (mensajes) => {
 // Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
 export const TOPES_CONTEXTO = {
   descripcion: 1200, costoDetalle: 300, informacionAdicional: 500,
+  descripcionSecundario: 400, informacionAdicionalSecundario: 250,
   requisitos: 15, documentos: 3, nombreDocumento: 60, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 10,
 };
 
@@ -235,10 +236,12 @@ const localidadesDe = (mesas) => {
 
 // `organismo`: el sector con su jurisdicción y localidad efectivas (ver jurisdiccion.service.js).
 // `consulta`: lo que escribió la persona, para elegir las mesas de la localidad que nombró.
-const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
+const formatearTramite = (t, organismo, { consulta = "", secundario = false } = {}) => {
   const conFuente = esUrlHttp(t.fuenteUrl);
   const dondeSigue = conFuente ? "en la fuente oficial" : "en una mesa de entrada";
-  const descripcion = recortarEnOracion(t.descripcion, TOPES_CONTEXTO.descripcion);
+  const topeDescripcion = secundario ? TOPES_CONTEXTO.descripcionSecundario : TOPES_CONTEXTO.descripcion;
+  const topeInformacion = secundario ? TOPES_CONTEXTO.informacionAdicionalSecundario : TOPES_CONTEXTO.informacionAdicional;
+  const descripcion = recortarEnOracion(t.descripcion, topeDescripcion);
   // Cada trámite abre con su encabezado: los datos de abajo son solo de este trámite.
   const lineas = [
     `### Trámite (id ${t.id}): ${t.nombre}`,
@@ -248,7 +251,7 @@ const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
   ];
 
   if (t.informacionAdicional) {
-    const info = recortarEnOracion(t.informacionAdicional, TOPES_CONTEXTO.informacionAdicional);
+    const info = recortarEnOracion(t.informacionAdicional, topeInformacion);
     lineas.push(`Información adicional: ${info}${info === t.informacionAdicional ? "" : ` (resumida: hay más información ${dondeSigue})`}`);
   }
 
@@ -357,15 +360,15 @@ const describirOrganismo = ({ jurisdiccion, localidad }) => {
   return localidad ? `${nombre} (${localidad})` : nombre;
 };
 
-const formatearCandidato = (c, jurisdicciones, opciones) =>
-  c.sinResolver ? formatearGrupo(c) : formatearTramite(c, jurisdicciones.get(c.sectorId), opciones);
+const formatearCandidato = (c, i, jurisdicciones, opciones) =>
+  c.sinResolver ? formatearGrupo(c) : formatearTramite(c, jurisdicciones.get(c.sectorId), { ...opciones, secundario: i > 0 });
 
 // Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta.
 const armarInstruccion = async (prompt, topeAlcanzado, candidatos, opciones = {}) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
   const { texto: resumen } = await obtenerResumenCatalogo();
   const jurisdicciones = candidatos.length > 0 ? await obtenerJurisdicciones() : null;
-  const contexto = candidatos.length > 0 ? candidatos.map((c) => formatearCandidato(c, jurisdicciones, opciones)).join("\n\n") : "(ninguno)";
+  const contexto = candidatos.length > 0 ? candidatos.map((c, i) => formatearCandidato(c, i, jurisdicciones, opciones)).join("\n\n") : "(ninguno)";
   return `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}\n\nContexto (trámites candidatos):\n${contexto}`;
 };
 
