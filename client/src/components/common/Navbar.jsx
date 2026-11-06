@@ -91,7 +91,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
           <span className="nav-profile-avatar" aria-hidden="true">
             {(user.name || user.dni || user.email || "?").charAt(0).toUpperCase()}
           </span>
-          <span className="hidden sm:inline-block text-sm font-medium text-white/90 max-w-[5.5rem] truncate">
+          <span className="hidden sm:inline-block text-sm font-medium text-white/90 max-w-22 truncate">
             {firstName}
           </span>
           <svg
@@ -176,7 +176,7 @@ function ProfileMenu({ user, isStaff, userRole, logout }) {
 
       {loggingOut && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center animate-fade-in"
+          className="fixed inset-0 z-70 flex items-center justify-center animate-fade-in"
           style={{ backgroundColor: "var(--color-paper)" }}
           role="status"
           aria-label="Cerrando sesión"
@@ -435,7 +435,7 @@ export default function Navbar() {
       >
         <a
           href="#contenido"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-xl focus:bg-brand-deep focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:rounded-xl focus:bg-brand-deep focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
         >
           Saltar al contenido principal
         </a>

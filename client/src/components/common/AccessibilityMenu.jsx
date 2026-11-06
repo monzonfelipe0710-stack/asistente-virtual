@@ -43,7 +43,7 @@ function Switch({ checked, label, hint, onToggle }) {
       >
         <span
           className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all ${
-            checked ? "left-[1.125rem]" : "left-0.5"
+            checked ? "left-4.5" : "left-0.5"
           }`}
         />
       </span>
@@ -136,7 +136,7 @@ export default function AccessibilityMenu() {
       ref={panelRef}
       role="dialog"
       aria-label="Opciones de accesibilidad"
-      className="accessibility-menu-panel animate-scale-in fixed bottom-[9.25rem] right-3.5 z-[80] w-[19rem] max-w-[calc(100vw-2rem)] max-h-[calc(100dvh_-_10rem)] origin-bottom-right overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl sm:bottom-[5.25rem] sm:right-6 sm:max-h-[calc(100dvh_-_6rem)]"
+      className="accessibility-menu-panel animate-scale-in fixed bottom-37 right-3.5 z-80 w-76 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-10rem)] origin-bottom-right overflow-y-auto chat-scroll rounded-2xl border border-line bg-paper p-4 shadow-xl sm:bottom-21 sm:right-6 sm:max-h-[calc(100dvh-6rem)]"
     >
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">

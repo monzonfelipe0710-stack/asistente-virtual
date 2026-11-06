@@ -160,7 +160,7 @@ export default function ClickSpark({
     <>
       <canvas
         ref={canvasRef}
-        className="fixed inset-0 pointer-events-none z-[99999]"
+        className="fixed inset-0 pointer-events-none z-99999"
         aria-hidden="true"
       />
       {children}

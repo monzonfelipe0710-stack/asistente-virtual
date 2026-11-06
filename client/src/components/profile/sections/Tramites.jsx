@@ -20,12 +20,12 @@ function Timeline({ status }) {
           <li key={step} className="relative pb-6 last:pb-0">
             {i < STEPS.length - 1 && (
               <span
-                className={`absolute left-[5px] top-4 bottom-0 w-0.5 ${done || active ? "bg-brand-deep" : "bg-line"}`}
+                className={`absolute left-1.25 top-4 bottom-0 w-0.5 ${done || active ? "bg-brand-deep" : "bg-line"}`}
                 aria-hidden="true"
               />
             )}
             <span
-              className={`absolute left-0 top-1 w-[11px] h-[11px] rounded-full border-2 ${
+              className={`absolute left-0 top-1 w-2.75 h-2.75 rounded-full border-2 ${
                 active ? "bg-brand-deep border-brand-deep dot-ping" : done ? "bg-brand-deep border-brand-deep" : "bg-paper border-line"
               }`}
               aria-hidden="true"
@@ -53,7 +53,7 @@ function TramiteRow({ t, onClick }) {
           <p className="text-sm font-semibold text-ink m-0 truncate">{t.type}</p>
           <p className="text-[11px] font-mono text-faint m-0 mt-0.5">{t.id} · {formatDate(t.date)}</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <StatusPill status={t.status} />
           <span className="text-faint" aria-hidden="true">›</span>
         </div>

@@ -182,10 +182,10 @@ export default function MesaDeEntrada() {
                     <span className="font-mono text-xs font-bold text-brand-deep">{item.numero}</span>
                     <span className="rounded-full bg-mist px-2.5 py-1 text-xs font-semibold text-muted">{item.estado}</span>
                   </div>
-                  <h3 className="mt-2 mb-0 break-words text-base font-bold text-ink">{item.asunto}</h3>
+                  <h3 className="mt-2 mb-0 wrap-break-word text-base font-bold text-ink">{item.asunto}</h3>
                   <p className="mt-1 mb-0 text-sm text-muted">{item.remitente}{item.documento ? ` · ${item.documento}` : ""}</p>
                   {item.area && <p className="mt-1 mb-0 text-sm text-muted">Destino: {item.area}</p>}
-                  {item.observaciones && <p className="mt-2 mb-0 whitespace-pre-wrap break-words text-sm text-muted">{item.observaciones}</p>}
+                  {item.observaciones && <p className="mt-2 mb-0 whitespace-pre-wrap wrap-break-word text-sm text-muted">{item.observaciones}</p>}
                   <p className="mt-2 mb-0 text-xs text-muted">Creado: {new Date(item.creadoEn).toLocaleString("es-AR")}</p>
                 </div>
                 <label className="flex shrink-0 items-center gap-2 text-sm font-medium text-ink">

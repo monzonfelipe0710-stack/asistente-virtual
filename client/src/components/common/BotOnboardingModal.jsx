@@ -460,7 +460,7 @@ export default function BotOnboardingModal() {
 
       <div
         key={step}
-        className={`tour-card pointer-events-auto relative z-[60] my-auto flex w-full max-w-xl shrink-0 flex-col items-center gap-3 ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
+        className={`tour-card pointer-events-auto relative z-60 my-auto flex w-full max-w-xl shrink-0 flex-col items-center gap-3 ${isClosing ? "animate-scale-out" : "animate-scale-in"}`}
         style={wrapStyle}
         transition="all 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
       >

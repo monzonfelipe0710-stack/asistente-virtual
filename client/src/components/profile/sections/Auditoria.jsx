@@ -49,7 +49,7 @@ export default function Auditoria() {
             description="Las acciones administrativas (aprobaciones, cambios de permiso, configuraciones) se van a registrar acá."
           />
         ) : (
-          <ul className="divide-y divide-line max-h-[28rem] overflow-y-auto">
+          <ul className="divide-y divide-line max-h-112 overflow-y-auto">
             {events.map((e) => (
               <li key={e.id} className="flex items-start gap-3 px-5 py-3.5">
                 <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${TYPE_TONE[e.type] || TYPE_TONE.sistema}`}>
