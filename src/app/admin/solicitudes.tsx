@@ -23,8 +23,97 @@ import { useToast } from "@/components/ui/Toast";
 
 type Filtro = "todos" | "aceptados" | "rechazados";
 
-export default function Solicitudes() {
+function filtrarPorEstado(lista: TramiteApi[], filtro: Filtro) {
+  if (filtro === "todos") return lista;
+  if (filtro === "aceptados") return lista.filter((t) => t.publicado);
+  return lista.filter((t) => !t.publicado);
+}
+
+function filtrarPorBusqueda(lista: TramiteApi[], busqueda: string) {
+  const q = busqueda.trim().toLowerCase();
+  if (!q) return lista;
+  return lista.filter((t) => {
+    if (t.nombre.toLowerCase().includes(q)) return true;
+    if (t.sector.nombre.toLowerCase().includes(q)) return true;
+    if (t.encargado.nombre.toLowerCase().includes(q)) return true;
+    return false;
+  });
+}
+
+function ordenarPorActualizacion(lista: TramiteApi[]) {
+  const copia = [...lista];
+  copia.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  return copia;
+}
+
+function textoVacio(busqueda: string, filtro: Filtro) {
+  if (busqueda.trim()) return "No hay trámites que coincidan con la búsqueda.";
+  if (filtro === "aceptados") return "No hay trámites aceptados.";
+  if (filtro === "rechazados") return "No hay trámites rechazados.";
+  return "Todavía no hay trámites propuestos por los empleados.";
+}
+
+function BloqueError({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
   const C = useColors();
+  return (
+    <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
+      <Text style={[Type.meta, { color: C.danger }]}>{mensaje}</Text>
+      <Btn label="Reintentar" variant="secondary" size="md" onPress={onReintentar} />
+    </View>
+  );
+}
+
+function FilaSolicitud({
+  tramite,
+  trabajando,
+  onPress,
+  onRechazar,
+  onAceptar,
+}: {
+  tramite: TramiteApi;
+  trabajando: boolean;
+  onPress: () => void;
+  onRechazar: () => void;
+  onAceptar: () => void;
+}) {
+  const C = useColors();
+  const detalle = [tramite.sector.nombre, tramite.encargado.nombre, formatearCosto(tramite.costo)].join(" · ");
+
+  return (
+    <Row onPress={onPress} accessibilityLabel={`Ver ${tramite.nombre}`} style={{ paddingVertical: 14 }}>
+      <View style={styles.linea}>
+        <View style={styles.cuerpo}>
+          <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
+            {tramite.nombre}
+          </Text>
+          <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
+            {detalle}
+          </Text>
+          <View style={styles.etiquetas}>
+            <Badge
+              label={tramite.publicado ? "Aceptado" : "Rechazado"}
+              tone={tramite.publicado ? "ok" : "bad"}
+            />
+            <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(tramite.updatedAt)}</Text>
+          </View>
+          <View style={styles.etiquetas}>
+            <Btn
+              label="Rechazar"
+              variant="danger"
+              size="md"
+              onPress={onRechazar}
+              disabled={trabajando || !tramite.publicado}
+            />
+            <Btn label="Aceptar" size="md" onPress={onAceptar} disabled={trabajando || tramite.publicado} />
+          </View>
+        </View>
+        <Icon name="chevronRight" size={20} color={C.ink2} />
+      </View>
+    </Row>
+  );
+}
+
+export default function Solicitudes() {
   const push = useToast();
   const { tramites, cargando, error, recargar, cambiarPublicacion } = useTramites();
 
@@ -38,20 +127,22 @@ export default function Solicitudes() {
 
   const filtrados = useMemo(() => {
     let lista = tramites;
-    if (filtro !== "todos") lista = lista.filter((t) => (filtro === "aceptados" ? t.publicado : !t.publicado));
-    const q = busqueda.trim().toLowerCase();
-    if (q) {
-      lista = lista.filter(
-        (t) =>
-          t.nombre.toLowerCase().includes(q) ||
-          t.sector.nombre.toLowerCase().includes(q) ||
-          t.encargado.nombre.toLowerCase().includes(q)
-      );
-    }
-    return [...lista].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+    lista = filtrarPorEstado(lista, filtro);
+    lista = filtrarPorBusqueda(lista, busqueda);
+    return ordenarPorActualizacion(lista);
   }, [tramites, filtro, busqueda]);
 
   const { page, totalPages, paginatedItems, setPage } = usePagination(filtrados, 8);
+
+  function cambiarBusqueda(texto: string) {
+    setBusqueda(texto);
+    setPage(1);
+  }
+
+  function cambiarFiltro(nuevoFiltro: Filtro) {
+    setFiltro(nuevoFiltro);
+    setPage(1);
+  }
 
   async function revisar(t: { id: number }, aceptar: boolean) {
     setTrabajando(true);
@@ -66,13 +157,6 @@ export default function Solicitudes() {
     }
   }
 
-  function textoVacio() {
-    if (busqueda.trim()) return "No hay trámites que coincidan con la búsqueda.";
-    if (filtro === "aceptados") return "No hay trámites aceptados.";
-    if (filtro === "rechazados") return "No hay trámites rechazados.";
-    return "Todavía no hay trámites propuestos por los empleados.";
-  }
-
   return (
     <Screen>
       <PageHeader
@@ -80,19 +164,11 @@ export default function Solicitudes() {
         description="Revisá los trámites que proponen los empleados. Solo los aceptados aparecen en el chat."
       />
 
-      {!!error && (
-        <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
-          <Text style={[Type.meta, { color: C.danger }]}>{error}</Text>
-          <Btn label="Reintentar" variant="secondary" size="md" onPress={recargar} />
-        </View>
-      )}
+      {!!error && <BloqueError mensaje={error} onReintentar={recargar} />}
 
       <SearchInput
         value={busqueda}
-        onChangeText={(texto) => {
-          setBusqueda(texto);
-          setPage(1);
-        }}
+        onChangeText={cambiarBusqueda}
         placeholder="Buscar por nombre, sector o encargado…"
         autoCapitalize="none"
       />
@@ -105,10 +181,7 @@ export default function Solicitudes() {
             { id: "rechazados" as const, label: "Rechazados", count: tramites.length - aceptados },
           ]}
           value={filtro}
-          onChange={(f) => {
-            setFiltro(f);
-            setPage(1);
-          }}
+          onChange={cambiarFiltro}
         />
       </View>
 
@@ -117,46 +190,19 @@ export default function Solicitudes() {
 
         {!cargando &&
           paginatedItems.map((t: TramiteApi) => (
-            <Row
+            <FilaSolicitud
               key={t.id}
+              tramite={t}
+              trabajando={trabajando}
               onPress={() => setVerId(t.id)}
-              accessibilityLabel={`Ver ${t.nombre}`}
-              style={{ paddingVertical: 14 }}
-            >
-              <View style={styles.linea}>
-                <View style={styles.cuerpo}>
-                  <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
-                    {t.nombre}
-                  </Text>
-                  <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
-                    {[t.sector.nombre, t.encargado.nombre, formatearCosto(t.costo)].join(" · ")}
-                  </Text>
-                  <View style={styles.etiquetas}>
-                    <Badge label={t.publicado ? "Aceptado" : "Rechazado"} tone={t.publicado ? "ok" : "bad"} />
-                    <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(t.updatedAt)}</Text>
-                  </View>
-                  <View style={styles.etiquetas}>
-                    <Btn
-                      label="Rechazar"
-                      variant="danger"
-                      size="md"
-                      onPress={() => revisar(t, false)}
-                      disabled={trabajando || !t.publicado}
-                    />
-                    <Btn
-                      label="Aceptar"
-                      size="md"
-                      onPress={() => revisar(t, true)}
-                      disabled={trabajando || t.publicado}
-                    />
-                  </View>
-                </View>
-                <Icon name="chevronRight" size={20} color={C.ink2} />
-              </View>
-            </Row>
+              onRechazar={() => revisar(t, false)}
+              onAceptar={() => revisar(t, true)}
+            />
           ))}
 
-        {!cargando && !error && filtrados.length === 0 && <EmptyState title="Sin trámites" detalle={textoVacio()} />}
+        {!cargando && !error && filtrados.length === 0 && (
+          <EmptyState title="Sin trámites" detalle={textoVacio(busqueda, filtro)} />
+        )}
 
         {!cargando && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />}
       </View>

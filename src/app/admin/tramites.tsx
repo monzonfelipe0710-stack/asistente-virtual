@@ -27,6 +27,121 @@ import { useToast } from "@/components/ui/Toast";
 
 type Filtro = "todos" | "aceptados" | "sinAceptar";
 
+function filtrarPorEstado(lista: TramiteApi[], filtro: Filtro) {
+  if (filtro === "todos") return lista;
+  if (filtro === "aceptados") return lista.filter((t) => t.publicado);
+  return lista.filter((t) => !t.publicado);
+}
+
+function filtrarPorBusqueda(lista: TramiteApi[], busqueda: string) {
+  const q = busqueda.trim().toLowerCase();
+  if (!q) return lista;
+  return lista.filter((t) => {
+    if (t.nombre.toLowerCase().includes(q)) return true;
+    if (t.sector.nombre.toLowerCase().includes(q)) return true;
+    if (t.encargado.nombre.toLowerCase().includes(q)) return true;
+    return false;
+  });
+}
+
+function ordenarPorActualizacion(lista: TramiteApi[]) {
+  const copia = [...lista];
+  copia.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+  return copia;
+}
+
+async function subirArchivos(tramiteId: number, archivos: ArchivoAdjunto[]) {
+  const fallidos: string[] = [];
+  for (const archivo of archivos) {
+    try {
+      await subirDocumento(tramiteId, archivo);
+    } catch {
+      fallidos.push(archivo.name);
+    }
+  }
+  return fallidos;
+}
+
+function armarMensajeGuardado(accion: string, archivos: ArchivoAdjunto[], fallidos: string[]) {
+  if (fallidos.length > 0) {
+    return `${accion}, pero no se pudieron subir: ${fallidos.join(", ")}`;
+  }
+  if (archivos.length > 0) {
+    const palabra = archivos.length === 1 ? "archivo" : "archivos";
+    return `${accion} con ${archivos.length} ${palabra}`;
+  }
+  return accion;
+}
+
+function textoVacio(busqueda: string, filtro: Filtro) {
+  if (busqueda.trim()) return "No hay trámites que coincidan con la búsqueda.";
+  if (filtro === "aceptados") return "No hay trámites aceptados.";
+  if (filtro === "sinAceptar") return "No hay trámites sin aceptar.";
+  return "Todavía no creaste trámites. Empezá con “Registrar ingreso”.";
+}
+
+function armarDetalleDeFila(tramite: TramiteApi, soloMios: boolean) {
+  const candidatos = [
+    tramite.sector.nombre,
+    soloMios ? null : tramite.encargado.nombre,
+    formatearCosto(tramite.costo),
+  ];
+  const partes: string[] = [];
+  for (const candidato of candidatos) {
+    if (candidato) partes.push(candidato);
+  }
+  return partes.join(" · ");
+}
+
+function BloqueError({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
+  const C = useColors();
+  return (
+    <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
+      <Text style={[Type.meta, { color: C.danger }]}>{mensaje}</Text>
+      <Btn label="Reintentar" variant="secondary" size="md" onPress={onReintentar} />
+    </View>
+  );
+}
+
+function FilaTramite({
+  tramite,
+  soloMios,
+  onPress,
+}: {
+  tramite: TramiteApi;
+  soloMios: boolean;
+  onPress: () => void;
+}) {
+  const C = useColors();
+  return (
+    <Row onPress={onPress} accessibilityLabel={`Ver ${tramite.nombre}`} style={{ paddingVertical: 14 }}>
+      <View style={styles.linea}>
+        <View style={styles.cuerpo}>
+          <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
+            {tramite.nombre}
+          </Text>
+          {!!tramite.descripcion && (
+            <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
+              {tramite.descripcion}
+            </Text>
+          )}
+          <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
+            {armarDetalleDeFila(tramite, soloMios)}
+          </Text>
+          <View style={styles.etiquetas}>
+            <Badge
+              label={tramite.publicado ? "Aceptado" : "Sin aceptar"}
+              tone={tramite.publicado ? "ok" : "muted"}
+            />
+            <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(tramite.updatedAt)}</Text>
+          </View>
+        </View>
+        <Icon name="chevronRight" size={20} color={C.ink2} />
+      </View>
+    </Row>
+  );
+}
+
 export default function Tramites() {
   const C = useColors();
   const push = useToast();
@@ -56,18 +171,12 @@ export default function Tramites() {
 
   const filtrados = useMemo(() => {
     let lista = tramites;
-    if (soloMios && user) lista = lista.filter((t) => String(t.encargado.id) === user.id);
-    if (filtro !== "todos") lista = lista.filter((t) => (filtro === "aceptados" ? t.publicado : !t.publicado));
-    const q = busqueda.trim().toLowerCase();
-    if (q) {
-      lista = lista.filter(
-        (t) =>
-          t.nombre.toLowerCase().includes(q) ||
-          t.sector.nombre.toLowerCase().includes(q) ||
-          t.encargado.nombre.toLowerCase().includes(q)
-      );
+    if (soloMios && user) {
+      lista = lista.filter((t) => String(t.encargado.id) === user.id);
     }
-    return [...lista].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+    lista = filtrarPorEstado(lista, filtro);
+    lista = filtrarPorBusqueda(lista, busqueda);
+    return ordenarPorActualizacion(lista);
   }, [tramites, soloMios, filtro, busqueda, user]);
 
   const { page, totalPages, paginatedItems, setPage } = usePagination(filtrados, 8);
@@ -76,9 +185,29 @@ export default function Tramites() {
   const puedeGestionarVisto =
     !esSuperusuario && !!tramiteVisto && sectores.some((s) => s.id === tramiteVisto.sectorId);
 
+  function cambiarBusqueda(texto: string) {
+    setBusqueda(texto);
+    setPage(1);
+  }
+
+  function cambiarFiltro(nuevoFiltro: Filtro) {
+    setFiltro(nuevoFiltro);
+    setPage(1);
+  }
+
+  function alternarSoloMios() {
+    setSoloMios((v) => !v);
+    setPage(1);
+  }
+
   function abrirNuevo() {
     setEditando(null);
     setFormAbierto(true);
+  }
+
+  function cerrarFormulario() {
+    setFormAbierto(false);
+    setEditando(null);
   }
 
   async function guardar(datos: TramiteDatos, archivos: ArchivoAdjunto[]) {
@@ -90,25 +219,11 @@ export default function Tramites() {
       tramiteId = (await registrar(datos)).id;
     }
 
-    const fallidos: string[] = [];
-    for (const archivo of archivos) {
-      try {
-        await subirDocumento(tramiteId, archivo);
-      } catch {
-        fallidos.push(archivo.name);
-      }
-    }
+    const fallidos = await subirArchivos(tramiteId, archivos);
 
     const accion = editando ? "Trámite actualizado" : "Trámite creado";
-    push(
-      fallidos.length
-        ? `${accion}, pero no se pudieron subir: ${fallidos.join(", ")}`
-        : archivos.length
-          ? `${accion} con ${archivos.length} ${archivos.length === 1 ? "archivo" : "archivos"}`
-          : accion
-    );
-    setFormAbierto(false);
-    setEditando(null);
+    push(armarMensajeGuardado(accion, archivos, fallidos));
+    cerrarFormulario();
     setVersionDetalle((v) => v + 1);
   }
 
@@ -128,13 +243,6 @@ export default function Tramites() {
     }
   }
 
-  function textoVacio() {
-    if (busqueda.trim()) return "No hay trámites que coincidan con la búsqueda.";
-    if (filtro !== "todos")
-      return `No hay trámites ${filtro === "aceptados" ? "aceptados" : "sin aceptar"}.`;
-    return "Todavía no creaste trámites. Empezá con “Registrar ingreso”.";
-  }
-
   return (
     <Screen>
       <PageHeader
@@ -144,19 +252,11 @@ export default function Tramites() {
         {puedeRegistrar && <Btn label="Registrar ingreso" icon="plus" onPress={abrirNuevo} disabled={cargando} />}
       </PageHeader>
 
-      {!!error && (
-        <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
-          <Text style={[Type.meta, { color: C.danger }]}>{error}</Text>
-          <Btn label="Reintentar" variant="secondary" size="md" onPress={recargar} />
-        </View>
-      )}
+      {!!error && <BloqueError mensaje={error} onReintentar={recargar} />}
 
       <SearchInput
         value={busqueda}
-        onChangeText={(texto) => {
-          setBusqueda(texto);
-          setPage(1);
-        }}
+        onChangeText={cambiarBusqueda}
         placeholder="Buscar por nombre, sector o encargado…"
         autoCapitalize="none"
       />
@@ -169,10 +269,7 @@ export default function Tramites() {
             { id: "sinAceptar" as const, label: "Sin aceptar", count: tramites.length - aceptados },
           ]}
           value={filtro}
-          onChange={(f) => {
-            setFiltro(f);
-            setPage(1);
-          }}
+          onChange={cambiarFiltro}
         />
       </View>
 
@@ -180,10 +277,7 @@ export default function Tramites() {
         <Text style={[Type.meta, { color: C.ink2, flex: 1 }]}>{filtrados.length} trámites</Text>
         {!esSuperusuario && (
           <Pressable
-            onPress={() => {
-              setSoloMios((v) => !v);
-              setPage(1);
-            }}
+            onPress={alternarSoloMios}
             accessibilityRole="switch"
             accessibilityState={{ checked: soloMios }}
             style={styles.soloMios}
@@ -199,38 +293,12 @@ export default function Tramites() {
 
         {!cargando &&
           paginatedItems.map((t: TramiteApi) => (
-            <Row
-              key={t.id}
-              onPress={() => setVerId(t.id)}
-              accessibilityLabel={`Ver ${t.nombre}`}
-              style={{ paddingVertical: 14 }}
-            >
-              <View style={styles.linea}>
-                <View style={styles.cuerpo}>
-                  <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
-                    {t.nombre}
-                  </Text>
-                  {!!t.descripcion && (
-                    <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
-                      {t.descripcion}
-                    </Text>
-                  )}
-                  <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
-                    {[t.sector.nombre, !soloMios ? t.encargado.nombre : null, formatearCosto(t.costo)]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </Text>
-                  <View style={styles.etiquetas}>
-                    <Badge label={t.publicado ? "Aceptado" : "Sin aceptar"} tone={t.publicado ? "ok" : "muted"} />
-                    <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(t.updatedAt)}</Text>
-                  </View>
-                </View>
-                <Icon name="chevronRight" size={20} color={C.ink2} />
-              </View>
-            </Row>
+            <FilaTramite key={t.id} tramite={t} soloMios={soloMios} onPress={() => setVerId(t.id)} />
           ))}
 
-        {!cargando && !error && filtrados.length === 0 && <EmptyState title="Sin trámites" detalle={textoVacio()} />}
+        {!cargando && !error && filtrados.length === 0 && (
+          <EmptyState title="Sin trámites" detalle={textoVacio(busqueda, filtro)} />
+        )}
 
         {!cargando && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />}
       </View>
@@ -254,10 +322,7 @@ export default function Tramites() {
         <TramiteFormModal
           tramite={editando}
           sectores={sectores}
-          onClose={() => {
-            setFormAbierto(false);
-            setEditando(null);
-          }}
+          onClose={cerrarFormulario}
           onSave={guardar}
         />
       )}

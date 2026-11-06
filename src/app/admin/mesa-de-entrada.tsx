@@ -21,6 +21,82 @@ import { SkeletonList } from "@/components/ui/SkeletonList";
 import { Text } from "@/components/ui/Text";
 import { useToast } from "@/components/ui/Toast";
 
+function filtrarMesas(mesas: MesaApi[], busqueda: string) {
+  const q = busqueda.trim().toLowerCase();
+  if (!q) return mesas;
+  return mesas.filter((m) => {
+    if (m.nombre.toLowerCase().includes(q)) return true;
+    if ((m.direccion ?? "").toLowerCase().includes(q)) return true;
+    if ((m.localidad ?? "").toLowerCase().includes(q)) return true;
+    return false;
+  });
+}
+
+function unirConSeparador(valores: (string | null | undefined)[]) {
+  const presentes: string[] = [];
+  for (const valor of valores) {
+    if (valor) presentes.push(valor);
+  }
+  return presentes.join(" · ");
+}
+
+function textoRecortadoOValorVacio(texto: string, valorVacio: "" | undefined) {
+  const recortado = texto.trim();
+  if (recortado) return recortado;
+  return valorVacio;
+}
+
+function textoVacio(busqueda: string) {
+  if (busqueda.trim()) return "No hay mesas que coincidan con la búsqueda.";
+  return "Todavía no hay mesas de entrada creadas.";
+}
+
+function BloqueError({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
+  const C = useColors();
+  return (
+    <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
+      <Text style={[Type.meta, { color: C.danger }]}>{mensaje}</Text>
+      <Btn label="Reintentar" variant="secondary" size="md" onPress={onReintentar} />
+    </View>
+  );
+}
+
+function FilaMesa({
+  mesa,
+  trabajando,
+  onEditar,
+  onEliminar,
+}: {
+  mesa: MesaApi;
+  trabajando: boolean;
+  onEditar: () => void;
+  onEliminar: () => void;
+}) {
+  const C = useColors();
+  const textoDireccion = unirConSeparador([mesa.direccion, mesa.localidad]) || "Sin dirección";
+  const textoSector = unirConSeparador([mesa.esGeneral ? "General" : mesa.sector?.nombre, mesa.horario]);
+
+  return (
+    <Row style={{ paddingVertical: 14 }}>
+      <View style={styles.cuerpo}>
+        <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
+          {mesa.nombre}
+        </Text>
+        <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
+          {textoDireccion}
+        </Text>
+        <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
+          {textoSector}
+        </Text>
+        <View style={styles.acciones}>
+          <Btn label="Editar" variant="secondary" size="md" onPress={onEditar} disabled={trabajando} />
+          <Btn label="Eliminar" variant="danger" size="md" onPress={onEliminar} disabled={trabajando} />
+        </View>
+      </View>
+    </Row>
+  );
+}
+
 export default function MesaDeEntrada() {
   const C = useColors();
   const push = useToast();
@@ -41,14 +117,7 @@ export default function MesaDeEntrada() {
   const [trabajando, setTrabajando] = useState(false);
 
   const filtradas = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    if (!q) return mesas;
-    return mesas.filter(
-      (m) =>
-        m.nombre.toLowerCase().includes(q) ||
-        (m.direccion ?? "").toLowerCase().includes(q) ||
-        (m.localidad ?? "").toLowerCase().includes(q)
-    );
+    return filtrarMesas(mesas, busqueda);
   }, [mesas, busqueda]);
 
   const { page, totalPages, paginatedItems, setPage } = usePagination(filtradas, 8);
@@ -64,6 +133,11 @@ export default function MesaDeEntrada() {
       activo = false;
     };
   }, []);
+
+  function cambiarBusqueda(texto: string) {
+    setBusqueda(texto);
+    setPage(1);
+  }
 
   function abrirNueva() {
     setEditando(null);
@@ -89,6 +163,18 @@ export default function MesaDeEntrada() {
     setFormAbierto(true);
   }
 
+  function armarDatosMesa(sector: SectorApi | undefined) {
+    const valorVacio = editando ? "" : undefined;
+    return {
+      nombre: nombre.trim(),
+      direccion: textoRecortadoOValorVacio(direccion, valorVacio),
+      localidad: textoRecortadoOValorVacio(localidad, valorVacio),
+      horario: textoRecortadoOValorVacio(horario, valorVacio),
+      esGeneral,
+      sectorId: esGeneral ? null : sector?.id,
+    };
+  }
+
   async function guardar() {
     if (!nombre.trim()) {
       setErrorForm("El nombre de la mesa es obligatorio.");
@@ -99,15 +185,7 @@ export default function MesaDeEntrada() {
       setErrorForm("Elegí un sector o marcá la mesa como general.");
       return;
     }
-    const vacio = editando ? "" : undefined;
-    const datos = {
-      nombre: nombre.trim(),
-      direccion: direccion.trim() || vacio,
-      localidad: localidad.trim() || vacio,
-      horario: horario.trim() || vacio,
-      esGeneral,
-      sectorId: esGeneral ? null : sector?.id,
-    };
+    const datos = armarDatosMesa(sector);
     setTrabajando(true);
     try {
       if (editando) await actualizar(editando.id, datos);
@@ -142,19 +220,11 @@ export default function MesaDeEntrada() {
         <Btn label="Crear mesa" icon="plus" onPress={abrirNueva} disabled={cargando} />
       </PageHeader>
 
-      {!!error && (
-        <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
-          <Text style={[Type.meta, { color: C.danger }]}>{error}</Text>
-          <Btn label="Reintentar" variant="secondary" size="md" onPress={recargar} />
-        </View>
-      )}
+      {!!error && <BloqueError mensaje={error} onReintentar={recargar} />}
 
       <SearchInput
         value={busqueda}
-        onChangeText={(texto) => {
-          setBusqueda(texto);
-          setPage(1);
-        }}
+        onChangeText={cambiarBusqueda}
         placeholder="Buscar por nombre, dirección o localidad…"
         autoCapitalize="none"
       />
@@ -164,30 +234,17 @@ export default function MesaDeEntrada() {
 
         {!cargando &&
           paginatedItems.map((m) => (
-            <Row key={m.id} style={{ paddingVertical: 14 }}>
-              <View style={styles.cuerpo}>
-                <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
-                  {m.nombre}
-                </Text>
-                <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
-                  {[m.direccion, m.localidad].filter(Boolean).join(" · ") || "Sin dirección"}
-                </Text>
-                <Text style={[Type.meta, { color: C.ink2 }]} numberOfLines={1}>
-                  {[m.esGeneral ? "General" : m.sector?.nombre, m.horario].filter(Boolean).join(" · ")}
-                </Text>
-                <View style={styles.acciones}>
-                  <Btn label="Editar" variant="secondary" size="md" onPress={() => abrirEdicion(m)} disabled={trabajando} />
-                  <Btn label="Eliminar" variant="danger" size="md" onPress={() => setBorrando(m)} disabled={trabajando} />
-                </View>
-              </View>
-            </Row>
+            <FilaMesa
+              key={m.id}
+              mesa={m}
+              trabajando={trabajando}
+              onEditar={() => abrirEdicion(m)}
+              onEliminar={() => setBorrando(m)}
+            />
           ))}
 
         {!cargando && !error && filtradas.length === 0 && (
-          <EmptyState
-            title="Sin mesas"
-            detalle={busqueda.trim() ? "No hay mesas que coincidan con la búsqueda." : "Todavía no hay mesas de entrada creadas."}
-          />
+          <EmptyState title="Sin mesas" detalle={textoVacio(busqueda)} />
         )}
 
         {!cargando && <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />}
