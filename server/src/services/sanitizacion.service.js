@@ -11,7 +11,7 @@ export const TOPES_CAMPOS = {
   localidad: 120,
   documento: 200,
   informacionAdicional: 10000,
-  costoDetalle: 1000,
+  costoDetalle: 4000,
   telefono: 100,
   email: 200,
 };

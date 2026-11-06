@@ -194,6 +194,22 @@ describe('importarCatalogo con la ficha del portal', () => {
     });
   });
 
+  it('una corrida cortada antes de reindexar se retoma: la siguiente reindexa lo que cambió', async () => {
+    const nueva = detalle({ requisitos: '1- Requisito nuevo. 2- Otro nuevo.' });
+    const cortada = importarCatalogo(catalogo([tramite(2, { detalle: nueva })]), {
+      reindexar: async () => { throw new Error('se cortó la conexión'); }, log: silencioso, publicar: false,
+    });
+    await assert.rejects(cortada, /se cortó la conexión/);
+    const t = await leer(2);
+    assert.deepEqual(t.requisitos.map((q) => q.descripcion), ['Requisito nuevo.', 'Otro nuevo.']);
+    const [{ falta }] = await prisma.$queryRaw`SELECT embedding IS NULL AS falta FROM tramites WHERE id = ${t.id}`;
+    assert.equal(falta, true, 'el vector viejo no queda como si estuviera al día');
+
+    const retomada = await importar([tramite(2, { detalle: nueva })]);
+    assert.equal(retomada.sinCambios, 1);
+    assert.deepEqual(retomada.reindexados, [t.id]);
+  });
+
   it('--dry-run informa sin escribir', async () => {
     const antes = await prisma.mesaEntrada.count({ where: { origenId: { startsWith: SUFIJO } } });
     const r = await importar([tramite(5, { detalle: detalle({ oficinas: [oficina(9)] }) })], { simular: true });

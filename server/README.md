@@ -170,6 +170,10 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
   encargado es Sistema **o** si tiene huella: reasignarle el encargado desde el panel no frena
   el enriquecimiento. Uno sin huella y con otro encargado no se toca aunque tenga la misma
   `fuenteUrl`: queda en **Manuales**.
+- **Reanudable.** Cada trámite se escribe en una transacción (con sus requisitos, mesas y
+  documentos), y si cambió algo del texto del embedding el vector viejo se borra en la misma
+  transacción: si la corrida se corta, se vuelve a correr la misma y retoma lo que falta, incluido
+  el reindexado. Mientras tanto, la búsqueda por palabras lo sigue encontrando.
 - **Embeddings en lotes** de 100 (`--lote n`) con 3 reintentos por lote. Si un lote los agota,
   se prueba de a un trámite y los que fallan quedan como fallidos. Se reindexan los trámites
   nuevos, los que cambiaron, los de un sector que cambió (y sus descendientes) y los que vinieron

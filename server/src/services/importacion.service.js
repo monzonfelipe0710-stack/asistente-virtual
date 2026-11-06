@@ -246,8 +246,12 @@ const camposDeMesa = (m) => ({
 
 // Un trámite se escribe entero o no se escribe: una corrida cortada se retoma sin dejarlo a medias.
 // Los documentos que se reemplazan son solo enlaces (los archivos subidos no se tocan).
-const escribirTramite = (id, data, { requisitos, mesaIds, documentos }) => prisma.$transaction(async (tx) => {
+// Si cambió algo del texto del embedding, el vector viejo se borra en la misma transacción: una
+// corrida que se corta antes de reindexar deja el trámite con embedding null y la siguiente lo
+// reindexa (mientras tanto, la búsqueda por palabras lo sigue encontrando).
+const escribirTramite = (id, data, { requisitos, mesaIds, documentos }, { invalidarEmbedding = false } = {}) => prisma.$transaction(async (tx) => {
   if (Object.keys(data).length > 0) await tx.tramite.update({ where: { id }, data });
+  if (invalidarEmbedding) await tx.$executeRaw`UPDATE tramites SET embedding = NULL WHERE id = ${id}`;
   if (requisitos) {
     await tx.requisito.deleteMany({ where: { tramiteId: id } });
     if (requisitos.length > 0) await tx.requisito.createMany({ data: requisitos.map((r) => ({ ...r, tramiteId: id })) });
@@ -491,10 +495,11 @@ export const importarCatalogo = async (crudos, {
         return;
       }
       if (sospechas.length > 0) data.publicado = false;
-      if (!simular) await escribirTramite(existente.id, { ...data, ...extra }, listas);
+      const delEmbedding = gruposCambiados.some((g) => g === 'nombre' || DEL_EMBEDDING.has(g));
+      if (!simular) await escribirTramite(existente.id, { ...data, ...extra }, listas, { invalidarEmbedding: delEmbedding });
       informe.actualizados.push({ id: existente.id, nombre: t.nombre, grupos: gruposCambiados });
       revisar(existente.id, 'actualizado sin publicar');
-      if (gruposCambiados.some((g) => g === 'nombre' || DEL_EMBEDDING.has(g)) || sinEmbedding.has(existente.id)) aIndexar.add(existente.id);
+      if (delEmbedding || sinEmbedding.has(existente.id)) aIndexar.add(existente.id);
       return;
     }
 

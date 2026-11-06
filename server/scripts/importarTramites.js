@@ -1,6 +1,9 @@
 // Importa el catálogo. Formato del JSON y opciones: README, sección "Importar el catálogo".
 //
-//   node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa --despublicar-faltantes]
+//   node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa [--despublicar-faltantes]]
+//
+// Es idempotente y reanudable: si una corrida se corta, se vuelve a correr la misma. Con --completa
+// despublica los trámites que el sitio ya no lista (ver el README).
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import prisma from '../src/config/prisma.js';
