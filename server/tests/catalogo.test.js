@@ -82,8 +82,20 @@ describe('resumen del catálogo (base)', () => {
   after(() => prisma.$disconnect());
 
   it('cuenta los trámites publicados y los reparte por jurisdicción', async () => {
-    const r = await obtenerResumenCatalogo();
-    assert.equal(r.totalPublicados, await prisma.tramite.count({ where: { publicado: true } }));
+    // Otros archivos de test crean y borran trámites publicados en paralelo: solo se compara si
+    // la cuenta no cambió mientras se armaba el resumen.
+    const contar = () => prisma.tramite.count({ where: { publicado: true } });
+    let r, antes, despues;
+    for (let intento = 0; intento < 10; intento++) {
+      cache.limpiar();
+      antes = await contar();
+      r = await obtenerResumenCatalogo();
+      despues = await contar();
+      if (antes === despues) break;
+      await new Promise((resolver) => setTimeout(resolver, 300));
+    }
+    assert.equal(antes, despues, 'el catálogo cambió en cada intento');
+    assert.equal(r.totalPublicados, antes);
     assert.equal(Object.values(r.porJurisdiccion).reduce((a, b) => a + b, 0), r.totalPublicados);
     assert.match(r.texto, new RegExp(`Trámites publicados: ${r.totalPublicados}[ .]`));
   });
