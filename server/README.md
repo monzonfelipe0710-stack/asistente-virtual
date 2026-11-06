@@ -97,6 +97,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
 | `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
+| `npm run base:temporal [-- --sintetico] [-- --recrear]` | Arma la base temporal de Docker (`chatap-temporal`, `localhost:55432`): crea el contenedor si no está, migra e importa el catálogo real (y el sintético con `--sintetico`). Ver [La base temporal](#la-base-temporal) |
 
 ### Importar el catálogo
 
@@ -850,9 +851,29 @@ más de uno, la aclaración por jurisdicción o localidad con una opción por pa
 
 `--catalogo sintetico` corre solo los casos de trámites repetidos en distintos municipios (y los que
 dependen del catálogo) y se niega a correr si `DATABASE_URL` no es el Postgres temporal de Docker
-(`localhost:55432`). Para armarlo: `docker run -d --rm --name chatap-temporal -e POSTGRES_PASSWORD=... -p 55432:5432 pgvector/pgvector:pg17`,
-`npx prisma migrate deploy`, el import del catálogo real y el de
-`scripts/generar-catalogo-sintetico.js`, todo con `DATABASE_URL` apuntando a esa base.
+(`localhost:55432`); hay que armarla con `npm run base:temporal -- --sintetico`.
+
+`node scripts/eval-seguridad.js` corre los ataques y las preguntas legítimas (grupos A, B y C)
+contra la base del `.env`. `--grupo D` (trámites envenenados) y `--grupo E` (el conjunto de control,
+con otras redacciones) crean trámites publicados con órdenes para el asistente en la descripción,
+así que se niegan a correr si `DATABASE_URL` no es la base temporal, y borran lo que crean.
+
+### La base temporal
+
+Las pruebas con datos sintéticos van en un Postgres de Docker aparte, nunca en la base real. El
+contenedor se crea con `--rm`, así que se pierde al reiniciar la PC o al detenerlo. Para
+volver a armarlo (con Docker Desktop abierto):
+
+```bash
+npm run base:temporal                  # crea chatap-temporal si no está, migra e importa el catálogo real
+npm run base:temporal -- --sintetico   # además el catálogo sintético de 8 municipios
+npm run base:temporal -- --recrear     # lo borra y lo arma de cero
+```
+
+El script nunca toca la base del `.env`: corre todo con
+`DATABASE_URL=postgresql://postgres:temporal@localhost:55432/postgres` y al final imprime esa URL
+para usarla en los evals. Se puede correr las veces que haga falta: si el contenedor ya está, solo
+migra lo pendiente y el import no cambia nada. Importar genera los embeddings (llama a OpenAI).
 
 ## Notas de diseño
 
