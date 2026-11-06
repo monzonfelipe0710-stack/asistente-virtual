@@ -31,6 +31,49 @@ const crearIdMensajeBot = () => `bot-${Date.now()}-${Math.random().toString(36).
 const crearIdConversacion = () => `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const THREADS_PREFIX = "chatap.threads.";
 const TRAMITES_CACHE_KEY = "chatap.tramites-publicados.v1";
+const MODERATION_PREFIX = "chatap.moderation.";
+
+function normalizarMensajeModeracion(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function mensajeModerado(texto) {
+  const normalized = normalizarMensajeModeracion(texto);
+  if (!normalized) return true;
+
+  const insultos = [
+    "idiota", "imbecil", "estupido", "mierda", "pelotudo", "boludo",
+    "pendejo", "tarado", "malparido", "hdp", "concha", "puta",
+  ];
+  if (insultos.some((word) => normalized.split(/\s+/).includes(word))) return true;
+  if (/odio\s+(?:a\s+)?(?:los\s+)?(?:negros|judios|musulmanes|mujeres|hombres)/.test(normalized)) return true;
+  if (/^(pene|postre|xd|xddd|lol|jaja|jajaja|jajajaja|asdf|prueba|test)$/i.test(normalized)) return true;
+  if (/^(quiero\s+(?:hacer|comer|preparar)\s+(?:una\s+)?(?:comida|postre))\b/.test(normalized)) return true;
+  if (/^[a-z]{1,3}$/.test(normalized) && normalized !== "si" && normalized !== "no") return true;
+  return /^(.)\1{5,}$/u.test(normalized.replace(/\s/g, ""));
+}
+
+function cargarModeracion(ownerId) {
+  try {
+    return JSON.parse(window.localStorage.getItem(MODERATION_PREFIX + (ownerId || "anonimo")) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function guardarModeracion(ownerId, state) {
+  try {
+    window.localStorage.setItem(MODERATION_PREFIX + (ownerId || "anonimo"), JSON.stringify(state));
+  } catch {
+    // La moderación local puede degradarse sin impedir el uso del chat.
+  }
+}
 
 function cargarCacheTramitesPublicados() {
   if (typeof window === "undefined") return [];
@@ -851,6 +894,33 @@ export default function ChatWindow({ initialQuery = null }) {
     const t = (text ?? "").trim();
     if (!t || requestInFlightRef.current || speakingRef.current) return;
 
+    const moderationOwner = isAuthenticated && user?.id ? String(user.id) : "anonimo";
+    const moderation = cargarModeracion(moderationOwner);
+    if (moderation.blockedUntil && moderation.blockedUntil > Date.now()) {
+      const seconds = Math.ceil((moderation.blockedUntil - Date.now()) / 1000);
+      const warning = `No podés enviar mensajes por ${seconds} segundos. Usá ChatAP con consultas claras y respetuosas sobre trámites.`;
+      setAnnounce(warning);
+      presentBotMessage(warning, null, { error: true });
+      return;
+    }
+
+    if (mensajeModerado(t)) {
+      const violations = Number(moderation.violations || 0) + 1;
+      const nextState = {
+        violations,
+        blockedUntil: violations >= 3
+          ? Date.now() + (violations >= 6 ? 120000 : 30000)
+          : 0,
+      };
+      guardarModeracion(moderationOwner, nextState);
+      const warning = nextState.blockedUntil
+        ? "Detectamos varios mensajes irrespetuosos o sin relación con trámites. ChatAP estará bloqueado temporalmente."
+        : "Ese mensaje no parece una consulta relacionada con trámites. Reformulá tu pregunta para continuar.";
+      setAnnounce(warning);
+      presentBotMessage(warning, null, { error: true });
+      return;
+    }
+
     // También protegemos el envío directo (por ejemplo, desde una búsqueda inicial):
     // un hilo nuevo no puede empezar si ya existen cuatro conversaciones.
     const activeThreadSaved = savedThreads.some((thread) => thread.id === activeThreadId) ||
@@ -899,6 +969,27 @@ export default function ChatWindow({ initialQuery = null }) {
     if (image) wizardRef.current = null;
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
+    const quiereTramite = /^(?:hola\s+)?(?:quiero\s+(?:hacer|iniciar|realizar|consultar|buscar)\s+(?:un\s+|una\s+)?tr[aá]mite)/i.test(t);
+    if (quiereTramite && tramitesPublicados.length) {
+      const opciones = tramitesPublicados.slice(0, 8).map((tramite) => ({
+        label: tramite.nombre,
+        value: tramite.nombre,
+      }));
+      opciones.push({
+        label: "No está relacionado / quiero escribir otra consulta",
+        value: "__custom_consulta__",
+      });
+      presentBotMessage(
+        "Elegí el trámite que necesitás. Si no aparece en la lista, podés escribir tu consulta.",
+        [{
+          type: "chips",
+          title: "Trámites disponibles:",
+          options: opciones,
+        }],
+        { consultaId: null, calificarToken: null, canRate: false }
+      );
+      return;
+    }
     respondTo(t, image, userMessageId, immediateConsultaId);
   }
 
@@ -1066,6 +1157,12 @@ export default function ChatWindow({ initialQuery = null }) {
 
   function handleFollowUp(payload) {
     if (!payload) return;
+    if (payload === "__custom_consulta__") {
+      setInput("");
+      setAnnounce("Escribí tu consulta en el campo de mensaje.");
+      window.setTimeout(() => document.getElementById("chat-here")?.focus(), 0);
+      return;
+    }
     if (typeof payload === "string") {
       sendText(payload);
       return;
