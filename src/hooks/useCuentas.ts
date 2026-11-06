@@ -2,7 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import { usuarioDesdeApi, type AuthUser } from "@/lib/auth";
-import { cambiarEstadoDeUsuario, crearEmpleado, pedirUsuarios, type EmpleadoDatos } from "@/lib/backend";
+import {
+  cambiarEstadoDeUsuario,
+  crearEmpleado,
+  mensajeDeError,
+  pedirUsuarios,
+  type EmpleadoDatos,
+} from "@/lib/backend";
 
 export type AccionDeCuenta = "aprobar" | "rechazar" | "suspender" | "reactivar";
 
@@ -25,7 +31,7 @@ export function useCuentas() {
         setError("");
       })
       .catch((e) => {
-        if (activo) setError(e instanceof Error ? e.message : "No se pudieron cargar los usuarios.");
+        if (activo) setError(mensajeDeError(e, "No se pudieron cargar los usuarios."));
       })
       .finally(() => {
         if (activo) setCargando(false);
@@ -54,10 +60,15 @@ export function useCuentas() {
     [recargar]
   );
 
-  const cuentas = useMemo(
-    () => usuarios.filter((u) => u.status === "Activo" || u.status === "Suspendido"),
-    [usuarios]
-  );
+  const cuentas = useMemo(() => {
+    const filtradas: AuthUser[] = [];
+    for (const usuario of usuarios) {
+      if (usuario.status === "Activo" || usuario.status === "Suspendido") {
+        filtradas.push(usuario);
+      }
+    }
+    return filtradas;
+  }, [usuarios]);
 
   return { usuarios, cuentas, cargando, error, recargar, cambiarEstado, crear };
 }

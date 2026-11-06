@@ -4,6 +4,7 @@ import {
   actualizarMesa,
   crearMesa,
   eliminarMesa,
+  mensajeDeError,
   pedirMesas,
   type MesaApi,
   type MesaDatos,
@@ -24,7 +25,7 @@ export function useMesas() {
         setError("");
       })
       .catch((e) => {
-        if (activo) setError(e instanceof Error ? e.message : "No se pudieron cargar las mesas.");
+        if (activo) setError(mensajeDeError(e, "No se pudieron cargar las mesas."));
       })
       .finally(() => {
         if (activo) setCargando(false);

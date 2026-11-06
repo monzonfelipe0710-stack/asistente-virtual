@@ -26,38 +26,91 @@ export function alVencerSesion(callback: (() => void) | null) {
   alExpirarSesion = callback;
 }
 
+interface OpcionesDePedido {
+  metodo?: string;
+  cuerpo?: unknown;
+  senal?: AbortSignal;
+}
+
+export function mensajeDeError(error: unknown, mensajePorDefecto: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return mensajePorDefecto;
+}
+
+function armarEncabezados(cuerpo: unknown): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const esArchivo = cuerpo instanceof FormData;
+  if (cuerpo !== undefined && !esArchivo) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+function armarCuerpo(cuerpo: unknown): FormData | string | undefined {
+  if (cuerpo === undefined) {
+    return undefined;
+  }
+  if (cuerpo instanceof FormData) {
+    return cuerpo;
+  }
+  return JSON.stringify(cuerpo);
+}
+
+async function enviarPedido(
+  ruta: string,
+  metodo: string,
+  headers: Record<string, string>,
+  cuerpo: unknown,
+  senalInterna: AbortSignal
+): Promise<Response> {
+  try {
+    return await fetch(`${API_URL}${ruta}`, {
+      method: metodo,
+      headers,
+      body: armarCuerpo(cuerpo),
+      signal: senalInterna,
+    });
+  } catch {
+    throw new Error("No se pudo conectar con el servidor. Probá de nuevo en un momento.");
+  }
+}
+
+async function leerRespuesta<T>(res: Response, conSesion: boolean): Promise<T> {
+  let datos: { error?: string } | null = null;
+  try {
+    datos = await res.json();
+  } catch {
+    datos = null;
+  }
+  if (res.status === 401 && conSesion) alExpirarSesion?.();
+  if (!res.ok) throw new Error(datos?.error ?? "El servidor no pudo completar la operación.");
+  return datos as T;
+}
+
 async function pedir<T>(
   ruta: string,
-  { metodo = "GET", cuerpo, senal }: { metodo?: string; cuerpo?: unknown; senal?: AbortSignal } = {}
+  { metodo = "GET", cuerpo, senal }: OpcionesDePedido = {}
 ): Promise<T> {
   const controlador = new AbortController();
   senal?.addEventListener("abort", () => controlador.abort());
   const temporizador = setTimeout(() => controlador.abort(), TIMEOUT_MS);
   const conSesion = token !== null;
 
-  const headers: Record<string, string> = {};
-  const esArchivo = cuerpo instanceof FormData;
-  if (cuerpo !== undefined && !esArchivo) headers["Content-Type"] = "application/json";
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const headers = armarEncabezados(cuerpo);
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${ruta}`, {
-      method: metodo,
-      headers,
-      body: cuerpo === undefined ? undefined : esArchivo ? cuerpo : JSON.stringify(cuerpo),
-      signal: controlador.signal,
-    });
-  } catch {
-    throw new Error("No se pudo conectar con el servidor. Probá de nuevo en un momento.");
+    res = await enviarPedido(ruta, metodo, headers, cuerpo, controlador.signal);
   } finally {
     clearTimeout(temporizador);
   }
 
-  const datos = await res.json().catch(() => null);
-  if (res.status === 401 && conSesion) alExpirarSesion?.();
-  if (!res.ok) throw new Error(datos?.error ?? "El servidor no pudo completar la operación.");
-  return datos as T;
+  return leerRespuesta<T>(res, conSesion);
 }
 
 export interface MensajeChat {
@@ -259,7 +312,11 @@ export function pedirMisConsultas() {
 }
 
 export function pedirConsultasPorTramite(soloPropias = false) {
-  return pedir<ConsultasPorTramiteApi[]>(`/metricas/por-tramite${soloPropias ? "?alcance=propias" : ""}`);
+  let ruta = "/metricas/por-tramite";
+  if (soloPropias) {
+    ruta += "?alcance=propias";
+  }
+  return pedir<ConsultasPorTramiteApi[]>(ruta);
 }
 
 export function pedirConsultasSinRespuesta() {
@@ -296,9 +353,11 @@ export function actualizarTramite(id: number, datos: TramiteDatos) {
 }
 
 export function cambiarPublicacionDeTramite(id: number, publicar: boolean) {
-  return pedir<{ mensaje: string }>(`/tramites/${id}/${publicar ? "publicar" : "despublicar"}`, {
-    metodo: "PATCH",
-  });
+  let accion = "despublicar";
+  if (publicar) {
+    accion = "publicar";
+  }
+  return pedir<{ mensaje: string }>(`/tramites/${id}/${accion}`, { metodo: "PATCH" });
 }
 
 export function eliminarTramite(id: number) {
@@ -317,14 +376,19 @@ export function pedirDocumentos(tramiteId: number) {
   return pedir<DocumentoApi[]>(`/tramites/${tramiteId}/documentos`);
 }
 
-export async function subirDocumento(tramiteId: number, archivo: ArchivoElegido, nombre?: string) {
-  const formulario = new FormData();
+async function agregarArchivo(formulario: FormData, archivo: ArchivoElegido) {
   if (Platform.OS === "web") {
-    const contenido = await fetch(archivo.uri).then((r) => r.blob());
+    const respuesta = await fetch(archivo.uri);
+    const contenido = await respuesta.blob();
     formulario.append("archivo", contenido, archivo.name);
   } else {
     formulario.append("archivo", { uri: archivo.uri, name: archivo.name, type: archivo.mimeType } as unknown as Blob);
   }
+}
+
+export async function subirDocumento(tramiteId: number, archivo: ArchivoElegido, nombre?: string) {
+  const formulario = new FormData();
+  await agregarArchivo(formulario, archivo);
   if (nombre) formulario.append("nombre", nombre);
   return pedir<DocumentoApi>(`/tramites/${tramiteId}/documentos`, { metodo: "POST", cuerpo: formulario });
 }

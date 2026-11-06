@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import {
+  mensajeDeError,
   pedirConsultasPorTramite,
   pedirConsultasSinRespuesta,
   type ConsultaSinRespuestaApi,
@@ -27,7 +28,7 @@ export function useMetricas() {
         setError("");
       })
       .catch((e) => {
-        if (activo) setError(e instanceof Error ? e.message : "No se pudieron cargar las métricas.");
+        if (activo) setError(mensajeDeError(e, "No se pudieron cargar las métricas."));
       })
       .finally(() => {
         if (activo) setCargando(false);

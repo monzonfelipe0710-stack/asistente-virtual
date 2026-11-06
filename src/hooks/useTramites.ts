@@ -6,6 +6,7 @@ import {
   cambiarPublicacionDeTramite,
   crearTramite,
   eliminarTramite,
+  mensajeDeError,
   pedirMisSectores,
   pedirSectores,
   pedirTramites,
@@ -28,7 +29,14 @@ export function useTramites() {
   useEffect(() => {
     let activo = true;
     setCargando(true);
-    Promise.all([pedirTramites(), esSuperusuario ? pedirSectores() : pedirMisSectores()])
+    const pedidoTramites = pedirTramites();
+    let pedidoSectores: Promise<SectorApi[]>;
+    if (esSuperusuario) {
+      pedidoSectores = pedirSectores();
+    } else {
+      pedidoSectores = pedirMisSectores();
+    }
+    Promise.all([pedidoTramites, pedidoSectores])
       .then(([listaTramites, listaSectores]) => {
         if (!activo) return;
         setTramites(listaTramites);
@@ -36,7 +44,7 @@ export function useTramites() {
         setError("");
       })
       .catch((e) => {
-        if (activo) setError(e instanceof Error ? e.message : "No se pudieron cargar los trámites.");
+        if (activo) setError(mensajeDeError(e, "No se pudieron cargar los trámites."));
       })
       .finally(() => {
         if (activo) setCargando(false);

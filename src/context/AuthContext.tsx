@@ -66,9 +66,11 @@ async function register(input: RegisterInput): Promise<string> {
 }
 
 async function requestPasswordReset(email: string): Promise<void> {
-  if (!isValidEmail(normalizeEmail(email)))
+  const correo = normalizeEmail(email);
+  if (!isValidEmail(correo)) {
     throw new Error("Ingresá un correo electrónico válido.");
-  await solicitarRecuperacion(normalizeEmail(email));
+  }
+  await solicitarRecuperacion(correo);
 }
 
 async function validateResetToken(token: string): Promise<{ ok: boolean }> {
@@ -111,30 +113,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  async function login(email: string, password: string): Promise<AuthUser> {
-    const correo = normalizeEmail(email);
-    if (!isValidEmail(correo)) throw new Error("Ingresá un correo electrónico válido.");
-    if (!password) throw new Error("Ingresá tu contraseña.");
-    const { token, usuario } = await iniciarSesion(correo, password);
+  async function guardarSesion(token: string, usuario: UsuarioApi): Promise<AuthUser> {
     const autenticado = usuarioDesdeApi(usuario);
     fijarToken(token);
     setUser(autenticado);
     await writeJSON(CLAVE_SESION, { token, usuario } satisfies SesionGuardada);
     return autenticado;
+  }
+
+  async function login(email: string, password: string): Promise<AuthUser> {
+    const correo = normalizeEmail(email);
+    if (!isValidEmail(correo)) throw new Error("Ingresá un correo electrónico válido.");
+    if (!password) throw new Error("Ingresá tu contraseña.");
+    const { token, usuario } = await iniciarSesion(correo, password);
+    return guardarSesion(token, usuario);
   }
 
   async function changePassword(currentPassword: string, newPassword: string): Promise<AuthUser> {
     if (!currentPassword) throw new Error("Ingresá tu contraseña actual.");
     assertValidPassword(newPassword);
     const { token, usuario } = await cambiarPasswordApi(currentPassword, newPassword);
-    const autenticado = usuarioDesdeApi(usuario);
-    fijarToken(token);
-    setUser(autenticado);
-    await writeJSON(CLAVE_SESION, { token, usuario } satisfies SesionGuardada);
-    return autenticado;
+    return guardarSesion(token, usuario);
   }
 
   const userRole = user?.role ?? null;
+  const isStaff = userRole === "Administración" || userRole === "Empleado";
 
   return (
     <AuthContext.Provider
@@ -142,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         userRole,
         loading,
-        isStaff: userRole === "Administración" || userRole === "Empleado",
+        isStaff,
         login,
         register,
         logout,

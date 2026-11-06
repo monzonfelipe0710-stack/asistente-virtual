@@ -1,23 +1,47 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/data/mockMessages";
-import { consultarChat, type MensajeChat } from "@/lib/backend";
+import { consultarChat, mensajeDeError, type MensajeChat } from "@/lib/backend";
 
 const MAX_MENSAJES = 20;
 const MAX_TEXTO = 2000;
 
+function convertirMensajes(mensajes: ChatMessage[]): MensajeChat[] {
+  const historial: MensajeChat[] = [];
+  for (const mensaje of mensajes) {
+    if (mensaje.text.trim().length === 0) {
+      continue;
+    }
+    let rol: MensajeChat["rol"] = "asistente";
+    if (mensaje.type === "user") {
+      rol = "usuario";
+    }
+    historial.push({ rol, texto: mensaje.text.slice(0, MAX_TEXTO) });
+  }
+  return historial;
+}
+
 function armarHistorial(mensajes: ChatMessage[], pregunta: string): MensajeChat[] {
-  const historial: MensajeChat[] = mensajes
-    .filter((m) => m.text.trim().length > 0)
-    .map((m) => ({
-      rol: m.type === "user" ? "usuario" : "asistente",
-      texto: m.text.slice(0, MAX_TEXTO),
-    }));
+  const historial = convertirMensajes(mensajes);
   const ultimo = historial[historial.length - 1];
   const texto = pregunta.slice(0, MAX_TEXTO);
-  if (ultimo?.rol !== "usuario" || ultimo.texto !== texto) {
+  const preguntaYaEsta = ultimo !== undefined && ultimo.rol === "usuario" && ultimo.texto === texto;
+  if (!preguntaYaEsta) {
     historial.push({ rol: "usuario", texto });
   }
   return historial.slice(-MAX_MENSAJES);
+}
+
+function armarTextoDeRespuesta(respuesta: string, opciones: { nombre: string }[]): string {
+  const lista = opciones.map((o) => `- ${o.nombre}`).join("\n");
+  if (lista) {
+    return `${respuesta}\n\n${lista}`;
+  }
+  return respuesta;
+}
+
+function calcularSiguienteId(mensajes: ChatMessage[]): number {
+  const ids = mensajes.map((m) => m.id);
+  return Math.max(0, ...ids) + 1;
 }
 
 /** Mensajes de la conversación, cómo enviar uno, reintentar el que falló y detener la espera. */
@@ -28,7 +52,7 @@ export function useChat(
   const [messages, setMessages] = useState<ChatMessage[]>(inicial);
   const [isTyping, setIsTyping] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
-  const siguienteId = useRef(Math.max(0, ...inicial.map((m) => m.id)) + 1);
+  const siguienteId = useRef(calcularSiguienteId(inicial));
   const mensajesIniciales = useRef(messages);
   const mensajesActuales = useRef(messages);
   const ultimaConsulta = useRef("");
@@ -64,12 +88,11 @@ export function useChat(
           pedido.signal
         );
         if (!pedido.signal.aborted) {
-          const lista = opciones.map((o) => `- ${o.nombre}`).join("\n");
-          agregar("bot", lista ? `${respuesta}\n\n${lista}` : respuesta);
+          agregar("bot", armarTextoDeRespuesta(respuesta, opciones));
         }
       } catch (error) {
         if (!pedido.signal.aborted) {
-          setFallo(error instanceof Error ? error.message : "No se pudo obtener la respuesta.");
+          setFallo(mensajeDeError(error, "No se pudo obtener la respuesta."));
         }
       } finally {
         if (pedidoActual.current === pedido) {
