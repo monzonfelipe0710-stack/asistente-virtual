@@ -516,13 +516,13 @@ export default function HomePage() {
                 <span className="assistant-showcase__label-tag">Experiencia interactiva</span>
               </div>
               {enhancementsReady ? (
-              <Suspense fallback={<div className="assistant-showcase__mockup min-h-[420px]" aria-hidden="true" />}>
+              <Suspense fallback={<div className="assistant-showcase__mockup min-h-105" aria-hidden="true" />}>
                 <div className="assistant-showcase__mockup">
                   <InteractiveChatMockup />
                 </div>
               </Suspense>
               ) : (
-                <div className="assistant-showcase__mockup min-h-[420px]" aria-hidden="true" />
+                <div className="assistant-showcase__mockup min-h-105" aria-hidden="true" />
               )}
             </div>
 

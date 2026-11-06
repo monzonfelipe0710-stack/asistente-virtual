@@ -158,7 +158,7 @@ export default function AdminLayout() {
         </header>
 
         <main ref={mainRef} id="admin-main" tabIndex={-1} aria-label="Panel de administración" className="admin-layout-main flex-1 min-h-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-9 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1440px]"><Outlet /></div>
+          <div className="mx-auto w-full max-w-360"><Outlet /></div>
         </main>
       </div>
     </div>

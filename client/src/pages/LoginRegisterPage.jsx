@@ -177,14 +177,14 @@ export default function LoginRegisterPage() {
   }
 
   return (
-    <div className="min-h-[100svh] flex flex-col bg-paper font-sans">
+    <div className="min-h-svh flex flex-col bg-paper font-sans">
       {/* Grilla Principal:
           - Izquierda: Decoración editorial previa + Fotografía de Montañas
           - Derecha: Formulario de acceso (login / solicitud de cuenta)
       */}
       <div className="flex-1 grid grid-cols-1 items-start lg:grid-cols-2">
         {/* 1. Columna Izquierda: Decoración Editorial Previa + Fotografía de Montañas */}
-        <div className="relative hidden lg:sticky lg:top-0 lg:flex lg:h-[100svh] lg:self-start min-h-0 flex-col justify-between overflow-hidden border-r border-line bg-mist/50 dark:bg-slate-900/40 p-10 xl:p-12 select-none">
+        <div className="relative hidden lg:sticky lg:top-0 lg:flex lg:h-svh lg:self-start min-h-0 flex-col justify-between overflow-hidden border-r border-line bg-mist/50 dark:bg-slate-900/40 p-10 xl:p-12 select-none">
           {/* Cabecera institucional */}
           <div className="relative z-10 flex items-start justify-between">
             <span className="inline-flex items-center gap-3">
@@ -213,13 +213,13 @@ export default function LoginRegisterPage() {
 
           {/* Marco escénico con la fotografía de paisaje montañoso */}
           <div className="relative z-10 w-full overflow-hidden rounded-2xl border border-line bg-card shadow-lg group">
-            <div className="aspect-[21/10] w-full overflow-hidden relative">
+            <div className="aspect-21/10 w-full overflow-hidden relative">
               <img
                 src="/assets/auth-landscape.jpg"
                 alt="Paisaje montañoso en niebla - Gobierno de Formosa"
                 className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-xs text-white">
                 <span className="font-semibold tracking-wide flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -235,7 +235,7 @@ export default function LoginRegisterPage() {
         <main
           id="contenido"
           aria-label="Inicio de sesión o registro"
-          className="flex flex-col px-6 sm:px-12 xl:px-20 py-6 lg:min-h-[100svh] lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100"
+          className="flex flex-col px-6 sm:px-12 xl:px-20 py-6 lg:min-h-svh lg:py-5 bg-paper dark:bg-[#09090b] text-ink dark:text-slate-100"
         >
           {/* Barra superior con navegación de retorno y toggle de modo */}
           <div className="flex items-center justify-between w-full max-w-md mx-auto shrink-0">
