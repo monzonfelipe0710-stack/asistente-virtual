@@ -61,7 +61,7 @@ export function Field({ label, value, mono = false }) {
   return (
     <div className="min-w-0">
       <dt className="text-[10px] uppercase tracking-widest text-faint m-0">{label}</dt>
-      <dd className={`text-ink font-medium mt-0.5 break-words m-0 ${mono ? "font-mono text-[13px]" : "text-sm"}`}>
+      <dd className={`text-ink font-medium mt-0.5 wrap-break-word m-0 ${mono ? "font-mono text-[13px]" : "text-sm"}`}>
         {value}
       </dd>
     </div>

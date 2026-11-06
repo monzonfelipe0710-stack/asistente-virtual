@@ -198,7 +198,7 @@ export default function ReportsPage() {
           <ul className="m-0 list-none divide-y divide-line p-0">
             {sinRespuestaData.slice(0, 20).map((item) => (
               <li key={item.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-start sm:justify-between md:px-6">
-                <p className="m-0 min-w-0 whitespace-pre-wrap break-words text-sm text-ink">{item.textoConsulta || "Consulta sin texto disponible"}</p>
+                <p className="m-0 min-w-0 whitespace-pre-wrap wrap-break-word text-sm text-ink">{item.textoConsulta || "Consulta sin texto disponible"}</p>
                 <time className="shrink-0 text-xs text-muted" dateTime={item.fecha && !Number.isNaN(Date.parse(item.fecha)) ? item.fecha : undefined}>
                   {item.fecha && !Number.isNaN(Date.parse(item.fecha))
                     ? new Date(item.fecha).toLocaleString("es-AR", { dateStyle: "medium", timeStyle: "short" })

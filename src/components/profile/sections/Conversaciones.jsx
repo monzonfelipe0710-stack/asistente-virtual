@@ -70,7 +70,7 @@ export default function Conversaciones() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Pill tone="bg-mist text-muted border border-line">
                       {formatDateTime(last?.timestamp)}
                     </Pill>
@@ -86,7 +86,7 @@ export default function Conversaciones() {
                     {s.messages.slice(-12).map((m) => (
                       <div
                         key={m.id}
-                        className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words ${
+                        className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed wrap-break-word ${
                           m.type === "user"
                             ? "bg-brand-deep text-paper ml-auto rounded-br-sm"
                             : m.type === "action"

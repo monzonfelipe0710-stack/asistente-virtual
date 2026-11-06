@@ -29,7 +29,7 @@ function InfoItem({ label, value, mono = false }) {
   return (
     <div className="min-w-0 border-t border-line/70 pt-4">
       <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-faint m-0">{label}</p>
-      <p className={`text-[15px] text-ink font-medium m-0 mt-1 break-words ${mono ? "font-mono text-[13px]" : ""}`}>{value}</p>
+      <p className={`text-[15px] text-ink font-medium m-0 mt-1 wrap-break-word ${mono ? "font-mono text-[13px]" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -45,7 +45,7 @@ export default function ProfileHeader() {
       <header className="card overflow-hidden bg-paper">
         <div className="px-6 sm:px-10 pt-10 pb-8 relative overflow-hidden">
           <span
-            className="pointer-events-none select-none absolute -right-6 -top-8 text-ink/[0.05] text-[11rem] font-black tracking-tighter"
+            className="pointer-events-none select-none absolute -right-6 -top-8 text-ink/5 text-[11rem] font-black tracking-tighter"
             aria-hidden="true"
           >
             AP

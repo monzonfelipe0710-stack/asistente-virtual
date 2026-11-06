@@ -17,7 +17,7 @@ function Metric({ label, value, hint }) {
         {value}
       </p>
       {hint ? <p className="mt-2 m-0 text-sm text-faint">{hint}</p> : null}
-      <div className="mt-6 h-[3px] w-10 bg-brand-deep" aria-hidden="true" />
+      <div className="mt-6 h-0.75 w-10 bg-brand-deep" aria-hidden="true" />
     </div>
   );
 }
@@ -287,7 +287,7 @@ export default function Dashboard() {
               <ul className="m-0 p-0 divide-y divide-line">
                 {sinRespuestaRecientes.map((c) => (
                   <li key={c.id} className="px-8 py-5 flex items-start justify-between gap-6">
-                    <p className="m-0 min-w-0 break-words text-sm text-ink">{c.textoConsulta || "Consulta sin texto disponible"}</p>
+                    <p className="m-0 min-w-0 wrap-break-word text-sm text-ink">{c.textoConsulta || "Consulta sin texto disponible"}</p>
                     <span className="text-xs text-faint shrink-0">{formatDate(c.fecha)}</span>
                   </li>
                 ))}
