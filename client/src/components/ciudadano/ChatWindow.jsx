@@ -1605,7 +1605,7 @@ export default function ChatWindow({ initialQuery = null }) {
           <div
             className={`max-w-2xl mx-auto mb-3 ${promoLeaving ? "promo-leave" : "promo-enter"}`}
           >
-            <div className="flex items-center gap-3 rounded-2xl border border-line bg-mist/70 dark:bg-white/[0.04] px-3.5 py-2.5 sm:px-4 sm:py-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-line bg-mist/70 dark:bg-white/4 px-3.5 py-2.5 sm:px-4 sm:py-3">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-deep text-white" aria-hidden="true">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zm6.5 11l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z" />
@@ -1745,7 +1745,7 @@ export default function ChatWindow({ initialQuery = null }) {
       {/* Historial móvil: panel lateral de altura completa, con fondo y cierre suave. */}
       {(isAuthenticated || isTutorialHistory) && (
         <div
-          className={`chat-mobile-history-overlay fixed inset-0 z-[100] lg:hidden ${historyOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+          className={`chat-mobile-history-overlay fixed inset-0 z-100 lg:hidden ${historyOpen ? "pointer-events-auto" : "pointer-events-none"}`}
           aria-hidden={!historyOpen}
         >
           <button
@@ -1763,7 +1763,7 @@ export default function ChatWindow({ initialQuery = null }) {
             aria-label="Historial de consultas"
             tabIndex={-1}
             inert={!historyOpen}
-            className="chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-[100vh] h-[100dvh] w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl" style={{ transform: historyOpen ? "translate3d(0, 0, 0)" : "translate3d(-105%, 0, 0)" }}
+            className="chat-mobile-history-drawer absolute inset-y-0 left-0 flex h-dvh w-[min(88vw,22rem)] max-w-full flex-col overflow-hidden border-r border-line bg-paper shadow-2xl" style={{ transform: historyOpen ? "translate3d(0, 0, 0)" : "translate3d(-105%, 0, 0)" }}
           >
             <ChatHistoryPanel
               queries={displayedHistoryQueries}

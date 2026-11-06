@@ -94,7 +94,7 @@ function renderInline(text, keyPrefix = "inline") {
     if (part.startsWith("**") && part.endsWith("**")) return <strong key={keyPrefix + index} className="font-semibold text-ink">{part.slice(2, -2)}</strong>;
     if (/^https?:\/\//i.test(part)) {
       const cleanUrl = part.replace(/[.,;!?]+$/, "");
-      return <a key={keyPrefix + index} href={cleanUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-deep underline decoration-brand/40 underline-offset-2 break-words hover:decoration-brand">{cleanUrl}</a>;
+      return <a key={keyPrefix + index} href={cleanUrl} target="_blank" rel="noreferrer" className="font-medium text-brand-deep underline decoration-brand/40 underline-offset-2 wrap-break-word hover:decoration-brand">{cleanUrl}</a>;
     }
     return part;
   });
@@ -357,7 +357,7 @@ function MessageBubble({
                           value={opcion}
                           checked={motivo === opcion}
                           onChange={() => setMotivo(opcion)}
-                          className="h-4 w-4 shrink-0 accent-[var(--color-brand-deep)]"
+                          className="h-4 w-4 shrink-0 accent-(--color-brand-deep)"
                         />
                         <span>{opcion}</span>
                       </label>
