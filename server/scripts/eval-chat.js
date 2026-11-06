@@ -158,8 +158,9 @@ const INGLES = /\b(?:the|you|your|and|is|are|with|for|please|this|that|can|what|
 
 // Si el trámite no trae el dato pedido, el texto tiene que decirlo: una negación seguida, a hasta
 // cuatro palabras y sin cruzar un signo de puntuación, de "cargad" ("no se encuentran cargadas",
-// "no hay información cargada", "no está cargado", "sin datos cargados"), o "no figura" y parecidas.
-const DICE_NO_CARGADO = /\b(?:no|ni|sin|tampoco)(?:\s+[a-zñ]+){0,4}?\s+cargad|\bno figura|\bno cuento con|\bno tengo informacion/;
+// "no hay información cargada", "no está cargado", "sin datos cargados"), o "no figura", "no
+// (se) menciona", "no (se) especifica", "no (se) indica" y parecidas.
+const DICE_NO_CARGADO = /\b(?:no|ni|sin|tampoco)(?:\s+[a-zñ]+){0,4}?\s+cargad|\bno figura|\bno cuento con|\bno tengo informacion|\bno\s+(?:se\s+)?(?:menciona|especifica|indica)n?\b/;
 // Conocimiento general que el modelo ya inventó en estas preguntas, y variantes parecidas
 // (normalizadas: minúsculas y sin tildes).
 const CONOCIMIENTO_GENERAL = [
