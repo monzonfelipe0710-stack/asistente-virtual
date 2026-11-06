@@ -6,6 +6,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as cache from './cache.service.js';
 import { esUrlHttp } from '../validators/documento.validator.js';
 import { TOPES_CAMPOS, sanitizarTexto } from './sanitizacion.service.js';
+import { EXTENSIONES } from '../config/multer.js';
 
 // Sin el campo archivo: la key de R2 no sale del server. La URL externa es pública.
 const PUBLICO = { id: true, nombre: true, tipo: true, urlExterna: true, createdAt: true };
@@ -30,8 +31,7 @@ export const obtenerPorId = async (id) => {
 };
 
 const subirArchivoAR2 = async (archivo) => {
-  const extension = archivo.originalname.split('.').pop();
-  const key = `documentos/${randomUUID()}.${extension}`;
+  const key = `documentos/${randomUUID()}.${EXTENSIONES[archivo.mimetype]}`;
   await r2.send(new PutObjectCommand({
     Bucket: R2_BUCKET,
     Key: key,
@@ -45,15 +45,21 @@ const borrarDeR2 = (key) => r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET,
 
 export const subirDocumento = async (archivo, datos) => {
   const key = await subirArchivoAR2(archivo);
-  const documento = await prisma.documento.create({
-    data: {
-      nombre: datos.nombre || sanitizarTexto(archivo.originalname, { multilinea: false, tope: TOPES_CAMPOS.documento }) || 'Documento',
-      archivo: key,
-      tipo: archivo.mimetype,
-      tramiteId: datos.tramiteId,
-    },
-    select: { ...PUBLICO, tramiteId: true },
-  });
+  let documento;
+  try {
+    documento = await prisma.documento.create({
+      data: {
+        nombre: datos.nombre || sanitizarTexto(archivo.originalname, { multilinea: false, tope: TOPES_CAMPOS.documento }) || 'Documento',
+        archivo: key,
+        tipo: archivo.mimetype,
+        tramiteId: datos.tramiteId,
+      },
+      select: { ...PUBLICO, tramiteId: true },
+    });
+  } catch (error) {
+    await eliminarArchivos([key]);
+    throw error;
+  }
   cache.limpiar();
   return documento;
 };
@@ -78,7 +84,13 @@ export const actualizarDocumento = async (documento, { nombre, urlExterna, archi
     Object.assign(data, { urlExterna, archivo: null, tipo: null });
   }
 
-  const actualizado = await prisma.documento.update({ where: { id: documento.id }, data, select: { ...PUBLICO, tramiteId: true } });
+  let actualizado;
+  try {
+    actualizado = await prisma.documento.update({ where: { id: documento.id }, data, select: { ...PUBLICO, tramiteId: true } });
+  } catch (error) {
+    if (archivo) await eliminarArchivos([data.archivo]);
+    throw error;
+  }
   if (documento.archivo && data.archivo !== undefined && data.archivo !== documento.archivo) {
     await eliminarArchivos([documento.archivo]);
   }
@@ -106,9 +118,8 @@ export const generarUrlDescarga = async (documento) => {
 };
 
 export const eliminarDocumento = async (documento) => {
-  if (documento.archivo) await borrarDeR2(documento.archivo);
-
   const eliminado = await prisma.documento.delete({ where: { id: documento.id } });
+  await eliminarArchivos([documento.archivo]);
   cache.limpiar();
   return eliminado;
 };

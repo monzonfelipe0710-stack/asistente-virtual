@@ -6,23 +6,21 @@ import * as cache from './cache.service.js';
 export const crearTramite = async (datos, encargadoId) => {
   const { requisitos, mesaIds, ...datosTramite } = datos;
 
-  const tramite = await prisma.$transaction(async (tx) => {
-    return tx.tramite.create({
-      data: {
-        ...datosTramite,
-        encargadoId,
-        requisitos: {
-          create: requisitos,
-        },
-        mesas: {
-          create: [...new Set(mesaIds)].map((mesaId) => ({ mesaId })),
-        },
+  const tramite = await prisma.tramite.create({
+    data: {
+      ...datosTramite,
+      encargadoId,
+      requisitos: {
+        create: requisitos,
       },
-      include: {
-        requisitos: true,
-        mesas: true,
+      mesas: {
+        create: [...new Set(mesaIds)].map((mesaId) => ({ mesaId })),
       },
-    });
+    },
+    include: {
+      requisitos: true,
+      mesas: true,
+    },
   });
 
   indexarTramite(tramite.id).catch((err) => {
@@ -33,8 +31,13 @@ export const crearTramite = async (datos, encargadoId) => {
   return tramite;
 };
 
-export const listarTramites = async () => {
+export const listarTramites = async (usuario) => {
+  const where = usuario?.rol === 'SUPERUSUARIO'
+    ? undefined
+    : { OR: [{ publicado: true }, { sector: { usuarios: { some: { usuarioId: usuario.id } } } }] };
+
   return prisma.tramite.findMany({
+    where,
     orderBy: { nombre: 'asc' },
     include: {
       sector: { select: {id: true, nombre: true } },
@@ -148,7 +151,7 @@ export const actualizarTramite = async (id, datos) => {
         encargado: { select: { id: true, nombre: true } },
       },
     });
-  });
+  }, { timeout: 20000, maxWait: 10000 });
 
   indexarTramite(id)
     .then(cache.limpiar)

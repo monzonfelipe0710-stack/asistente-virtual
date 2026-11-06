@@ -5,7 +5,7 @@ import { autorizar } from '../middlewares/roles.middleware.js';
 import { puedeGestionarTramite } from '../middlewares/propiedad.middleware.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { validarId } from '../middlewares/validarId.middleware.js';
-import { upload } from '../config/multer.js';
+import { subirArchivo } from '../config/multer.js';
 import { publicoLimiter } from '../config/rateLimit.js';
 
 // El :id del trámite lo valida el router.param de tramite.routes.js antes de llegar acá.
@@ -18,7 +18,7 @@ router.post(
   autenticar,
   autorizar('ADMINISTRADOR'),
   asyncHandler(puedeGestionarTramite),
-  upload.single('archivo'),
+  subirArchivo('archivo'),
   asyncHandler(documentoController.subir)
 );
 
@@ -32,7 +32,7 @@ router.patch(
   autenticar,
   autorizar('ADMINISTRADOR'),
   asyncHandler(puedeGestionarTramite),
-  upload.single('archivo'),
+  subirArchivo('archivo'),
   asyncHandler(documentoController.actualizar)
 );
 

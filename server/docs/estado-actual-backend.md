@@ -93,7 +93,7 @@
 | `config/r2.js` | `S3Client` con `region: 'auto'` y el endpoint de R2 |
 | `config/correo.js` | `transporter` de nodemailer con `service: 'gmail'`; al arrancar corre `verify()` y loguea si conectó |
 | `config/openai.js` | Cliente de OpenAI (solo lo usa `core/ai/openai.adapter.js`) |
-| `config/multer.js` | Almacenamiento en memoria, 10 MB, solo PDF o DOCX |
+| `config/multer.js` | Almacenamiento en memoria, 10 MB, solo PDF o DOCX (tipo declarado y firma del contenido) |
 
 ### 2.3 Variables de entorno
 
@@ -181,8 +181,8 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | DELETE | `/api/tramites/:id` | `auth`, `rol(ADM)`, `sector` | `tramite.eliminar` | Borra también en R2 |
 | PATCH | `/api/tramites/:id/publicar` | `auth`, `rol(SU)` | `tramite.publicar` | Indexa si falta el embedding |
 | PATCH | `/api/tramites/:id/despublicar` | `auth`, `rol(SU)` | `tramite.despublicar` | |
-| POST | `/api/tramites/:id/documentos` | `auth`, `rol(ADM)`, `sector`, `upload.single('archivo')` | `documento.subir` | Archivo PDF o DOCX de 10 MB (multipart) o enlace JSON `{ nombre, urlExterna }`; exactamente uno |
-| PATCH | `/api/tramites/:id/documentos/:docId` | `auth`, `rol(ADM)`, `sector`, `upload.single('archivo')` | `documento.actualizar` | `nombre`, `urlExterna` o `archivo` nuevo |
+| POST | `/api/tramites/:id/documentos` | `auth`, `rol(ADM)`, `sector`, `subirArchivo('archivo')` | `documento.subir` | Archivo PDF o DOCX de 10 MB (multipart) o enlace JSON `{ nombre, urlExterna }`; exactamente uno |
+| PATCH | `/api/tramites/:id/documentos/:docId` | `auth`, `rol(ADM)`, `sector`, `subirArchivo('archivo')` | `documento.actualizar` | `nombre`, `urlExterna` o `archivo` nuevo |
 | GET | `/api/tramites/:id/documentos` | `publicoLimiter`, `auth?` | `documento.listar` | Borrador: solo SU o ADM del sector; al resto 404 |
 | GET | `/api/tramites/:id/documentos/:docId/descargar` | `publicoLimiter`, `auth?` | `documento.descargar` | `{ url, externa }`: el enlace externo o una URL de R2 firmada por 5 min |
 | DELETE | `/api/tramites/:id/documentos/:docId` | `auth`, `rol(ADM)`, `sector` | `documento.eliminar` | |
