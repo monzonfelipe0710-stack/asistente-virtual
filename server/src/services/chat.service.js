@@ -5,8 +5,8 @@ import { TIEMPOS_IA } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
-import { describirJurisdiccion, obtenerJurisdicciones } from "./jurisdiccion.service.js";
-import { aclaracionDeGrupo, formatearGrupo, localidadesConocidas, loQueNombro, quitarLocalidades, resolverGrupos } from "./variantes.service.js";
+import { describirJurisdiccion, nombreConRaiz, obtenerJurisdicciones } from "./jurisdiccion.service.js";
+import { aclaracionDeGrupo, etiquetarPorJurisdiccion, formatearGrupo, localidadesConocidas, loQueNombro, quitarLocalidades, resolverGrupos } from "./variantes.service.js";
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
@@ -246,7 +246,7 @@ const formatearTramite = (t, organismo, { consulta = "", secundario = false } = 
   // Cada trámite abre con su encabezado: los datos de abajo son solo de este trámite.
   const lineas = [
     `### Trámite (id ${t.id}): ${t.nombre}`,
-    ...(organismo ? [`Organismo: ${organismo.nombre}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
+    ...(organismo ? [`Organismo: ${nombreConRaiz(organismo)}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
     `Descripción: ${descripcion}${descripcion === t.descripcion ? "" : ` (descripción resumida: hay más información ${dondeSigue})`}`,
     `Costo: ${formatearCosto(t)}`,
   ];
@@ -561,13 +561,15 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
     grupos: new Map(lista.filter((c) => c.sinResolver).map((g) => [g.id, g])),
     ids: new Set(lista.map((c) => c.id)),
     consulta: consultaBusqueda,
+    jurisdicciones,
   };
 };
 
 const opcionesDeLaAclaracion = (ids, candidatos) =>
-  (ids ?? [])
-    .filter((id) => candidatos.ids.has(id))
-    .map((id) => ({ id, nombre: candidatos.lista.find((c) => c.id === id).nombre }));
+  etiquetarPorJurisdiccion(
+    (ids ?? []).filter((id) => candidatos.ids.has(id)).map((id) => candidatos.lista.find((c) => c.id === id)),
+    candidatos.jurisdicciones,
+  );
 
 // La persona pidió un trámite que existe con el mismo nombre en distintos organismos y no dijo
 // cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones), no la cachea

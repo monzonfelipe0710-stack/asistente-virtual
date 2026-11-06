@@ -194,6 +194,8 @@ export const informacionAdicionalDeFicha = (d) => {
   if (d.modalidad?.length) partes.push(`Modalidad: ${d.modalidad.join('; ')}`);
   if (d.duracion) partes.push(`Duración aproximada: ${d.duracion}`);
   if (d.destinatarios?.length) partes.push(`Destinado a: ${d.destinatarios.join(', ')}`);
+  // Otras secciones con su rótulo ("Dónde se realiza", "Quién puede hacerlo"), como en el sitio municipal.
+  for (const s of d.secciones ?? []) if (s?.titulo && s?.texto) partes.push(`${s.titulo}: ${s.texto}`);
   if (d.observaciones) partes.push(`Observaciones: ${d.observaciones}`);
   if (d.pasoAPaso) partes.push(`Paso a paso:\n${d.pasoAPaso}`);
   // Las normas sin enlace (o con el enlace roto) no se pierden: van acá con su nombre.
@@ -247,7 +249,7 @@ export const mesaDeOficina = (o) => ({
   origenId: o.origenId,
   nombre: o.nombre || o.domicilio || o.origenId,
   direccion: o.domicilio ?? null,
-  localidad: localidadDeOficina(o),
+  localidad: o.localidad ?? localidadDeOficina(o),
   horario: o.horario ?? null,
   telefono: o.telefono ?? null,
   email: o.email ?? null,

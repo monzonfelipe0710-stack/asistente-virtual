@@ -117,6 +117,17 @@ describe('oficinas, documentos e información adicional', () => {
     assert.deepEqual(datos.requisitos, [{ descripcion: 'Fotocopia del DNI.' }]);
     assert.equal(datos.verificadoEn.toISOString(), '2026-11-06T04:00:00.000Z');
   });
+
+  it('las secciones con rótulo de la ficha municipal van a la información adicional y la localidad de la oficina se respeta', () => {
+    const datos = datosDeFicha({
+      costos: [], requisitos: '',
+      secciones: [{ titulo: 'Quién puede hacerlo', texto: 'El titular.' }, { titulo: 'Dónde se realiza', texto: 'AIM, Fotheringham 1364.' }, { titulo: 'Vacía', texto: '' }],
+      observaciones: 'Ninguna.',
+      oficinas: [{ origenId: 'fsatuciudad:aim:1', nombre: 'Administración de Ingresos Municipales (AIM)', domicilio: 'Fotheringham Nº 1364', localidad: 'Formosa' }],
+    });
+    assert.equal(datos.informacionAdicional, 'Quién puede hacerlo: El titular.\nDónde se realiza: AIM, Fotheringham 1364.\nObservaciones: Ninguna.');
+    assert.equal(datos.mesas[0].localidad, 'Formosa');
+  });
 });
 
 describe('huella', () => {

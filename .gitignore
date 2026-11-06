@@ -7,3 +7,5 @@ ingestion/data/cache_html/
 ingestion/data/tramites_muestra.json
 ingestion/data/informe_muestra.md
 __pycache__/
+# HTML y PDF crudos de los scrapers (se reprocesan sin volver a pedirlos)
+ingestion/data/raw/

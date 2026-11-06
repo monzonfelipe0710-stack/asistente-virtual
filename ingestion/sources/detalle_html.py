@@ -323,22 +323,27 @@ class Cliente:
                     self.dormir(2 ** intento)
         raise ErrorDeSitio(f"{metodo} {url}: {ultimo_error}")
 
-    def _ruta_cache(self, clave):
+    def _ruta_cache(self, clave, extension="html"):
         nombre = re.sub(r"[^a-z0-9_.-]+", "_", clave.lower()).strip("_")
-        return self.cache_dir / f"{nombre}.html"
+        return self.cache_dir / f"{nombre}.{extension}"
 
-    def get_html(self, url, clave=None, usar_cache=True):
-        """HTML decodificado. Con `clave` se guarda en la caché (y se lee de ahí si ya está)."""
-        ruta = self._ruta_cache(clave) if clave else None
+    def get_bytes(self, url, clave=None, usar_cache=True, extension="html"):
+        """Contenido crudo. Con `clave` se guarda en la caché (y se lee de ahí si ya está)."""
+        ruta = self._ruta_cache(clave, extension) if clave else None
         if usar_cache and ruta and ruta.exists():
             self.desde_cache += 1
-            return decodificar(ruta.read_bytes())
+            return ruta.read_bytes()
         r = self._pedir("GET", url)
         if r.status_code >= 400:
             raise ErrorDeSitio(f"HTTP {r.status_code} en {url}")
         if ruta:
             ruta.write_bytes(r.content)
-        return decodificar(r.content)
+        return r.content
+
+    def get_html(self, url, clave=None, usar_cache=True, codificacion=None):
+        """HTML decodificado (ISO-8859-1 del portal provincial salvo otra `codificacion`)."""
+        contenido = self.get_bytes(url, clave, usar_cache)
+        return contenido.decode(codificacion, errors="replace") if codificacion else decodificar(contenido)
 
     def head(self, url):
         """Código de estado de un HEAD (sin bajar el archivo); si el servidor no acepta HEAD, un GET

@@ -1,6 +1,6 @@
 import { ia } from '../core/ai/index.js';
 import prisma from '../config/prisma.js';
-import { describirJurisdiccion, obtenerJurisdicciones, subarbol, leerSectoresParaResolver } from './jurisdiccion.service.js';
+import { describirJurisdiccion, nombreConRaiz, obtenerJurisdicciones, subarbol, leerSectoresParaResolver } from './jurisdiccion.service.js';
 import { recortarEnOracion } from '../utils/texto.js';
 
 // Topes de lo que entra al texto del embedding (lo guardado no se recorta).
@@ -13,7 +13,7 @@ export const generarEmbedding = (texto, opciones) => ia.generarEmbedding(texto, 
 // nombre en distintos municipios no quedan con el mismo vector.
 export const textoDeTramite = (tramite, organismo) => {
   const partes = [`Trámite: ${tramite.nombre}.`];
-  if (organismo) partes.push(`Organismo: ${organismo.nombre} (${describirJurisdiccion(organismo)}).`);
+  if (organismo) partes.push(`Organismo: ${nombreConRaiz(organismo)} (${describirJurisdiccion(organismo)}).`);
   partes.push(`Descripción: ${tramite.descripcion}.`);
 
   if (tramite.costoDetalle) partes.push(`Costo: ${recortarEnOracion(enUnaLinea(tramite.costoDetalle), TOPES_EMBEDDING.costoDetalle)}.`);

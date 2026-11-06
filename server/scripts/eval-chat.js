@@ -10,6 +10,9 @@
 //                                         solo los casos de trámites repetidos en distintos
 //                                         municipios (catálogo de scripts/generar-catalogo-sintetico.js)
 //                                         y los que dependen del catálogo. Se niega con otra base.
+//   DATABASE_URL=<base temporal> node scripts/eval-chat.js --catalogo municipal
+//                                         solo los casos de la Municipalidad de la Ciudad de Formosa
+//                                         (base-temporal.js --municipal). También solo en la temporal.
 //
 // responderConsulta registra las consultas en `consultas`; al terminar se borran
 // por id las que creó esta corrida para no ensuciar las métricas.
@@ -28,9 +31,11 @@ const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [pr
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 3);
 const DETALLE = process.argv.includes('--detalle');
 const SOLO = argumento('--solo');
-const SINTETICO = argumento('--catalogo')[0] === 'sintetico';
-if (SINTETICO && !/@(localhost|127\.0\.0\.1):55432\//.test(process.env.DATABASE_URL ?? '')) {
-  throw new Error('--catalogo sintetico corre solo contra la base temporal de Docker (localhost:55432), nunca contra la real.');
+const MODO = argumento('--catalogo')[0] ?? null;
+const SINTETICO = MODO === 'sintetico';
+if (MODO && !['sintetico', 'municipal'].includes(MODO)) throw new Error(`--catalogo ${MODO}: los catálogos son sintetico y municipal.`);
+if (MODO && !/@(localhost|127\.0\.0\.1):55432\//.test(process.env.DATABASE_URL ?? '')) {
+  throw new Error(`--catalogo ${MODO} corre solo contra la base temporal de Docker (localhost:55432), nunca contra la real.`);
 }
 
 const CONVERSACION = { tipo: 'respuesta', encontrado: false, conversacional: true, textoNoVacio: true, distintoDelFijo: true };
@@ -151,6 +156,34 @@ const casos = [
     esperado: { tipo: 'respuesta', encontrado: true, localidad: 'Pirané' },
   },
   { catalogo: 'sintetico', pregunta: 'hola', esperado: CONVERSACION },
+  // El mismo nombre en la provincia y en la Municipalidad de la Ciudad de Formosa: "municipal" o
+  // "municipalidad" eligen; "en Formosa" a secas no, porque la provincia se llama igual.
+  { catalogo: 'sintetico', pregunta: 'certificado de domicilio municipal', esperado: { tipo: 'respuesta', encontrado: true, jurisdiccion: 'MUNICIPAL', localidad: 'Formosa' } },
+  {
+    catalogo: 'sintetico',
+    pregunta: 'seguimiento: certificado de domicilio → el de la municipalidad',
+    turnos: ['certificado de domicilio', 'el de la municipalidad'],
+    esperado: { tipo: 'respuesta', encontrado: true, jurisdiccion: 'MUNICIPAL' },
+  },
+  { catalogo: 'sintetico', pregunta: 'certificado de domicilio en Formosa', esperado: { tipo: 'aclaracion', aclaracionPorJurisdiccion: 2 } },
+
+  // Catálogo municipal (--catalogo municipal): las fichas de formosatuciudad.gob.ar con el provincial.
+  // Costos en módulos con el monto en pesos escrito; el trámite de la municipalidad y no el provincial.
+  {
+    catalogo: 'municipal',
+    pregunta: 'cuánto sale el certificado de libre deuda de tasa única de servicios e impuesto inmobiliario',
+    esperado: { tipo: 'respuesta', encontrado: true, jurisdiccion: 'MUNICIPAL', ...DOMINIO, segunBase: { nombre: 'Certificado de Libre Deuda de Tasa Única de Servicios e Impuesto Inmobiliario', dato: 'costo' } },
+  },
+  {
+    catalogo: 'municipal',
+    pregunta: 'qué necesito para la habilitación comercial en la municipalidad',
+    esperado: { tipo: 'respuesta', encontrado: true, jurisdiccion: 'MUNICIPAL', ...DOMINIO, segunBase: { nombre: 'Requisitos de habilitaciones comerciales', dato: 'requisitos' } },
+  },
+  {
+    catalogo: 'municipal',
+    pregunta: 'dónde hago el cambio de titularidad del auto en la municipalidad',
+    esperado: { contesta: true, jurisdiccion: 'MUNICIPAL', ...DOMINIO, segunBase: { nombre: 'Cambio de Titularidad', dato: 'mesas' } },
+  },
 ];
 
 // Los ejemplos del resumen se eligen por consultas y las de la evaluación se borran recién al final,
@@ -272,7 +305,11 @@ const esperadoSegunCatalogo = ({ segunCatalogo, siNoHay = {} }) => {
 // Esperado según el contenido de la base: si el trámite tiene cargado el dato que se pide
 // (requisitos, costo, mesas de entrada), la respuesta tiene que mencionarlo (y un costo del portal,
 // aclarar que conviene confirmarlo en la fuente oficial); si no lo tiene, decir que no está cargado.
-const idsSegunBase = [...new Set(casos.filter((c) => c.esperado.segunBase).map((c) => c.esperado.segunBase.id))];
+// Con `nombre` en vez de `id`: los casos del catálogo municipal, cuyos ids dependen de la base.
+for (const { esperado: { segunBase } } of casos) {
+  if (segunBase?.nombre) segunBase.id = publicados.find((t) => normalizar(t.nombre) === normalizar(segunBase.nombre))?.id ?? null;
+}
+const idsSegunBase = [...new Set(casos.filter((c) => c.esperado.segunBase?.id).map((c) => c.esperado.segunBase.id))];
 const detallePorId = new Map((await cargarDetalle(idsSegunBase)).map((t) => [t.id, t]));
 const tieneDato = (t, dato) => {
   if (dato === 'requisitos') return t.requisitos.length > 0;
@@ -480,7 +517,10 @@ const correccionesDeSalida = [];
 
 // Los casos del catálogo sintético corren solo con --catalogo sintetico; los que dependen del
 // catálogo, en los dos modos.
-const delModo = casos.filter((c) => (SINTETICO ? c.catalogo === 'sintetico' || c.esperado.segunCatalogo : c.catalogo !== 'sintetico'));
+const delModo = casos.filter((c) => {
+  if (MODO === 'municipal') return c.catalogo === 'municipal';
+  return SINTETICO ? c.catalogo === 'sintetico' || c.esperado.segunCatalogo : !c.catalogo;
+});
 const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunta)) : delModo;
 const desconocidos = SOLO.filter((p) => !delModo.some((c) => c.pregunta === p));
 if (desconocidos.length > 0) throw new Error(`Casos que no existen: ${desconocidos.join(' | ')}`);

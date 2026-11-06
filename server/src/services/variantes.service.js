@@ -78,8 +78,15 @@ const paresDe = (grupo, jurisdicciones) => {
   return [...pares.values()];
 };
 
+// La capital se llama como la provincia: "en Formosa" sin "municipal" ni "provincial" puede ser
+// cualquiera de las dos, así que no descarta lo provincial (ni lo nacional), que no tiene localidad.
+export const LOCALIDAD_HOMONIMA = 'Formosa';
+const esHomonima = (localidad) => Boolean(localidad) && mismaLocalidad(localidad, LOCALIDAD_HOMONIMA);
+
 const cumple = (par, nombrado) =>
-  (!nombrado.localidad || (par.localidad && mismaLocalidad(par.localidad, nombrado.localidad))) &&
+  (!nombrado.localidad
+    || (par.localidad && mismaLocalidad(par.localidad, nombrado.localidad))
+    || (!par.localidad && !nombrado.jurisdiccion && esHomonima(nombrado.localidad))) &&
   (!nombrado.jurisdiccion || par.jurisdiccion === nombrado.jurisdiccion);
 
 // Para cada grupo: { id } si queda una sola variante (la de lo que nombró la persona, o la única),
@@ -104,6 +111,7 @@ export const resolverGrupos = (grupos, jurisdicciones, nombrado) =>
   });
 
 const etiquetaDeOpcion = (nombre, { jurisdiccion, localidad }) => {
+  if (jurisdiccion === 'MUNICIPAL' && esHomonima(localidad)) return `${nombre} de la Municipalidad de ${localidad}`;
   if (jurisdiccion === 'MUNICIPAL' && localidad) return `${nombre} en ${localidad}`;
   return `${nombre} ${describirJurisdiccion({ jurisdiccion, localidad })}`;
 };
@@ -143,6 +151,20 @@ export const aclaracionDeGrupo = (grupo) => {
     texto: aviso + pregunta,
     opciones: opciones.map((o) => ({ id: o.id, nombre: etiquetaDeOpcion(nombre, o), jurisdiccion: o.jurisdiccion, localidad: o.localidad })),
   };
+};
+
+// Opciones de una aclaración que armó el modelo (trámites distintos, no variantes del mismo): si
+// son de más de una jurisdicción o localidad, cada una dice de cuál es, con palabras que al
+// mandarla como respuesta la resuelven ("municipalidad", "provincial").
+export const etiquetarPorJurisdiccion = (opciones, jurisdicciones) => {
+  const pares = opciones.map((o) => (o.sinResolver ? null : jurisdicciones?.get(o.sectorId) ?? { jurisdiccion: 'PROVINCIAL', localidad: null }));
+  if (new Set(pares.filter(Boolean).map(clavePar)).size < 2) return opciones.map(({ id, nombre }) => ({ id, nombre }));
+  return opciones.map(({ id, nombre }, i) => {
+    if (!pares[i]) return { id, nombre };
+    const { jurisdiccion, localidad } = pares[i];
+    const cual = jurisdiccion === 'MUNICIPAL' && localidad ? `Municipalidad de ${localidad}` : describirJurisdiccion({ jurisdiccion, localidad });
+    return { id, nombre: `${nombre} (${cual})` };
+  });
 };
 
 // Para el contexto del modelo: sin descripción, para que no use los datos de una variante. Si la

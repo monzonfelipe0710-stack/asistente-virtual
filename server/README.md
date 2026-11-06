@@ -94,12 +94,13 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `npx prisma db seed` | Crea el superusuario inicial |
 | `npm run seed:demo` | Carga (o recarga) los datos de prueba |
 | `node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa --despublicar-faltantes]` | Importa el catálogo (default `ingestion/data/tramites_normalizado.json` del repo). Formato y opciones en [Importar el catálogo](#importar-el-catálogo) |
+| `node scripts/importarTramites.js --municipal [archivo] [--dry-run] [--lote n] [--sin-despublicar]` | Importa los trámites de la Municipalidad de la Ciudad de Formosa (default `ingestion/data/tramites_municipal.json`). Ver [Fuente municipal](#fuente-municipal-formosatuciudadgobar) |
 | `node scripts/despublicarTramites.js id... [--dry-run]` | Despublica los trámites de una lista explícita de ids, informa qué hizo con cada uno e incrementa la versión del catálogo. No borra nada |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
 | `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
-| `npm run base:temporal [-- --sintetico] [-- --recrear]` | Arma la base temporal de Docker (`chatap-temporal`, `localhost:55432`): crea el contenedor si no está, migra e importa el catálogo real (y el sintético con `--sintetico`). Ver [La base temporal](#la-base-temporal) |
+| `npm run base:temporal [-- --sintetico] [-- --recrear]` | Arma la base temporal de Docker (`chatap-temporal`, `localhost:55432`): crea el contenedor si no está, migra e importa el catálogo real (y el sintético con `--sintetico`, el municipal con `--municipal`). Ver [La base temporal](#la-base-temporal) |
 
 ### Importar el catálogo
 
@@ -234,6 +235,62 @@ python -m venv .venv
 - **Informe** (`data/informe_fichas.md`): totales contra el XML, organismos con su ministerio
   (propuesta de jerarquía, no se aplica), sectores que el sitio no indexa, trámites fuera del
   listado con su motivo, fichas con error y enlaces rotos.
+
+### Fuente municipal (formosatuciudad.gob.ar)
+
+Los trámites de la Municipalidad de la Ciudad de Formosa salen del listado `/tramites` del sitio
+municipal. Los otros municipios y lo nacional no se scrapean (van por derivación).
+
+```bash
+cd ingestion
+.venv/Scripts/python main.py --municipal              # → data/tramites_municipal.json e informe en data/informe_municipal.md
+.venv/Scripts/python main.py --municipal --refrescar  # vuelve a pedir el HTML y los PDF en vez de leerlos de data/raw/municipal
+cd ../server
+node scripts/importarTramites.js --municipal --dry-run
+node scripts/importarTramites.js --municipal
+```
+
+- **Cortesía con el sitio.** El mismo cliente que el provincial: un pedido por segundo, sin
+  paralelismo, robots.txt respetado, reintento corto ante error y User-Agent del proyecto. El
+  sitio no publica términos de uso: cada trámite cita su ficha en `fuenteUrl` y se muestra como
+  fuente oficial.
+- **Crudo.** El HTML y los PDF quedan en `ingestion/data/raw/municipal/` (fuera del repo) para
+  reprocesar sin volver a pedirlos.
+- **Formatos.** Hay cuatro formatos de ficha, cada uno con su parser: `secciones` (rótulos
+  "Descripción", "Requisitos", "Valor del trámite" o preguntas numeradas), `tabla` (requisitos
+  en una tabla, Obras Privadas), `descarga` (solo el formulario) y `libre` (subtítulos y listas,
+  Tránsito y Habilitaciones). La ficha que no encaja en ninguno no se importa y queda en
+  `noReconocidas` con su URL. Los enlaces del listado que no son fichas (PDF sueltos, páginas de
+  otras secciones) quedan en `noFichas`.
+- **Sectores.** "Municipalidad de la Ciudad de Formosa" (MUNICIPAL, Formosa) y debajo cada
+  sección del listado; las direcciones de Obras Públicas, debajo de la Secretaría. Los hijos
+  tienen jurisdicción y localidad en null (heredan). Se identifican por nombre y padre, como
+  siempre: reejecutar no duplica ni toca el `parentId` de un sector existente.
+- **Clave.** Un trámite municipal se identifica solo por la URL de su ficha (`soloPorUrl`): nunca
+  se toma uno por el nombre, aunque haya uno provincial que se llame igual.
+- **Privacidad.** No se guardan nombres de personas ("Lic. Fulano", "Responsable: ...") ni
+  correos que no sean de un dominio oficial (`.gob.ar`, `.gov.ar`); el correo que Joomla oculta
+  con JavaScript se reconstruye solo para decidir eso. En su lugar queda "(el correo figura en la
+  fuente oficial)".
+- **Costos en módulos.** El valor del módulo sale del PDF "Valor del módulo desde ..." de la
+  página del Código Tarifario: un valor por tributo y por fecha de vigencia, y se usa el de la
+  última fecha anterior a la consulta. Cada concepto se valoriza con el módulo de su tributo según
+  el Código Tarifario 2026 (los de oficina, como certificados, exenciones o estudio de dominio,
+  con el de servicios varios; la escala por superficie de habilitaciones, con el de
+  habilitaciones). `costoDetalle` queda como "4 módulos ($4.029,40, con módulo a $1.007,35
+  vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)": el monto en
+  pesos tiene que estar escrito para que el chat lo pueda decir. Si el PDF no se puede leer con
+  certeza o el concepto no está en la tabla, queda solo la cantidad de módulos y el informe lo
+  avisa.
+- **Los montos caducan.** Cuando la AIM publica un valor nuevo del módulo, los montos en pesos
+  cargados quedan viejos: hay que volver a correr `main.py --municipal --refrescar` y el
+  importador. Un costo que alguien editó a mano no se pisa (huella del grupo `costo`).
+- **Despublicar faltantes.** Con `--municipal` el importador despublica los trámites de
+  `formosatuciudad.gob.ar` que ya no están en el listado, dentro del subárbol de la
+  Municipalidad, solo si el JSON es el listado entero sin fichas no reconocidas ni con error. Si
+  no, lo informa y no despublica nada. `--sin-despublicar` lo saltea.
+- **Salida.** El importador incrementa la versión del catálogo, reindexa lo importado y sale con
+  código 1 si hubo fallidos, fichas no reconocidas o con error.
 
 ## Estructura
 
@@ -891,6 +948,10 @@ correr arma o pone al día con `scripts/base-temporal.js` (crea el contenedor si
 migraciones e importa el catálogo real). Hace falta Docker Desktop abierto. Se niega a correr si
 `DATABASE_URL_TEST` apunta a la misma base que el `.env`.
 
+**Tests del scraper.** La corrida completa (sin archivos) también corre `ingestion/tests` (Python,
+sin red ni base: parsers de las fichas, lectura del módulo, privacidad) con `ingestion/.venv`; si no
+existe, avisa y los saltea. El código de salida es el peor de los dos.
+
 `npm run test:real` corre los mismos tests contra la base del `.env`, para verificar las
 migraciones antes de un deploy. Pide escribir el host de la base para confirmar y no corre sin
 una terminal donde hacerlo (en un script o en CI se niega).
@@ -941,7 +1002,12 @@ más de uno, la aclaración por jurisdicción o localidad con una opción por pa
 
 `--catalogo sintetico` corre solo los casos de trámites repetidos en distintos municipios (y los que
 dependen del catálogo) y se niega a correr si `DATABASE_URL` no es el Postgres temporal de Docker
-(`localhost:55432`); hay que armarla con `npm run base:temporal -- --sintetico`.
+(`localhost:55432`); hay que armarla con `npm run base:temporal -- --sintetico`. Entre ellos, el
+mismo trámite en la provincia y en la Municipalidad de la Ciudad de Formosa: "municipal" o
+"municipalidad" eligen, y "en Formosa" a secas pide aclaración, porque la provincia se llama igual
+que la capital. `--catalogo municipal` corre los casos de las fichas de formosatuciudad.gob.ar
+(costo en módulos con el monto en pesos, requisitos y oficinas del trámite municipal), también
+solo en la temporal, armada con `npm run base:temporal -- --municipal`.
 
 `node scripts/eval-seguridad.js` corre los ataques y las preguntas legítimas (grupos A, B y C)
 contra la base del `.env`. `--grupo D` (trámites envenenados) y `--grupo E` (el conjunto de control,
@@ -957,6 +1023,7 @@ volver a armarlo (con Docker Desktop abierto):
 ```bash
 npm run base:temporal                  # crea chatap-temporal si no está, migra e importa el catálogo real
 npm run base:temporal -- --sintetico   # además el catálogo sintético de 8 municipios
+npm run base:temporal -- --municipal   # además ingestion/data/tramites_municipal.json
 npm run base:temporal -- --recrear     # lo borra y lo arma de cero
 ```
 

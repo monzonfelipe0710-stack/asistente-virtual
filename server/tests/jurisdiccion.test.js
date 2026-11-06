@@ -15,13 +15,14 @@ describe('resolverJurisdicciones', () => {
 
   it('un hijo hereda jurisdicción y localidad del ancestro más cercano que las tenga', () => {
     const r = resolverJurisdicciones([sector(1, null, 'MUNICIPAL', 'Formosa'), sector(2, 1), sector(3, 2)]);
-    assert.deepEqual(r.get(3), { nombre: 'S3', jurisdiccion: 'MUNICIPAL', localidad: 'Formosa' });
+    assert.deepEqual(r.get(3), { nombre: 'S3', jurisdiccion: 'MUNICIPAL', localidad: 'Formosa', raiz: 'S1' });
+    assert.equal(r.get(1).raiz, undefined);
   });
 
   it('cada campo se resuelve por separado', () => {
     const r = resolverJurisdicciones([sector(1, null, 'PROVINCIAL'), sector(2, 1, null, 'Clorinda'), sector(3, 2, 'NACIONAL')]);
-    assert.deepEqual(r.get(2), { nombre: 'S2', jurisdiccion: 'PROVINCIAL', localidad: 'Clorinda' });
-    assert.deepEqual(r.get(3), { nombre: 'S3', jurisdiccion: 'NACIONAL', localidad: 'Clorinda' });
+    assert.deepEqual(r.get(2), { nombre: 'S2', jurisdiccion: 'PROVINCIAL', localidad: 'Clorinda', raiz: 'S1' });
+    assert.deepEqual(r.get(3), { nombre: 'S3', jurisdiccion: 'NACIONAL', localidad: 'Clorinda', raiz: 'S1' });
   });
 
   it('no se cuelga con un ciclo', () => {

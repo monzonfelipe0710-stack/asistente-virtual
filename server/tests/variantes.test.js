@@ -117,7 +117,7 @@ describe('aclaracionDeGrupo', () => {
     const [g] = resolverGrupos([grupo('Habilitación comercial', [4, 5])], jurisdicciones, nada);
     const { texto, opciones } = aclaracionDeGrupo(g);
     assert.equal(texto, 'Hay más de un trámite «Habilitación comercial». ¿Necesitás el trámite provincial o el de la Municipalidad de Formosa?');
-    assert.deepEqual(opciones.map((o) => o.nombre), ['Habilitación comercial provincial', 'Habilitación comercial en Formosa']);
+    assert.deepEqual(opciones.map((o) => o.nombre), ['Habilitación comercial provincial', 'Habilitación comercial de la Municipalidad de Formosa']);
   });
 
   it('avisa cuando la localidad nombrada no está', () => {

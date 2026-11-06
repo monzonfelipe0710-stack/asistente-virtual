@@ -23,17 +23,34 @@ export const resolverJurisdicciones = (sectores) => {
     }
     return null;
   };
+  const raizDe = (sector) => {
+    const vistos = new Set();
+    let s = sector;
+    while (porId.has(s.parentId) && !vistos.has(s.id)) {
+      vistos.add(s.id);
+      s = porId.get(s.parentId);
+    }
+    return s === sector ? null : s.nombre;
+  };
   return new Map(
-    sectores.map((s) => [
-      s.id,
-      {
-        nombre: s.nombre,
-        jurisdiccion: heredado(s, 'jurisdiccion') ?? JURISDICCION_POR_DEFECTO,
-        localidad: heredado(s, 'localidad'),
-      },
-    ]),
+    sectores.map((s) => {
+      const raiz = raizDe(s);
+      return [
+        s.id,
+        {
+          nombre: s.nombre,
+          jurisdiccion: heredado(s, 'jurisdiccion') ?? JURISDICCION_POR_DEFECTO,
+          localidad: heredado(s, 'localidad'),
+          ...(raiz && { raiz }),
+        },
+      ];
+    }),
   );
 };
+
+// "Dirección de Obras Privadas, Municipalidad de la Ciudad de Formosa": el sector y, si depende de
+// otro, el organismo del que depende.
+export const nombreConRaiz = ({ nombre, raiz }) => (raiz && raiz !== nombre ? `${nombre}, ${raiz}` : nombre);
 
 export const leerSectoresParaResolver = () =>
   prisma.sector.findMany({ select: { id: true, nombre: true, parentId: true, jurisdiccion: true, localidad: true } });

@@ -5,6 +5,8 @@
 //
 //   node scripts/base-temporal.js               crea el contenedor si no está, migra e importa
 //   node scripts/base-temporal.js --sintetico   además importa el catálogo sintético de 8 municipios
+//   node scripts/base-temporal.js --municipal   además importa ingestion/data/tramites_municipal.json
+//                                               (eval-chat --catalogo municipal)
 //   node scripts/base-temporal.js --recrear     borra el contenedor y lo arma de cero
 //
 // Nunca usa la base del .env: todo corre con DATABASE_URL apuntando a la temporal, y al final
@@ -24,6 +26,7 @@ const URL_TEMPORAL = `postgresql://postgres:${CLAVE}@localhost:${PUERTO}/postgre
 const SERVIDOR = fileURLToPath(new URL('..', import.meta.url));
 const args = process.argv.slice(2);
 const SINTETICO = args.includes('--sintetico');
+const MUNICIPAL = args.includes('--municipal');
 const RECREAR = args.includes('--recrear');
 
 const env = { ...process.env, DATABASE_URL: URL_TEMPORAL };
@@ -79,6 +82,11 @@ exigir(correr(process.execPath, ['node_modules/prisma/build/index.js', 'migrate'
 
 console.log('Importando el catálogo real...');
 exigir(correr(process.execPath, ['scripts/importarTramites.js']), 'importar el catálogo real');
+
+if (MUNICIPAL) {
+  console.log('Importando el catálogo municipal...');
+  exigir(correr(process.execPath, ['scripts/importarTramites.js', '--municipal']), 'importar el catálogo municipal');
+}
 
 if (SINTETICO) {
   const carpeta = mkdtempSync(join(tmpdir(), 'catalogo-sintetico-'));

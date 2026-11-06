@@ -277,6 +277,8 @@ const escribirTramite = (id, data, { requisitos, mesaIds, documentos }, { invali
 //   trámites cargados a mano.
 // - `publicar` en false deja los trámites nuevos como borradores (lo usan los tests).
 // - `reindexar(ids, { lote, log })` devuelve `{ reindexados, fallidos }`.
+// - `soloPorUrl`: cada trámite se identifica solo por su fuenteUrl, nunca por el nombre.
+// - `fuenteDeFaltantes`: los faltantes que se despublican, además, tienen la fuenteUrl con ese prefijo.
 export const importarCatalogo = async (crudos, {
   reindexar = reindexarPorDefecto,
   log = console,
@@ -284,6 +286,8 @@ export const importarCatalogo = async (crudos, {
   simular = false,
   completa = false,
   despublicarFaltantes = false,
+  soloPorUrl = false,
+  fuenteDeFaltantes = null,
   lote = 100,
 } = {}) => {
   if (despublicarFaltantes && !completa) {
@@ -369,6 +373,8 @@ export const importarCatalogo = async (crudos, {
     if (fuenteUrl) {
       if (urlsDelJson.has(fuenteUrl)) return marcar(null, () => conflicto('fuenteUrl repetida en el JSON'));
       urlsDelJson.add(fuenteUrl);
+    } else if (soloPorUrl) {
+      return marcar(null, () => fallido('falta la fuenteUrl: en esta fuente cada trámite se identifica por la URL de su ficha'), { identificable: false });
     }
 
     const sectorId = sectorDelTramite(t, datos.sectores, ids);
@@ -415,7 +421,7 @@ export const importarCatalogo = async (crudos, {
         return marcar(existente.id, () => conflicto(`la fuenteUrl ya es del trámite ${existente.id} ("${existente.nombre}") de otro sector`, existente.id));
       }
       // Un trámite que el importador creó sin URL la adopta si ahora viene con una.
-      if (!existente) {
+      if (!existente && !soloPorUrl) {
         const adoptable = delSectorSinUrl.filter(delImportador);
         if (adoptable.length === 1) existente = adoptable[0];
       }
@@ -560,10 +566,14 @@ export const importarCatalogo = async (crudos, {
       // "Completa" vale para los organismos del JSON: un catálogo municipal no despublica el provincial.
       const todos = await leerSectoresParaResolver();
       const alcance = new Set([...ids.values()].filter(esIdReal).flatMap((id) => [...subarbol(todos, id)]));
-      const faltantes = existentes.filter((t) => delImportador(t) && t.publicado && alcance.has(t.sectorId) && !vistos.has(t.id));
+      const deLaFuente = (t) => !fuenteDeFaltantes || (t.fuenteUrl ?? '').startsWith(fuenteDeFaltantes);
+      const faltantes = existentes.filter((t) => delImportador(t) && t.publicado && alcance.has(t.sectorId) && !vistos.has(t.id) && deLaFuente(t));
       if (!simular && faltantes.length > 0) {
         await prisma.tramite.updateMany({
-          where: { id: { in: faltantes.map((t) => t.id) }, encargadoId: sistema.id, publicado: true },
+          where: {
+            id: { in: faltantes.map((t) => t.id) }, encargadoId: sistema.id, publicado: true,
+            ...(fuenteDeFaltantes && { fuenteUrl: { startsWith: fuenteDeFaltantes } }),
+          },
           data: { publicado: false },
         });
       }
@@ -596,6 +606,49 @@ export const importarCatalogo = async (crudos, {
 
   const sectorIds = datos.sectores.map((s, i) => ({ nombre: s.nombre, padre: s.padre ?? null, id: ids.get(i) ?? null }));
   return { simulado: simular, sectores, sectorIds, ...informe, cache };
+};
+
+// --- Fuente municipal (ingestion: python main.py --municipal) -----------------------------------
+
+export const FUENTE_MUNICIPAL = 'municipalidad-formosa';
+export const BASE_MUNICIPAL = 'https://formosatuciudad.gob.ar/';
+
+// Valida el JSON del scraper municipal y arma las opciones de la importación. Despublicar faltantes
+// solo es seguro con el listado entero leído: sin fichas no reconocidas ni con error, ni una muestra.
+export const opcionesMunicipales = (datos, { despublicar = true } = {}) => {
+  if (datos?.fuente !== FUENTE_MUNICIPAL) throw new Error(`El JSON no es de la fuente municipal (fuente: ${datos?.fuente ?? 'sin fuente'}).`);
+  const sectores = datos.sectores ?? [];
+  const raices = sectores.filter((s) => !s.padre);
+  if (raices.length !== 1 || raices[0].jurisdiccion !== 'MUNICIPAL' || !raices[0].localidad) {
+    throw new Error('El catálogo municipal tiene que tener un único sector raíz, municipal y con localidad.');
+  }
+  const porNombre = new Map(sectores.map((s) => [s.nombre, s]));
+  for (const s of sectores) {
+    let actual = s;
+    for (let pasos = 0; actual?.padre && pasos < sectores.length; pasos++) actual = porNombre.get(actual.padre);
+    if (actual !== raices[0]) throw new Error(`El sector "${s.nombre}" no depende de "${raices[0].nombre}".`);
+  }
+  const ajenos = (datos.tramites ?? []).filter((t) => typeof t?.fuenteUrl !== 'string' || !t.fuenteUrl.startsWith(BASE_MUNICIPAL));
+  if (ajenos.length > 0) throw new Error(`${ajenos.length} trámites del JSON no tienen una fuenteUrl de ${BASE_MUNICIPAL}.`);
+
+  const noReconocidas = datos.noReconocidas ?? [];
+  const errores = datos.errores ?? [];
+  const bloqueos = [
+    datos.parcial && 'el JSON es una muestra del listado',
+    noReconocidas.length > 0 && `${noReconocidas.length} fichas no reconocidas`,
+    errores.length > 0 && `${errores.length} fichas con error de descarga`,
+  ].filter(Boolean);
+  return {
+    opciones: {
+      soloPorUrl: true,
+      completa: !datos.parcial,
+      despublicarFaltantes: despublicar && bloqueos.length === 0,
+      fuenteDeFaltantes: BASE_MUNICIPAL,
+    },
+    sinDespublicar: !despublicar ? 'pedido con --sin-despublicar' : bloqueos.join('; ') || null,
+    noReconocidas,
+    errores,
+  };
 };
 
 const lista = (titulo, items, formato) =>

@@ -9,6 +9,8 @@
 //
 // Los tests leen DATABASE_URL: este script la fija antes de lanzarlos y `dotenv` no la pisa.
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -65,4 +67,17 @@ const r = spawnSync(
   ['--test', '--experimental-test-module-mocks', ...(archivos.length > 0 ? archivos : ['tests/**/*.test.js'])],
   { cwd: SERVIDOR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: url } },
 );
-process.exit(r.status ?? 1);
+
+// Los del scraper (ingestion/, Python, sin red ni base) van con la corrida completa.
+let python = 0;
+if (archivos.length === 0) {
+  const INGESTION = fileURLToPath(new URL('../../ingestion/', import.meta.url));
+  const interprete = [join(INGESTION, '.venv', 'Scripts', 'python.exe'), join(INGESTION, '.venv', 'bin', 'python')].find(existsSync);
+  if (interprete) {
+    console.log('\nTests del scraper (ingestion/tests)...');
+    python = spawnSync(interprete, ['-m', 'unittest', 'discover', '-s', 'tests'], { cwd: INGESTION, stdio: 'inherit', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } }).status ?? 1;
+  } else {
+    console.log('\nSin ingestion/.venv: no se corren los tests del scraper (ver el README, "Importar el catálogo").');
+  }
+}
+process.exit((r.status ?? 1) || python);
