@@ -1,3 +1,9 @@
 cliente-prueba
 BACKEND_CONTEXTO.md
 test-frontend
+# Entorno virtual y caché del scraper de ingestion
+ingestion/.venv/
+ingestion/data/cache_html/
+ingestion/data/tramites_muestra.json
+ingestion/data/informe_muestra.md
+__pycache__/

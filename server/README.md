@@ -162,6 +162,43 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
   porque el que arranque empieza sin caché. Solo pide reiniciar el server si no pudo incrementar
   la versión (por ejemplo, porque falta la migración `catalogo_version`).
 
+### Armar el JSON: XML y fichas del sitio
+
+El JSON lo arma `ingestion/` (Python) a partir del XML del portal y de las fichas
+`detalle_del_tramite` de formosa.gob.ar. Se corre con un entorno virtual propio, nunca con el
+Python global:
+
+```bash
+cd ingestion
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt   # en Linux/macOS: .venv/bin/python
+.venv/Scripts/python main.py                 # XML + fichas → data/tramites_normalizado.json e informe en data/informe_fichas.md
+.venv/Scripts/python main.py --muestra 10    # solo los 10 primeros, en data/tramites_muestra.json
+.venv/Scripts/python main.py --solo-xml      # solo el XML, sin pedir nada al sitio
+.venv/Scripts/python -m unittest discover -s tests   # tests del parseo (sin red)
+```
+
+- **Cortesía con el sitio.** Un pedido por segundo como mucho (incluidos los HEAD), User-Agent
+  que identifica el proyecto (ChatAP, IPF, estudiantes) y robots.txt respetado en cada host.
+- **Listado.** Recorre `/tramites/organismos` y, por organismo, todas las páginas del listado:
+  la paginación (`/tramites/buscar/pagina/N`) depende de la cookie de la sesión, así que se
+  sigue en orden con la misma sesión. Los trámites del XML que no figuran ahí llevan
+  `enListado: false`; los de un sector que el sitio no indexa, `organismoIndexado: false`.
+- **Fichas.** Se leen en ISO-8859-1 (con los caracteres de Windows-1252 que algunas traen). El
+  sitio contesta 200 con una página de error ("Trámite no encontrado"): se reconoce y queda en
+  el informe. Cada trámite lleva en `detalle` la descripción, los requisitos, las observaciones,
+  la modalidad, la duración, el paso a paso, las filas de "Cuánto sale", las oficinas (con su
+  `origenId`, `collapse_NNN`), los formularios y las normas, y `verificadoEn`. El nombre de los
+  responsables de cada oficina no se guarda.
+- **Enlaces.** Los PDF de formularios y normas se verifican con HEAD (no se descargan) y cada
+  uno lleva `enlace.estado` `ok` o `roto`.
+- **Reanudable.** El HTML crudo queda en `data/cache_html/` (fuera del repo): una corrida
+  cortada se retoma sin volver a pedir lo que ya se bajó. El listado de cada organismo se guarda
+  entero o no se guarda. Para capturar de nuevo, se borra la caché.
+- **Informe** (`data/informe_fichas.md`): totales contra el XML, organismos con su ministerio
+  (propuesta de jerarquía, no se aplica), sectores que el sitio no indexa, trámites fuera del
+  listado con su motivo, fichas con error y enlaces rotos.
+
 ## Estructura
 
 ```
