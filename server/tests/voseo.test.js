@@ -10,7 +10,7 @@ describe('corregirTuteo', () => {
   it('pasa a voseo cada forma de la lista', () => {
     const pares = [
       ['tienes', 'tenés'], ['puedes', 'podés'], ['debes', 'debés'], ['necesitas', 'necesitás'],
-      ['quieres', 'querés'], ['sabes', 'sabés'], ['vienes', 'venís'], ['haces', 'hacés'], ['eres', 'sos'],
+      ['quieres', 'querés'], ['sabes', 'sabés'], ['vienes', 'venís'], ['haces', 'hacés'], ['eres', 'sos'], ['recuerda', 'recordá'],
       ['asegúrate', 'asegurate'], ['acércate', 'acercate'], ['fíjate', 'fijate'], ['ten en cuenta', 'tené en cuenta'],
     ];
     for (const [tuteo, vos] of pares) assert.equal(voseo(`Si ${tuteo} algo.`), `Si ${vos} algo.`, tuteo);

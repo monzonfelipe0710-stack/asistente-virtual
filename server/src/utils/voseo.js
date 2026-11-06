@@ -12,6 +12,7 @@ const VOSEO = {
   vienes: 'venís',
   haces: 'hacés',
   eres: 'sos',
+  recuerda: 'recordá',
   'asegúrate': 'asegurate',
   'acércate': 'acercate',
   'fíjate': 'fijate',

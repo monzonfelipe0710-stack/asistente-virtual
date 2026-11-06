@@ -174,7 +174,7 @@ const INGLES = /\b(?:the|you|your|and|is|are|with|for|please|this|that|can|what|
 // cuatro palabras y sin cruzar un signo de puntuación, de "cargad" ("no se encuentran cargadas",
 // "no hay información cargada", "no está cargado", "sin datos cargados"), o "no figura", "no
 // (se) menciona", "no (se) especifica", "no (se) indica" y parecidas.
-const DICE_NO_CARGADO = /\b(?:no|ni|sin|tampoco)(?:\s+[a-zñ]+){0,4}?\s+cargad|\bno figura|\bno cuento con|\bno tengo informacion|\bno\s+(?:se\s+)?(?:menciona|especifica|indica)n?\b/;
+const DICE_NO_CARGADO = /\b(?:no|ni|sin|tampoco)(?:\s+[a-zñ]+){0,4}?\s+cargad|\bno figura|\bno cuento con|\bno tengo informacion|\bno\s+(?:se\s+)?(?:menciona|especifica|indica)(?:n|ron)?\b/;
 // Conocimiento general que el modelo ya inventó en estas preguntas, y variantes parecidas
 // (normalizadas: minúsculas y sin tildes).
 const CONOCIMIENTO_GENERAL = [
@@ -241,7 +241,7 @@ const repiteNombres = (opciones) =>
   new Set(opciones.map((o) => normalizar(o.nombre))).size < opciones.length;
 
 // Mide el texto final (ya corregido por el servidor); lo que tuteó el modelo se cuenta aparte.
-const TUTEO = /(?<![\p{L}\p{N}_])(tienes|puedes|debes|necesitas|quieres|sabes|vienes|haces|eres|asegúrate|acércate|fíjate|ten\s+en\s+cuenta)(?![\p{L}\p{N}_])/iu;
+const TUTEO = /(?<![\p{L}\p{N}_])(tienes|puedes|debes|necesitas|quieres|sabes|vienes|haces|eres|recuerda|asegúrate|acércate|fíjate|ten\s+en\s+cuenta)(?![\p{L}\p{N}_])/iu;
 const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
 const publicados = await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, nombre: true, fuenteUrl: true, sectorId: true } });

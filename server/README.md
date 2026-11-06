@@ -1020,7 +1020,6 @@ consultar la tabla.
 - Editar una mesa no revalida los trámites que ya la usan.
 - Alinear las migraciones con las de otras ramas (los 9 registros de las ramas de Felipe, ver arriba).
 - Migrar `package.json#prisma` a `prisma.config.ts` antes de Prisma 7.
-- Aplicar en la base real `20261105120000_catalogo_version` y `20261105130000_documento_url_externa` (antes, un branch de respaldo en Neon), antes o junto con el deploy: sin `catalogo_version` el server avisa una vez en el log y la caché vuelve a durar hasta 1 hora, pero sin `url_externa` fallan los endpoints de documentos.
 - Un trámite que `--despublicar-faltantes` bajó no se vuelve a publicar solo si reaparece en el JSON.
 
 Más detalle en [`docs/estado-actual-backend.md`](docs/estado-actual-backend.md).
