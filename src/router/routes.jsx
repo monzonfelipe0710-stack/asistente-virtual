@@ -3,10 +3,10 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAdmin } from "../context/AdminContext";
 import HomePage from "../pages/HomePage";
-import LoginRegisterPage from "../pages/LoginRegisterPage";
-import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 const CiudadanoPage = lazy(() => import("../pages/CiudadanoPage"));
+const LoginRegisterPage = lazy(() => import("../pages/LoginRegisterPage"));
+const ResetPasswordPage = lazy(() => import("../pages/ResetPasswordPage"));
 
 const AdminLayout = lazy(() => import("../pages/AdminLayout"));
 const ContactoPage = lazy(() => import("../pages/ContactoPage"));
@@ -69,8 +69,8 @@ export default function AppRoutes({ location }) {
     <Routes location={location}>
       <Route path="/" element={<HomePage />} />
       <Route path="/chat" element={<Lazy><CiudadanoPage /></Lazy>} />
-      <Route path="/login" element={<LoginRegisterPage />} />
-      <Route path="/restablecer" element={<ResetPasswordPage />} />
+      <Route path="/login" element={<Lazy><LoginRegisterPage /></Lazy>} />
+      <Route path="/restablecer" element={<Lazy><ResetPasswordPage /></Lazy>} />
 
       <Route path="/terminos" element={<Lazy><LegalPage type="terms" /></Lazy>} />
       <Route path="/privacidad" element={<Lazy><LegalPage type="privacy" /></Lazy>} />

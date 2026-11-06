@@ -1111,7 +1111,10 @@ select {
   }
   .chat-msg--user .chat-msg__meta {
     justify-content: flex-end;
-    color: color-mix(in srgb, var(--color-ink) 55%, transparent);
+    color: color-mix(in srgb, var(--color-ink) 78%, transparent);
+  }
+  .chat-msg__meta:not(.chat-msg__meta--end) {
+    color: color-mix(in srgb, var(--color-ink) 78%, transparent);
   }
   .chat-msg__meta--end {
     justify-content: flex-end;
