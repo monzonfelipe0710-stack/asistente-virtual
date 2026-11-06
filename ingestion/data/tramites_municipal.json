@@ -1,6 +1,6 @@
 {
   "fuente": "municipalidad-formosa",
-  "capturadoEn": "2026-11-06T17:12:27+00:00",
+  "capturadoEn": "2026-11-06T18:39:33+00:00",
   "consultadoEl": "06/11/2026",
   "parcial": false,
   "modulo": {
@@ -233,8 +233,8 @@
         },
         "costos": [
           {
-            "concepto": "Certificados de Libre Deuda",
-            "importe": "4 módulos: $4.029,40",
+            "concepto": "1) Certificados de Libre Deuda",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -243,8 +243,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Certificaciones de Libre Deuda por Infracciones y/o Multas al Tránsito",
-            "importe": "2 módulos: $2.014,70",
+            "concepto": "2) Certificaciones de Libre Deuda por Infracciones y/o Multas al Tránsito",
+            "importe": "2 módulos: $2.014,70 (módulo vigente desde 01/10/2026)",
             "modulos": 2.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.7",
@@ -253,8 +253,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Certificaciones, copias de Documentos, Constancias Varias",
-            "importe": "2,5 módulos: $2.518,38",
+            "concepto": "3) Certificaciones, copias de Documentos, Constancias Varias",
+            "importe": "2,5 módulos: $2.518,38 (módulo vigente desde 01/10/2026)",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.3",
@@ -500,8 +500,8 @@
         },
         "costos": [
           {
-            "concepto": "Libre Deuda Administración de Ingresos Municipales (AIM)",
-            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "concepto": "1) Libre Deuda Administración de Ingresos Municipales (AIM)",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -510,12 +510,20 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)",
-            "importe": "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
+            "concepto": "2) Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10) (*)",
+            "importe": null
           },
           {
-            "concepto": "Libre Deuda Dir. Tránsito: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)",
-            "importe": "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
+            "concepto": "3) Libre Deuda Dir. Tránsito: Tasa administrativa de 3 Unidades Tributarias (1UT:$10) (*)",
+            "importe": null
+          },
+          {
+            "concepto": "(*) Monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina.",
+            "importe": null
+          },
+          {
+            "concepto": "Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
+            "importe": null
           }
         ],
         "oficinas": [
@@ -664,8 +672,8 @@
         },
         "costos": [
           {
-            "concepto": "Por actividades administrativas (Estudio de Dominio)",
-            "importe": "6 módulos: $6.044,10",
+            "concepto": "1) Por actividades administrativas (Estudio de Dominio)",
+            "importe": "6 módulos: $6.044,10 (módulo vigente desde 01/10/2026)",
             "modulos": 6,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. n.3",
@@ -674,8 +682,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Certificado de Libre Deuda",
-            "importe": "4 módulos: $4.029,40",
+            "concepto": "2) Certificado de Libre Deuda",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -975,8 +983,8 @@
         },
         "costos": [
           {
-            "concepto": "Certificados de Libre Deuda",
-            "importe": "4 módulos: $4.029,40",
+            "concepto": "1) Certificados de Libre Deuda",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -985,8 +993,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Certificaciones de Libre Deuda por Infracciones y/o Multas al Tránsito",
-            "importe": "2 módulos: $2.014,70",
+            "concepto": "2) Certificaciones de Libre Deuda por Infracciones y/o Multas al Tránsito",
+            "importe": "2 módulos: $2.014,70 (módulo vigente desde 01/10/2026)",
             "modulos": 2.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.7",
@@ -995,8 +1003,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Certificaciones, copias de Documentos, Constancias Varias",
-            "importe": "2,5 módulos: $2.518,38",
+            "concepto": "3) Certificaciones, copias de Documentos, Constancias Varias",
+            "importe": "2,5 módulos: $2.518,38 (módulo vigente desde 01/10/2026)",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.3",
@@ -1051,8 +1059,8 @@
         },
         "costos": [
           {
-            "concepto": "Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
-            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "concepto": "1) Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -1061,12 +1069,20 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Libre deuda emitida por Tribunal de Faltas",
-            "importe": "$ 85 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "2) Libre deuda emitida por Tribunal de Faltas",
+            "importe": "$ 85 (*)"
           },
           {
-            "concepto": "Libre deuda emitida por Direccion de Transito",
-            "importe": "$ 68 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "3) Libre deuda emitida por Direccion de Transito",
+            "importe": "$ 68 (*)"
+          },
+          {
+            "concepto": "(*) Monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina.",
+            "importe": null
+          },
+          {
+            "concepto": "Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
+            "importe": null
           }
         ],
         "oficinas": [
@@ -1119,8 +1135,8 @@
         },
         "costos": [
           {
-            "concepto": "Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
-            "importe": "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026",
+            "concepto": "1) Libre deuda emitida por Administración de Ingresos Municipales (AIM)",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -1129,12 +1145,20 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Libre deuda emitida por Tribunal de Faltas",
-            "importe": "$ 85 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "2) Libre deuda emitida por Tribunal de Faltas",
+            "importe": "$ 85 (*)"
           },
           {
-            "concepto": "Libre deuda emitida por Direccion de Transito",
-            "importe": "$ 68 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "3) Libre deuda emitida por Direccion de Transito",
+            "importe": "$ 68 (*)"
+          },
+          {
+            "concepto": "(*) Monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina.",
+            "importe": null
+          },
+          {
+            "concepto": "Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
+            "importe": null
           }
         ],
         "oficinas": [
@@ -1179,8 +1203,8 @@
         },
         "costos": [
           {
-            "concepto": "Estudio de dominio de inmuebles, por cada parcela",
-            "importe": "6 módulos: $6.044,10",
+            "concepto": "1) Estudio de dominio de inmuebles, por cada parcela",
+            "importe": "6 módulos: $6.044,10 (módulo vigente desde 01/10/2026)",
             "modulos": 6.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. n.3",
@@ -1189,8 +1213,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Certificado de Libre Deuda",
-            "importe": "4 módulos: $4.029,40",
+            "concepto": "2) Certificado de Libre Deuda",
+            "importe": "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)",
             "modulos": 4.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.5",
@@ -1681,16 +1705,20 @@
         },
         "costos": [
           {
-            "concepto": "Bajo Tierra",
-            "importe": "$ 255 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "1) Bajo Tierra",
+            "importe": "$ 255 (*)"
           },
           {
-            "concepto": "Nicho o Tierra",
-            "importe": "$ 290 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "2) Nicho o Tierra",
+            "importe": "$ 290 (*)"
           },
           {
-            "concepto": "Pago por Arrendamiento",
-            "importe": "$ 120 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "3) Pago por Arrendamiento",
+            "importe": "$ 120 (*)"
+          },
+          {
+            "concepto": "(*) Monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina.",
+            "importe": null
           }
         ],
         "oficinas": [
@@ -1743,12 +1771,16 @@
         },
         "costos": [
           {
-            "concepto": "Estampillado por Resolucion",
-            "importe": "$ 55 (monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina)"
+            "concepto": "1) Estampillado por Resolucion",
+            "importe": "$ 55 (*)"
           },
           {
-            "concepto": "$72 xm2 Estampillado por Dcho. Cementerio (segun cada expediente el monto que varia por la dimension y otros criterios).",
-            "importe": "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina"
+            "concepto": "2) $72 xm2 Estampillado por Dcho. Cementerio (segun cada expediente el monto que varia por la dimension y otros criterios). (*)",
+            "importe": null
+          },
+          {
+            "concepto": "(*) Monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina.",
+            "importe": null
           }
         ],
         "oficinas": [
@@ -3855,8 +3887,8 @@
             "importe": null
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (hasta 25 m 2)",
-            "importe": "3 módulos: $15.110,28 (módulo de habilitaciones)",
+            "concepto": "1) Según dimensiones del local a habilitar (hasta 25 m 2)",
+            "importe": "3 módulos: $15.110,28 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 3.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3865,8 +3897,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 25 m 2 hasta 50 m 2)",
-            "importe": "5,5 módulos: $27.702,18 (módulo de habilitaciones)",
+            "concepto": "2) Según dimensiones del local a habilitar (más de 25 m 2 hasta 50 m 2)",
+            "importe": "5,5 módulos: $27.702,18 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 5.5,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3875,8 +3907,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 50 m 2 hasta 100 m 2)",
-            "importe": "9 módulos: $45.330,84 (módulo de habilitaciones)",
+            "concepto": "3) Según dimensiones del local a habilitar (más de 50 m 2 hasta 100 m 2)",
+            "importe": "9 módulos: $45.330,84 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 9.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3885,8 +3917,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 100 m 2 hasta 300 m 2)",
-            "importe": "12 módulos: $60.441,12 (módulo de habilitaciones)",
+            "concepto": "4) Según dimensiones del local a habilitar (más de 100 m 2 hasta 300 m 2)",
+            "importe": "12 módulos: $60.441,12 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 12.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3895,8 +3927,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 300 m 2 hasta 500 m 2)",
-            "importe": "14 módulos: $70.514,64 (módulo de habilitaciones)",
+            "concepto": "5) Según dimensiones del local a habilitar (más de 300 m 2 hasta 500 m 2)",
+            "importe": "14 módulos: $70.514,64 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 14.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3905,8 +3937,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 500 m 2 hasta 750 m 2)",
-            "importe": "19 módulos: $95.698,44 (módulo de habilitaciones)",
+            "concepto": "6) Según dimensiones del local a habilitar (más de 500 m 2 hasta 750 m 2)",
+            "importe": "19 módulos: $95.698,44 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 19.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3915,8 +3947,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 750 m 2 hasta 1.000 m 2)",
-            "importe": "25 módulos: $125.919,00 (módulo de habilitaciones)",
+            "concepto": "7) Según dimensiones del local a habilitar (más de 750 m 2 hasta 1.000 m 2)",
+            "importe": "25 módulos: $125.919,00 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 25.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3925,8 +3957,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 1.000 m 2 hasta 1.500 m 2)",
-            "importe": "32 módulos: $161.176,32 (módulo de habilitaciones)",
+            "concepto": "8) Según dimensiones del local a habilitar (más de 1.000 m 2 hasta 1.500 m 2)",
+            "importe": "32 módulos: $161.176,32 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 32.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3935,8 +3967,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 1.500 m 2 hasta 2.000 m 2)",
-            "importe": "38,5 módulos: $193.915,26 (módulo de habilitaciones)",
+            "concepto": "9) Según dimensiones del local a habilitar (más de 1.500 m 2 hasta 2.000 m 2)",
+            "importe": "38,5 módulos: $193.915,26 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 38.5,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3945,8 +3977,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 2.000 m 2 hasta 2.500 m 2)",
-            "importe": "45 módulos: $226.654,20 (módulo de habilitaciones)",
+            "concepto": "10) Según dimensiones del local a habilitar (más de 2.000 m 2 hasta 2.500 m 2)",
+            "importe": "45 módulos: $226.654,20 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 45.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3955,8 +3987,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 2.500 m 2 hasta 3.000 m 2)",
-            "importe": "54 módulos: $271.985,04 (módulo de habilitaciones)",
+            "concepto": "11) Según dimensiones del local a habilitar (más de 2.500 m 2 hasta 3.000 m 2)",
+            "importe": "54 módulos: $271.985,04 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 54.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3965,8 +3997,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 3.000 m 2 hasta 5.000 m 2)",
-            "importe": "62 módulos: $312.279,12 (módulo de habilitaciones)",
+            "concepto": "12) Según dimensiones del local a habilitar (más de 3.000 m 2 hasta 5.000 m 2)",
+            "importe": "62 módulos: $312.279,12 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 62.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3975,8 +4007,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 5.000 m 2 hasta 10.000 m 2)",
-            "importe": "76 módulos: $382.793,76 (módulo de habilitaciones)",
+            "concepto": "13) Según dimensiones del local a habilitar (más de 5.000 m 2 hasta 10.000 m 2)",
+            "importe": "76 módulos: $382.793,76 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 76.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3985,8 +4017,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Según dimensiones del local a habilitar (más de 10.000 m 2)",
-            "importe": "82 módulos: $413.014,32 (módulo de habilitaciones)",
+            "concepto": "14) Según dimensiones del local a habilitar (más de 10.000 m 2)",
+            "importe": "82 módulos: $413.014,32 (módulo de habilitaciones, vigente desde 01/10/2026)",
             "modulos": 82.0,
             "categoria": "habilitaciones",
             "articulo": "art. 25",
@@ -3995,8 +4027,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Emisión del certificado de habilitación",
-            "importe": "5 módulos: $5.036,75 (módulo de servicios varios)",
+            "concepto": "15) Emisión del certificado de habilitación",
+            "importe": "5 módulos: $5.036,75 (módulo de servicios varios, vigente desde 01/10/2026)",
             "modulos": 5.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.9",
@@ -4005,8 +4037,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Emisión del certificado de renovación",
-            "importe": "5 módulos: $5.036,75 (módulo de servicios varios)",
+            "concepto": "16) Emisión del certificado de renovación",
+            "importe": "5 módulos: $5.036,75 (módulo de servicios varios, vigente desde 01/10/2026)",
             "modulos": 5.0,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.10",
@@ -4015,8 +4047,8 @@
             "desde": "01/10/2026"
           },
           {
-            "concepto": "Por certificaciones, copias de documentos, constancias varias",
-            "importe": "2,5 módulos: $2.518,38 (módulo de servicios varios)",
+            "concepto": "17) Por certificaciones, copias de documentos, constancias varias",
+            "importe": "2,5 módulos: $2.518,38 (módulo de servicios varios, vigente desde 01/10/2026)",
             "modulos": 2.5,
             "categoria": "servicios_varios",
             "articulo": "art. 24 inc. t.3",

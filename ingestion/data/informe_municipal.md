@@ -1,6 +1,6 @@
 # Informe del recorrido de formosatuciudad.gob.ar
 
-Consultado el 06/11/2026 (2026-11-06T17:12:27+00:00). Pedidos al sitio: 0; leídos de la caché local: 72.
+Consultado el 06/11/2026 (2026-11-06T18:39:33+00:00). Pedidos al sitio: 0; leídos de la caché local: 72.
 
 ## Totales
 
@@ -104,18 +104,7 @@ Los montos en pesos calculados caducan cuando la AIM publica un valor nuevo del 
 
 ## Montos publicados que no se pueden contrastar con el módulo (quedan con la advertencia)
 
-- Certificado de Libre Deuda de la Tasa de Utilización de la Vía Pública: Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)
-- Certificado de Libre Deuda de la Tasa de Utilización de la Vía Pública: Libre Deuda Dir. Tránsito: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)
 - Plan de Pago: por actividad administrativa + la 1er Cuota del Plan: $ 66
-- Baja del Automotor por Robo / Destrucción total: Libre deuda emitida por Tribunal de Faltas: $ 85
-- Baja del Automotor por Robo / Destrucción total: Libre deuda emitida por Direccion de Transito: $ 68
-- Certificado de Baja del Automotor por cambio de Radicación: Libre deuda emitida por Tribunal de Faltas: $ 85
-- Certificado de Baja del Automotor por cambio de Radicación: Libre deuda emitida por Direccion de Transito: $ 68
-- Pagos por Inhumaciones: Bajo Tierra: $ 255
-- Pagos por Inhumaciones: Nicho o Tierra: $ 290
-- Pagos por Inhumaciones: Pago por Arrendamiento: $ 120
-- Pagos por Resolución de Concesión de Terreno: Estampillado por Resolucion: $ 55
-- Pagos por Resolución de Concesión de Terreno: $72 xm2 Estampillado por Dcho. Cementerio (segun cada expediente el monto que varia por la dimension y otros criterios).
 - Requisitos de habilitaciones comerciales: (requisito) 5.- Certificado de Libre Falta (Tribunal de Faltas – Rivadavia Esq. Pringles). Válido por 48 hs. Estampilla de $122.70-
 
 ## Datos personales descartados

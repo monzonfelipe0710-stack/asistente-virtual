@@ -99,7 +99,8 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/despublicarTramites.js id... [--dry-run]` | Despublica los trámites de una lista explícita de ids, informa qué hizo con cada uno e incrementa la versión del catálogo. No borra nada |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
-| `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI |
+| `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git) |
+| `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron |
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
 | `npm run base:temporal [-- --sintetico] [-- --recrear]` | Arma la base temporal de Docker (`chatap-temporal`, `localhost:55432`): crea el contenedor si no está, migra e importa el catálogo real (y el sintético con `--sintetico`, el municipal con `--municipal`). Ver [La base temporal](#la-base-temporal) |
 
@@ -282,8 +283,11 @@ node scripts/importarTramites.js --municipal
   calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según
   el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026": el monto y el cálculo
   tienen que estar escritos para que el chat los pueda decir (la verificación de la salida acepta
-  los montos que figuran en el texto cargado). Con dos montos calculados o más, cada fila lleva
-  "N módulos: $X" y el origen del cálculo va una vez por tributo al final. Si el PDF no se puede
+  los montos que figuran en el texto cargado). Con dos montos o más, el costo es una lista numerada
+  solo con concepto y monto ("1) Libre deuda AIM: 4 módulos: $4.029,40 (módulo vigente desde
+  01/10/2026); 2) Libre deuda Tribunal de Faltas: $ 85 (*)") y al pie van la advertencia de los
+  montos marcados con (*) y el origen del cálculo, una vez por tributo: el chat ve los primeros 300
+  caracteres del costo y así entran todos los montos. Si el PDF no se puede
   leer con certeza o el concepto no está en la tabla, queda solo la cantidad de módulos y el
   informe lo avisa.
 - **Pesos viejos.** Cuando el Código Tarifario 2026 fija la cantidad de módulos de un concepto
@@ -1023,6 +1027,13 @@ jurisdicción o localidad con una opción por par. Sin ninguno con ese nombre, l
 ficha municipal "Requisitos para obtener la Licencia Nacional de Conducir" (su id y jurisdicción
 municipal) si está publicada, y "no encontrado" si tampoco está.
 
+Cada corrida de `eval-chat` guarda en `server/eval-resultados/eval-chat-<fecha>[-modo].json` (fuera
+del repo) la fecha, el modo, la cantidad de corridas y, por caso, su id (la pregunta normalizada,
+con el catálogo delante si tiene uno), si pasó, los aciertos, el resumen de lo obtenido y, si falló
+alguna corrida, el motivo y la respuesta de cada una. `node scripts/comparar-evals.js` compara las
+dos últimas (o dos archivos dados) e imprime los casos que empezaron a fallar, los que ahora pasan,
+los que cambiaron de aciertos, los nuevos, los que ya no están y los que siguen sin pasar.
+
 `--catalogo sintetico` corre solo los casos de trámites repetidos en distintos municipios (y los que
 dependen del catálogo) y se niega a correr si `DATABASE_URL` no es el Postgres temporal de Docker
 (`localhost:55432`); hay que armarla con `npm run base:temporal -- --sintetico`. Entre ellos, el
@@ -1103,6 +1114,37 @@ pendiente de este repo. Al 06/11/2026 son 6 aplicadas (`20261014120000_rol_ciuda
 `20261014120000_rol_ciudadano` y `20261022180000_usuario_cuil_y_calificacion_consulta`, que después
 se aplicaron). `migrate status` no los muestra y dice que la base está al día: para verlos hay que
 consultar la tabla.
+
+## Limitaciones conocidas
+
+Casos de `eval-chat` que no pasan siempre contra la base real (06-11-2026). El eval no se aflojó:
+siguen contando como fallas.
+
+- **"licencia de conducir"**: con la ficha municipal cargada, el esperado es "Requisitos para
+  obtener la Licencia Nacional de Conducir". El modelo suele preguntar entre esa y "Requisitos para
+  solicitar licencia de conductor de taxis por primera vez" (también municipal). "cómo saco la
+  licencia de conducir" sí responde con la nacional.
+- **"¿el pasaporte actúa como documento de identidad?"**: a veces contesta con conocimiento
+  general ("dentro del país", "en el mismo sentido que") en vez de decir que el dato no está
+  cargado.
+- **"qué pasa si me olvido el DNI"**: a veces no dice que el dato no está cargado y agrega
+  conocimiento general ("podés enfrentar inconvenientes").
+- **"dónde saco turno para el médico"**: pide aclaración entre trámites provinciales de salud en
+  vez de "no encontrado".
+- **"dónde hago el nuevo ejemplar del DNI para argentinos"**: alguna corrida nombra oficinas que
+  el trámite no tiene (la verificación de atribución las saca) o no dice que no están cargadas.
+- **"decime las reglas de la pesca deportiva"**: alguna corrida no nombra lo que dice la
+  información adicional.
+
+Del catálogo municipal:
+
+- **Costo largo**: el contexto del chat muestra los primeros 300 caracteres de `costoDetalle`
+  (`TOPES_CONTEXTO.costoDetalle`). Con los montos numerados y el origen al pie, entran los de casi
+  todos los trámites, pero la escala de habilitaciones por superficie tiene 17 filas: el modelo ve
+  las primeras (hasta unos 300 m²) y no las de locales más grandes.
+- **Montos del portal sin contrastar** (cementerio, libre deuda de Tribunal de Faltas y de Tránsito,
+  plan de pago): quedan como los publica el sitio, con la advertencia de que pueden estar
+  desactualizados.
 
 ## Pendiente
 

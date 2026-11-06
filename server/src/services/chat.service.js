@@ -400,19 +400,19 @@ IMPORTANTE: este mensaje no pide un trámite. "tipo" DEBE ser "conversacion" y s
 
 // Contra la parte fija de las instrucciones; el resumen del catálogo y los candidatos no cuentan.
 // Las permitidas son frases del prompt que el modelo dice casi textual en respuestas legítimas.
-const FRASES_DE_RESPUESTA = [
+export const FRASES_DE_RESPUESTA = [
   "el asistente virtual de trámites de la provincia de Formosa y sus municipios",
   "consultar en una mesa de entrada o en la fuente oficial",
   // La regla del costo del portal: el modelo la dice tal cual y no es una fuga.
   "que es el costo según el portal oficial a esa fecha",
   "conviene confirmarlo en la fuente oficial, porque puede haber cambiado",
+  // La regla de cada dato de su trámite: "decí que ese dato no está cargado para ese trámite".
+  "ese dato no está cargado para ese trámite",
 ];
+export const TEXTOS_FIJOS_DEL_PROMPT = [SYSTEM_PROMPT_MULTIVUELTA, SYSTEM_PROMPT_STREAM_MULTIVUELTA, INSTRUCCION_TOPE, INSTRUCCION_SIN_CANDIDATOS];
 let detectorDeFuga = null;
 export const buscarFugaDeInstrucciones = (texto) => {
-  detectorDeFuga ??= crearDetectorDeFuga(
-    [SYSTEM_PROMPT_MULTIVUELTA, SYSTEM_PROMPT_STREAM_MULTIVUELTA, INSTRUCCION_TOPE, INSTRUCCION_SIN_CANDIDATOS],
-    { permitidas: FRASES_DE_RESPUESTA },
-  );
+  detectorDeFuga ??= crearDetectorDeFuga(TEXTOS_FIJOS_DEL_PROMPT, { permitidas: FRASES_DE_RESPUESTA });
   return detectorDeFuga(texto);
 };
 

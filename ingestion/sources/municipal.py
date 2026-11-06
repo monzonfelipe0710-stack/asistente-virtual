@@ -502,19 +502,38 @@ def costos_de(lineas, modulo, consulta, avisos, titulo, viejos):
 
 
 def compactar(filas, consulta):
-    """Con dos montos calculados o más, cada fila lleva la cantidad y el monto, y el origen del cálculo
-    va una vez por tributo al final: la escala de habilitaciones repetía la leyenda en 17 filas."""
-    calculadas = [f for f in filas if "monto" in f]
-    if len(calculadas) < 2:
+    """Con dos montos o más, una lista numerada solo con concepto y monto, y al pie el origen del
+    cálculo (una vez por tributo) y la advertencia de los montos publicados: el chat ve los primeros
+    300 caracteres del costo y la leyenda repetida en cada fila dejaba afuera los últimos montos."""
+    con_monto = [f for f in filas if f.get("importe")]
+    if len(con_monto) < 2:
         return filas
+    calculadas = [f for f in con_monto if "monto" in f]
     categorias = list(dict.fromkeys(f["categoria"] for f in calculadas))
     nombre = lambda c: NOMBRES_CATEGORIA.get(c, c.replace("_", " "))  # noqa: E731
-    for f in calculadas:
-        f["importe"] = f"{cantidad_ar(f['modulos'])} módulos: ${numero_ar(f['monto'])}" + (f" (módulo de {nombre(f['categoria'])})" if len(categorias) > 1 else "")
+    advertidas = sin_monto = 0
+    for n, f in enumerate(con_monto, 1):
+        if "monto" in f:
+            de = f"de {nombre(f['categoria'])}, " if len(categorias) > 1 else ""
+            f["importe"] = f"{cantidad_ar(f['modulos'])} módulos: ${numero_ar(f['monto'])} (módulo {de}vigente desde {f['desde']})"
+        elif f["importe"] == ADVERTENCIA:
+            f["concepto"], f["importe"] = f"{f['concepto']} (*)", None
+            advertidas += 1
+        elif ADVERTENCIA in f["importe"]:
+            f["importe"] = f["importe"].replace(f"({ADVERTENCIA})", "(*)")
+            advertidas += 1
+        elif "modulos" in f:
+            f["importe"] = f"{cantidad_ar(f['modulos'])} módulos (el valor en pesos no está cargado)"
+            sin_monto += 1
+        f["concepto"] = f"{n}) {f['concepto']}"
+    if advertidas:
+        filas.append({"concepto": f"(*) {ADVERTENCIA[:1].upper() + ADVERTENCIA[1:]}.", "importe": None})
     for c in categorias:
         f = next(x for x in calculadas if x["categoria"] == c)
         filas.append({"concepto": f"Montos calculados con el valor del módulo ({nombre(c)}: ${numero_ar(f['valorModulo'])}) vigente desde {f['desde']}, "
                                   f"según el {CODIGO_TARIFARIO}; fuente: portal oficial, consultado el {consulta}.", "importe": None})
+    if sin_monto and not categorias:
+        filas.append({"concepto": f"Fuente: portal oficial, consultado el {consulta}.", "importe": None})
     return filas
 
 

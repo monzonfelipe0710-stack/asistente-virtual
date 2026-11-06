@@ -51,9 +51,9 @@ mock.module(servicio('services/metrica.service.js'), {
 
 const cache = await import('../src/services/cache.service.js');
 const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
-const { responderConsulta, responderConsultaStream, buscarFugaDeInstrucciones, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
+const { responderConsulta, responderConsultaStream, buscarFugaDeInstrucciones, TEXTOS_FIJOS_DEL_PROMPT, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
   await import('../src/services/chat.service.js');
-const { MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
+const { LARGO_DE_FUGA, MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA } = await import('../src/services/verificacion.service.js');
 const { MENSAJE_SOLO_ESPANOL } = await import('../src/utils/idioma.js');
 
@@ -770,6 +770,45 @@ describe('chat', () => {
       assert.equal((await responderConsulta(turno('¿quién sos?'))).respuesta, legitima);
       salidaModelo = salida({ tipo: 'conversacion', respuesta: '¡De nada! Cuando quieras, preguntame por otro trámite.' });
       assert.equal((await responderConsulta(turno('gracias'))).respuesta, '¡De nada! Cuando quieras, preguntame por otro trámite.');
+    });
+
+    // Lo que el prompt le ordena decir (después de "aclará que", "decilo así", "decí", "avisá", ...)
+    // no puede disparar el detector: el modelo lo dice casi textual. Si al cambiar el prompt aparece
+    // una orden de decir algo de 40 caracteres o más, este test pide sumarla a FRASES_DE_RESPUESTA.
+    it('ninguna frase que el prompt pide decir dispara el detector de fuga', () => {
+      const MATIZ = String.raw`(?:\s+(?:expresamente|siempre|solo|brevemente|claramente))?(?:\s+que)?`;
+      const IMPERATIVO = String.raw`(?:aclará|decí|decilo así|decilo|decile|avisá|indicá|recordá|sugerí|respondé|contestá|mencioná|explicá|ofrecé|invitá|orientá|pedí|preguntá)${MATIZ}\s+`;
+      // Otra orden encadenada ("..., nombrá ...", "... y aclará ..."): un imperativo con voseo.
+      const VOSEO = String.raw`(?!(?:está|están|más|así|acá|allá|ahí|también|qué|cuál|quién|dónde|cómo|cuándo|sí|según|además|después)(?![\p{L}]))\p{L}{2,}[áéí](?![\p{L}])`;
+      const tramos = [];
+      for (const texto of TEXTOS_FIJOS_DEL_PROMPT) {
+        const sinCitas = texto.replace(/"[^"\n]*"/g, ' ');
+        for (const [, orden] of sinCitas.matchAll(new RegExp(`(?<![\\p{L}])${IMPERATIVO}([^.;:\\n]+)`, 'giu'))) {
+          for (const parte of orden.split(new RegExp(`(?:\\s+[ye]\\s+|,\\s*)${VOSEO}${MATIZ}`, 'iu'))) {
+            const entreParentesis = [...parte.matchAll(/\(([^)]*)\)/g)].map((m) => m[1]);
+            tramos.push(...entreParentesis, parte.replace(/\([^)]*\)/g, ' '));
+          }
+        }
+      }
+      // Órdenes que el modelo parafrasea y no dice textual: no se permiten en el detector.
+      const NO_TEXTUALES = [
+        'dónde está el resto, como dice el contexto',
+        'cuántos trámites hay y de qué jurisdicciones',
+        'al menos 3 sectores del resumen con su nombre exacto y 2 o 3 trámites de ejemplo del resumen,',
+        'con amabilidad que solo ayudás con trámites y dá 2 ejemplos copiando tal cual 2 nombres de la línea del RESUMEN DEL CATÁLOGO',
+        'TODOS los candidatos que corresponden, aunque sean de temas distintos entre sí y aunque uno sea más general que otro',
+        'ese dato no está cargado y que lo consulte en la mesa de entrada',
+        'directo a lo que se pidió, sin repetir la pregunta',
+        'la pregunta con el resto de la información del trámite, siguiendo estas reglas',
+        'el sistema lo reemplaza por el mensaje fijo',
+        'tipo y como texto únicamente FUERA_DE_ALCANCE',
+        'igual describiendo brevemente cada uno de esos candidatos para que pueda elegir, con el ID del primero en y los de todos en',
+        'consultar en una mesa de entrada solo si ningún candidato del contexto corresponde',
+      ];
+      const largos = [...new Set(tramos.map((t) => t.replace(/\s+/g, ' ').trim()))].filter((t) => t.length >= LARGO_DE_FUGA && !NO_TEXTUALES.includes(t));
+      assert.ok(largos.some((t) => t.includes('conviene confirmarlo en la fuente oficial')), 'la extracción encuentra la regla del costo del portal');
+      const disparan = largos.filter((tramo) => buscarFugaDeInstrucciones(`Te cuento: ${tramo}.`) !== null);
+      assert.deepEqual(disparan, [], `Sumar a FRASES_DE_RESPUESTA (si el modelo lo dice textual) o a NO_TEXTUALES:\n${disparan.join('\n')}`);
     });
 
     it('la aclaración que pide la regla del costo del portal no es una fuga', () => {

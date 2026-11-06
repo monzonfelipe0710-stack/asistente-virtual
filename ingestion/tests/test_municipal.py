@@ -145,17 +145,19 @@ class Modulo(unittest.TestCase):
         antes = m.leer_tabla_modulo(fixture("modulo.txt"), date(2026, 7, 1))
         self.assertFalse(antes["legible"])
 
-    def test_calcula_el_monto_y_lo_escribe(self):
-        _, d, extra = ficha("secciones.html")
-        exencion = d["costos"][0]
-        self.assertEqual(exencion["concepto"], "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales")
-        self.assertEqual(exencion["importe"], "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026")
+    def test_un_solo_monto_lleva_el_calculo_en_la_misma_linea(self):
+        filas = m.costos_de(["Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales: 2.5 Módulos"], MODULO, CONSULTA, [], "Exención", [])
+        self.assertEqual(filas, [{**filas[0], "concepto": "Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales",
+                                  "importe": "2,5 módulos: $2.518,38, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026"}])
 
-    def test_concepto_sin_categoria_queda_solo_con_la_cantidad(self):
+    def test_varios_montos_van_numerados_con_el_origen_al_pie(self):
         _, d, extra = ficha("secciones.html")
-        plan = d["costos"][1]
-        self.assertEqual(plan["importe"], "3 módulos (el valor en pesos no está cargado; fuente: portal oficial, consultado el 06/11/2026)")
-        self.assertNotIn("$", plan["importe"])
+        texto = [c["concepto"] + (f": {c['importe']}" if c["importe"] else "") for c in d["costos"]]
+        self.assertEqual(texto, ([
+            "1) Por solicitud de acogimiento y/o renovación de exención de Tributos Municipales: 2,5 módulos: $2.518,38 (módulo vigente desde 01/10/2026)",
+            "2) Plan de Pago en cuotas: 3 módulos (el valor en pesos no está cargado)",
+            "Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
+        ]))
         self.assertEqual(extra["modulos"][0]["motivo"], "el concepto no está en la tabla de conceptos del Código Tarifario")
 
     def test_valor_ilegible_no_inventa_el_monto(self):
@@ -185,16 +187,27 @@ class PesosDelPortal(unittest.TestCase):
         return m.costos_de(lineas, MODULO, CONSULTA, avisos, titulo, viejos), viejos
 
     def test_pesos_con_concepto_del_codigo_se_recalculan(self):
-        filas, viejos = self.costos(["$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)", "$85 Libre deuda emitida por Tribunal de Faltas"])
-        self.assertEqual(filas[0]["importe"], "4 módulos: $4.029,40, calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026")
-        self.assertEqual(filas[1], {"concepto": "Libre deuda emitida por Tribunal de Faltas", "importe": f"$ 85 ({m.ADVERTENCIA})"})
+        filas, viejos = self.costos(["$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)", "$85 Libre deuda emitida por Tribunal de Faltas", "$68 Libre deuda emitida por Direccion de Transito"])
+        self.assertEqual([(f["concepto"], f["importe"]) for f in filas], [
+            ("1) Libre deuda emitida por Administración de Ingresos Municipales (AIM)", "4 módulos: $4.029,40 (módulo vigente desde 01/10/2026)"),
+            ("2) Libre deuda emitida por Tribunal de Faltas", "$ 85 (*)"),
+            ("3) Libre deuda emitida por Direccion de Transito", "$ 68 (*)"),
+            (f"(*) Monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina.", None),
+            ("Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.", None),
+        ])
         self.assertEqual([v["texto"] for v in viejos], ["$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)"])
+
+    def test_los_montos_entran_en_lo_que_ve_el_chat(self):
+        filas, _ = self.costos(["$125 Libre deuda emitida por Administración de Ingresos Municipales (AIM)", "$85 Libre deuda emitida por Tribunal de Faltas", "$68 Libre deuda emitida por Direccion de Transito"])
+        en_una_linea = "; ".join(f["concepto"] + (f": {f['importe']}" if f["importe"] else "") for f in filas)
+        for dato in ("$4.029,40", "vigente desde 01/10/2026", "$ 85", "$ 68", "(*) Monto publicado en el portal"):
+            self.assertLess(en_una_linea.index(dato), 300 - len(dato), dato)
 
     def test_unidades_tributarias(self):
         filas, viejos = self.costos(["1 U.T (1 U.T $250) por actividades administrativas (Estudio de Dominio)", "Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10)"])
-        self.assertEqual(filas[0]["concepto"], "Por actividades administrativas (Estudio de Dominio)")
-        self.assertTrue(filas[0]["importe"].startswith("6 módulos: $6.044,10, calculado con el valor del módulo (servicios varios"))
-        self.assertEqual(filas[1]["importe"], m.ADVERTENCIA)
+        self.assertEqual(filas[0]["concepto"], "1) Por actividades administrativas (Estudio de Dominio)")
+        self.assertEqual(filas[0]["importe"], "6 módulos: $6.044,10 (módulo vigente desde 01/10/2026)")
+        self.assertEqual(filas[1], {"concepto": "2) Libre Deuda T.F.: Tasa administrativa de 3 Unidades Tributarias (1UT:$10) (*)", "importe": None})
         self.assertEqual(len(viejos), 1)
 
     def test_costo_generico_usa_el_titulo(self):
@@ -204,10 +217,10 @@ class PesosDelPortal(unittest.TestCase):
 
     def test_modulos_con_pesos_viejos_en_la_misma_linea(self):
         filas, viejos = self.costos(["SEGÚN DIMENSIONES DEL LOCAL A HABILITAR ART. 36 INC. A ($100)", "Hasta 25 m 2 : 3 Módulos $ 730.00", "EMISIÓN DEL CERTIFICADO DE HABILITACIÓN: 5 Módulos ($49,08) = $ 245.40."])
-        self.assertEqual(filas[0]["concepto"], "Según dimensiones del local a habilitar (hasta 25 m 2)")
-        self.assertEqual(filas[0]["importe"], "3 módulos: $15.110,28 (módulo de habilitaciones)")
-        self.assertEqual(filas[1]["concepto"], "Emisión del certificado de habilitación")
-        self.assertEqual(filas[1]["importe"], "5 módulos: $5.036,75 (módulo de servicios varios)")
+        self.assertEqual(filas[0]["concepto"], "1) Según dimensiones del local a habilitar (hasta 25 m 2)")
+        self.assertEqual(filas[0]["importe"], "3 módulos: $15.110,28 (módulo de habilitaciones, vigente desde 01/10/2026)")
+        self.assertEqual(filas[1]["concepto"], "2) Emisión del certificado de habilitación")
+        self.assertEqual(filas[1]["importe"], "5 módulos: $5.036,75 (módulo de servicios varios, vigente desde 01/10/2026)")
         self.assertEqual([f["concepto"] for f in filas[2:]], [
             "Montos calculados con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
             "Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",

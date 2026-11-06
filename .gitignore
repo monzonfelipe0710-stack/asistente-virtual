@@ -9,3 +9,5 @@ ingestion/data/informe_muestra.md
 __pycache__/
 # HTML y PDF crudos de los scrapers (se reprocesan sin volver a pedirlos)
 ingestion/data/raw/
+# Resultados de eval-chat por corrida (scripts/comparar-evals.js)
+server/eval-resultados/

@@ -17,6 +17,9 @@
 // responderConsulta registra las consultas en `consultas`; al terminar se borran
 // por id las que creó esta corrida para no ensuciar las métricas.
 import 'dotenv/config';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
@@ -531,6 +534,12 @@ const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunt
 const desconocidos = SOLO.filter((p) => !delModo.some((c) => c.pregunta === p));
 if (desconocidos.length > 0) throw new Error(`Casos que no existen: ${desconocidos.join(' | ')}`);
 
+// Cada corrida queda en server/eval-resultados/ (ignorada por git) para compararla con
+// scripts/comparar-evals.js. El id del caso es su pregunta (y el catálogo, si tiene uno).
+const resultados = [];
+const idDelCaso = (caso) => `${caso.catalogo ? `${caso.catalogo}:` : ''}${normalizar(caso.pregunta).replace(/[^a-z0-9ñ]+/g, '-').replace(/^-|-$/g, '')}`;
+const inicio = new Date();
+
 for (const caso of elegidos) {
   const corridas = [];
   for (let i = 0; i < CORRIDAS; i++) corridas.push(await correr(caso));
@@ -544,6 +553,15 @@ for (const caso of elegidos) {
     estado: estadoDe(aciertos),
   });
   detalle.push({ pregunta: caso.pregunta, textos: corridas.map((c) => c.texto) });
+  resultados.push({
+    id: idDelCaso(caso),
+    pregunta: caso.pregunta,
+    paso: aciertos === CORRIDAS,
+    estado: estadoDe(aciertos),
+    aciertos,
+    obtenido: resumirCorridas(corridas),
+    ...(aciertos < CORRIDAS && { fallados: corridas.filter((c) => c.motivo.length > 0).map((c) => ({ motivo: c.motivo, respuesta: c.texto })) }),
+  });
   tuteoPorCaso.push({
     pregunta: caso.pregunta,
     corridas: corridas.filter((c) => c.tuteo.length > 0).length,
@@ -598,6 +616,21 @@ console.log(
 
 const { count: borradas } = await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
 console.log(`Consultas de la evaluación borradas: ${borradas}`);
+
+const CARPETA = fileURLToPath(new URL('../eval-resultados/', import.meta.url));
+mkdirSync(CARPETA, { recursive: true });
+const archivo = join(CARPETA, `eval-chat-${inicio.toISOString().replace(/[:.]/g, '-')}${MODO ? `-${MODO}` : ''}.json`);
+writeFileSync(archivo, JSON.stringify({
+  fecha: inicio.toISOString(),
+  terminada: new Date().toISOString(),
+  modo: MODO ?? 'real',
+  corridas: CORRIDAS,
+  solo: SOLO,
+  total: elegidos.length,
+  ok: conEstado('OK').length,
+  casos: resultados,
+}, null, 1));
+console.log(`Resultado por caso en ${archivo}`);
 
 if (conEstado('OK').length < elegidos.length) process.exitCode = 1;
 await prisma.$disconnect();

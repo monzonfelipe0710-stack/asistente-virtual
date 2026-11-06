@@ -391,7 +391,13 @@ trámites provinciales (campos guardados y texto del embedding) es la misma ante
   después. El informe del dry-run real está en `ingestion/data/informe_dryrun_municipal.md`.
 - La regla del costo del portal pedía decir "conviene confirmarlo en la fuente oficial" y el
   detector de fuga de instrucciones lo tomaba como copia del prompt: la respuesta salía reemplazada
-  por el mensaje fijo. Esas frases quedaron entre las permitidas.
+  por el mensaje fijo (desde `3aa483e`; medido después con el detector viejo: 1 de 6 respuestas de
+  costo provincial y 5 de 12 de costo municipal). Esas frases y "ese dato no está cargado para ese
+  trámite" quedaron entre las permitidas, y un test recorre las órdenes de decir del prompt para
+  que ninguna dispare el detector.
+- Con dos montos o más, `costoDetalle` es una lista numerada con el origen del cálculo y la
+  advertencia al pie: el chat ve los primeros 300 caracteres y antes los últimos montos (los $85 y
+  $68 de la baja del automotor) quedaban afuera.
 
 Evals contra la base real después de importar (06-11-2026), con la red inestable (timeouts de
 OpenAI y de Neon que se repitieron aparte):
@@ -480,6 +486,22 @@ Los sectores se buscan y se crean por `(nombre, padre)`: el JSON puede traer `pa
 24. Estilo mezclado: comillas dobles en `usuario.controller.js` y `chat.service.js`, simples en el resto. Erratas: "adminstradores" en `asignarSectores` y la relación `consultar` (en vez de `consultas`) en `Usuario`.
 25. Falta `engines` en `package.json` para fijar la versión mínima de Node.
 26. La config de seed en `package.json#prisma` deja de funcionar en Prisma 7: migrar a `prisma.config.ts` antes de actualizar.
+
+### Limitaciones conocidas (06-11-2026)
+
+Casos de `eval-chat` que no pasan siempre contra la base real; el eval no se aflojó (detalle en el
+README, "Limitaciones conocidas"):
+
+- "licencia de conducir": el modelo pregunta entre la licencia nacional y la de taxis (las dos
+  fichas municipales) en vez de responder con la nacional.
+- "¿el pasaporte actúa como documento de identidad?" y "qué pasa si me olvido el DNI": a veces
+  completan con conocimiento general en vez de decir que el dato no está cargado.
+- "dónde saco turno para el médico": aclaración entre trámites provinciales en vez de "no
+  encontrado".
+- "dónde hago el nuevo ejemplar del DNI para argentinos" y "decime las reglas de la pesca
+  deportiva": inestables (oficinas que no tiene el trámite, o no nombra la información adicional).
+- La escala de habilitaciones por superficie supera los 300 caracteres de costo que ve el chat: el
+  modelo no ve las filas de locales grandes.
 
 ---
 
