@@ -32,6 +32,12 @@ const crearIdConversacion = () => `chat_${Date.now()}_${Math.random().toString(3
 const THREADS_PREFIX = "chatap.threads.";
 const TRAMITES_CACHE_KEY = "chatap.tramites-publicados.v1";
 const MODERATION_PREFIX = "chatap.moderation.";
+const TRAMITES_INICIALES = [
+  "Matrimonio",
+  "Pasaporte",
+  "Licencia por maternidad",
+  "Registro Civil",
+];
 
 function normalizarMensajeModeracion(texto) {
   return String(texto || "")
@@ -635,8 +641,11 @@ export default function ChatWindow({ initialQuery = null }) {
       typeof window !== "undefined" &&
       !!window.matchMedia &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
+    const hasImmediateActions = Array.isArray(finalActions) &&
+      finalActions.some((action) => action?.type === "chips" || action?.type === "wizard");
+    if (reduceMotion || hasImmediateActions) {
       requestInFlightRef.current = false;
+      setPromoReady(true);
       controllerRef.current?.onEvent(error ? "botError" : "botSuccess");
       return;
     }
@@ -970,10 +979,13 @@ export default function ChatWindow({ initialQuery = null }) {
     // Pasamos el texto del usuario para que el controller detecte contexto
     controllerRef.current?.onEvent("userMessageSent", { text: t });
     const quiereTramite = /^(?:hola\s+)?(?:quiero\s+(?:hacer|iniciar|realizar|consultar|buscar)\s+(?:un\s+|una\s+)?tr[aá]mite)/i.test(t);
-    if (quiereTramite && tramitesPublicados.length) {
-      const opciones = tramitesPublicados.slice(0, 8).map((tramite) => ({
-        label: tramite.nombre,
-        value: tramite.nombre,
+    if (quiereTramite) {
+      const nombresCatalogo = tramitesPublicados.length
+        ? tramitesPublicados.slice(0, 8).map((tramite) => tramite.nombre)
+        : TRAMITES_INICIALES;
+      const opciones = [...new Set(nombresCatalogo)].slice(0, 8).map((nombre) => ({
+        label: nombre,
+        value: nombre,
       }));
       opciones.push({
         label: "No está relacionado / quiero escribir otra consulta",
