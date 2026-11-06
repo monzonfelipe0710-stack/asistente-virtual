@@ -114,9 +114,8 @@ export default function InteractiveChatMockup() {
 
     if (current.type === "user") {
       if (phase === "idle") {
-        setDraft("");
         sentRef.current = false;
-        setPhase("composing");
+        timerRef.current = window.setTimeout(() => setPhase("composing"), 0);
       } else if (phase === "composing" && draft.length < current.text.length) {
         timerRef.current = window.setTimeout(() => {
           setDraft(current.text.slice(0, Math.min(current.text.length, draft.length + 2)));

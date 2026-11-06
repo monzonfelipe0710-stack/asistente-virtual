@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
@@ -92,35 +92,29 @@ export default function ContactoPage() {
   const [isDraggingReportFile, setIsDraggingReportFile] = useState(false);
   const [reportPreviewUrl, setReportPreviewUrl] = useState("");
 
-  useEffect(() => {
-    if (!reportFile) {
-      setReportPreviewUrl("");
-      return undefined;
-    }
-
-    const previewUrl = URL.createObjectURL(reportFile);
-    setReportPreviewUrl(previewUrl);
-
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [reportFile]);
-
   function validateReportFile(file) {
     setReportFileError("");
     if (!file) {
+      if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl);
       setReportFile(null);
+      setReportPreviewUrl("");
       return;
     }
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setReportFile(null);
+      setReportPreviewUrl("");
       setReportFileError("Elegí una imagen JPG, PNG o WEBP.");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
       setReportFile(null);
+      setReportPreviewUrl("");
       setReportFileError("La imagen no puede superar los 5 MB.");
       return;
     }
+    if (reportPreviewUrl) URL.revokeObjectURL(reportPreviewUrl);
     setReportFile(file);
+    setReportPreviewUrl(URL.createObjectURL(file));
   }
 
   function handleReportFile(event) {

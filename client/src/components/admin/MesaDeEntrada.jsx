@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAdmin } from "../../context/AdminContext";
 import { roleLabel } from "../../lib/roles";
 
@@ -26,17 +26,13 @@ function nextNumber(items) {
 
 export default function MesaDeEntrada() {
   const { can, role } = useAdmin();
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(readExpedientes);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [showForm, setShowForm] = useState(false);
   const [storageError, setStorageError] = useState("");
   const [formError, setFormError] = useState("");
   const [draft, setDraft] = useState({ remitente: "", documento: "", asunto: "", area: "", observaciones: "" });
-
-  useEffect(() => {
-    setItems(readExpedientes());
-  }, []);
 
   function persist(next) {
     try {

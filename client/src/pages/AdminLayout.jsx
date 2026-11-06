@@ -43,7 +43,9 @@ export default function AdminLayout() {
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "instant" });
-    if (isMobile) setSidebarOpen(false);
+    if (isMobile) {
+      window.setTimeout(() => setSidebarOpen(false), 0);
+    }
   }, [pathname, isMobile]);
 
   useEffect(() => {
