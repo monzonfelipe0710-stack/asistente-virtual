@@ -41,8 +41,8 @@ FICHA = """
  </table></div>
 </div>
 <div class="col-sm-6">
- <div class="header-box"><div>¿Cómo se realiza el trámite?:</div><p><strong>Personal</strong></p></div>
- <div class="header-box"><div>Duración Aproximada:</div><h6>8 minutos</h6></div>
+ <div class="header-box"><div class="icon-box"><i class="fa fa-inbox"></i></div><div>¿Cómo se realiza el trámite?:</div><p><strong>Personal</strong></p></div>
+ <div class="header-box"><div class="icon-box"><i class="fa fa-clock"></i></div><div>Duración Aproximada:</div><h6>8 minutos</h6></div>
  <div class="header-box"><div>Organismo Responsable</div><h6><a href="/tramites/organismo/823/registro_civil">Dirección del Registro Civil</a></h6></div>
  <div class="steps"><p>1. Pedir turno.</p><p>2. Presentarse.</p></div>
 </div>

@@ -170,14 +170,20 @@ const entradaBloqueada = (mensajes) => {
   return bloqueada;
 };
 
-// null es "no se cargó", no "gratis": solo un 0 explícito es gratuito.
-const formatearCosto = (costo) => {
-  if (costo == null) return "no informado";
-  return Number(costo) === 0 ? "gratuito" : `$${costo}`;
+// Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
+export const TOPES_CONTEXTO = {
+  descripcion: 1200, costoDetalle: 300, informacionAdicional: 800,
+  requisitos: 15, documentos: 10, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 30,
 };
 
-// Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
-export const TOPES_CONTEXTO = { descripcion: 1200, requisitos: 15, documentos: 10, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 30 };
+const enUnaLinea = (texto) => texto.replace(/\s*\n+\s*/g, "; ");
+
+// null es "no se cargó", no "gratis": solo un 0 explícito es gratuito. Lo que no entra en un monto
+// (varias filas, importes en UT) va como texto.
+const formatearCosto = ({ costo, costoDetalle }) => {
+  if (costo == null) return costoDetalle ? recortarEnOracion(enUnaLinea(costoDetalle), TOPES_CONTEXTO.costoDetalle) : "no informado";
+  return Number(costo) === 0 ? "gratuito" : `$${costo}`;
+};
 
 const normalizarLocalidad = (l) => normalizarNombre(l ?? "");
 
@@ -190,7 +196,10 @@ const mesasParaMostrar = (mesas, localidades, consulta) => {
 };
 
 const lineaDeMesa = ({ mesa }) =>
-  `- ${[mesa.nombre, mesa.direccion, mesa.localidad, mesa.horario && `horario: ${mesa.horario}`].filter(Boolean).join(", ")}`;
+  `- ${[
+    mesa.nombre, mesa.direccion, mesa.localidad,
+    mesa.horario && `horario: ${mesa.horario}`, mesa.telefono && `teléfono: ${mesa.telefono}`, mesa.email && `email: ${mesa.email}`,
+  ].filter(Boolean).join(", ")}`;
 
 const localidadesDe = (mesas) => {
   const vistas = new Map();
@@ -211,8 +220,13 @@ const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
     `Trámite (id ${t.id}): ${t.nombre}`,
     ...(organismo ? [`Organismo: ${organismo.nombre}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
     `Descripción: ${descripcion}${descripcion === t.descripcion ? "" : ` (descripción resumida: hay más información ${dondeSigue})`}`,
-    `Costo: ${formatearCosto(t.costo)}`,
+    `Costo: ${formatearCosto(t)}`,
   ];
+
+  if (t.informacionAdicional) {
+    const info = recortarEnOracion(t.informacionAdicional, TOPES_CONTEXTO.informacionAdicional);
+    lineas.push(`Información adicional: ${info}${info === t.informacionAdicional ? "" : ` (resumida: hay más información ${dondeSigue})`}`);
+  }
 
   // Lo que falta se dice explícitamente: así el modelo no lo completa con conocimiento general.
   if (t.requisitos.length > 0) {
@@ -269,6 +283,8 @@ export const cargarDetalle = async (ids) => {
   const filas = await prisma.$queryRaw`
     SELECT
       t.id, t.nombre, t.descripcion, t.costo,
+      t.costo_detalle AS "costoDetalle", t.informacion_adicional AS "informacionAdicional",
+      t.verificado_en AS "verificadoEn", t.huella_importacion AS "huellaImportacion",
       t.encargado_id AS "encargadoId", t.publicado,
       t.created_at AS "createdAt", t.updated_at AS "updatedAt",
       t.sector_id AS "sectorId", t.fuente_url AS "fuenteUrl",
@@ -284,7 +300,9 @@ export const cargarDetalle = async (ids) => {
           'tramiteId', tm.tramite_id, 'mesaId', tm.mesa_id,
           'mesa', json_build_object(
             'id', m.id, 'nombre', m.nombre, 'direccion', m.direccion, 'localidad', m.localidad,
-            'horario', m.horario, 'esGeneral', m.es_general, 'sectorId', m.sector_id
+            'horario', m.horario, 'telefono', m.telefono, 'email', m.email,
+            'esGeneral', m.es_general, 'sectorId', m.sector_id,
+            'origenId', m.origen_id, 'huellaImportacion', m.huella_importacion
           )
         ) ORDER BY m.id)
         FROM tramite_mesa tm JOIN mesas_entrada m ON m.id = tm.mesa_id

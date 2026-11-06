@@ -348,6 +348,37 @@ describe('chat', () => {
     }
   });
 
+  it('al modelo le llegan el costo en texto, la información adicional (acotada) y el teléfono y el email de las mesas', async () => {
+    const contextoDelTramite = async () => {
+      llamadasModelo = [];
+      cache.limpiar();
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('qué necesito'));
+      return llamadasModelo[0].instruccionSistema.split('Contexto (trámites candidatos):')[1];
+    };
+    const larga = `Modalidad: Personal\n${'Observación de la ficha. '.repeat(80)}`;
+    const mesa = await prisma.mesaEntrada.create({
+      data: { nombre: `Mesa ficha ${SUFIJO}`, direccion: 'Moreno 575', telefono: '(0370) 442-9326', email: 'pol.judicial@formosa.gob.ar' },
+    });
+    try {
+      await prisma.tramite.update({
+        where: { id: tramite.id },
+        data: { costoDetalle: 'Estampilla Primera vez: $ 5.000\nEstampilla Renovación: $ 5.000', informacionAdicional: larga, fuenteUrl: `https://example.invalid/ficha-${SUFIJO}` },
+      });
+      await prisma.tramiteMesa.create({ data: { tramiteId: tramite.id, mesaId: mesa.id } });
+
+      const contexto = await contextoDelTramite();
+      assert.match(contexto, /^Costo: Estampilla Primera vez: \$ 5\.000; Estampilla Renovación: \$ 5\.000$/m);
+      const [, info] = contexto.match(/^Información adicional: ([\s\S]*?) \(resumida: hay más información en la fuente oficial\)$/m);
+      assert.ok(info.startsWith('Modalidad: Personal') && info.length <= TOPES_CONTEXTO.informacionAdicional + 1);
+      assert.match(contexto, new RegExp(`^- Mesa ficha ${SUFIJO}, Moreno 575, teléfono: \\(0370\\) 442-9326, email: pol\\.judicial@formosa\\.gob\\.ar$`, 'm'));
+    } finally {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costoDetalle: null, informacionAdicional: null, fuenteUrl: null } });
+      await prisma.tramiteMesa.deleteMany({ where: { mesaId: mesa.id } });
+      await prisma.mesaEntrada.delete({ where: { id: mesa.id } });
+    }
+  });
+
   it('acota la descripción, los requisitos, los formularios y las mesas, sin tocar lo guardado', async () => {
     const contextoDe = async (pregunta) => {
       llamadasModelo = [];

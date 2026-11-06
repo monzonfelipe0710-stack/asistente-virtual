@@ -1,6 +1,6 @@
 # Informe del recorrido de las fichas de formosa.gob.ar
 
-Capturado el 2026-11-06T03:58:10+00:00. Pedidos al sitio: 487 (y 6 páginas leídas de la caché local).
+Capturado el 2026-11-06T04:18:26+00:00. Pedidos al sitio: 0 (y 279 páginas leídas de la caché local).
 
 ## Totales
 

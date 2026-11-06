@@ -12,6 +12,9 @@ const tramiteSchema = z.object({
   nombre: textoExterno({ tope: TOPES_CAMPOS.nombre, vacio: 'El nombre es obligatorio.' }),
   descripcion: textoExterno({ tope: TOPES_CAMPOS.descripcion, multilinea: true, vacio: 'La descripción es obligatoria.' }),
   costo: z.number().nonnegative().optional(),
+  // Lo que no entra en el costo (varias filas, importes en UT) y los datos de la ficha del portal.
+  costoDetalle: textoExterno({ tope: TOPES_CAMPOS.costoDetalle, multilinea: true }).optional(),
+  informacionAdicional: textoExterno({ tope: TOPES_CAMPOS.informacionAdicional, multilinea: true }).optional(),
   sectorId: z.number().int().positive('El sector es obligatorio.'),
   requisitos: z.array(requisitoSchema),
   mesaIds: z.array(z.number().int().positive()),

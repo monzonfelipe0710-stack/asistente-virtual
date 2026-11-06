@@ -19,6 +19,17 @@ describe('verificación de la salida', () => {
     });
   });
 
+  describe('costo en texto de la ficha del portal', () => {
+    it('sus montos están respaldados y la corrección de un monto inventado los usa', () => {
+      const t = tramite({ nombre: 'Certificado de Buena Conducta', costoDetalle: 'Estampilla Primera vez: $ 5.000\nEstampilla Renovación: $ 5.000' });
+      assert.deepEqual(verificar('La estampilla cuesta $5.000.', [t]), { texto: 'La estampilla cuesta $5.000.', capas: [] });
+      assert.deepEqual(verificar('El certificado cuesta $9.000.', [t]), {
+        texto: 'El costo del trámite Certificado de Buena Conducta es: Estampilla Primera vez: $ 5.000; Estampilla Renovación: $ 5.000.',
+        capas: ['costo'],
+      });
+    });
+  });
+
   describe('respuesta sin contenido', () => {
     it('el relleno solo no es contenido; un dato o un "no está cargado" sí', () => {
       for (const t of [

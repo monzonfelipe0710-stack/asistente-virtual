@@ -144,6 +144,32 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
   (si una persona ya lo revisó y lo publicó, sigue publicado), pero se vuelve a informar. Se
   publica a mano después de revisarlo. La detección busca frases, no palabras sueltas: "You are
   here" o "SEMFormosaBot" no cuentan.
+- **Ficha del portal.** Si el trámite trae `detalle` (lo arma `ingestion/`, ver abajo), se
+  importan además (`services/fichas.service.js`):
+  - **Costo**: el decimal si hay una sola fila con "$ N"; si no (varias filas, importes en UT),
+    `costoDetalle` como texto. "Ninguno" no se toma como gratuito: queda sin costo.
+  - **Requisitos**: cortados por números, letras o viñetas, con el subgrupo delante de cada uno
+    ("Para menores de edad: DNI actualizado."). Si no se puede cortar con seguridad (las piezas
+    no reconstruyen el texto), un único requisito con el texto completo, en trozos del tope si
+    hace falta: nunca se pierde texto.
+  - **Información adicional**: modalidad, duración, destinatarios, observaciones, paso a paso y
+    las normas sin enlace.
+  - **Mesas de entrada**: una por oficina del portal, identificada por `origenId`
+    (`collapse_NNN`) y compartida entre trámites, con teléfono y email institucionales y la
+    localidad si se puede leer del nombre. Sin el nombre del responsable.
+  - **Documentos**: formularios y normas como enlaces (`urlExterna`); los rotos no se importan
+    y quedan en el informe.
+  - `verificadoEn`: la fecha de la captura.
+  Todo pasa por la misma sanitización, y una frase con forma de instrucción en cualquiera de
+  esos textos deja el trámite sin publicar.
+- **Lo editado a mano no se pisa.** Al escribir, el importador guarda en `huella_importacion` un
+  hash por grupo (descripción, costo, información adicional, requisitos, mesas, documentos). Al
+  reimportar, un grupo cuyo valor actual ya no coincide con su huella lo editó alguien (el panel,
+  SQL, otro script) y se conserva: queda en **Conservados**. Un grupo sin huella se llena solo si
+  está vacío. Lo mismo para cada mesa del portal. Un trámite cuenta como del importador si su
+  encargado es Sistema **o** si tiene huella: reasignarle el encargado desde el panel no frena
+  el enriquecimiento. Uno sin huella y con otro encargado no se toca aunque tenga la misma
+  `fuenteUrl`: queda en **Manuales**.
 - **Embeddings en lotes** de 100 (`--lote n`) con 3 reintentos por lote. Si un lote los agota,
   se prueba de a un trámite y los que fallan quedan como fallidos. Se reindexan los trámites
   nuevos, los que cambiaron, los de un sector que cambió (y sus descendientes) y los que vinieron

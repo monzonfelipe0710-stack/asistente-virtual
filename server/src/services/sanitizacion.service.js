@@ -10,6 +10,10 @@ export const TOPES_CAMPOS = {
   mesa: 300,
   localidad: 120,
   documento: 200,
+  informacionAdicional: 10000,
+  costoDetalle: 1000,
+  telefono: 100,
+  email: 200,
 };
 
 const codigos = (lista) => lista.map((c) => (Array.isArray(c) ? `${String.fromCharCode(c[0])}-${String.fromCharCode(c[1])}` : String.fromCharCode(c))).join('');

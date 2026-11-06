@@ -136,10 +136,11 @@ def _seccion(detalle, titulo):
 
 def _bloque_lateral(sopa, rotulo):
     """El .header-box de la columna lateral cuyo rótulo empieza con `rotulo`."""
+    # El rótulo puede no ser el primer div: delante suele ir el del ícono, vacío.
     for caja in sopa.select(".header-box"):
-        primero = caja.find("div", recursive=False)
-        if primero and _limpio(primero.get_text()).lower().startswith(rotulo):
-            return caja
+        for div in caja.find_all("div", recursive=False):
+            if _limpio(div.get_text()).lower().startswith(rotulo):
+                return caja
     return None
 
 

@@ -1,6 +1,11 @@
 import { ia } from '../core/ai/index.js';
 import prisma from '../config/prisma.js';
 import { describirJurisdiccion, obtenerJurisdicciones, subarbol, leerSectoresParaResolver } from './jurisdiccion.service.js';
+import { recortarEnOracion } from '../utils/texto.js';
+
+// Topes de lo que entra al texto del embedding (lo guardado no se recorta).
+export const TOPES_EMBEDDING = { costoDetalle: 300, informacionAdicional: 1500 };
+const enUnaLinea = (texto) => texto.replace(/\s*\n+\s*/g, '; ');
 
 export const generarEmbedding = (texto, opciones) => ia.generarEmbedding(texto, opciones);
 
@@ -11,9 +16,15 @@ export const textoDeTramite = (tramite, organismo) => {
   if (organismo) partes.push(`Organismo: ${organismo.nombre} (${describirJurisdiccion(organismo)}).`);
   partes.push(`Descripción: ${tramite.descripcion}.`);
 
+  if (tramite.costoDetalle) partes.push(`Costo: ${recortarEnOracion(enUnaLinea(tramite.costoDetalle), TOPES_EMBEDDING.costoDetalle)}.`);
+
   if (tramite.requisitos && tramite.requisitos.length > 0) {
     const reqs = tramite.requisitos.map((r) => r.descripcion).join(', ');
     partes.push(`Requisitos: ${reqs}.`);
+  }
+
+  if (tramite.informacionAdicional) {
+    partes.push(`Información adicional: ${recortarEnOracion(enUnaLinea(tramite.informacionAdicional), TOPES_EMBEDDING.informacionAdicional)}`);
   }
 
   return partes.join(' ');

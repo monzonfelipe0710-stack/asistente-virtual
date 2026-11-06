@@ -93,6 +93,13 @@ model Tramite {
 
   fuenteUrl   String?  @unique @map("fuente_url")
 
+  // De la ficha del portal (ver la migración fichas_del_portal).
+  informacionAdicional String?   @map("informacion_adicional")
+  costoDetalle         String?   @map("costo_detalle")
+  verificadoEn         DateTime? @map("verificado_en")
+  // Hash de lo que escribió el importador, por grupo de campos (ver src/utils/huella.js).
+  huellaImportacion    Json?     @map("huella_importacion")
+
   @@index([sectorId])
   @@index([embedding], map: "tramites_embedding_idx")
   @@index([searchVector], map: "tramites_search_idx", type: Gin)
@@ -118,7 +125,12 @@ model MesaEntrada {
   direccion String?
   localidad String?
   horario   String?
+  telefono  String?
+  email     String?
   esGeneral Boolean @default(false) @map("es_general")
+  // Identificador de la oficina en el portal (collapse_NNN): evita duplicarla entre trámites.
+  origenId  String? @unique @map("origen_id")
+  huellaImportacion Json? @map("huella_importacion")
 
   sectorId  Int? @map("sector_id")
   sector    Sector? @relation(fields: [sectorId], references: [id], onDelete: SetNull)

@@ -28,7 +28,7 @@ mock.module(new URL('../src/core/ai/index.js', import.meta.url).href, {
   },
 });
 
-const { textoDeTramite, reindexarCatalogo } = await import('../src/services/embedding.service.js');
+const { textoDeTramite, reindexarCatalogo, TOPES_EMBEDDING } = await import('../src/services/embedding.service.js');
 
 describe('textoDeTramite', () => {
   it('incluye el organismo con su jurisdicción y localidad', () => {
@@ -40,6 +40,24 @@ describe('textoDeTramite', () => {
       texto,
       'Trámite: Habilitación comercial. Organismo: Municipalidad de Clorinda (municipal, Clorinda). Descripción: Para abrir un comercio. Requisitos: DNI.',
     );
+  });
+
+  it('suma el costo en texto y la información adicional de la ficha, con tope; sin ellos el texto no cambia', () => {
+    const base = { nombre: 'Certificado', descripcion: 'Constancia policial', requisitos: [{ descripcion: 'DNI' }] };
+    const organismo = { nombre: 'Policía', jurisdiccion: 'PROVINCIAL', localidad: null };
+    const sinFicha = textoDeTramite(base, organismo);
+    assert.equal(sinFicha, 'Trámite: Certificado. Organismo: Policía (provincial). Descripción: Constancia policial. Requisitos: DNI.');
+    assert.equal(textoDeTramite({ ...base, costoDetalle: null, informacionAdicional: null }, organismo), sinFicha);
+
+    const conFicha = textoDeTramite({
+      ...base,
+      costoDetalle: 'Estampilla Primera vez: $ 5.000\nEstampilla Renovación: $ 5.000',
+      informacionAdicional: `Modalidad: Personal\nDuración aproximada: 24 horas\n${'Observación larga. '.repeat(200)}`,
+    }, organismo);
+    assert.match(conFicha, /Costo: Estampilla Primera vez: \$ 5\.000; Estampilla Renovación: \$ 5\.000\./);
+    const [, info] = conFicha.match(/Información adicional: (.*)$/);
+    assert.ok(info.startsWith('Modalidad: Personal; Duración aproximada: 24 horas;'));
+    assert.ok(info.length <= TOPES_EMBEDDING.informacionAdicional + 1);
   });
 
   it('un provincial sin localidad no la nombra', () => {

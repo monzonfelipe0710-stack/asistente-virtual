@@ -144,7 +144,8 @@ const GRATUITO = /(?<!\bno\s(?:es|son)\s)\b(?:gratuit[oa]s?|gratis|sin\s+(?:ning
 export const diceGratuito = (oracion) => GRATUITO.test(normalizar(oracion));
 
 const numero = (valor) => (valor === null || valor === undefined ? null : Number(valor));
-const textosDe = (t) => [t.descripcion ?? '', ...(t.requisitos ?? []).map((r) => r.descripcion ?? '')];
+// El costo en texto y la información adicional (de la ficha del portal) también son texto del trámite.
+const textosDe = (t) => [t.descripcion ?? '', t.costoDetalle ?? '', t.informacionAdicional ?? '', ...(t.requisitos ?? []).map((r) => r.descripcion ?? '')];
 // Oraciones del propio trámite que no tienen forma de instrucción para el asistente.
 const oracionesConfiables = (t) =>
   textosDe(t)
@@ -174,6 +175,7 @@ const permiteGratuito = (t) => {
 const formatearMonto = (n) => `$${n.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`;
 const oracionDeCosto = (t) => {
   const costo = numero(t.costo);
+  if (costo === null && t.costoDetalle) return `El costo del trámite ${t.nombre} es: ${t.costoDetalle.replace(/\s*\n+\s*/g, '; ')}.`;
   if (costo === null) return `El costo del trámite ${t.nombre} no está cargado: consultalo en una mesa de entrada o en la fuente oficial.`;
   return costo === 0 ? `El trámite ${t.nombre} es gratuito.` : `El costo del trámite ${t.nombre} es ${formatearMonto(costo)}.`;
 };

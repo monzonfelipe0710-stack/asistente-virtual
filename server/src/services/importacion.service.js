@@ -7,6 +7,8 @@ import { JURISDICCION_POR_DEFECTO, leerSectoresParaResolver, resolverJurisdiccio
 import { normalizarNombre } from '../utils/texto.js';
 import { marcarCatalogoCambiado } from './version-catalogo.service.js';
 import { TOPES_CAMPOS, instruccionesEn, limpiarTexto } from './sanitizacion.service.js';
+import { datosDeFicha } from './fichas.service.js';
+import { grupoVacio, huellaDeGrupo, huellaDeMesa } from '../utils/huella.js';
 
 const JURISDICCIONES = new Set(Object.values(Jurisdiccion));
 export const EMAIL_SISTEMA = 'sistema@chatap.local';
@@ -146,6 +148,34 @@ const limpiarCatalogo = (datos) => {
     return texto;
   };
   const nombre = { tope: TOPES_CAMPOS.nombre };
+  // Lo que se toma de la ficha del portal, con los mismos topes que la carga manual. Un texto que
+  // queda vacío después de limpiarlo es null.
+  const ficha = (detalle, de) => {
+    const f = datosDeFicha(detalle);
+    const txt = (valor, campoNombre, tope, multilinea = false) =>
+      (typeof valor === 'string' ? campo(valor, campoNombre, de, { tope, multilinea }) : null) || null;
+    const mesa = (m) => ({
+      origenId: m.origenId,
+      nombre: txt(m.nombre, 'nombre de la mesa', TOPES_CAMPOS.mesa) ?? m.origenId,
+      direccion: txt(m.direccion, 'dirección de la mesa', TOPES_CAMPOS.mesa),
+      localidad: txt(m.localidad, 'localidad de la mesa', TOPES_CAMPOS.localidad),
+      horario: txt(m.horario, 'horario de la mesa', TOPES_CAMPOS.mesa),
+      telefono: txt(m.telefono, 'teléfono de la mesa', TOPES_CAMPOS.telefono),
+      email: txt(m.email, 'email de la mesa', TOPES_CAMPOS.email),
+    });
+    return {
+      ...f,
+      costoDetalle: txt(f.costoDetalle, 'costoDetalle', TOPES_CAMPOS.costoDetalle, true),
+      informacionAdicional: txt(f.informacionAdicional, 'informacionAdicional', TOPES_CAMPOS.informacionAdicional, true),
+      requisitos: f.requisitos
+        .map((r) => ({ descripcion: txt(r.descripcion, 'requisito', TOPES_CAMPOS.requisito, true) }))
+        .filter((r) => r.descripcion),
+      mesas: f.mesas.filter((m) => typeof m.origenId === 'string' && m.origenId.trim()).map(mesa),
+      documentos: f.documentos
+        .filter((d) => /^https?:\/\/\S+$/i.test(d.urlExterna ?? ''))
+        .map((d) => ({ ...d, nombre: txt(d.nombre, 'nombre del documento', TOPES_CAMPOS.documento) ?? d.tipo })),
+    };
+  };
   const sectores = datos.sectores.map((s) => ({
     ...s,
     nombre: campo(s.nombre, 'nombre del sector', s.nombre, nombre),
@@ -159,10 +189,72 @@ const limpiarCatalogo = (datos) => {
       descripcion: campo(t.descripcion, 'descripcion', t.nombre, { tope: TOPES_CAMPOS.descripcion, multilinea: true }),
       sector: campo(t.sector, 'sector', t.nombre, nombre),
       sectorPadre: campo(t.sectorPadre, 'sectorPadre', t.nombre, nombre),
+      ficha: t.detalle && typeof t.detalle === 'object' ? ficha(t.detalle, t.nombre) : null,
     }
     : t));
   return { datos: { ...datos, sectores, tramites }, recortados };
 };
+
+// --- Datos de la ficha del portal --------------------------------------------------------------
+
+// Grupos que vienen de la ficha. Los tres primeros entran en el texto del embedding.
+const GRUPOS_FICHA = ['costo', 'informacionAdicional', 'requisitos', 'mesas', 'documentos'];
+const DEL_EMBEDDING = new Set(['descripcion', 'costo', 'informacionAdicional', 'requisitos']);
+
+// Un trámite es del importador si lo creó (encargado Sistema) o si tiene huella: asignarle un
+// encargado desde el panel no lo vuelve manual.
+const esDelImportador = (t, sistema) => Boolean((sistema && t.encargadoId === sistema.id) || t.huellaImportacion);
+
+// Un grupo con huella se escribe si nadie lo cambió desde la última importación; sin huella (un
+// trámite anterior a las huellas), solo si está vacío. La descripción sin huella es del importador,
+// como antes de las huellas.
+const puedeEscribir = (grupo, t) => {
+  const huella = t.huellaImportacion?.[grupo];
+  if (huella) return huella === huellaDeGrupo(grupo, t);
+  return grupo === 'descripcion' || grupoVacio(grupo, t);
+};
+
+const valoresDeFicha = (f, mesaIds) => ({
+  costo: f.costo,
+  costoDetalle: f.costoDetalle,
+  informacionAdicional: f.informacionAdicional,
+  requisitos: f.requisitos,
+  mesaIds,
+  documentos: f.documentos,
+});
+
+// Los textos de la ficha que le llegan al modelo, para buscar frases con forma de instrucción.
+const textosDeFicha = (f) => (f
+  ? {
+    requisitos: f.requisitos.map((r) => r.descripcion).join('\n'),
+    informacionAdicional: f.informacionAdicional,
+    costoDetalle: f.costoDetalle,
+    mesas: f.mesas.map((m) => [m.nombre, m.direccion, m.localidad, m.horario, m.telefono, m.email].filter(Boolean).join(', ')).join('\n'),
+    documentos: f.documentos.map((d) => d.nombre).join('\n'),
+  }
+  : {});
+
+const camposDeMesa = (m) => ({
+  nombre: m.nombre, direccion: m.direccion, localidad: m.localidad, horario: m.horario, telefono: m.telefono, email: m.email,
+});
+
+// Un trámite se escribe entero o no se escribe: una corrida cortada se retoma sin dejarlo a medias.
+// Los documentos que se reemplazan son solo enlaces (los archivos subidos no se tocan).
+const escribirTramite = (id, data, { requisitos, mesaIds, documentos }) => prisma.$transaction(async (tx) => {
+  if (Object.keys(data).length > 0) await tx.tramite.update({ where: { id }, data });
+  if (requisitos) {
+    await tx.requisito.deleteMany({ where: { tramiteId: id } });
+    if (requisitos.length > 0) await tx.requisito.createMany({ data: requisitos.map((r) => ({ ...r, tramiteId: id })) });
+  }
+  if (mesaIds) {
+    await tx.tramiteMesa.deleteMany({ where: { tramiteId: id } });
+    if (mesaIds.length > 0) await tx.tramiteMesa.createMany({ data: mesaIds.map((mesaId) => ({ tramiteId: id, mesaId })), skipDuplicates: true });
+  }
+  if (documentos) {
+    await tx.documento.deleteMany({ where: { tramiteId: id, archivo: null } });
+    if (documentos.length > 0) await tx.documento.createMany({ data: documentos.map((d) => ({ ...d, tramiteId: id })) });
+  }
+});
 
 // Importa sectores y trámites sin cortar la corrida: lo que no se puede escribir queda en
 // `fallidos` y lo que pisaría un trámite ajeno, en `conflictos`. Un trámite cuyo nombre o
@@ -194,17 +286,66 @@ export const importarCatalogo = async (crudos, {
   if (!simular) await avisarMunicipalesSinLocalidad(ids, log);
 
   const existentes = await prisma.tramite.findMany({
-    select: { id: true, nombre: true, descripcion: true, sectorId: true, fuenteUrl: true, encargadoId: true, publicado: true },
+    select: {
+      id: true, nombre: true, descripcion: true, sectorId: true, fuenteUrl: true, encargadoId: true, publicado: true,
+      costo: true, costoDetalle: true, informacionAdicional: true, verificadoEn: true, huellaImportacion: true,
+      requisitos: { select: { descripcion: true, dondeSeConsigue: true, costo: true }, orderBy: { id: 'asc' } },
+      mesas: { select: { mesaId: true } },
+      documentos: { select: { nombre: true, archivo: true, urlExterna: true, tipo: true }, orderBy: { id: 'asc' } },
+    },
   });
   const porUrl = new Map(existentes.filter((t) => t.fuenteUrl).map((t) => [t.fuenteUrl, t]));
   const porClave = agrupar(existentes, (t) => claveDe(t.sectorId, t.nombre));
   const sinEmbedding = new Set((await prisma.$queryRaw`SELECT id FROM tramites WHERE embedding IS NULL`).map((f) => f.id));
-  const delImportador = (t) => sistema && t.encargadoId === sistema.id;
+  const delImportador = (t) => esDelImportador(t, sistema);
 
   // El texto del embedding incluye el sector: si cambió la jurisdicción o la localidad de un
   // sector, se reindexan sus trámites y los de sus descendientes.
   const aIndexar = new Set(cambiados.length > 0 ? await tramitesDeSectores(cambiados) : []);
-  const informe = { creados: [], actualizados: [], sinCambios: 0, reindexados: [], fallidos: [], conflictos: [], paraRevisar: [], recortados, despublicados: [], despublicacion: null };
+  const informe = {
+    creados: [], actualizados: [], sinCambios: 0, reindexados: [], fallidos: [], conflictos: [], paraRevisar: [], recortados,
+    despublicados: [], despublicacion: null, manuales: [], conservados: [], enlacesRotos: [],
+    mesas: { creadas: 0, actualizadas: 0, conservadas: [] },
+  };
+
+  // Mesas de entrada del portal, una por oficina (origenId): se crean una vez y las comparten los
+  // trámites. Una mesa que alguien editó a mano (no coincide su huella) no se pisa.
+  const mesasPorOrigen = new Map((await prisma.mesaEntrada.findMany({ where: { origenId: { not: null } } })).map((m) => [m.origenId, m]));
+  const mesasResueltas = new Map();
+  const resolverMesa = async (m, sectorId) => {
+    if (mesasResueltas.has(m.origenId)) return mesasResueltas.get(m.origenId);
+    const existenteMesa = mesasPorOrigen.get(m.origenId);
+    const campos = camposDeMesa(m);
+    const huella = { datos: huellaDeMesa(campos) };
+    let id;
+    if (existenteMesa) {
+      id = existenteMesa.id;
+      if (existenteMesa.huellaImportacion?.datos !== huellaDeMesa(existenteMesa)) {
+        if (huellaDeMesa(existenteMesa) !== huella.datos) informe.mesas.conservadas.push({ id, nombre: existenteMesa.nombre });
+      } else if (existenteMesa.huellaImportacion.datos !== huella.datos) {
+        if (!simular) await prisma.mesaEntrada.update({ where: { id }, data: { ...campos, huellaImportacion: huella } });
+        informe.mesas.actualizadas++;
+      }
+    } else if (simular) {
+      id = `nueva-${m.origenId}`;
+      informe.mesas.creadas++;
+    } else {
+      id = (await prisma.mesaEntrada.create({
+        data: { ...campos, origenId: m.origenId, sectorId: esIdReal(sectorId) ? sectorId : null, huellaImportacion: huella },
+      })).id;
+      informe.mesas.creadas++;
+    }
+    mesasResueltas.set(m.origenId, id);
+    return id;
+  };
+  const resolverMesas = async (mesas, sectorId) => {
+    const ids = [];
+    for (const m of mesas) {
+      const id = await resolverMesa(m, sectorId);
+      if (!ids.includes(id)) ids.push(id);
+    }
+    return ids;
+  };
   const vistos = new Set();
   const urlsDelJson = new Set();
   const clavesDelJson = new Set();
@@ -228,8 +369,9 @@ export const importarCatalogo = async (crudos, {
       return marcar(porUrl.get(fuenteUrl)?.id ?? null, () => fallido('falta el nombre o la descripción'), { identificable: Boolean(porUrl.get(fuenteUrl)) });
     }
 
-    // El nombre del sector también le llega al modelo ("Organismo"), así que se revisa con el trámite.
-    const sospechas = instruccionesEn({ nombre: t.nombre, descripcion: t.descripcion, sector: t.sector });
+    // El nombre del sector también le llega al modelo ("Organismo"), así que se revisa con el trámite,
+    // igual que todo lo que viene de la ficha.
+    const sospechas = instruccionesEn({ nombre: t.nombre, descripcion: t.descripcion, sector: t.sector, ...textosDeFicha(t.ficha) });
     const revisar = (id, accion) => {
       if (sospechas.length > 0) informe.paraRevisar.push({ id, nombre: t.nombre, fuenteUrl, frases: sospechas, accion });
     };
@@ -240,6 +382,10 @@ export const importarCatalogo = async (crudos, {
 
     if (fuenteUrl) {
       existente = porUrl.get(fuenteUrl) ?? null;
+      // Un trámite cargado a mano (sin huella y con otro encargado) no se toca aunque tenga la URL.
+      if (existente && !delImportador(existente)) {
+        return marcar(existente.id, () => informe.manuales.push({ id: existente.id, nombre: existente.nombre, fuenteUrl, motivo: 'manual, no se toca' }));
+      }
       if (existente && existente.sectorId !== sectorId) {
         return marcar(existente.id, () => conflicto(`la fuenteUrl ya es del trámite ${existente.id} ("${existente.nombre}") de otro sector`, existente.id));
       }
@@ -262,21 +408,70 @@ export const importarCatalogo = async (crudos, {
       existente = delSistema[0] ?? null;
     }
 
+    const f = t.ficha;
+    if (f?.enlacesRotos.length > 0) informe.enlacesRotos.push(...f.enlacesRotos.map((e) => ({ ...e, tramite: t.nombre })));
+    const mesaIds = f ? await resolverMesas(f.mesas, sectorId) : null;
+    const nuevos = f ? valoresDeFicha(f, mesaIds) : null;
+
     if (existente) {
       marcar(existente.id);
-      const datosNuevos = { nombre: t.nombre.trim(), descripcion: t.descripcion, ...(fuenteUrl && { fuenteUrl }) };
-      const cambio = Object.entries(datosNuevos).some(([campo, valor]) => existente[campo] !== valor);
-      if (!cambio) {
+      const data = {};
+      const listas = {};
+      const gruposCambiados = [];
+      const conservados = [];
+      const huella = { ...(existente.huellaImportacion ?? {}) };
+      const cambiar = (grupo) => gruposCambiados.push(grupo);
+
+      if (existente.nombre !== t.nombre.trim()) {
+        data.nombre = t.nombre.trim();
+        cambiar('nombre');
+      }
+      if (fuenteUrl && existente.fuenteUrl !== fuenteUrl) {
+        data.fuenteUrl = fuenteUrl;
+        cambiar('fuenteUrl');
+      }
+
+      // Cada grupo se escribe solo si nadie lo editó a mano desde la última importación.
+      const grupos = ['descripcion', ...(nuevos ? GRUPOS_FICHA : [])];
+      const valores = { ...nuevos, descripcion: t.descripcion };
+      for (const grupo of grupos) {
+        const nuevaHuella = huellaDeGrupo(grupo, valores);
+        const igual = nuevaHuella === huellaDeGrupo(grupo, existente);
+        if (!puedeEscribir(grupo, existente)) {
+          // Igual a lo del portal: desde ahora es del importador. Distinto: lo editó alguien.
+          if (igual) huella[grupo] = nuevaHuella;
+          else conservados.push(grupo);
+          continue;
+        }
+        huella[grupo] = nuevaHuella;
+        if (igual) continue;
+        cambiar(grupo);
+        if (grupo === 'descripcion') data.descripcion = t.descripcion;
+        if (grupo === 'costo') Object.assign(data, { costo: nuevos.costo, costoDetalle: nuevos.costoDetalle });
+        if (grupo === 'informacionAdicional') data.informacionAdicional = nuevos.informacionAdicional;
+        if (grupo === 'requisitos') listas.requisitos = nuevos.requisitos;
+        if (grupo === 'mesas') listas.mesaIds = nuevos.mesaIds;
+        if (grupo === 'documentos') listas.documentos = nuevos.documentos;
+      }
+      if (conservados.length > 0) informe.conservados.push({ id: existente.id, nombre: t.nombre, grupos: conservados });
+
+      // La fecha de la captura y la huella se guardan aunque no haya otro cambio, sin contarlo.
+      const extra = {};
+      if (f?.verificadoEn && existente.verificadoEn?.getTime() !== f.verificadoEn.getTime()) extra.verificadoEn = f.verificadoEn;
+      if (JSON.stringify(huella) !== JSON.stringify(existente.huellaImportacion ?? {})) extra.huellaImportacion = huella;
+
+      if (gruposCambiados.length === 0) {
         informe.sinCambios++;
+        if (!simular && Object.keys(extra).length > 0) await prisma.tramite.update({ where: { id: existente.id }, data: extra });
         revisar(existente.id, existente.publicado ? 'sin cambios, sigue publicado' : 'sin cambios, sin publicar');
         if (sinEmbedding.has(existente.id)) aIndexar.add(existente.id);
         return;
       }
-      const data = sospechas.length > 0 ? { ...datosNuevos, publicado: false } : datosNuevos;
-      if (!simular) await prisma.tramite.update({ where: { id: existente.id }, data });
-      informe.actualizados.push({ id: existente.id, nombre: t.nombre });
+      if (sospechas.length > 0) data.publicado = false;
+      if (!simular) await escribirTramite(existente.id, { ...data, ...extra }, listas);
+      informe.actualizados.push({ id: existente.id, nombre: t.nombre, grupos: gruposCambiados });
       revisar(existente.id, 'actualizado sin publicar');
-      aIndexar.add(existente.id);
+      if (gruposCambiados.some((g) => g === 'nombre' || DEL_EMBEDDING.has(g)) || sinEmbedding.has(existente.id)) aIndexar.add(existente.id);
       return;
     }
 
@@ -286,8 +481,22 @@ export const importarCatalogo = async (crudos, {
       revisar(null, 'creado sin publicar');
       return;
     }
-    const creado = await prisma.tramite.create({
-      data: { nombre: t.nombre.trim(), descripcion: t.descripcion, sectorId, encargadoId: sistema.id, publicado: publicar && sospechas.length === 0, fuenteUrl },
+    const huella = { descripcion: huellaDeGrupo('descripcion', t) };
+    if (nuevos) for (const grupo of GRUPOS_FICHA) huella[grupo] = huellaDeGrupo(grupo, nuevos);
+    const creado = await prisma.$transaction(async (tx) => {
+      const tramite = await tx.tramite.create({
+        data: {
+          nombre: t.nombre.trim(), descripcion: t.descripcion, sectorId, encargadoId: sistema.id, publicado: publicar && sospechas.length === 0, fuenteUrl,
+          huellaImportacion: huella,
+          ...(nuevos && {
+            costo: nuevos.costo, costoDetalle: nuevos.costoDetalle, informacionAdicional: nuevos.informacionAdicional, verificadoEn: f.verificadoEn,
+            requisitos: { create: nuevos.requisitos },
+            documentos: { create: nuevos.documentos },
+          }),
+        },
+      });
+      if (nuevos?.mesaIds.length > 0) await tx.tramiteMesa.createMany({ data: nuevos.mesaIds.map((mesaId) => ({ tramiteId: tramite.id, mesaId })), skipDuplicates: true });
+      return tramite;
     });
     informe.creados.push({ id: creado.id, nombre: t.nombre });
     revisar(creado.id, 'creado sin publicar');
@@ -343,7 +552,7 @@ export const importarCatalogo = async (crudos, {
   }
 
   const huboCambios = sectores.creados + sectores.actualizados + informe.creados.length + informe.actualizados.length
-    + informe.reindexados.length + informe.despublicados.length > 0;
+    + informe.reindexados.length + informe.despublicados.length + informe.mesas.creadas + informe.mesas.actualizadas > 0;
   let cache = { invalidada: false, version: null, error: null };
   if (!simular && huboCambios) {
     try {
@@ -364,11 +573,16 @@ export const formatearInforme = (r) => [
   r.simulado ? 'SIMULACIÓN (--dry-run): no se escribió nada.' : 'Importación terminada.',
   `Sectores: ${r.sectores.creados} ${r.simulado ? 'a crear' : 'creados'}, ${r.sectores.actualizados} ${r.simulado ? 'a actualizar' : 'actualizados'}`,
   `Trámites: ${r.creados.length} creados, ${r.actualizados.length} actualizados, ${r.sinCambios} sin cambios, ${r.reindexados.length} ${r.simulado ? 'a reindexar' : 'reindexados'}, ${r.fallidos.length} fallidos, ${r.conflictos.length} conflictos, ${r.paraRevisar.length} para revisión`,
+  `Mesas de entrada del portal: ${r.mesas.creadas} ${r.simulado ? 'a crear' : 'creadas'}, ${r.mesas.actualizadas} ${r.simulado ? 'a actualizar' : 'actualizadas'}, ${r.mesas.conservadas.length} editadas a mano (no se tocan)`,
   ...(r.despublicacion ? [`Despublicación de faltantes: ${r.despublicacion}${r.despublicacion.startsWith('omitida') ? '' : ` (${r.despublicados.length})`}`] : []),
   ...lista('Fallidos', r.fallidos, (f) => `${f.nombre ?? `id ${f.id}`}${f.fuenteUrl ? ` <${f.fuenteUrl}>` : ''}: ${f.motivo}`),
   ...lista('Conflictos', r.conflictos, (c) => `${c.nombre}${c.fuenteUrl ? ` <${c.fuenteUrl}>` : ''}: ${c.motivo}`),
   ...lista('Para revisión (frases con forma de instrucción para el asistente)', r.paraRevisar, (p) =>
     `${p.id ?? 'nuevo'} ${p.nombre}${p.fuenteUrl ? ` <${p.fuenteUrl}>` : ''}: ${p.frases.map((f) => `"${f.frase}" (${f.campo})`).join(', ')}; ${p.accion}`),
   ...lista('Recortados', r.recortados, (x) => `${x.nombre}: ${x.campo} a ${x.tope} caracteres`),
+  ...lista('Manuales (no se tocan)', r.manuales, (m) => `${m.id} ${m.nombre}${m.fuenteUrl ? ` <${m.fuenteUrl}>` : ''}: ${m.motivo}`),
+  ...lista('Conservados (editados a mano, no se pisan)', r.conservados, (c) => `${c.id} ${c.nombre}: ${c.grupos.join(', ')}`),
+  ...lista('Mesas editadas a mano (no se pisan)', r.mesas.conservadas, (m) => `${m.id} ${m.nombre}`),
+  ...lista('Enlaces rotos (no se importan)', r.enlacesRotos, (e) => `${e.tramite}: ${e.tipo} "${e.nombre}" <${e.url}>`),
   ...lista(r.simulado ? 'Se despublicarían' : 'Despublicados', r.despublicados, (d) => `${d.id} ${d.nombre}`),
 ].join('\n');
