@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader, EmptyState } from "./ui";
 
 const STORAGE_KEY = "chatap.admin.knowledge.local.v1";
@@ -20,7 +20,7 @@ function Icon({ path, className = "h-5 w-5" }) {
 }
 
 export default function KnowledgeManager() {
-  const [entries, setEntries] = useState([]);
+  const [entries, setEntries] = useState(readEntries);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todas");
   const [status, setStatus] = useState("Todos");
@@ -29,10 +29,6 @@ export default function KnowledgeManager() {
   const [formOpen, setFormOpen] = useState(false);
   const [error, setError] = useState("");
   const [storageError, setStorageError] = useState("");
-
-  useEffect(() => {
-    setEntries(readEntries());
-  }, []);
 
   function persist(next) {
     try {
