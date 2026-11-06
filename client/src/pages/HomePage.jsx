@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 import "./HomePage.css";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
-import LogoLoop from "../components/common/LogoLoop";
-import InteractiveChatMockup from "../components/common/InteractiveChatMockup";
-import ChatBotAvatar from "../components/ChatBotAvatar";
 import HeroCinematicBackground from "../components/common/HeroCinematicBackground";
-import ScrollFloat from "../components/common/ScrollFloat";
 import useTheme from "../hooks/useTheme";
 
 const Particles = lazy(() => import("../components/common/Particles"));
+const LogoLoop = lazy(() => import("../components/common/LogoLoop"));
+const InteractiveChatMockup = lazy(() => import("../components/common/InteractiveChatMockup"));
+const ChatBotAvatar = lazy(() => import("../components/ChatBotAvatar"));
+const ScrollFloat = lazy(() => import("../components/common/ScrollFloat"));
 
 /* ------------------------------------------------------------------
    Contenidos Esenciales de HomePage Minimalista
@@ -141,6 +141,8 @@ function getInstitutionalLogos(isDark) {
             src={isDark ? "/assets/logos/todos-unidos-dark.png" : "/assets/logos/todos-unidos-light.png"}
             alt="Todos Unidos"
             className="institutional-mark__image"
+            width={336}
+            height={132}
             draggable={false}
           />
         </span>
@@ -155,6 +157,8 @@ function getInstitutionalLogos(isDark) {
             src={isDark ? "/assets/logos/gobierno-formosa-dark.png" : "/assets/logos/gobierno-formosa-light.png"}
             alt="Gobierno de Formosa"
             className="institutional-mark__image"
+            width={426}
+            height={132}
             draggable={false}
           />
         </span>
@@ -230,7 +234,7 @@ export default function HomePage() {
             <Particles
               className="w-full h-full"
               particleColors={particleColors}
-              particleCount={220}
+              particleCount={96}
               speed={0.05}
               particleBaseSize={16}
               active={heroVisible}
@@ -256,17 +260,19 @@ export default function HomePage() {
           <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4">
             {/* Gran Titular Editorial con ScrollFloat */}
             <div className="hero-anim-title max-w-4xl mx-auto">
-              <ScrollFloat
-                as="h1"
-                mode="once"
-                animationDuration={0.85}
-                ease="power3.out"
-                stagger={0.012}
-                containerClassName="hero-cinematic__title-container"
-                textClassName="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0 block"
-              >
-                El Estado te responde a la primera.
-              </ScrollFloat>
+              <Suspense fallback={<h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0">El Estado te responde a la primera.</h1>}>
+                <ScrollFloat
+                  as="h1"
+                  mode="once"
+                  animationDuration={0.85}
+                  ease="power3.out"
+                  stagger={0.012}
+                  containerClassName="hero-cinematic__title-container"
+                  textClassName="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0 block"
+                >
+                  El Estado te responde a la primera.
+                </ScrollFloat>
+              </Suspense>
             </div>
 
             {/* Subtítulo comercial y directo */}
@@ -321,17 +327,19 @@ export default function HomePage() {
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted/70 font-semibold m-0 select-none">
                 Un proyecto del Gobierno de la Provincia de Formosa
               </p>
-              <LogoLoop
-                logos={institutionalLogos}
-                speed={26}
-                direction="left"
-                logoHeight={28}
-                gap={56}
-                fadeOut
-                pauseOnHover
-                scaleOnHover
-                ariaLabel="Todos Unidos, Gobierno de Formosa y ChatAP"
-              />
+              <Suspense fallback={<div className="h-7" aria-hidden="true" />}>
+                <LogoLoop
+                  logos={institutionalLogos}
+                  speed={26}
+                  direction="left"
+                  logoHeight={28}
+                  gap={56}
+                  fadeOut
+                  pauseOnHover
+                  scaleOnHover
+                  ariaLabel="Todos Unidos, Gobierno de Formosa y ChatAP"
+                />
+              </Suspense>
             </div>
           </div>
         </section>
@@ -486,9 +494,11 @@ export default function HomePage() {
                 Seguí el recorrido de una consulta
                 <span className="assistant-showcase__label-tag">Experiencia interactiva</span>
               </div>
-              <div className="assistant-showcase__mockup">
-                <InteractiveChatMockup />
-              </div>
+              <Suspense fallback={<div className="assistant-showcase__mockup min-h-[420px]" aria-hidden="true" />}>
+                <div className="assistant-showcase__mockup">
+                  <InteractiveChatMockup />
+                </div>
+              </Suspense>
             </div>
 
             <div className="assistant-showcase__action">
@@ -599,7 +609,9 @@ export default function HomePage() {
           <div className="ed-max">
             <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
               <div className="p-2 rounded-2xl bg-brand/10 border border-brand/20">
-                <ChatBotAvatar size={56} reaction="happy" followMouse={false} />
+                <Suspense fallback={<span className="block h-14 w-14 rounded-full bg-brand/10" aria-hidden="true" />}>
+                  <ChatBotAvatar size={56} reaction="happy" followMouse={false} />
+                </Suspense>
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-ink m-0">

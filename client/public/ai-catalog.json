@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "name": "ChatAP",
+  "description": "Asistente virtual de la Administración Pública de la Provincia de Formosa.",
+  "language": "es-AR",
+  "homepage": "/",
+  "resources": [
+    {
+      "name": "Chat",
+      "url": "/chat",
+      "description": "Consulta de trámites y orientación ciudadana."
+    },
+    {
+      "name": "Contacto",
+      "url": "/contacto",
+      "description": "Información de atención y soporte."
+    }
+  ]
+}

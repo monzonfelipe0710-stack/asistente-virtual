@@ -1,0 +1,9 @@
+# ChatAP
+
+ChatAP es el asistente virtual de la Administración Pública de la Provincia de Formosa. Permite consultar información de trámites, requisitos, documentación y mesas de entrada.
+
+- Inicio: https://chatap.formosa.gob.ar/
+- Chat: https://chatap.formosa.gob.ar/chat
+- Contacto: https://chatap.formosa.gob.ar/contacto
+- Términos: https://chatap.formosa.gob.ar/terminos
+- Privacidad: https://chatap.formosa.gob.ar/privacidad
