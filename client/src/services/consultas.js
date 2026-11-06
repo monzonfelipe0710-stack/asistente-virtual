@@ -23,8 +23,12 @@ export async function calificarConsulta(id, calificacion, { motivo = "", token }
 
 /** GET /api/consultas/calificaciones — supervisor y empleados, con filtros. */
 export async function listarCalificaciones(filtros = {}) {
+  const params = { ...filtros };
+  if (params.limit != null) {
+    params.limit = Math.min(50, Math.max(1, Number(params.limit) || 1));
+  }
   const { data } = await api.get("/api/consultas/calificaciones", {
-    params: filtros,
+    params,
   });
   return data;
 }

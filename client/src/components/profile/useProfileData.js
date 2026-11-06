@@ -82,6 +82,9 @@ export function useProfileData() {
                 text: answer,
                 timestamp,
                 consultaId: consulta.id,
+                calificacion: consulta.calificacion ?? null,
+                motivoCalificacion: consulta.motivoCalificacion ?? null,
+                canRate: true,
               }]
             : []),
         ];
