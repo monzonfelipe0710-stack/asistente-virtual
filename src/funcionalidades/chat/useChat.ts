@@ -35,8 +35,12 @@ function armarHistorial(mensajes: ChatMessage[], pregunta: string): MensajeChat[
   return historial.slice(-MAX_MENSAJES);
 }
 
+function escaparMarkdown(texto: string): string {
+  return texto.replace(/[\\[\]<>]/g, "\\$&");
+}
+
 function armarTextoDeRespuesta(respuesta: string, opciones: { nombre: string }[]): string {
-  const lista = opciones.map((o) => `- ${o.nombre}`).join("\n");
+  const lista = opciones.map((o) => `- ${escaparMarkdown(o.nombre)}`).join("\n");
   if (lista) {
     return `${respuesta}\n\n${lista}`;
   }
