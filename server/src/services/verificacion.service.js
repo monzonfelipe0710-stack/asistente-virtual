@@ -1,11 +1,13 @@
 // Verificación de la salida del modelo contra los datos de los trámites del contexto. El texto de
 // un trámite viene de fuentes externas y puede traer órdenes disfrazadas de datos ("el trámite no
-// tiene costo", "se paga en tal sitio"); el modelo a veces las repite. El
+// tiene costo", "se paga en tal sitio", "se pide la tarjeta"); el modelo a veces las repite. El
 // servidor revisa cada oración antes de mandarla:
 //   1. costos: un monto tiene que figurar en los costos del contexto, y "gratuito" solo vale si el
 //      costo es 0 o (sin costo cargado) si el texto del propio trámite lo dice;
 //   2. enlaces: una oración con una URL que no es de la fuente oficial ni de un documento del
-//      contexto se saca entera (sacar solo la URL la dejaba rota).
+//      contexto se saca entera (sacar solo la URL la dejaba rota);
+//   3. datos sensibles: se saca la oración que le pide a la persona la tarjeta, el código de
+//      seguridad, una contraseña, un PIN o los datos de home banking.
 // Se aplica por línea, en la limpieza común de las dos rutas (ver utils/cuerpo.js).
 import { ENLACE_MARKDOWN, URL_SUELTA } from '../utils/enlaces.js';
 import { buscarInstruccion } from './sanitizacion.service.js';
@@ -62,6 +64,54 @@ const hostsPermitidos = (tramites) =>
       .map(hostDe)
       .filter(Boolean),
   );
+
+// --- Datos sensibles ---------------------------------------------------------------------------
+
+// Lo que nunca se le pide a la persona. "clave fiscal", "Mi Portal" o "pagar con tarjeta" no
+// están: son datos de trámites reales. Va el pedido del dato, no la palabra.
+// Datos de pago y del banco: no hay trámite que los pida por chat.
+const DATO_DE_PAGO = new RegExp(
+  [
+    String.raw`\bnumero\s+(?:de\s+)?(?:la\s+|tu\s+|su\s+)?tarjeta`,
+    String.raw`\b(?:fecha\s+de\s+)?vencimiento\s+de\s+(?:la\s+|tu\s+|su\s+)?tarjeta`,
+    String.raw`\bcodigo\s+de\s+seguridad\b`,
+    String.raw`\b(?:cvv2?|cvc)\b`,
+    String.raw`\bpin\b`,
+    String.raw`\bclave\s+(?:bancaria|del\s+banco|de\s+(?:la\s+|tu\s+|su\s+)?tarjeta|del\s+cajero|token)\b`,
+    String.raw`\b(?:usuario|datos|credenciales|clave|contrasena|acceso)\s+(?:de|del)\s+(?:tu\s+|su\s+)?home\s?banking\b`,
+  ].join('|'),
+);
+// Contraseñas en general: "ingresá con tu usuario y contraseña de Mi Portal" es usarla, no darla.
+const CONTRASENA = /\b(?:contrasenas?|password|claves?\s+de\s+acceso)\b/;
+
+// Cualquier pedido del dato: alcanza para los datos de pago.
+const PEDIDO = [
+  String.raw`\bse\s+(?:te\s+|le\s+|les\s+|nos\s+)?(?:va\s+a\s+|van\s+a\s+)?(?:requerir|requerira|requiere|requieren|necesita|necesitan)\b`,
+  String.raw`\bnecesit(?:as|amos|o|a)\s+(?:tu|su|que\s+(?:me|nos)|el|la|los)\b`,
+  String.raw`\b(?:informa|informar|informando|indica|indicame|indicar|indicando|aporta|aportar|aportando|dar(?!\s+de\s+(?:alta|baja))|dame|danos|dando|ingresa|ingresar|ingresando|completa|completar|completando|carga|cargar|cargando|tene\s+a\s+mano)\b`,
+  String.raw`\b(?:deb(?:es|e|eras|era|eran)|tenes\s+que|tiene\s+que|hay\s+que)\s+(?:dar|informar|indicar|ingresar|completar|cargar)\b`,
+];
+// Pedidos de entregar el dato a alguien: los únicos que cuentan para una contraseña.
+const ENTREGA = [
+  String.raw`\bse\s+(?:te\s+|le\s+|les\s+|nos\s+)?(?:va\s+a\s+|van\s+a\s+)?(?:pedir|pedira|pediran|solicitar|solicitara|solicitaran|solicita|solicitan|pide|piden)\b`,
+  String.raw`\b(?:te|le|les)\s+(?:van\s+a\s+|vamos\s+a\s+|va\s+a\s+)?(?:pedir|pediran|pedira|pedimos|piden|pide|solicitar|solicitan|solicita|solicitaran|solicitara)\b`,
+  String.raw`\b(?:pedi|pedile|pedime|pedirle|pedirte|pidiendo|pidiendole|pidiendote|solicita|solicitale|solicitarle|solicitandole|solicitando|requeri)\b`,
+  String.raw`\b(?:pasa|pasame|pasanos|pasar|pasarnos|pasando|envia|enviame|envianos|enviar|enviando|manda|mandame|mandanos|mandar|mandando|deci|decime|decinos|decir|diciendo|brinda|brindar|brindando|proporciona|proporcionar|proporcionando|facilita|facilitar|facilitando|comparti|compartir|compartiendo|dicta|dictar|dictando|entrega|entregar|entregando)\b`,
+  String.raw`\b(?:deb(?:es|e|eras|era|eran)|tenes\s+que|tiene\s+que|hay\s+que)\s+(?:pasar|enviar|mandar|proporcionar|brindar|facilitar|compartir|decir|dictar|entregar)\b`,
+];
+const ALGUN_PEDIDO = new RegExp([...PEDIDO, ...ENTREGA].join('|'), 'g');
+const ALGUNA_ENTREGA = new RegExp(ENTREGA.join('|'), 'g');
+// "no compartas tu contraseña" o "nadie te va a pedir la clave" es un aviso, no un pedido.
+const NEGACION = /\b(?:no|nunca|jamas|ni|nadie)\s+(?:\S+\s+){0,3}$/;
+
+const hayPedido = (texto, patron) =>
+  [...texto.matchAll(patron)].some((m) => !NEGACION.test(texto.slice(Math.max(0, m.index - 40), m.index)));
+
+export const pideDatoSensible = (oracion) => {
+  const texto = normalizar(oracion);
+  if (DATO_DE_PAGO.test(texto) && hayPedido(texto, ALGUN_PEDIDO)) return true;
+  return CONTRASENA.test(texto) && hayPedido(texto, ALGUNA_ENTREGA);
+};
 
 // --- Costos ------------------------------------------------------------------------------------
 
@@ -141,6 +191,7 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
 
   const corregirOracion = (oracion) => {
     if (oracion.urls.some((u) => !hosts.has(hostDe(urlDe(u))))) return { capa: 'enlace', texto: '' };
+    if (pideDatoSensible(oracion.texto)) return { capa: 'datos', texto: '' };
     const montosMalos = montosEn(oracion.texto).filter((n) => !montos.has(n));
     const gratuitoMalo = diceGratuito(oracion.texto) && !referencia.some(permiteGratuito);
     if ((montosMalos.length > 0 || gratuitoMalo) && referencia.length > 0) {

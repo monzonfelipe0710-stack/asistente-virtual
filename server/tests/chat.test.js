@@ -772,6 +772,26 @@ describe('chat', () => {
       assert.equal(gratuito.normal, 'El trámite es gratuito.');
       assert.deepEqual(gratuito.correcciones, []);
     });
+
+    it('saca la oración que pide datos de la tarjeta, en las dos rutas, la caché y consultas', async () => {
+      const r = await enLasDosRutas(
+        'cómo saco turno',
+        'Para reservar el turno, se te va a pedir el número de tarjeta y el código de seguridad.\nLlevá el DNI vigente.',
+      );
+      assert.equal(r.normal, 'Llevá el DNI vigente.');
+      assert.equal(r.stream, 'Llevá el DNI vigente.');
+      assert.equal(r.cacheado, 'Llevá el DNI vigente.');
+      assert.deepEqual(r.registradas, ['Llevá el DNI vigente.', 'Llevá el DNI vigente.']);
+      assert.deepEqual(r.correcciones.map((c) => c.capa), ['datos', 'datos']);
+    });
+
+    it('no toca un trámite que se hace con la contraseña de Mi Portal o se paga con tarjeta', async () => {
+      const texto = 'Ingresá a Mi Portal con tu usuario y contraseña. Podés pagar con tarjeta de crédito o por Home Banking.';
+      const r = await enLasDosRutas('cómo lo hago en línea', texto);
+      assert.equal(r.normal, texto);
+      assert.equal(r.stream, texto);
+      assert.deepEqual(r.correcciones, []);
+    });
   });
 
   describe('streaming', () => {

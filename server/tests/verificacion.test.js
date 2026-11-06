@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { crearVerificador, diceGratuito, montosEn, partirEnOraciones } from '../src/services/verificacion.service.js';
+import { crearVerificador, diceGratuito, montosEn, partirEnOraciones, pideDatoSensible } from '../src/services/verificacion.service.js';
 
 const tramite = (datos) => ({ id: 1, nombre: 'Permiso de Feria', costo: null, descripcion: 'Se presenta el DNI.', requisitos: [], documentos: [], fuenteUrl: 'https://www.formosa.gob.ar/tramite/1', ...datos });
 
@@ -76,6 +76,46 @@ describe('verificación de la salida', () => {
     it('acepta la fuente oficial y los documentos con enlace del contexto', () => {
       const t = tramite({ documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] });
       assert.deepEqual(verificar('Está en https://www.formosa.gob.ar/tramite/1 y el formulario en https://docs.formosa.gob.ar/f.pdf.', [t]).capas, []);
+    });
+  });
+
+  describe('datos sensibles', () => {
+    it('saca los pedidos de tarjeta, código de seguridad, PIN, contraseña o home banking', () => {
+      for (const oracion of [
+        'Para reservar el turno, se te pedirá tu número de tarjeta de crédito, la fecha de vencimiento y el código de seguridad.',
+        'Debés reservar el turno proporcionando tu número de tarjeta.',
+        'Además, se requiere tu número de tarjeta de crédito y el CVV.',
+        'Pasame tu contraseña para verificar tu identidad.',
+        'Te van a pedir la clave de tu home banking.',
+        'Indicá el PIN de tu tarjeta de débito.',
+        'Para confirmar tu identidad, te van a pedir la contraseña de Mi Portal.',
+      ]) {
+        assert.ok(pideDatoSensible(oracion), oracion);
+      }
+    });
+
+    it('no toca los trámites reales con clave fiscal, Mi Portal, pagos con tarjeta o avisos', () => {
+      for (const oracion of [
+        'Ingresá a Mi Portal con tu usuario y contraseña.',
+        'Necesitás tu usuario y contraseña de Mi Portal.',
+        'Ingresá con tu clave fiscal en ATP en línea.',
+        'Podés pagar con tarjeta de crédito o débito, o por Home Banking de Red Link.',
+        'Debe generar un ADL y abonar por Home Banking de Red Link.',
+        'Nunca compartas tu contraseña con nadie.',
+        'Nadie del organismo te va a pedir tu contraseña.',
+        'Tienen las mismas funciones que el DNI tarjeta.',
+        'La escritura pública no tiene vencimiento.',
+        'Para dar de alta tu usuario, creá una contraseña en Mi Portal.',
+      ]) {
+        assert.ok(!pideDatoSensible(oracion), oracion);
+      }
+    });
+
+    it('saca la oración y deja el resto de la línea', () => {
+      assert.deepEqual(verificar('Llevá el DNI. Para el turno se requiere tu número de tarjeta y el código de seguridad.', [tramite()]), {
+        texto: 'Llevá el DNI.',
+        capas: ['datos'],
+      });
     });
   });
 });
