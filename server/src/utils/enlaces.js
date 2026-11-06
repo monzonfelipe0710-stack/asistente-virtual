@@ -1,8 +1,8 @@
 // Los enlaces del chat los pone el servidor: los que escribe el modelo se sacan (podrían ser
 // inventados) y se agregan los de la fuente oficial de cada trámite usado.
 
-const ENLACE_MARKDOWN = String.raw`!?\[[^\]\n]*\]\([^)\n]*\)`;
-const URL_SUELTA = String.raw`<?(?:https?:\/\/|www\.)[^\s<>()\[\]]*[^\s<>()\[\].,;:!?]>?`;
+export const ENLACE_MARKDOWN = String.raw`!?\[[^\]\n]*\]\([^)\n]*\)`;
+export const URL_SUELTA =String.raw`<?(?:https?:\/\/|www\.)[^\s<>()\[\]]*[^\s<>()\[\].,;:!?]>?`;
 
 // Con el enlace se va el ":" que lo anunciaba: "consultá la fuente oficial: [x](url)." queda
 // "consultá la fuente oficial.".

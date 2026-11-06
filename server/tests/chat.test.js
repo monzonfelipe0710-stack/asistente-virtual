@@ -715,6 +715,57 @@ describe('chat', () => {
     });
   });
 
+  describe('verificación de la salida contra los datos', () => {
+    after(async () => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: null } });
+    });
+
+    // Las dos rutas, la caché y lo registrado en consultas tienen que tener el texto ya corregido.
+    const enLasDosRutas = async (pregunta, respuesta) => {
+      const correcciones = [];
+      const alCorregirSalida = (c) => correcciones.push(c);
+      salidaModelo = salida({ tipo: 'respuesta', respuesta, tramiteId: tramite.id });
+      const normal = await responderConsulta(turno(pregunta), null, { alCorregirSalida });
+      const cacheado = cache.obtener(pregunta)?.respuesta;
+      cache.limpiar();
+      pedazosStream = [meta({ tipo: 'respuesta', tramiteId: tramite.id }), ...respuesta.match(/.{1,4}/gs)];
+      const { texto: stream } = await consumir(responderConsultaStream(turno(pregunta), null, { alCorregirSalida }));
+      return { normal: normal.respuesta, stream, cacheado, registradas: registros.map((r) => r.respuesta), correcciones };
+    };
+
+    it('corrige "gratuito" con el costo cargado, en las dos rutas, la caché y consultas', async () => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: 4500 } });
+      const r = await enLasDosRutas('cuánto cuesta', 'El trámite es **gratuito**. Se presenta el DNI.');
+      const esperado = `El costo del trámite ${tramite.nombre} es $4.500. Se presenta el DNI.`;
+      assert.equal(r.normal, esperado);
+      assert.equal(r.stream, esperado);
+      assert.equal(r.cacheado, esperado);
+      assert.deepEqual(r.registradas, [esperado, esperado]);
+      assert.deepEqual(r.correcciones.map((c) => c.capa), ['costo', 'costo']);
+    });
+
+    it('no toca un monto que coincide con el costo cargado', async () => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: 4500 } });
+      const r = await enLasDosRutas('cuánto sale', 'Cuesta $4.500 y se paga en la mesa de entradas.');
+      assert.equal(r.normal, 'Cuesta $4.500 y se paga en la mesa de entradas.');
+      assert.equal(r.stream, r.normal);
+      assert.deepEqual(r.correcciones, []);
+    });
+
+    it('sin costo cargado, "no tiene costo" pasa a "no está cargado"; con costo 0, "gratuito" queda', async () => {
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: null } });
+      const sinCargar = await enLasDosRutas('es gratis?', 'El trámite no tiene costo.');
+      assert.equal(sinCargar.normal, `El costo del trámite ${tramite.nombre} no está cargado: consultalo en una mesa de entrada o en la fuente oficial.`);
+      assert.equal(sinCargar.stream, sinCargar.normal);
+
+      registros = [];
+      await prisma.tramite.update({ where: { id: tramite.id }, data: { costo: 0 } });
+      const gratuito = await enLasDosRutas('es gratis el trámite?', 'El trámite es gratuito.');
+      assert.equal(gratuito.normal, 'El trámite es gratuito.');
+      assert.deepEqual(gratuito.correcciones, []);
+    });
+  });
+
   describe('streaming', () => {
     it('una conversación transmite el texto del modelo y no se registra', async () => {
       pedazosStream = [meta({ tipo: 'conversacion' }), '¡Gracias a vos! ', 'Cuando quieras, preguntame.'];

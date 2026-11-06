@@ -8,7 +8,9 @@ import { corregirTuteo } from './voseo.js';
 // mucho una en blanco).
 // No sale nada antes de la primera línea con texto ni después de la última.
 // `alCorregirTuteo` recibe las formas de tuteo que se corrigieron (sirve para medir el prompt).
-export const crearLimpiador = ({ saludo = '', alCorregirTuteo } = {}) => {
+// `verificar` revisa la línea contra los datos de los trámites antes de sacar los enlaces (ver
+// services/verificacion.service.js): puede corregir una oración o sacarla.
+export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {}) => {
   let pendiente = '';
   let enBlanco = 0;
   let empezo = false;
@@ -18,7 +20,9 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo } = {}) => {
       if (empezo) enBlanco++;
       return '';
     }
-    const { texto: enVoseo, formas } = corregirTuteo(quitarEnlaces(cruda));
+    const verificada = verificar ? verificar(cruda) : cruda;
+    if (!verificada.trim()) return '';
+    const { texto: enVoseo, formas } = corregirTuteo(quitarEnlaces(verificada));
     if (formas.length > 0) alCorregirTuteo?.(formas);
     let limpia = enVoseo;
     if (!empezo) limpia = quitarSaludosIniciales(limpia.trimStart(), saludo);

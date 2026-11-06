@@ -16,6 +16,7 @@ import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo
 import { cortarEnOracion, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
+import { crearVerificador } from "./verificacion.service.js";
 import {
   MARCA_FUERA_DE_ALCANCE,
   MENSAJE_FUERA_DE_ALCANCE,
@@ -356,7 +357,7 @@ export const buscarFugaDeInstrucciones = (texto) => {
   return detectorDeFuga(texto);
 };
 
-const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, signal }) => {
+const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, verificar, signal }) => {
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
 
@@ -369,10 +370,15 @@ const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCor
       signal,
     }),
   );
-  return limitarConversacion(reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo })));
+  return limitarConversacion(reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo, verificar })));
 };
 
 const SIN_REGISTRO = { consultaId: null, calificarToken: null };
+
+// La salida se verifica contra los trámites del contexto; los usados (el de "tramiteId" primero)
+// son a los que se refiere un costo.
+const verificadorPara = (tramites, idsUsados, alCorregir) =>
+  crearVerificador({ tramites, principales: idsUsados.map((id) => tramites.find((t) => t.id === id)), alCorregir });
 
 const FIN_CONVERSACIONAL = {
   tipo: "fin",
@@ -527,7 +533,7 @@ const crearTraza = () => {
   };
 };
 
-// `alCorregirTuteo` y `alDetectarFuga` son opcionales: los usan los evals para medir.
+// `alCorregirTuteo`, `alDetectarFuga` y `alCorregirSalida` son opcionales: los usan los evals para medir.
 export const responderConsulta = async (mensajes, usuario = null, opciones = {}) => {
   const traza = crearTraza();
   try {
@@ -537,7 +543,7 @@ export const responderConsulta = async (mensajes, usuario = null, opciones = {})
   }
 };
 
-const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectarFuga, signal: externa }, traza) => {
+const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectarFuga, alCorregirSalida, signal: externa }, traza) => {
   const signal = crearPlazo(externa);
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
@@ -583,14 +589,15 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
 
   const salida = JSON.parse(salidaRaw);
   const saludo = saludoPara(preguntaActual, salida.saludo);
-  const cuerpoModelo = reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo }));
+  const verificar = verificadorPara(tramites, idsUsadosDe(salida, idsResueltos), alCorregirSalida);
+  const cuerpoModelo = reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo, verificar }));
   // El mensaje fijo sale sin saludo, igual que cuando lo frena la regla de entrada.
   if (cuerpoModelo === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
   if (copiaInstrucciones(cuerpoModelo, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
 
   if (salida.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, signal });
+    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
     return respuestaConversacional(conSaludo(texto, saludo, usuario));
@@ -671,7 +678,7 @@ export async function* responderConsultaStream(mensajes, usuario = null, opcione
   }
 }
 
-async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal: externa }, traza) {
+async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorregirSalida, signal: externa }, traza) {
   const signal = crearPlazo(externa);
   const usuarioId = usuario?.id ?? null;
   const nombre = nombreParaSaludo(usuario);
@@ -725,6 +732,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
   let saludo = "";
   let cuerpo = "";
   let limpiador = null;
+  let verificar = null;
   let sinTramite = false;
 
   for await (let delta of deltas) {
@@ -777,7 +785,8 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
         continue;
       }
 
-      limpiador = crearLimpiador({ saludo, alCorregirTuteo });
+      verificar = verificadorPara(tramites, meta.idsUsados, alCorregirSalida);
+      limpiador = crearLimpiador({ saludo, alCorregirTuteo, verificar });
       // El saludo de una conversación sale al final: si es el mensaje fijo, va sin saludo.
       const prefijo = componerSaludo(saludo, nombre);
       if (prefijo && meta.tipo !== "conversacion") yield { tipo: "delta", texto: prefijo };
@@ -804,7 +813,7 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, signal:
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, signal });
+    const texto = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
     const prefijo = componerSaludo(saludo, nombre);
     if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE) yield { tipo: "delta", texto: prefijo };
     yield { tipo: "delta", texto };
