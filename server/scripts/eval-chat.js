@@ -364,10 +364,12 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
     const transversales = [];
     const tuteo = [];
     const alCorregirTuteo = (formas) => tuteo.push(...formas);
+    const correcciones = [];
+    const alCorregirSalida = (c) => correcciones.push(c);
     let r;
     for (const texto of turnos ?? [pregunta]) {
       mensajes.push({ rol: 'usuario', texto });
-      r = await responderConsulta(mensajes, null, { alCorregirTuteo });
+      r = await responderConsulta(mensajes, null, { alCorregirTuteo, alCorregirSalida });
       if (r.consultaId) consultasCreadas.push(r.consultaId);
       transversales.push(...fallasTransversales(r, mensajes.filter((m) => m.rol === 'usuario').map((m) => m.texto).join(' ')));
       mensajes.push({ rol: 'asistente', texto: r.respuesta });
@@ -377,9 +379,10 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
       motivo: [...new Set([...fallas(esperado, r), ...transversales.filter(Boolean)])],
       texto: r.respuesta,
       tuteo,
+      correcciones,
     };
   } catch (err) {
-    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [] };
+    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [], correcciones: [] };
   }
 };
 
@@ -402,6 +405,9 @@ const estadoDe = (aciertos) => {
 const filas = [];
 const detalle = [];
 const tuteoPorCaso = [];
+// Oraciones que la verificación de la salida corrigió o sacó (costo, enlace, datos sensibles): en
+// preguntas legítimas tendría que ser 0, salvo un enlace que no es de la fuente oficial.
+const correccionesDeSalida = [];
 
 // Los casos del catálogo sintético corren solo con --catalogo sintetico; los que dependen del
 // catálogo, en los dos modos.
@@ -428,6 +434,7 @@ for (const caso of elegidos) {
     corridas: corridas.filter((c) => c.tuteo.length > 0).length,
     formas: corridas.flatMap((c) => c.tuteo),
   });
+  for (const c of corridas.flatMap((x) => x.correcciones)) correccionesDeSalida.push({ pregunta: caso.pregunta, ...c });
 }
 
 console.table(filas);
@@ -460,6 +467,12 @@ console.log(
   (conTuteo.length > 0 ? ` (${contarFormas(conTuteo.flatMap((t) => t.formas))})` : '')
 );
 for (const t of conTuteo) console.log(`  - "${t.pregunta}": ${t.corridas}/${CORRIDAS} (${contarFormas(t.formas)})`);
+
+const porCapa = Object.entries(Object.groupBy(correccionesDeSalida, (c) => c.capa)).map(([capa, cs]) => `${capa} ${cs.length}`);
+console.log(`\nOraciones modificadas por la verificación de la salida: ${correccionesDeSalida.length}${porCapa.length ? ` (${porCapa.join(', ')})` : ''}`);
+for (const c of correccionesDeSalida) {
+  console.log(`  - [${c.capa}] "${c.pregunta}": "${c.original}"${c.corregida ? ` → "${c.corregida}"` : ' → (se sacó)'}`);
+}
 
 console.log(
   `\nOK ${CORRIDAS}/${CORRIDAS}: ${conEstado('OK').length} | ` +
