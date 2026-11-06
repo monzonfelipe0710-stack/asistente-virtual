@@ -215,7 +215,7 @@ export default function AdminSidebar({ open, onToggle }) {
               style={{ marginBottom: "24px" }}
             >
               <p
-                className="h-[18px] mb-1.5 text-[10px] font-semibold uppercase tracking-widest overflow-hidden whitespace-nowrap transition-opacity duration-300"
+                className="h-4.5 mb-1.5 text-[10px] font-semibold uppercase tracking-widest overflow-hidden whitespace-nowrap transition-opacity duration-300"
                 style={{
                   color: "var(--sidebar-section-text)",
                   opacity: open ? 1 : 0,
@@ -268,7 +268,7 @@ export default function AdminSidebar({ open, onToggle }) {
                     <>
                       {isActive && (
                         <span
-                          className="absolute left-1 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                          className="absolute left-1 top-1/2 -translate-y-1/2 w-0.75 h-5 rounded-r-full"
                           style={{ backgroundColor: "var(--sidebar-active-text)" }}
                         />
                       )}
