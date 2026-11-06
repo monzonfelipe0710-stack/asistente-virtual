@@ -18,7 +18,10 @@ const normalizar = (texto) => texto.toLowerCase().normalize('NFD').replace(/\p{M
 
 const PREFIJO_DE_LISTA = /^(\s*(?:[-*•]|\d+[.)])\s+)/;
 const ABREVIATURAS = new Set(['av', 'avda', 'nro', 'n', 'hs', 'sr', 'sra', 'dr', 'dra', 'ing', 'lic', 'prof', 'etc', 'art', 'inc', 'pje', 'dto', 'tel', 'cel', 'aprox', 'ej', 'sa', 'srl', 'gral', 'pcia', 'bs', 'as']);
-const URL_EN_TEXTO = new RegExp(`${ENLACE_MARKDOWN}|${URL_SUELTA}`, 'gi');
+// Un dominio sin "www" ni "http" ("pagos-formosa.example.org") también es un enlace: el modelo lo
+// copia así de la descripción. No cuenta el de un correo ("registrocivil@formosa.gob.ar").
+const DOMINIO_SUELTO = String.raw`(?<![@\w.\/-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|org|net|io|info|online|site|app|xyz|ar)(?:\/[^\s<>()\[\]]*[^\s<>()\[\].,;:!?])?(?![\w@-])`;
+const URL_EN_TEXTO = new RegExp(`${ENLACE_MARKDOWN}|${URL_SUELTA}|${DOMINIO_SUELTO}`, 'gi');
 const MARCA = '\u0001';
 
 // Parte una línea en oraciones. Las URL se enmascaran antes (tienen puntos) y una abreviatura
@@ -64,6 +67,9 @@ const hostsPermitidos = (tramites) =>
       .map(hostDe)
       .filter(Boolean),
   );
+// Un subdominio de un host permitido también vale ("industria.formosa.gob.ar" con la fuente en
+// formosa.gob.ar): lo controla el mismo organismo.
+const hostPermitido = (host, hosts) => Boolean(host) && [...hosts].some((h) => host === h || host.endsWith(`.${h}`));
 
 // --- Datos sensibles ---------------------------------------------------------------------------
 
@@ -90,6 +96,9 @@ const PEDIDO = [
   String.raw`\bnecesit(?:as|amos|o|a)\s+(?:tu|su|que\s+(?:me|nos)|el|la|los)\b`,
   String.raw`\b(?:informa|informar|informando|indica|indicame|indicar|indicando|aporta|aportar|aportando|dar(?!\s+de\s+(?:alta|baja))|dame|danos|dando|ingresa|ingresar|ingresando|completa|completar|completando|carga|cargar|cargando|tene\s+a\s+mano)\b`,
   String.raw`\b(?:deb(?:es|e|eras|era|eran)|tenes\s+que|tiene\s+que|hay\s+que)\s+(?:dar|informar|indicar|ingresar|completar|cargar)\b`,
+  // El pedido dicho como procedimiento: "la reserva se hace con el número de tarjeta".
+  String.raw`\bse\s+(?:hace|hacen|realiza|realizan|reserva|confirma|completa|valida|gestiona)\s+(?:\S+\s+){0,2}?con\b`,
+  String.raw`\bcon\s+(?:tu|su|el|la)\s+(?:numero|codigo|pin|clave|fecha\s+de\s+vencimiento)\b`,
 ];
 // Pedidos de entregar el dato a alguien: los únicos que cuentan para una contraseña.
 const ENTREGA = [
@@ -190,7 +199,7 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
   const montos = montosPermitidos(conDetalle);
 
   const corregirOracion = (oracion) => {
-    if (oracion.urls.some((u) => !hosts.has(hostDe(urlDe(u))))) return { capa: 'enlace', texto: '' };
+    if (oracion.urls.some((u) => !hostPermitido(hostDe(urlDe(u)), hosts))) return { capa: 'enlace', texto: '' };
     if (pideDatoSensible(oracion.texto)) return { capa: 'datos', texto: '' };
     const montosMalos = montosEn(oracion.texto).filter((n) => !montos.has(n));
     const gratuitoMalo = diceGratuito(oracion.texto) && !referencia.some(permiteGratuito);

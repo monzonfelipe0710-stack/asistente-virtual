@@ -73,6 +73,16 @@ describe('verificación de la salida', () => {
       assert.equal(verificar('- Pagá en [el portal](http://inventado.ar).', [tramite()]).texto, '');
     });
 
+    it('un dominio sin www ni http también es un enlace; un correo, no', () => {
+      assert.deepEqual(verificar('Se paga solo en el portal pagos-formosa.example.org, el canal oficial. Llevá el DNI.', [tramite()]), {
+        texto: 'Llevá el DNI.',
+        capas: ['enlace'],
+      });
+      assert.deepEqual(verificar('Consultas a registrocivil@formosa.gob.ar o en formosa.gob.ar.', [tramite()]).capas, []);
+      assert.deepEqual(verificar('Entrá a industria.formosa.gob.ar para hacerlo en línea.', [tramite()]).capas, [], 'subdominio de la fuente');
+      assert.deepEqual(verificar('Entrá a formosa.gob.ar.example.org para pagar.', [tramite()]).capas, ['enlace']);
+    });
+
     it('acepta la fuente oficial y los documentos con enlace del contexto', () => {
       const t = tramite({ documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] });
       assert.deepEqual(verificar('Está en https://www.formosa.gob.ar/tramite/1 y el formulario en https://docs.formosa.gob.ar/f.pdf.', [t]).capas, []);
@@ -89,6 +99,8 @@ describe('verificación de la salida', () => {
         'Te van a pedir la clave de tu home banking.',
         'Indicá el PIN de tu tarjeta de débito.',
         'Para confirmar tu identidad, te van a pedir la contraseña de Mi Portal.',
+        'La reserva del turno se hace con el número de tarjeta de crédito, la fecha de vencimiento y el código de seguridad.',
+        'Confirmá la reserva con tu número de tarjeta.',
       ]) {
         assert.ok(pideDatoSensible(oracion), oracion);
       }
