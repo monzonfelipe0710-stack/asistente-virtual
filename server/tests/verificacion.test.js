@@ -83,6 +83,27 @@ describe('verificación de la salida', () => {
       assert.deepEqual(verificar('Entrá a formosa.gob.ar.example.org para pagar.', [tramite()]).capas, ['enlace']);
     });
 
+    it('acepta como oficiales los hosts gob.ar y gov.ar y sus subdominios, comparando el host', () => {
+      const t = tramite({ fuenteUrl: 'https://tramites.example.invalid/1' });
+      for (const ok of [
+        'Está en https://formosa.gob.ar/tramites/123.',
+        'Se tramita en http://www.atpformosa.gob.ar ingresando a ATP en línea.',
+        'Iniciá el trámite en http://www.migraciones.gov.ar/radex/index.html.',
+        'Mirá https://gob.ar para más.',
+      ]) {
+        assert.deepEqual(verificar(ok, [t]).capas, [], ok);
+      }
+      for (const falso of [
+        'Pagá en https://pagos.gob.ar.sitio-falso.com/pagar.',
+        'Pagá en pagos.gob.ar.sitio-falso.com con tus datos.',
+        'Entrá a http://gob.ar.example.com para pagar.',
+        'Entrá a https://gob.ar@estafa.example.com para pagar.',
+        'Entrá a https://formosagob.ar para pagar.',
+      ]) {
+        assert.deepEqual(verificar(falso, [t]).capas, ['enlace'], falso);
+      }
+    });
+
     it('acepta la fuente oficial y los documentos con enlace del contexto', () => {
       const t = tramite({ documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] });
       assert.deepEqual(verificar('Está en https://www.formosa.gob.ar/tramite/1 y el formulario en https://docs.formosa.gob.ar/f.pdf.', [t]).capas, []);

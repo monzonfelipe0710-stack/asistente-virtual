@@ -69,7 +69,12 @@ const hostsPermitidos = (tramites) =>
   );
 // Un subdominio de un host permitido también vale ("industria.formosa.gob.ar" con la fuente en
 // formosa.gob.ar): lo controla el mismo organismo.
-const hostPermitido = (host, hosts) => Boolean(host) && [...hosts].some((h) => host === h || host.endsWith(`.${h}`));
+// Los sitios del Estado (gob.ar, gov.ar y sus subdominios) son oficiales aunque no sean la fuente
+// del trámite: "www.atpformosa.gob.ar", "www.migraciones.gov.ar". Se compara el host ya parseado,
+// así que "pagos.gob.ar.sitio-falso.com" (host en .com) no pasa.
+const OFICIALES = ['gob.ar', 'gov.ar'];
+const esOficial = (host) => OFICIALES.some((d) => host === d || host.endsWith(`.${d}`));
+const hostPermitido = (host, hosts) => Boolean(host) && (esOficial(host) || [...hosts].some((h) => host === h || host.endsWith(`.${h}`)));
 
 // --- Datos sensibles ---------------------------------------------------------------------------
 
