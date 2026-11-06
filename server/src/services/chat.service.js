@@ -16,7 +16,7 @@ import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo
 import { cortarEnOracion, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
-import { crearVerificador } from "./verificacion.service.js";
+import { MENSAJE_INFORMACION_OCULTA, crearVerificador, quedoSinContenido, sinContenidoPropio } from "./verificacion.service.js";
 import {
   MARCA_FUERA_DE_ALCANCE,
   MENSAJE_FUERA_DE_ALCANCE,
@@ -382,6 +382,20 @@ const SIN_REGISTRO = { consultaId: null, calificarToken: null };
 const verificadorPara = (tramites, idsUsados, alCorregir) =>
   crearVerificador({ tramites, principales: idsUsados.map((id) => tramites.find((t) => t.id === id)), alCorregir });
 
+// Si la verificación sacó todo lo que respondía, sale un mensaje seguro con la fuente oficial: no
+// es una respuesta útil, así que no se cachea ni se registra. El log deja los trámites para revisarlos.
+const avisarSinContenido = (usados) =>
+  console.warn(`Chat: la verificación de la salida dejó la respuesta sin contenido (trámites ${usados.map((t) => t.id).join(", ")}): sale el mensaje seguro`);
+const FIN_SIN_CONTENIDO = {
+  tipo: "fin",
+  tipoRespuesta: "respuesta",
+  encontrado: false,
+  tramitesEncontrados: [],
+  opciones: [],
+  conversacional: false,
+  ...SIN_REGISTRO,
+};
+
 const FIN_CONVERSACIONAL = {
   tipo: "fin",
   tipoRespuesta: "respuesta",
@@ -641,6 +655,19 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
   const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
   const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
 
+  if (encontrado && quedoSinContenido(verificar, cuerpoModelo)) {
+    avisarSinContenido(usados);
+    return {
+      tipo: "respuesta",
+      respuesta: conSaludo(conFuentes(MENSAJE_INFORMACION_OCULTA, usados), saludo, usuario),
+      encontrado: false,
+      tramitesEncontrados: [],
+      opciones: [],
+      conversacional: false,
+      ...SIN_REGISTRO,
+    };
+  }
+
   // La caché y `consultas` guardan el cuerpo; el saludo y las fuentes se agregan al servir.
   const cuerpo = encontrado ? cuerpoModelo : MENSAJE_SIN_RESPUESTA;
   const registro = await registrar({
@@ -736,6 +763,20 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
   let limpiador = null;
   let verificar = null;
   let sinTramite = false;
+  // Una respuesta con trámite se retiene hasta su primera oración con contenido: si la verificación
+  // saca todo lo que respondía, sale el mensaje seguro sin haber mandado el resto.
+  let retenido = "";
+  let conContenido = false;
+  const paraMandar = (texto) => {
+    if (!texto || meta.tipo === "conversacion") return "";
+    if (meta.tipo !== "respuesta" || conContenido) return texto;
+    retenido += texto;
+    if (sinContenidoPropio(retenido)) return "";
+    conContenido = true;
+    const todo = retenido;
+    retenido = "";
+    return todo;
+  };
 
   for await (let delta of deltas) {
     if (!delta || sinTramite) continue;
@@ -799,14 +840,30 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
     // La conversación se retiene entera: antes de mandarla hay que ver si nombra un candidato.
     const texto = reemplazarMarca(limpiador.agregar(delta));
     cuerpo += texto;
-    if (texto && meta.tipo !== "conversacion") yield { tipo: "delta", texto };
+    const salida = paraMandar(texto);
+    if (salida) yield { tipo: "delta", texto: salida };
   }
 
   // Al terminar sale lo retenido: la última línea.
   if (limpiador !== null) {
     const texto = reemplazarMarca(limpiador.cerrar());
     cuerpo += texto;
-    if (texto && meta.tipo !== "conversacion") yield { tipo: "delta", texto };
+    const salida = paraMandar(texto);
+    if (salida) yield { tipo: "delta", texto: salida };
+  }
+
+  if (meta?.tipo === "respuesta" && meta.encontrado && !conContenido) {
+    if (quedoSinContenido(verificar, cuerpo)) {
+      const usados = meta.idsUsados.map((id) => tramites.find((x) => x.id === id));
+      avisarSinContenido(usados);
+      yield { tipo: "delta", texto: MENSAJE_INFORMACION_OCULTA };
+      const fuentes = conFuentes(MENSAJE_INFORMACION_OCULTA, usados).slice(MENSAJE_INFORMACION_OCULTA.length);
+      if (fuentes) yield { tipo: "delta", texto: fuentes };
+      yield FIN_SIN_CONTENIDO;
+      return;
+    }
+    // Solo relleno escrito así por el modelo: sale tal cual.
+    if (retenido) yield { tipo: "delta", texto: retenido };
   }
 
   // Sin salto de línea no hubo META separada: el buffer entero puede ser el JSON.

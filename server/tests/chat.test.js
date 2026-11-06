@@ -52,6 +52,7 @@ const { obtenerResumenCatalogo } = await import('../src/services/catalogo.servic
 const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
   await import('../src/services/chat.service.js');
 const { MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
+const { MENSAJE_INFORMACION_OCULTA } = await import('../src/services/verificacion.service.js');
 
 const DOMINIO = '@chat.test.invalid';
 const SUFIJO = `chat-test-${Date.now()}`;
@@ -786,6 +787,51 @@ describe('chat', () => {
       assert.equal(r.cacheado, 'Llevá el DNI vigente.');
       assert.deepEqual(r.registradas, ['Llevá el DNI vigente.', 'Llevá el DNI vigente.']);
       assert.deepEqual(r.correcciones.map((c) => c.capa), ['datos', 'datos']);
+    });
+
+    describe('si al sacar oraciones no queda nada que responda', () => {
+      const fuente = `https://example.invalid/${SUFIJO}/vacia`;
+      const enlace = () => `[Fuente oficial: ${tramite.nombre}](${fuente})`;
+      before(() => prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: fuente } }));
+      after(() => prisma.tramite.update({ where: { id: tramite.id }, data: { fuenteUrl: null } }));
+
+      it('sale el mensaje seguro con la fuente en las dos rutas, sin cachear ni registrar', async () => {
+        const respuesta =
+          'Pagá en https://pagos.estafa.example.com/x con tus datos. Se te va a pedir el número de tarjeta y el código de seguridad.\n' +
+          'Para más información, consultá en la mesa de entrada.';
+        const r = await enLasDosRutas('cómo pago el trámite', respuesta);
+        const esperado = `${MENSAJE_INFORMACION_OCULTA}\n\n${enlace()}`;
+        assert.equal(r.normal, esperado);
+        assert.equal(r.stream, esperado);
+        assert.equal(r.cacheado, undefined);
+        assert.equal(cache.obtener('cómo pago el trámite'), null);
+        assert.deepEqual(r.registradas, []);
+        assert.deepEqual(r.correcciones.map((c) => c.capa), ['enlace', 'datos', 'enlace', 'datos']);
+      });
+
+      it('en streaming no manda nada del texto del modelo antes del mensaje seguro', async () => {
+        pedazosStream = [meta({ tipo: 'respuesta', tramiteId: tramite.id }), 'Para más detalles, te recomiendo consultar en la mesa.\n', 'Pagá en www.estafa.example.com.'];
+        const eventos = [];
+        for await (const e of responderConsultaStream(turno('dónde pago'))) eventos.push(e);
+        const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
+        assert.deepEqual(deltas, [MENSAJE_INFORMACION_OCULTA, `\n\n${enlace()}`]);
+        assert.equal(eventos.at(-1).encontrado, false);
+        assert.equal(eventos.at(-1).consultaId, null);
+      });
+
+      it('si queda algo con contenido, responde con eso', async () => {
+        const r = await enLasDosRutas('cómo hago el trámite', 'Pagá en https://pagos.estafa.example.com/x. Llevá el DNI vigente.');
+        assert.equal(r.normal, `Llevá el DNI vigente.\n\n${enlace()}`);
+        assert.equal(r.stream, r.normal);
+        assert.equal(r.registradas.length, 2);
+      });
+
+      it('un texto que el modelo escribió solo con relleno, sin que se saque nada, sale tal cual', async () => {
+        const r = await enLasDosRutas('qué más necesito', 'Para más información, consultá en la mesa de entrada.');
+        assert.equal(r.normal, `Para más información, consultá en la mesa de entrada.\n\n${enlace()}`);
+        assert.equal(r.stream, r.normal);
+        assert.equal(r.cacheado, 'Para más información, consultá en la mesa de entrada.');
+      });
     });
 
     it('no toca un trámite que se hace con la contraseña de Mi Portal o se paga con tarjeta', async () => {

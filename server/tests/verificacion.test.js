@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { crearVerificador, diceGratuito, montosEn, partirEnOraciones, pideDatoSensible } from '../src/services/verificacion.service.js';
+import { crearVerificador, diceGratuito, montosEn, partirEnOraciones, pideDatoSensible, quedoSinContenido, sinContenidoPropio } from '../src/services/verificacion.service.js';
 
 const tramite = (datos) => ({ id: 1, nombre: 'Permiso de Feria', costo: null, descripcion: 'Se presenta el DNI.', requisitos: [], documentos: [], fuenteUrl: 'https://www.formosa.gob.ar/tramite/1', ...datos });
 
@@ -16,6 +16,34 @@ describe('verificación de la salida', () => {
     it('no corta en una URL ni en una abreviatura', () => {
       const oraciones = partirEnOraciones('Andá a Av. 25 de Mayo 123. Mirá www.formosa.gob.ar/a.b para más. Listo.').map((o) => o.texto);
       assert.deepEqual(oraciones, ['Andá a Av. 25 de Mayo 123.', 'Mirá www.formosa.gob.ar/a.b para más.', 'Listo.']);
+    });
+  });
+
+  describe('respuesta sin contenido', () => {
+    it('el relleno solo no es contenido; un dato o un "no está cargado" sí', () => {
+      for (const t of [
+        '',
+        'Para más información, consultá en la mesa de entrada.',
+        'Para más detalles sobre el pago, te recomiendo consultar en la fuente oficial.\nRecordá que es importante seguir este procedimiento para asegurar la validez del trámite.',
+        '¿Te gustaría saber algo más?',
+        '- Podés consultar en la mesa de entrada correspondiente.',
+      ]) {
+        assert.ok(sinContenidoPropio(t), JSON.stringify(t));
+      }
+      for (const t of [
+        'Llevá el DNI vigente.',
+        'El costo del trámite Permiso de Feria no está cargado: consultalo en una mesa de entrada o en la fuente oficial.',
+        'Para más información, consultá en la mesa. Se presenta la libreta sanitaria.',
+      ]) {
+        assert.ok(!sinContenidoPropio(t), JSON.stringify(t));
+      }
+    });
+
+    it('solo cuenta si la verificación sacó algo', () => {
+      const v = crearVerificador({ tramites: [tramite()] });
+      assert.equal(quedoSinContenido(v, v('Para más información, consultá en la mesa de entrada.')), false);
+      assert.equal(v('Pagá en https://estafa.example.com.'), '');
+      assert.equal(quedoSinContenido(v, ''), true);
     });
   });
 

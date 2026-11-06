@@ -194,9 +194,41 @@ const tramiteDeLaOracion = (oracion, tramites) => {
 
 // --- Verificador -------------------------------------------------------------------------------
 
+// --- Respuestas que quedaron sin contenido ---------------------------------------------------
+
+// Si al sacar oraciones no queda nada que responda, va este mensaje (con el enlace a la fuente
+// oficial, que agrega el servidor).
+export const MENSAJE_INFORMACION_OCULTA = 'No puedo mostrar esa parte de la información. Consultá en una mesa de entrada o en la fuente oficial.';
+
+// Oraciones de relleno, que no responden nada por sí solas: derivar a consultar, "para más
+// información", "es importante seguir este procedimiento" o una pregunta de cierre. "El costo no está
+// cargado: consultalo en una mesa de entrada" responde (no empieza derivando).
+const RELLENO = [
+  /^(?:(?:para|si necesitas|si queres) (?:obtener |tener )?(?:mas|mayor) (?:informacion|detalles|precision)[^,]*,\s*)?(?:te (?:recomiendo|sugiero|aconsejo)(?: que)? |podes |deberias |es recomendable |conviene )?(?:consulta|consultes|consultar|consultalo|consultala|acercate|acercarte|dirigite|dirigirte|averigua|averiguar|comunicate|comunicarte)\b/,
+  /^(?:recorda|tene en cuenta) que es importante\b/,
+  /^(?:asegurate|es importante|recorda) (?:de |que )?(?:sigas |seguir |cumplir |cumplas )(?:con )?(?:este|estos|el|los|todos los) (?:procedimiento|pasos|requisitos|indicaciones)\b/,
+  /^(?:te gustaria|queres|te ayudo|necesitas|hay algo mas|en que mas|puedo ayudarte)\b.*\?$/,
+  /^espero (?:que )?(?:te )?(?:sirva|haberte|haber)\b/,
+];
+const esRelleno = (oracion) => {
+  const texto = normalizar(oracion).replace(/[¡¿*_]/g, '').trim();
+  return !texto || RELLENO.some((r) => r.test(texto));
+};
+
+// true si el texto no tiene ni una oración que no sea relleno (incluido el texto vacío).
+export const sinContenidoPropio = (texto) =>
+  texto
+    .split('\n')
+    .map((l) => l.replace(PREFIJO_DE_LISTA, ''))
+    .flatMap((l) => partirEnOraciones(l).map((o) => o.texto))
+    .every(esRelleno);
+
+// --- Verificador -------------------------------------------------------------------------------
+
 // `tramites`: todos los del contexto (con detalle); `principales`: los que usa la respuesta (el de
 // "tramiteId" primero), o vacío. `alCorregir` recibe { capa, original, corregida } (lo usan los
-// evals y los tests). Devuelve una función que verifica una línea.
+// evals y los tests). Devuelve una función que verifica una línea; su `quitadas()` dice cuántas
+// oraciones sacó sin reemplazo (para saber si la respuesta pudo quedar sin contenido).
 export const crearVerificador = ({ tramites = [], principales = [], alCorregir } = {}) => {
   const conDetalle = tramites.filter((t) => t && !t.sinResolver);
   const referencia = principales.filter(Boolean).length > 0 ? principales.filter(Boolean) : conDetalle;
@@ -215,7 +247,8 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
     return null;
   };
 
-  return (linea) => {
+  let quitadas = 0;
+  const verificar = (linea) => {
     const prefijo = linea.match(PREFIJO_DE_LISTA)?.[1] ?? '';
     const oraciones = partirEnOraciones(linea.slice(prefijo.length));
     let cambio = false;
@@ -227,6 +260,7 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
         continue;
       }
       cambio = true;
+      if (!correccion.texto) quitadas++;
       alCorregir?.({ capa: correccion.capa, original: o.texto.trim(), corregida: correccion.texto });
       if (correccion.texto && !salida.some((s) => s.trim() === correccion.texto)) salida.push(correccion.texto);
     }
@@ -234,4 +268,10 @@ export const crearVerificador = ({ tramites = [], principales = [], alCorregir }
     const cuerpo = salida.map((s) => s.trim()).filter(Boolean).join(' ');
     return cuerpo ? `${prefijo}${cuerpo}` : '';
   };
+  verificar.quitadas = () => quitadas;
+  return verificar;
 };
+
+// La respuesta quedó sin nada que responda por lo que sacó la verificación (no por cómo la escribió
+// el modelo: un texto que ya venía con solo relleno no se toca).
+export const quedoSinContenido = (verificar, cuerpo) => verificar.quitadas() > 0 && sinContenidoPropio(cuerpo);
