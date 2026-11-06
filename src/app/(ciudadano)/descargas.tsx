@@ -18,26 +18,92 @@ import {
   type TramitePublicadoApi,
 } from "@/lib/backend";
 
-function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
+function CabeceraDelTramite({
+  tramite,
+  abierto,
+  cargando,
+  onPress,
+}: {
+  tramite: TramitePublicadoApi;
+  abierto: boolean;
+  cargando: boolean;
+  onPress: () => void;
+}) {
   const C = useColors();
+  const nombreDelIcono = abierto ? "chevronDown" : "chevronRight";
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: abierto }}
+      style={({ pressed }) => [
+        styles.cabecera,
+        { backgroundColor: pressed ? C.surface2 : C.surface },
+      ]}
+    >
+      <Text style={[Type.rowTitle, { color: C.ink, flex: 1 }]} numberOfLines={2}>
+        {tramite.nombre}
+      </Text>
+      {cargando ? (
+        <ActivityIndicator color={C.accent} />
+      ) : (
+        <Icon name={nombreDelIcono} size={20} color={C.ink2} />
+      )}
+    </Pressable>
+  );
+}
+
+function ListaDeDocumentos({
+  documentos,
+  onDescargar,
+}: {
+  documentos: DocumentoApi[];
+  onDescargar: (documento: DocumentoApi) => void;
+}) {
+  const C = useColors();
+
+  return (
+    <View style={styles.documentos}>
+      {documentos.map((documento) => (
+        <TarjetaDeDocumento
+          key={documento.id}
+          documento={documento}
+          onPress={() => onDescargar(documento)}
+        />
+      ))}
+      {documentos.length === 0 && (
+        <Text style={[Type.meta, { color: C.ink2 }]}>Este trámite no tiene documentos.</Text>
+      )}
+    </View>
+  );
+}
+
+function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
   const push = useToast();
   const [abierto, setAbierto] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [documentos, setDocumentos] = useState<DocumentoApi[] | null>(null);
 
-  async function alternar() {
-    const siguiente = !abierto;
-    setAbierto(siguiente);
-    if (!siguiente || documentos !== null) return;
+  async function cargarDocumentos() {
     setCargando(true);
     try {
-      setDocumentos(await pedirDocumentos(tramite.id));
+      const documentosDelTramite = await pedirDocumentos(tramite.id);
+      setDocumentos(documentosDelTramite);
     } catch (e) {
       push(e instanceof Error ? e.message : "No se pudieron cargar los documentos.");
       setAbierto(false);
     } finally {
       setCargando(false);
     }
+  }
+
+  async function alternar() {
+    const siguiente = !abierto;
+    setAbierto(siguiente);
+    if (!siguiente) return;
+    if (documentos !== null) return;
+    await cargarDocumentos();
   }
 
   async function descargar(documento: DocumentoApi) {
@@ -51,38 +117,15 @@ function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
 
   return (
     <View>
-      <Pressable
+      <CabeceraDelTramite
+        tramite={tramite}
+        abierto={abierto}
+        cargando={cargando}
         onPress={alternar}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: abierto }}
-        style={({ pressed }) => [
-          styles.cabecera,
-          { backgroundColor: pressed ? C.surface2 : C.surface },
-        ]}
-      >
-        <Text style={[Type.rowTitle, { color: C.ink, flex: 1 }]} numberOfLines={2}>
-          {tramite.nombre}
-        </Text>
-        {cargando ? (
-          <ActivityIndicator color={C.accent} />
-        ) : (
-          <Icon name={abierto ? "chevronDown" : "chevronRight"} size={20} color={C.ink2} />
-        )}
-      </Pressable>
+      />
 
       {abierto && documentos !== null && (
-        <View style={styles.documentos}>
-          {documentos.map((documento) => (
-            <TarjetaDeDocumento
-              key={documento.id}
-              documento={documento}
-              onPress={() => descargar(documento)}
-            />
-          ))}
-          {documentos.length === 0 && (
-            <Text style={[Type.meta, { color: C.ink2 }]}>Este trámite no tiene documentos.</Text>
-          )}
-        </View>
+        <ListaDeDocumentos documentos={documentos} onDescargar={descargar} />
       )}
     </View>
   );
@@ -112,6 +155,8 @@ export default function Descargas() {
     };
   }, []);
 
+  const sinTramites = !cargando && !error && tramites.length === 0;
+
   return (
     <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
       <Encabezado titulo="Descargas" />
@@ -131,7 +176,7 @@ export default function Descargas() {
           ))}
         </View>
 
-        {!cargando && !error && tramites.length === 0 && (
+        {sinTramites && (
           <EmptyState title="Sin trámites" detalle="Todavía no hay trámites publicados." />
         )}
       </Screen>

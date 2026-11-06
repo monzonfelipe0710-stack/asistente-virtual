@@ -2,6 +2,8 @@ import { useCuentas } from "@/hooks/useCuentas";
 import { useMetricas } from "@/hooks/useMetricas";
 import { useTramites } from "@/hooks/useTramites";
 import { type Tone } from "@/components/ui/Badge";
+import { type AuthUser } from "@/lib/auth";
+import { type TramiteApi } from "@/lib/backend";
 import { type IconName } from "@/components/ui/Icon";
 import { Screen } from "@/components/ui/Screen";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,17 +19,36 @@ interface Stat {
   ejemplo?: boolean;
 }
 
+function contarUsuariosActivos(cuentas: AuthUser[]) {
+  let total = 0;
+  for (const cuenta of cuentas) {
+    const estado = cuenta.status ?? "Activo";
+    if (estado === "Activo") total += 1;
+  }
+  return total;
+}
+
+function contarTramitesPublicados(tramites: TramiteApi[]) {
+  let total = 0;
+  for (const tramite of tramites) {
+    if (tramite.publicado) total += 1;
+  }
+  return total;
+}
+
 export default function Dashboard() {
   const { cuentas } = useCuentas();
   const { tramites } = useTramites();
   const { sinRespuesta } = useMetricas();
 
-  const aceptados = tramites.filter((t) => t.publicado).length;
+  const usuariosActivos = contarUsuariosActivos(cuentas);
+  const aceptados = contarTramitesPublicados(tramites);
+  const rechazados = tramites.length - aceptados;
 
   const stats: Stat[] = [
     {
       title: "Usuarios activos",
-      value: cuentas.filter((u) => (u.status ?? "Activo") === "Activo").length,
+      value: usuariosActivos,
       icon: "users",
       tone: "ok",
       hint: "Dato real",
@@ -48,7 +69,7 @@ export default function Dashboard() {
     },
     {
       title: "Trámites rechazados",
-      value: tramites.length - aceptados,
+      value: rechazados,
       icon: "clock",
       tone: "bad",
       hint: "Dato real",

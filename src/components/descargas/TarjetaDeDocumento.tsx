@@ -5,6 +5,14 @@ import { Text } from "@/components/ui/Text";
 import { Fonts, Radius, Spacing, Weight, useColors } from "@/constants/theme";
 import type { DocumentoApi } from "@/lib/backend";
 
+function obtenerTipoDeArchivo(tipoMime: string | null) {
+  if (tipoMime === null || tipoMime === undefined) return "ARCHIVO";
+  const partes = tipoMime.split("/");
+  const ultimaParte = partes.pop();
+  if (ultimaParte === undefined) return "ARCHIVO";
+  return ultimaParte.toUpperCase();
+}
+
 /**
  * Fila de descarga: tarjeta gris de radio 16, ícono de documento en una caja de
  * 40 del color del fondo, nombre, y tipo de archivo en Geist Mono.
@@ -17,7 +25,7 @@ export function TarjetaDeDocumento({
   onPress: () => void;
 }) {
   const C = useColors();
-  const tipo = documento.tipo?.split("/").pop()?.toUpperCase() ?? "ARCHIVO";
+  const tipo = obtenerTipoDeArchivo(documento.tipo);
 
   return (
     <Pressable

@@ -37,6 +37,40 @@ const PASOS: { texto: string; icono: IconName; estado: "hecho" | "actual" | "fut
   { texto: "Cuenta aprobada", icono: "more", estado: "futuro" },
 ];
 
+function PasoDeSolicitud({ paso }: { paso: (typeof PASOS)[number] }) {
+  const C = useColors();
+  const hecho = paso.estado === "hecho";
+  const futuro = paso.estado === "futuro";
+  const actual = paso.estado === "actual";
+
+  return (
+    <View style={styles.paso}>
+      <View
+        style={[
+          styles.pasoIcono,
+          {
+            backgroundColor: hecho ? C.accent : C.canvas,
+            borderColor: futuro ? C.borderStrong : C.accent,
+          },
+        ]}
+      >
+        <Icon name={paso.icono} size={18} color={hecho ? C.onAccent : C.ink} />
+      </View>
+      <Text
+        style={[
+          styles.pasoTexto,
+          {
+            color: C.ink,
+            fontWeight: actual ? Weight.bold : Weight.medium,
+          },
+        ]}
+      >
+        {paso.texto}
+      </Text>
+    </View>
+  );
+}
+
 /** Pantalla que sigue al envío de la solicitud: dice que quedó pendiente y en qué paso está. */
 function SolicitudEnviada({ onTerminar }: { onTerminar: () => void }) {
   const C = useColors();
@@ -52,35 +86,9 @@ function SolicitudEnviada({ onTerminar }: { onTerminar: () => void }) {
       </View>
 
       <View style={[styles.pasos, { backgroundColor: C.surface, borderColor: C.border }]}>
-        {PASOS.map((paso) => {
-          const hecho = paso.estado === "hecho";
-          return (
-            <View key={paso.texto} style={styles.paso}>
-              <View
-                style={[
-                  styles.pasoIcono,
-                  {
-                    backgroundColor: hecho ? C.accent : C.canvas,
-                    borderColor: paso.estado === "futuro" ? C.borderStrong : C.accent,
-                  },
-                ]}
-              >
-                <Icon name={paso.icono} size={18} color={hecho ? C.onAccent : C.ink} />
-              </View>
-              <Text
-                style={[
-                  styles.pasoTexto,
-                  {
-                    color: C.ink,
-                    fontWeight: paso.estado === "actual" ? Weight.bold : Weight.medium,
-                  },
-                ]}
-              >
-                {paso.texto}
-              </Text>
-            </View>
-          );
-        })}
+        {PASOS.map((paso) => (
+          <PasoDeSolicitud key={paso.texto} paso={paso} />
+        ))}
       </View>
 
       <View style={{ flex: 1, minHeight: Spacing[6] }} />
@@ -111,16 +119,40 @@ export default function LoginRegisterScreen() {
     setError("");
   }
 
+  async function iniciarSesion() {
+    await login(email, password);
+  }
+
+  async function enviarSolicitud() {
+    await register({ name, email, password });
+    setPassword("");
+    setEnviada(true);
+  }
+
+  function volver() {
+    if (enviada) {
+      setEnviada(false);
+    } else {
+      router.replace("/");
+    }
+  }
+
+  function cambiarModoDesdeOpcion(opcion: string) {
+    if (opcion === "Crear cuenta") {
+      switchMode("register");
+    } else {
+      switchMode("login");
+    }
+  }
+
   async function handleSubmit() {
     setError("");
     setSubmitting(true);
     try {
       if (isLogin) {
-        await login(email, password);
+        await iniciarSesion();
       } else {
-        await register({ name, email, password });
-        setPassword("");
-        setEnviada(true);
+        await enviarSolicitud();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo completar la acción.");
@@ -131,8 +163,9 @@ export default function LoginRegisterScreen() {
 
   // Con una sesión abierta no hay nada que hacer acá: staff al panel, el resto al asistente.
   if (user) {
-    const destino = user.debeCambiarPassword ? "/cambiar-password" : isStaff ? "/admin" : "/";
-    return <Redirect href={destino} />;
+    if (user.debeCambiarPassword) return <Redirect href="/cambiar-password" />;
+    if (isStaff) return <Redirect href="/admin" />;
+    return <Redirect href="/" />;
   }
 
   return (
@@ -147,7 +180,7 @@ export default function LoginRegisterScreen() {
       >
         <BotonVolver
           etiqueta={enviada ? "Volver" : "Volver al asistente"}
-          onPress={() => (enviada ? setEnviada(false) : router.replace("/"))}
+          onPress={volver}
         />
 
         {enviada ? (
@@ -163,7 +196,7 @@ export default function LoginRegisterScreen() {
               <Segmented
                 value={isLogin ? "Ingresar" : "Crear cuenta"}
                 options={["Ingresar", "Crear cuenta"]}
-                onChange={(v) => switchMode(v === "Crear cuenta" ? "register" : "login")}
+                onChange={cambiarModoDesdeOpcion}
               />
             </View>
 

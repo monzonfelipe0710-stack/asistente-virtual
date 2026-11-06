@@ -22,12 +22,7 @@ export default function CambiarPasswordScreen() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  async function guardar() {
-    setError("");
-    if (nueva !== confirmar) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
+  async function enviarCambio() {
     setSubmitting(true);
     try {
       await changePassword(actual, nueva);
@@ -38,8 +33,23 @@ export default function CambiarPasswordScreen() {
     }
   }
 
+  async function guardar() {
+    setError("");
+    const coinciden = nueva === confirmar;
+    if (!coinciden) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+    await enviarCambio();
+  }
+
   if (!user) return <Redirect href="/login" />;
-  if (!user.debeCambiarPassword) return <Redirect href={isStaff ? "/admin" : "/"} />;
+  if (!user.debeCambiarPassword) {
+    const destino = isStaff ? "/admin" : "/";
+    return <Redirect href={destino} />;
+  }
+
+  const paddingInferior = Math.max(insets.bottom, Spacing[5]) + Spacing[5];
 
   return (
     <View style={{ flex: 1, backgroundColor: C.canvas }}>
@@ -48,7 +58,7 @@ export default function CambiarPasswordScreen() {
           styles.scroll,
           {
             paddingTop: insets.top + Spacing[5],
-            paddingBottom: Math.max(insets.bottom, Spacing[5]) + Spacing[5],
+            paddingBottom: paddingInferior,
           },
         ]}
         keyboardShouldPersistTaps="handled"

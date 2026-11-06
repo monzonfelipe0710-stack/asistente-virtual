@@ -39,6 +39,66 @@ const PANTALLAS: {
   { pantalla: "reportes", titulo: "Reportes", icono: "chart", grupo: "Sistema", permiso: "reportes" },
 ];
 
+type PantallaDelPanel = (typeof PANTALLAS)[number];
+
+function obtenerGrupos(pantallas: PantallaDelPanel[]) {
+  const grupos: string[] = [];
+  for (const pantalla of pantallas) {
+    if (!grupos.includes(pantalla.grupo)) {
+      grupos.push(pantalla.grupo);
+    }
+  }
+  return grupos;
+}
+
+function armarSecciones(pantallas: PantallaDelPanel[]) {
+  const secciones: SeccionDeMenu[] = [];
+  for (const grupo of obtenerGrupos(pantallas)) {
+    const items: ItemDeMenu[] = [];
+    for (const pantalla of pantallas) {
+      if (pantalla.grupo === grupo) {
+        items.push({ pantalla: pantalla.pantalla, titulo: pantalla.titulo, icono: pantalla.icono });
+      }
+    }
+    secciones.push({ titulo: grupo, items });
+  }
+  return secciones;
+}
+
+function PantallaCargando() {
+  const C = useColors();
+  return (
+    <View style={[styles.cargando, { backgroundColor: C.canvas }]}>
+      <ActivityIndicator color={C.accent} />
+    </View>
+  );
+}
+
+function AccesoRestringido({
+  confirmando,
+  onPedirConfirmacion,
+  onCancelar,
+}: {
+  confirmando: boolean;
+  onPedirConfirmacion: () => void;
+  onCancelar: () => void;
+}) {
+  const router = useRouter();
+  const { logout } = useAuth();
+
+  return (
+    <PantallaAviso
+      icono="lock"
+      titulo="Acceso restringido"
+      texto="Tu cuenta de Ciudadano no tiene permiso para entrar al Acceso Interno."
+    >
+      <Btn label="Volver al asistente" variant="secondary" onPress={() => router.replace("/")} />
+      <Btn label="Cerrar sesión" variant="ghost" onPress={onPedirConfirmacion} />
+      <DialogoCerrarSesion open={confirmando} onClose={onCancelar} onConfirmar={logout} />
+    </PantallaAviso>
+  );
+}
+
 /**
  * Entrada al panel. Sin sesión lleva al login; con una cuenta que no es de
  * personal muestra el acceso restringido; con una de personal, abre el menú.
@@ -46,22 +106,15 @@ const PANTALLAS: {
  */
 export default function LayoutAdmin() {
   const C = useColors();
-  const router = useRouter();
   const { width } = useWindowDimensions();
-  const { user, isStaff, loading, logout } = useAuth();
+  const { user, isStaff, loading } = useAuth();
   const { can } = usePermisos();
   const [accesibilidadAbierta, setAccesibilidadAbierta] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
   // La sesión se lee de forma asíncrona: sin esto, en el primer cuadro se vería
   // el login incluso teniendo una sesión válida.
-  if (loading) {
-    return (
-      <View style={[styles.cargando, { backgroundColor: C.canvas }]}>
-        <ActivityIndicator color={C.accent} />
-      </View>
-    );
-  }
+  if (loading) return <PantallaCargando />;
 
   if (!user) return <Redirect href="/login" />;
 
@@ -69,32 +122,17 @@ export default function LayoutAdmin() {
 
   if (!isStaff) {
     return (
-      <PantallaAviso
-        icono="lock"
-        titulo="Acceso restringido"
-        texto="Tu cuenta de Ciudadano no tiene permiso para entrar al Acceso Interno."
-      >
-        <Btn label="Volver al asistente" variant="secondary" onPress={() => router.replace("/")} />
-        <Btn label="Cerrar sesión" variant="ghost" onPress={() => setConfirmando(true)} />
-        <DialogoCerrarSesion
-          open={confirmando}
-          onClose={() => setConfirmando(false)}
-          onConfirmar={logout}
-        />
-      </PantallaAviso>
+      <AccesoRestringido
+        confirmando={confirmando}
+        onPedirConfirmacion={() => setConfirmando(true)}
+        onCancelar={() => setConfirmando(false)}
+      />
     );
   }
 
   const permitidas = PANTALLAS.filter((p) => can(p.permiso));
 
-  const grupos = [...new Set(permitidas.map((p) => p.grupo))];
-
-  const secciones: SeccionDeMenu[] = grupos.map((grupo) => ({
-    titulo: grupo,
-    items: permitidas
-      .filter((p) => p.grupo === grupo)
-      .map((p) => ({ pantalla: p.pantalla, titulo: p.titulo, icono: p.icono })),
-  }));
+  const secciones = armarSecciones(permitidas);
 
   return (
     <>
