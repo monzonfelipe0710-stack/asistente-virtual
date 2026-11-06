@@ -32,7 +32,8 @@
     "start": "node index.js",
     "predev": "prisma generate",
     "dev": "nodemon index.js",
-    "test": "node --test --experimental-test-module-mocks \"tests/**/*.test.js\"",
+    "test": "node scripts/test.js",
+    "test:real": "node scripts/test.js --real",
     "postinstall": "prisma generate",
     "seed:demo": "node prisma/seed-demo.js",
     "base:temporal": "node scripts/base-temporal.js"

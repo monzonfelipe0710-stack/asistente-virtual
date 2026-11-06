@@ -88,7 +88,8 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 |---|---|
 | `npm run dev` | Regenera el cliente de Prisma y levanta el server con nodemon |
 | `npm start` | Levanta el server |
-| `npm test` | Corre los tests. Algunos usan la base del `.env` (crean y borran sus propios datos) |
+| `npm test` | Corre los tests contra la base temporal de Docker (o `DATABASE_URL_TEST`), nunca contra la real. Ver [Tests](#tests) |
+| `npm run test:real` | Corre los tests contra la base del `.env`, con confirmación: para verificar las migraciones antes de un deploy |
 | `npx prisma migrate deploy` | Aplica las migraciones pendientes |
 | `npx prisma db seed` | Crea el superusuario inicial |
 | `npm run seed:demo` | Carga (o recarga) los datos de prueba |
@@ -806,8 +807,23 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 ## Tests
 
 ```bash
-npm test
+npm test                          # contra la base de prueba (nunca la real)
+npm test -- tests/chat.test.js    # solo esos archivos
+npm run test:real                 # contra la base del .env, con confirmación
 ```
+
+**Base de los tests.** `npm test` usa `DATABASE_URL_TEST` si está definida; si no, la base
+temporal de Docker (`chatap-temporal`, ver [La base temporal](#la-base-temporal)), que antes de
+correr arma o pone al día con `scripts/base-temporal.js` (crea el contenedor si no está, aplica las
+migraciones e importa el catálogo real). Hace falta Docker Desktop abierto. Se niega a correr si
+`DATABASE_URL_TEST` apunta a la misma base que el `.env`.
+
+`npm run test:real` corre los mismos tests contra la base del `.env`, para verificar las
+migraciones antes de un deploy. Pide escribir el host de la base para confirmar y no corre sin
+una terminal donde hacerlo (en un script o en CI se niega).
+
+Los tests que crean trámites envenenados (con una frase de instrucción para el asistente) los
+crean sin publicar y los borran al terminar.
 
 Runner nativo de Node, sin dependencias extra. `higiene.test.js` falla si algún `.js` de
 `src/`, `scripts/` o `tests/` tiene caracteres de combinación Unicode (U+0300 a U+036F)
@@ -824,9 +840,10 @@ simulados: alta, edición, descarga, borrado y que el chat los nombre sin la URL
 `esquema.test.js`, `login.test.js`, `registro.test.js`, `calificar.test.js`,
 `historial-consultas.test.js`, `calificaciones.test.js`, `catalogo.test.js`, `chat.test.js`,
 `importacion.test.js`, `reindexado.test.js`, `version-catalogo.test.js` y `documentos.test.js`
-usan la base del `.env` (conviene apuntar `DATABASE_URL` a la base temporal): crean sus propios datos (usuarios con dominios `.test.invalid`) y los
-borran al terminar (`catalogo.test.js` solo lee). El script de `npm test` incluye
-`--experimental-test-module-mocks` para simular el padrón, el modelo y la búsqueda.
+usan la base de los tests (la temporal, salvo `test:real`): crean sus propios datos (usuarios con
+dominios `.test.invalid`) y los borran al terminar (`catalogo.test.js` solo lee). `scripts/test.js`
+corre los tests con `--experimental-test-module-mocks` para simular el padrón, el modelo y la
+búsqueda.
 
 `fallas-openai.test.js` levanta un OpenAI falso local (con `OPENAI_BASE_URL`) y prueba el chat
 por HTTP con tiempos chicos: 429 y 500 con reintento, `retry-after` largo, 503 seguido de
