@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import "./HomePage.css";
 import Navbar from "../components/common/Navbar";
 import Footer from "../components/common/Footer";
-import HeroCinematicBackground from "../components/common/HeroCinematicBackground";
 import useTheme from "../hooks/useTheme";
 
 const Particles = lazy(() => import("../components/common/Particles"));
@@ -11,6 +10,7 @@ const LogoLoop = lazy(() => import("../components/common/LogoLoop"));
 const InteractiveChatMockup = lazy(() => import("../components/common/InteractiveChatMockup"));
 const ChatBotAvatar = lazy(() => import("../components/ChatBotAvatar"));
 const ScrollFloat = lazy(() => import("../components/common/ScrollFloat"));
+const HeroCinematicBackground = lazy(() => import("../components/common/HeroCinematicBackground"));
 
 /* ------------------------------------------------------------------
    Contenidos Esenciales de HomePage Minimalista
@@ -195,6 +195,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (isMobile) return undefined;
     if (!("requestIdleCallback" in window)) {
       const timeoutId = window.setTimeout(() => setEnhancementsReady(true), 1200);
       return () => window.clearTimeout(timeoutId);
@@ -202,7 +203,7 @@ export default function HomePage() {
 
     const idleId = window.requestIdleCallback(() => setEnhancementsReady(true), { timeout: 1800 });
     return () => window.cancelIdleCallback(idleId);
-  }, []);
+  }, [isMobile]);
 
   // El fondo WebGL solo anima mientras la sección principal está visible.
   const [heroVisible, setHeroVisible] = useState(true);
@@ -268,12 +269,18 @@ export default function HomePage() {
           className="hero-cinematic section-bleed relative flex flex-col justify-between"
         >
           {/* Layer 1 & 2: Fondo Cinematográfico con Ken Burns, Crossfade y Overlays */}
-          <HeroCinematicBackground />
+          {isMobile ? (
+            <div className="hero-cinematic-bg" aria-hidden="true" />
+          ) : (
+            <Suspense fallback={null}>
+              <HeroCinematicBackground />
+            </Suspense>
+          )}
 
           <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4">
             {/* Gran Titular Editorial con ScrollFloat */}
             <div className="hero-anim-title max-w-4xl mx-auto">
-              {enhancementsReady ? (
+              {enhancementsReady && !isMobile ? (
                 <Suspense fallback={<h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0">El Estado te responde a la primera.</h1>}>
                 <ScrollFloat
                   as="h1"
@@ -344,7 +351,7 @@ export default function HomePage() {
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted/70 font-semibold m-0 select-none">
                 Un proyecto del Gobierno de la Provincia de Formosa
               </p>
-              {enhancementsReady ? (
+              {enhancementsReady && !isMobile ? (
               <Suspense fallback={<div className="h-7" aria-hidden="true" />}>
                 <LogoLoop
                   logos={institutionalLogos}
@@ -515,7 +522,7 @@ export default function HomePage() {
                 Seguí el recorrido de una consulta
                 <span className="assistant-showcase__label-tag">Experiencia interactiva</span>
               </div>
-              {enhancementsReady ? (
+              {enhancementsReady && !isMobile ? (
               <Suspense fallback={<div className="assistant-showcase__mockup min-h-105" aria-hidden="true" />}>
                 <div className="assistant-showcase__mockup">
                   <InteractiveChatMockup />
@@ -634,7 +641,7 @@ export default function HomePage() {
           <div className="ed-max">
             <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
               <div className="p-2 rounded-2xl bg-brand/10 border border-brand/20">
-                {enhancementsReady ? (
+                {enhancementsReady && !isMobile ? (
                 <Suspense fallback={<span className="block h-14 w-14 rounded-full bg-brand/10" aria-hidden="true" />}>
                   <ChatBotAvatar size={56} reaction="happy" followMouse={false} />
                 </Suspense>
