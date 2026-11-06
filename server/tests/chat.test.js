@@ -232,6 +232,47 @@ describe('chat', () => {
       }
     });
 
+    // Caso de eval-chat "dónde hago el nuevo ejemplar del DNI": el trámite pedido no tiene oficinas y
+    // un candidato vecino sí; el modelo las tomaba del vecino.
+    for (const [pedido, vecino] of [['Nuevo Ejemplar para Argentinos', 'DNI en tu celular'], ['Matrimonio', 'Pasaporte Express']]) {
+      it(`cada dato queda en la sección de su trámite: "${pedido}" sin oficinas junto a "${vecino}" con oficinas`, async () => {
+        const sinOficinas = await prisma.tramite.create({
+          data: { nombre: `${pedido} ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },
+        });
+        const conOficinas = await prisma.tramite.create({
+          data: { nombre: `${vecino} ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },
+        });
+        const mesa = await prisma.mesaEntrada.create({ data: { nombre: `Centro de Documentación Rápida ${SUFIJO}`, direccion: 'Sarmiento 968' } });
+        await prisma.tramiteMesa.create({ data: { tramiteId: conOficinas.id, mesaId: mesa.id } });
+        try {
+          const instrucciones = [];
+          candidatos = [{ id: sinOficinas.id }, { id: conOficinas.id }];
+          salidaModelo = salida({ tipo: 'respuesta', tramiteId: sinOficinas.id, respuesta: 'Las oficinas no están cargadas para este trámite.' });
+          await responderConsulta(turno(`dónde hago ${pedido}`));
+          instrucciones.push(llamadasModelo.at(-1).instruccionSistema);
+          cache.limpiar();
+          pedazosStream = [`${meta({ tipo: 'respuesta', tramiteId: sinOficinas.id })}Las oficinas no están cargadas.`];
+          await consumir(responderConsultaStream(turno(`dónde hago ${pedido}`)));
+          instrucciones.push(llamadasModelo.at(-1).instruccionSistema);
+
+          for (const instruccion of instrucciones) {
+            const contexto = instruccion.split('Contexto (trámites candidatos):')[1];
+            const [, seccionPedido, seccionVecino] = contexto.split(/^### /m);
+            assert.match(seccionPedido, new RegExp(`^Trámite \\(id ${sinOficinas.id}\\): ${pedido}`));
+            assert.match(seccionPedido, /^Mesas de entrada \(oficinas\): no cargadas para este trámite$/m);
+            assert.doesNotMatch(seccionPedido, /Centro de Documentación Rápida/);
+            assert.match(seccionVecino, new RegExp(`^Trámite \\(id ${conOficinas.id}\\): ${vecino}`));
+            assert.match(seccionVecino, /^- Centro de Documentación Rápida .*, Sarmiento 968$/m);
+            // La regla, con la misma redacción en el prompt de las dos rutas.
+            assert.match(instruccion, /todo lo que figura en esa sección .* pertenece solo a ese trámite\. Si el trámite del que hablás no tiene el dato pedido .* decí que ese dato no está cargado para ese trámite; nunca lo completes con datos de otro trámite del contexto/);
+          }
+        } finally {
+          await prisma.tramite.deleteMany({ where: { id: { in: [sinOficinas.id, conOficinas.id] } } });
+          await prisma.mesaEntrada.delete({ where: { id: mesa.id } });
+        }
+      });
+    }
+
     it('el esquema de salida pide tramiteId antes de la respuesta y ya no pide encontrado', async () => {
       salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
       await responderConsulta(turno('hola'));
@@ -323,8 +364,9 @@ describe('chat', () => {
     };
 
     const vacio = await contextoDelTramite();
-    assert.match(vacio, /^Requisitos: no cargados$/m);
-    assert.match(vacio, /^Mesas de entrada: no cargadas$/m);
+    assert.match(vacio, /^### Trámite \(id \d+\): /m);
+    assert.match(vacio, /^Requisitos: no cargados para este trámite$/m);
+    assert.match(vacio, /^Mesas de entrada \(oficinas\): no cargadas para este trámite$/m);
     assert.doesNotMatch(vacio, /Fuente oficial/);
 
     const mesa = await prisma.mesaEntrada.create({
@@ -438,14 +480,14 @@ describe('chat', () => {
 
       assert.equal(contexto.match(/^- Requisito \d+$/gm).length, TOPES_CONTEXTO.requisitos);
       assert.match(contexto, /^- \(y 5 requisitos más: la lista completa está en la fuente oficial\)$/m);
-      assert.match(contexto, /^Formularios descargables: Formulario 0, .*Formulario 9 \(y 2 más\)$/m);
+      assert.match(contexto, /^Formularios y normas descargables: Formulario 0; Formulario 1; Formulario 2 \(y 9 más\)$/m);
 
       assert.match(contexto, /^Mesas de entrada: 20 en total\. Algunas:$/m);
       const mostradas = contexto.match(/^- Mesa \d+ .*$/gm);
       assert.equal(mostradas.length, TOPES_CONTEXTO.mesasDeLaLocalidad);
       assert.ok(mostradas.every((m) => m.includes('Herradura')), 'las de la localidad nombrada');
       assert.match(contexto, /^- \(las otras 15 están en la fuente oficial\)$/m);
-      assert.match(contexto, /^Localidades con mesa de entrada: Formosa, Clorinda, Pirané, Herradura$/m);
+      assert.match(contexto, /^Localidades con mesa de entrada \(4 en total\): Herradura, Formosa, Clorinda, Pirané$/m);
 
       const sinLocalidad = (await contextoDe('dónde lo hago')).match(/^- Mesa \d+ .*$/gm);
       assert.deepEqual(sinLocalidad.map((m) => m.split(' ')[2]), ['0', '1', '2']);

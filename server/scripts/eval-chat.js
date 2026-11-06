@@ -105,6 +105,8 @@ const casos = [
   { pregunta: 'dónde saco el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas' } } },
   { pregunta: 'dónde saco el pasaporte en Clorinda', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas', localidad: 'Clorinda' } } },
   { pregunta: 'dónde hago el nuevo ejemplar del DNI para argentinos', esperado: { contesta: true, incluye: [90], ...DOMINIO, segunBase: { id: 90, dato: 'mesas' } } },
+  // Sin oficinas, con un vecino del mismo organismo que sí tiene (la 273, con 69): no tomar las del vecino.
+  { pregunta: 'dónde hago la solicitud de actas a otras provincias', esperado: { contesta: true, incluye: [92], ...DOMINIO, segunBase: { id: 92, dato: 'mesas' } } },
   // DNI: responder con el trámite o pedir que elija entre las variantes son correctos.
   { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
   { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },

@@ -134,7 +134,7 @@ describe('aclaracionDeGrupo', () => {
     const [g] = resolverGrupos([grupo('Habilitación comercial', [4, 5])], jurisdicciones, nada);
     assert.equal(
       formatearGrupo(g),
-      'Trámite (id 400): Habilitación comercial\nEstá cargado para varias jurisdicciones o localidades: provincial; municipal, Formosa.\nLa persona no dijo cuál: si pregunta por este trámite, el sistema le pregunta cuál necesita.',
+      '### Trámite (id 400): Habilitación comercial\nEstá cargado para varias jurisdicciones o localidades: provincial; municipal, Formosa.\nLa persona no dijo cuál: si pregunta por este trámite, el sistema le pregunta cuál necesita.',
     );
   });
 });

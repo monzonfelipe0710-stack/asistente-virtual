@@ -244,7 +244,7 @@ describe('documentos con archivo en R2 o enlace externo', () => {
     const r = await responderConsulta([{ rol: 'usuario', texto: `¿qué formularios tiene ${SUFIJO}?` }]);
     assert.equal(r.encontrado, true);
     const [, contexto] = llamadasModelo.at(-1).instruccionSistema.split('Contexto (trámites candidatos):');
-    assert.match(contexto, /Formularios descargables: (Formulario en (PDF|la web)(, )?){2}/);
+    assert.match(contexto, /Formularios y normas descargables: (Formulario en (PDF|la web)(; )?){2}/);
     assert.equal(contexto.includes(ENLACE), false);
   });
 });

@@ -57,6 +57,7 @@ Saludos, agradecimientos y despedidas:
 Reglas:
 - Respondé solo con la información del contexto. No inventes datos, costos, requisitos ni lugares.
 - FIDELIDAD: en cualquier tipo de respuesta, incluida "conversacion", está PROHIBIDO afirmar hechos sobre trámites, documentos, leyes, validez de documentos, requisitos, costos, plazos, horarios, direcciones, turnos o procedimientos que no estén escritos en el contexto del trámite. Nada de conocimiento general (por ejemplo, "llevá tu documento anterior", "sacá un turno" o "no sirve como documento en el país" si el contexto no lo dice). Si preguntan si un documento sirve para algo o equivale a otro, respondé solo con lo que dice su descripción y decí que lo demás no está cargado: no lo deduzcas ni lo compares con otros documentos.
+- CADA DATO ES DE SU TRÁMITE: cada trámite del contexto empieza con "### Trámite (id N)", y todo lo que figura en esa sección (requisitos, costo, mesas de entrada u oficinas, formularios, información adicional) pertenece solo a ese trámite. Si el trámite del que hablás no tiene el dato pedido (dice "no cargados" o "no informado", o no aparece), decí que ese dato no está cargado para ese trámite; nunca lo completes con datos de otro trámite del contexto, aunque sea parecido o del mismo organismo.
 - Si el trámite está en el contexto pero el dato pedido no figura (dice "no cargados" o "no informado", o directamente no aparece): decí lo que sí figura en la descripción, decí expresamente que ese dato no está cargado y orientá a consultar en una mesa de entrada o en la fuente oficial (el enlace lo agrega el sistema).
 - Si la descripción dice "descripción resumida" o una lista avisa que hay más (requisitos, mesas de entrada), lo que no se muestra no lo sabés: no lo completes y decí dónde está el resto, como dice el contexto.
 - Una "conversacion" no puede contener datos sobre trámites ni sobre la administración pública: solo saludos, cortesía, qué hace el asistente, el RESUMEN DEL CATÁLOGO y la redirección.
@@ -174,8 +175,15 @@ const entradaBloqueada = (mensajes) => {
 
 // Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
 export const TOPES_CONTEXTO = {
-  descripcion: 1200, costoDetalle: 300, informacionAdicional: 800,
-  requisitos: 15, documentos: 10, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 30,
+  descripcion: 1200, costoDetalle: 300, informacionAdicional: 500,
+  requisitos: 15, documentos: 3, nombreDocumento: 60, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 10,
+};
+
+// "Circular RNP ADICION DE APELLIDO DE CASADA EN DNI Y…": en la última palabra completa.
+const acortarNombre = (nombre, tope) => {
+  if (nombre.length <= tope) return nombre;
+  const espacio = nombre.lastIndexOf(" ", tope - 1);
+  return `${nombre.slice(0, espacio > tope / 2 ? espacio : tope - 1).replace(/[\s,;:-]+$/, "")}…`;
 };
 
 const enUnaLinea = (texto) => texto.replace(/\s*\n+\s*/g, "; ");
@@ -200,8 +208,11 @@ export const formatearCosto = (t) => {
 const normalizarLocalidad = (l) => normalizarNombre(l ?? "");
 
 // Con muchas mesas se muestran unas pocas con domicilio, o las de la localidad que nombró la persona.
+const localidadBuscada = (localidades, consulta) =>
+  normalizarLocalidad(consulta ? loQueNombro(consulta, new Set(localidades)).localidad : null);
+
 const mesasParaMostrar = (mesas, localidades, consulta) => {
-  const buscada = normalizarLocalidad(consulta ? loQueNombro(consulta, new Set(localidades)).localidad : null);
+  const buscada = localidadBuscada(localidades, consulta);
   const prioridad = ({ mesa }) => (buscada && normalizarLocalidad(mesa.localidad) === buscada ? 0 : 2) + (mesa.direccion ? 0 : 1);
   const cantidad = buscada ? TOPES_CONTEXTO.mesasDeLaLocalidad : TOPES_CONTEXTO.mesasDeMuestra;
   return [...mesas].sort((a, b) => prioridad(a) - prioridad(b) || a.mesa.id - b.mesa.id).slice(0, cantidad);
@@ -228,8 +239,9 @@ const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
   const conFuente = esUrlHttp(t.fuenteUrl);
   const dondeSigue = conFuente ? "en la fuente oficial" : "en una mesa de entrada";
   const descripcion = recortarEnOracion(t.descripcion, TOPES_CONTEXTO.descripcion);
+  // Cada trámite abre con su encabezado: los datos de abajo son solo de este trámite.
   const lineas = [
-    `Trámite (id ${t.id}): ${t.nombre}`,
+    `### Trámite (id ${t.id}): ${t.nombre}`,
     ...(organismo ? [`Organismo: ${organismo.nombre}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
     `Descripción: ${descripcion}${descripcion === t.descripcion ? "" : ` (descripción resumida: hay más información ${dondeSigue})`}`,
     `Costo: ${formatearCosto(t)}`,
@@ -255,7 +267,7 @@ const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
     const resto = t.requisitos.length - TOPES_CONTEXTO.requisitos;
     if (resto > 0) lineas.push(`- (y ${resto} requisitos más: la lista completa está ${dondeSigue})`);
   } else {
-    lineas.push("Requisitos: no cargados");
+    lineas.push("Requisitos: no cargados para este trámite");
   }
 
   if (t.mesas.length > TOPES_CONTEXTO.mesas) {
@@ -264,20 +276,25 @@ const formatearTramite = (t, organismo, { consulta = "" } = {}) => {
     lineas.push(`Mesas de entrada: ${t.mesas.length} en total. Algunas:`, ...mostradas.map(lineaDeMesa));
     lineas.push(`- (las otras ${t.mesas.length - mostradas.length} están ${dondeSigue})`);
     if (localidades.length > 0) {
-      const extra = localidades.length > TOPES_CONTEXTO.localidades ? `, y ${localidades.length - TOPES_CONTEXTO.localidades} más` : "";
-      lineas.push(`Localidades con mesa de entrada: ${localidades.slice(0, TOPES_CONTEXTO.localidades).join(", ")}${extra}`);
+      // La localidad que nombró la persona va siempre, primera.
+      const buscada = localidadBuscada(localidades, consulta);
+      const elegidas = [
+        ...localidades.filter((l) => buscada && normalizarLocalidad(l) === buscada),
+        ...localidades.filter((l) => !buscada || normalizarLocalidad(l) !== buscada),
+      ].slice(0, TOPES_CONTEXTO.localidades);
+      const resto = localidades.length - elegidas.length;
+      lineas.push(`Localidades con mesa de entrada (${localidades.length} en total): ${elegidas.join(", ")}${resto > 0 ? ` y ${resto} más` : ""}`);
     }
   } else if (t.mesas.length > 0) {
     lineas.push("Mesas de entrada:", ...t.mesas.map(lineaDeMesa));
   } else {
-    lineas.push("Mesas de entrada: no cargadas");
+    lineas.push("Mesas de entrada (oficinas): no cargadas para este trámite");
   }
 
   if (t.documentos.length > 0) {
     const resto = t.documentos.length - TOPES_CONTEXTO.documentos;
-    lineas.push(
-      `Formularios descargables: ${t.documentos.slice(0, TOPES_CONTEXTO.documentos).map((d) => d.nombre).join(", ")}${resto > 0 ? ` (y ${resto} más)` : ""}`,
-    );
+    const nombres = t.documentos.slice(0, TOPES_CONTEXTO.documentos).map((d) => acortarNombre(d.nombre, TOPES_CONTEXTO.nombreDocumento));
+    lineas.push(`Formularios y normas descargables: ${nombres.join("; ")}${resto > 0 ? ` (y ${resto} más)` : ""}`);
   }
 
   // La URL no se le pasa al modelo: el enlace lo agrega el servidor.

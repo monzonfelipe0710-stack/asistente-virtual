@@ -149,7 +149,7 @@ export const aclaracionDeGrupo = (grupo) => {
 // persona pidió una localidad que no está, se dice: si no, el modelo lo toma como "no encontrado".
 export const formatearGrupo = ({ id, nombre, opciones, noEncontrado }) =>
   [
-    `Trámite (id ${id}): ${nombre}`,
+    `### Trámite (id ${id}): ${nombre}`,
     `Está cargado para varias jurisdicciones o localidades: ${opciones.map((o) => describirJurisdiccion(o)).join('; ')}.`,
     noEncontrado
       ? `La persona lo pidió ${describirNoEncontrado(noEncontrado)}, que no está entre esas: si pregunta por este trámite, igual es tipo "respuesta" con este ID; el sistema le avisa y le ofrece las que hay.`
