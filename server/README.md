@@ -95,6 +95,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `npm run seed:demo` | Carga (o recarga) los datos de prueba |
 | `node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa --despublicar-faltantes]` | Importa el catálogo (default `ingestion/data/tramites_normalizado.json` del repo). Formato y opciones en [Importar el catálogo](#importar-el-catálogo) |
 | `node scripts/importarTramites.js --municipal [archivo] [--dry-run] [--lote n] [--sin-despublicar]` | Importa los trámites de la Municipalidad de la Ciudad de Formosa (default `ingestion/data/tramites_municipal.json`). Ver [Fuente municipal](#fuente-municipal-formosatuciudadgobar) |
+| `node scripts/verificar-import-municipal.js --antes <estado.json> [--informe <md>]` / `--despues <estado.json>` | Solo lee. `--antes`: simula la importación municipal, evalúa las condiciones para importar (0 fichas no reconocidas, hasta 3 marcados y sin publicar, 60 a 85 trámites y 11 sectores a crear, 0 conflictos, sin correos personales ni celulares, el resto del catálogo sin cambios de texto) y guarda conteos y huella; sale con 1 si alguna falla. `--despues`: misma huella del resto del catálogo, versión del catálogo mayor y 0 publicados sin embedding |
 | `node scripts/despublicarTramites.js id... [--dry-run]` | Despublica los trámites de una lista explícita de ids, informa qué hizo con cada uno e incrementa la versión del catálogo. No borra nada |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
@@ -277,11 +278,23 @@ node scripts/importarTramites.js --municipal
   última fecha anterior a la consulta. Cada concepto se valoriza con el módulo de su tributo según
   el Código Tarifario 2026 (los de oficina, como certificados, exenciones o estudio de dominio,
   con el de servicios varios; la escala por superficie de habilitaciones, con el de
-  habilitaciones). `costoDetalle` queda como "4 módulos ($4.029,40, con módulo a $1.007,35
-  vigente desde el 01/10/2026; según el portal oficial, consultado el 06/11/2026)": el monto en
-  pesos tiene que estar escrito para que el chat lo pueda decir. Si el PDF no se puede leer con
-  certeza o el concepto no está en la tabla, queda solo la cantidad de módulos y el informe lo
-  avisa.
+  habilitaciones). `costoDetalle` queda como "Certificado de Libre Deuda: 4 módulos: $4.029,40,
+  calculado con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según
+  el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026": el monto y el cálculo
+  tienen que estar escritos para que el chat los pueda decir (la verificación de la salida acepta
+  los montos que figuran en el texto cargado). Con dos montos calculados o más, cada fila lleva
+  "N módulos: $X" y el origen del cálculo va una vez por tributo al final. Si el PDF no se puede
+  leer con certeza o el concepto no está en la tabla, queda solo la cantidad de módulos y el
+  informe lo avisa.
+- **Pesos viejos.** Cuando el Código Tarifario 2026 fija la cantidad de módulos de un concepto
+  (certificado de libre deuda, estudio de dominio, libreta de sanidad, emisión del certificado de
+  habilitación, etc.), los pesos o las unidades tributarias que publica la ficha se descartan, se
+  calcula con el módulo vigente y lo viejo queda listado en el informe. Si no hay forma de
+  contrastarlos (cementerio, libre deuda de Tribunal de Faltas o de Tránsito, plan de pago), se
+  guardan tal cual con "monto publicado en el portal, puede estar desactualizado; confirmalo en la
+  oficina". Lo mismo con las estampillas que aparecen dentro de los requisitos.
+- **Teléfonos.** No se guardan celulares (rotulados "Cel", "WhatsApp", o con la forma
+  3704-NNNNNN); quedan los fijos de siete cifras y los 0800.
 - **Los montos caducan.** Cuando la AIM publica un valor nuevo del módulo, los montos en pesos
   cargados quedan viejos: hay que volver a correr `main.py --municipal --refrescar` y el
   importador. Un costo que alguien editó a mano no se pisa (huella del grupo `costo`).
@@ -1004,9 +1017,11 @@ una respuesta encontrada incluya el enlace a la fuente oficial de su trámite, y
 trámite que existe en varias jurisdicciones o localidades sea la de lo que nombró la persona (que no
 se ate a un municipio que no dijo).
 
-Los casos de "licencia de conducir" dependen del catálogo: sin trámites publicados con ese nombre se
-espera "no encontrado"; con un solo par (jurisdicción, localidad), la respuesta con ese trámite; con
-más de uno, la aclaración por jurisdicción o localidad con una opción por par.
+Los casos de "licencia de conducir" dependen del catálogo: con un solo par (jurisdicción, localidad)
+publicado con ese nombre, la respuesta con ese trámite; con más de uno, la aclaración por
+jurisdicción o localidad con una opción por par. Sin ninguno con ese nombre, la respuesta con la
+ficha municipal "Requisitos para obtener la Licencia Nacional de Conducir" (su id y jurisdicción
+municipal) si está publicada, y "no encontrado" si tampoco está.
 
 `--catalogo sintetico` corre solo los casos de trámites repetidos en distintos municipios (y los que
 dependen del catálogo) y se niega a correr si `DATABASE_URL` no es el Postgres temporal de Docker

@@ -1,6 +1,6 @@
 # Informe del recorrido de formosatuciudad.gob.ar
 
-Consultado el 06/11/2026 (2026-11-06T17:07:13+00:00). Pedidos al sitio: 0; leídos de la caché local: 72.
+Consultado el 06/11/2026 (2026-11-06T17:12:27+00:00). Pedidos al sitio: 0; leídos de la caché local: 72.
 
 ## Totales
 

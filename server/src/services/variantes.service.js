@@ -86,7 +86,7 @@ const esHomonima = (localidad) => Boolean(localidad) && mismaLocalidad(localidad
 const cumple = (par, nombrado) =>
   (!nombrado.localidad
     || (par.localidad && mismaLocalidad(par.localidad, nombrado.localidad))
-    || (!par.localidad && !nombrado.jurisdiccion && esHomonima(nombrado.localidad))) &&
+    || (!par.localidad && esHomonima(nombrado.localidad))) &&
   (!nombrado.jurisdiccion || par.jurisdiccion === nombrado.jurisdiccion);
 
 // Para cada grupo: { id } si queda una sola variante (la de lo que nombró la persona, o la única),

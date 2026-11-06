@@ -205,9 +205,13 @@ class PesosDelPortal(unittest.TestCase):
     def test_modulos_con_pesos_viejos_en_la_misma_linea(self):
         filas, viejos = self.costos(["SEGÚN DIMENSIONES DEL LOCAL A HABILITAR ART. 36 INC. A ($100)", "Hasta 25 m 2 : 3 Módulos $ 730.00", "EMISIÓN DEL CERTIFICADO DE HABILITACIÓN: 5 Módulos ($49,08) = $ 245.40."])
         self.assertEqual(filas[0]["concepto"], "Según dimensiones del local a habilitar (hasta 25 m 2)")
-        self.assertTrue(filas[0]["importe"].startswith("3 módulos: $15.110,28, calculado con el valor del módulo (habilitaciones: $5.036,76)"))
+        self.assertEqual(filas[0]["importe"], "3 módulos: $15.110,28 (módulo de habilitaciones)")
         self.assertEqual(filas[1]["concepto"], "Emisión del certificado de habilitación")
-        self.assertNotIn("245", filas[1]["importe"])
+        self.assertEqual(filas[1]["importe"], "5 módulos: $5.036,75 (módulo de servicios varios)")
+        self.assertEqual([f["concepto"] for f in filas[2:]], [
+            "Montos calculados con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
+            "Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.",
+        ])
         self.assertEqual(len(viejos), 3)
 
     def test_estampilla_en_los_requisitos(self):

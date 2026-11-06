@@ -42,6 +42,7 @@ let provincial;
 let municipal;
 let habilitacionProvincial;
 let habilitacionMunicipal;
+let dni;
 
 const turno = (texto) => [{ rol: 'usuario', texto }];
 const salida = (datos) => ({ saludo: '', tramiteId: null, tramitesUsados: [], opciones: [], respuesta: '', ...datos });
@@ -69,7 +70,8 @@ describe('chat con un trámite provincial y uno de la Municipalidad de Formosa',
     municipal = await crear(NOMBRE, 'Cambio de titularidad del vehículo en la AIM.', aim);
     habilitacionProvincial = await crear(`Habilitación de industria ${SUFIJO}`, 'Registro industrial provincial.', rentas);
     habilitacionMunicipal = await crear(`Requisitos de habilitaciones comerciales ${SUFIJO}`, 'Habilitación de un local en la ciudad.', aim);
-    tramites = [provincial, municipal, habilitacionProvincial, habilitacionMunicipal];
+    dni = await crear(`Nuevo ejemplar de DNI ${SUFIJO}`, 'DNI ante el Registro Civil de la provincia.', rentas);
+    tramites = [provincial, municipal, habilitacionProvincial, habilitacionMunicipal, dni];
   });
 
   beforeEach(() => {
@@ -121,6 +123,22 @@ describe('chat con un trámite provincial y uno de la Municipalidad de Formosa',
     const r = await responderConsulta(turno('cómo hago el cambio de titularidad en Formosa'));
     assert.equal(r.tipo, 'aclaracion');
     assert.equal(r.opciones.length, 2);
+  });
+
+  it('"en Formosa" con un trámite que solo es provincial responde directo, sin aclaración', async () => {
+    candidatos = [{ id: dni.id, nombre: dni.nombre, variantes: [{ id: dni.id, nombre: dni.nombre, sectorId: dni.sectorId }] }];
+    salidaModelo = responder(dni.id);
+    const r = await responderConsulta(turno('cómo saco el DNI en Formosa'));
+    assert.equal(r.tipo, 'respuesta');
+    assert.deepEqual(r.tramitesEncontrados.map((t) => t.id), [dni.id]);
+    assert.ok(!r.respuesta.startsWith('No tengo cargado'));
+  });
+
+  it('"provincial" y "en Formosa" juntos eligen el provincial', async () => {
+    salidaModelo = responder(provincial.id);
+    const r = await responderConsulta(turno('cambio de titularidad provincial en Formosa'));
+    assert.equal(r.tipo, 'respuesta');
+    assert.deepEqual(r.tramitesEncontrados.map((t) => t.id), [provincial.id]);
   });
 
   it('el contexto del municipal trae la dirección, la Municipalidad, la jurisdicción y la localidad', async () => {

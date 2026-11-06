@@ -45,6 +45,14 @@ describe('verificación de la salida', () => {
         assert.deepEqual(verificar(linea, [t]), { texto: linea, capas: [] }, linea);
       }
       assert.deepEqual(verificar('Cuesta $4.400.', [t]).capas, ['costo']);
+
+      const varios = tramite({
+        nombre: 'Certificado de Baja de Contribución por Servicios',
+        costoDetalle: 'Certificados de Libre Deuda: 4 módulos: $4.029,40\nCertificaciones, copias de Documentos, Constancias Varias: 2,5 módulos: $2.518,38\n'
+          + 'Montos calculados con el valor del módulo (servicios varios: $1.007,35) vigente desde 01/10/2026, según el Código Tarifario 2026; fuente: portal oficial, consultado el 06/11/2026.',
+      });
+      const linea = 'El certificado de libre deuda cuesta $4.029,40 y cada constancia $2.518,38 (módulo de servicios varios a $1.007,35, según el Código Tarifario 2026).';
+      assert.deepEqual(verificar(linea, [varios]), { texto: linea, capas: [] });
     });
   });
 

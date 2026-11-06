@@ -49,11 +49,13 @@ const CATALOGO = { tipo: 'respuesta', conversacional: true, sinTramites: true, m
 const REMITE_AL_REGISTRO_DE_CADA_PROVINCIA =
   /registro civil.*\b(?:web|sitio|sitios|pagina|paginas|en linea|online|internet|directamente)\b|\b(?:web|sitio|sitios|pagina|paginas|en linea|online|internet|directamente)\b.*registro civil/;
 
+const LICENCIA_MUNICIPAL = 'Requisitos para obtener la Licencia Nacional de Conducir';
+
 const casos = [
   { pregunta: 'licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
   { pregunta: 'licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } }, // confirmar: ¿existe en la provincia?
-  // Depende del catálogo (ver esperadoSegunCatalogo): hoy la base real no tiene trámites municipales.
-  { pregunta: 'licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', siNoHay: { conversacional: false } } },
+  // Depende del catálogo (ver esperadoSegunCatalogo): sin "Licencia de conducir", la ficha municipal.
+  { pregunta: 'licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL, siNoHay: { conversacional: false } } },
   { pregunta: 'necesito un certificado', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'licencia', esperado: { tipo: 'aclaracion' } },
@@ -68,7 +70,7 @@ const casos = [
   { pregunta: 'qué necesito para la licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } },
 
   // Variantes naturales de casos que ya teníamos:
-  { pregunta: 'cómo saco la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir' } },
+  { pregunta: 'cómo saco la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL } },
   { pregunta: 'qué necesito para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } }, // ojo: hoy puede dar aclaración entre 19 y 28 (duplicados → caso del #2)
   { pregunta: 'dónde tramito el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
   { pregunta: 'necesito sacar un certificado', esperado: { tipo: 'aclaracion' } },
@@ -90,7 +92,7 @@ const casos = [
   { pregunta: 'hola, quiero saber cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], empiezaConSaludo: true } },
   { pregunta: 'quiero saber cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [90] } },
   { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
-  { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', siNoHay: { conversacional: false } } },
+  { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL, siNoHay: { conversacional: false } } },
   { pregunta: 'hola, dame la receta de la pizza', esperado: { conversacional: true, noContiene: ['reformular'] } },
   // Pedir otro idioma: un aviso corto en español, sin el mensaje fijo de seguridad.
   {
@@ -296,8 +298,12 @@ const paresDelNombre = (nombre) => {
   }
   return [...pares.values()];
 };
-const esperadoSegunCatalogo = ({ segunCatalogo, siNoHay = {} }) => {
+// `oTramite`: sin ninguno con ese nombre, el trámite publicado con este otro nombre (la ficha
+// municipal de la licencia de conducir) es la respuesta, con su id y su jurisdicción.
+const esperadoSegunCatalogo = ({ segunCatalogo, oTramite, siNoHay = {} }) => {
   const ids = paresDelNombre(segunCatalogo).map((p) => p.id);
+  const alternativa = ids.length === 0 && oTramite ? paresDelNombre(oTramite) : [];
+  if (alternativa.length === 1) return { tipo: 'respuesta', encontrado: true, incluye: [alternativa[0].id], jurisdiccion: alternativa[0].jurisdiccion, ...siNoHay };
   if (ids.length === 0) return { tipo: 'respuesta', encontrado: false, ...siNoHay };
   if (ids.length === 1) return { tipo: 'respuesta', encontrado: true, incluye: ids };
   return { tipo: 'aclaracion', aclaracionPorJurisdiccion: ids.length };

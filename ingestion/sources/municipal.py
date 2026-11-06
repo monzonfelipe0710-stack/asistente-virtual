@@ -498,6 +498,23 @@ def costos_de(lineas, modulo, consulta, avisos, titulo, viejos):
             filas.append({"concepto": linea, "importe": None})
     if len(filas) == 1 and filas[0].get("sinCosto"):
         return [{"concepto": filas[0]["concepto"], "importe": "$ 0"}]
+    return compactar(filas, consulta)
+
+
+def compactar(filas, consulta):
+    """Con dos montos calculados o más, cada fila lleva la cantidad y el monto, y el origen del cálculo
+    va una vez por tributo al final: la escala de habilitaciones repetía la leyenda en 17 filas."""
+    calculadas = [f for f in filas if "monto" in f]
+    if len(calculadas) < 2:
+        return filas
+    categorias = list(dict.fromkeys(f["categoria"] for f in calculadas))
+    nombre = lambda c: NOMBRES_CATEGORIA.get(c, c.replace("_", " "))  # noqa: E731
+    for f in calculadas:
+        f["importe"] = f"{cantidad_ar(f['modulos'])} módulos: ${numero_ar(f['monto'])}" + (f" (módulo de {nombre(f['categoria'])})" if len(categorias) > 1 else "")
+    for c in categorias:
+        f = next(x for x in calculadas if x["categoria"] == c)
+        filas.append({"concepto": f"Montos calculados con el valor del módulo ({nombre(c)}: ${numero_ar(f['valorModulo'])}) vigente desde {f['desde']}, "
+                                  f"según el {CODIGO_TARIFARIO}; fuente: portal oficial, consultado el {consulta}.", "importe": None})
     return filas
 
 

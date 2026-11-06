@@ -362,6 +362,34 @@ La caché se limpia al crear, editar, borrar, publicar o despublicar un trámite
 - `node scripts/reindexar-faltantes.js` genera los que falten. Este script y `reindexar-todo.js` incrementan al final la versión del catálogo.
 - `node scripts/reindexar-todo.js` regenera todo el catálogo en lotes de 100 (un pedido de embeddings y un `UPDATE` por lote, 3 reintentos por lote, `--desde` para retomar, `--estimar` para ver tokens y costo sin llamar a la API).
 
+### Catálogo municipal (06-11-2026)
+
+La base real tiene, además del provincial, los 69 trámites de la Municipalidad de la Ciudad de
+Formosa (formosatuciudad.gob.ar), importados con `node scripts/importarTramites.js --municipal`:
+11 sectores nuevos (la Municipalidad, MUNICIPAL y localidad Formosa, y 10 debajo que heredan), 8
+mesas de entrada y la versión del catálogo pasó de 5482 a 5483. Conteos: 278 → 347 trámites, 254 →
+323 publicados, 35 → 46 sectores, 190 → 198 mesas, 0 publicados sin embedding. La huella de los 278
+trámites provinciales (campos guardados y texto del embedding) es la misma antes y después.
+
+- El scraper (`ingestion/sources/municipal.py`, `python main.py --municipal`) tiene un parser por
+  formato de ficha (secciones, tabla, descarga, libre); la que no encaja queda como no reconocida.
+- Un trámite municipal se identifica solo por la URL de su ficha: nunca toma uno provincial por el
+  nombre. La despublicación de faltantes se limita a esa fuente, al subárbol de la Municipalidad y a
+  un listado entero sin fichas no reconocidas.
+- Costos en módulos con el monto calculado con el módulo vigente (PDF de la AIM) y escrito en
+  `costoDetalle` con su origen ("según el Código Tarifario 2026; fuente: portal oficial, consultado
+  el ..."). Los pesos viejos que el Código permite recalcular se descartan; los que no, quedan con
+  "monto publicado en el portal, puede estar desactualizado; confirmalo en la oficina". Los montos
+  caducan cuando la AIM publica un valor nuevo: hay que reejecutar el scraper y el importador.
+- Sin nombres de personas, correos no institucionales ni celulares en los textos.
+- El embedding y el contexto del chat nombran el organismo raíz ("Dirección de Obras Privadas,
+  Municipalidad de la Ciudad de Formosa"); los sectores provinciales son raíz y no cambian.
+- "En Formosa" a secas no elige entre un trámite provincial y uno municipal homónimos (la provincia
+  y la capital se llaman igual); "municipal", "municipalidad" o "provincial" sí. Si el tema solo
+  tiene trámite provincial, responde directo.
+- `scripts/verificar-import-municipal.js` evalúa las condiciones antes de importar y controla
+  después. El informe del dry-run real está en `ingestion/data/informe_dryrun_municipal.md`.
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).

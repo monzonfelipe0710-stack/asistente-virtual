@@ -62,6 +62,16 @@ describe('resolverGrupos', () => {
     assert.deepEqual(resolverGrupos([grupo('Licencias médicas', [6, 6, 6])], jurisdicciones, nada), [{ id: 600 }]);
   });
 
+  it('"Formosa" a secas solo deja la pregunta abierta si el grupo tiene provincial y municipal de Formosa', () => {
+    const enFormosa = { localidad: 'Formosa', jurisdiccion: null };
+    assert.equal(resolverGrupos([grupo('Habilitación comercial', [4, 5])], jurisdicciones, enFormosa)[0].sinResolver, true);
+    assert.deepEqual(resolverGrupos([grupo('DNI', [6])], jurisdicciones, enFormosa), [{ id: 600 }]);
+    assert.deepEqual(resolverGrupos([grupo('Licencias médicas', [6, 6])], jurisdicciones, enFormosa), [{ id: 600 }]);
+    assert.deepEqual(resolverGrupos([grupo('Habilitación comercial', [1, 5])], jurisdicciones, enFormosa), [{ id: 500 }]);
+    assert.deepEqual(resolverGrupos([grupo('Habilitación comercial', [4, 5])], jurisdicciones, { localidad: 'Formosa', jurisdiccion: 'MUNICIPAL' }), [{ id: 500 }]);
+    assert.deepEqual(resolverGrupos([grupo('Habilitación comercial', [4, 5])], jurisdicciones, { localidad: 'Formosa', jurisdiccion: 'PROVINCIAL' }), [{ id: 400 }]);
+  });
+
   it('un grupo sin variantes (un solo trámite) queda igual', () => {
     assert.deepEqual(resolverGrupos([{ id: 7 }], jurisdicciones, nada), [{ id: 7 }]);
   });
