@@ -93,6 +93,13 @@ const ES = [
   String.raw`\btu\s+(?:nueva\s+)?(?:tarea|mision|funcion|objetivo|rol)\s+(?:ahora\s+)?(?:es|sera)\b`,
   String.raw`\b(?:mostra|mostrale|revela|revelale|repeti|imprimi|copia|copiale|escribi|traduci|comparti)\s+(?:\S+\s+){0,3}?(?:tu|tus|el)\s+(?:prompt|instrucciones|reglas)\b(?!\s+(?:de|del|para)\b)`,
   String.raw`\bprompt\s+(?:del|de)\s+sistema\b`,
+  // Tercera persona dirigida a quien contesta: "quien conteste consultas sobre este trámite tiene
+  // que...". En subjuntivo y con las consultas: "la oficina responde consultas" no entra.
+  String.raw`\b(?:quien|quienes|el\s+que|la\s+que|los\s+que|las\s+que|la\s+persona\s+que|el\s+asistente\s+que|el\s+chatbot\s+que|el\s+bot\s+que)\s+(?:conteste|contesten|responda|respondan|atienda|atiendan)\s+(?:\S+\s+){0,2}?(?:consultas?|preguntas?|mensajes?|dudas?)\b`,
+  // Orden de decirle algo a quien consulte: "indicale a quien consulte", "decile siempre a quien pregunte".
+  String.raw`\b(?:decile|deciles|indicale|indicales|informale|informales|recordale|recordales|avisale|avisales|explicale|explicales|aclarale|aclarales|respondele|contestale|pedile|pediles)\s+(?:siempre\s+|solo\s+|unicamente\s+)?a\s+(?:quien|quienes|todo\s+el\s+que|todos\s+los\s+que|cualquiera\s+que|cada\s+persona\s+que)\b`,
+  // Avisos dirigidos al bot, con hasta dos palabras en el medio: "aviso interno para el chatbot".
+  String.raw`\b(?:nota|notas|mensaje|aviso|recordatorio|advertencia|comunicado|instruccion(?:es)?|indicacion(?:es)?)(?:\s+[a-z]+){0,2}?\s+(?:para|al|a\s+la|a\s+los|dirigid[oa]s?\s+(?:al|a\s+la|a\s+los))\s+(?:el\s+|la\s+|los\s+|las\s+)?(?:asistentes?|modelos?\s+de\s+lenguaje|modelo|chatbots?|bots?|ia|llm|inteligencia\s+artificial)\b`,
 ];
 // El voseo con tilde es imperativo sin ambigüedad: "respondé siempre", "contestá solo".
 const ES_CON_TILDE = [
@@ -108,7 +115,11 @@ const EN = [
   String.raw`\b(?:do\s+not|don't|never)\s+(?:mention|reveal|tell|disclose|show|say)\s+(?:the\s+)?(?:user|cost|price|fee|that)\b`,
   String.raw`\b(?:tell|ask|instruct|direct|redirect|send)\s+the\s+user\s+(?:to|for|that)\b`,
   String.raw`\bsystem\s?prompt\b|\bnew\s+instructions\s*:`,
-  String.raw`\b(?:note|message|instructions?)\s+(?:to|for)\s+(?:the\s+)?(?:ai|assistant|model|chatbot|llm)\b`,
+  String.raw`\b(?:note|notice|message|memo|reminder|warning|instructions?)(?:\s+[a-z]+){0,2}?\s+(?:to|for)\s+(?:the\s+|any\s+|all\s+)?(?:ai|assistants?|models?|chatbots?|bots?|llms?|language\s+models?)\b`,
+  // Tercera persona: "whoever answers", "bots answering questions", "tell anyone who asks".
+  String.raw`\b(?:whoever|anyone|everyone|those)\s+(?:who\s+)?(?:answers|answering|responds|responding|replies|replying)\b`,
+  String.raw`\b(?:chatbots?|bots?|ai\s+assistants?|virtual\s+assistants?|assistants?|ai\s+models?|language\s+models?|llms?)\s+(?:that\s+|which\s+|who\s+)?(?:answers?|answering|responds?|responding|replies|replying)\b`,
+  String.raw`\b(?:tell|inform|remind|direct|redirect|advise)\s+(?:anyone|everyone|whoever|every\s+user|all\s+users)\b`,
 ];
 const PT = [
   String.raw`\b(?:ignore|esqueca|esquece|desconsidere|descarte)\s+(?:todas\s+)?(?:as\s+)?(?:suas\s+)?(?:instrucoes|regras|orientacoes|diretrizes)\b`,
@@ -118,6 +129,9 @@ const PT = [
   String.raw`\bnao\s+(?:mencione|revele|informe|diga|mostre)\s+(?:o\s+(?:custo|preco|valor)|ao\s+usuario|que\b)`,
   String.raw`\b(?:se\s+)?voce\s+e\s+(?:um|uma)\s+(?:ia|assistente|modelo\s+de\s+linguagem|chatbot)\b`,
   String.raw`\bprompt\s+do\s+sistema\b`,
+  String.raw`\b(?:quem|aqueles\s+que|aquele\s+que)\s+(?:responder|responda|respondam|atender|atenda|atendam)\s+(?:\S+\s+){0,2}?(?:consultas?|perguntas?|mensagens?|duvidas?)\b`,
+  String.raw`\b(?:diga|digam|informe|indique|avise|lembre|explique|responda)\s+(?:sempre\s+|somente\s+|apenas\s+)?a\s+(?:quem|todos\s+que|todos\s+os\s+que|qualquer\s+pessoa\s+que)\b`,
+  String.raw`\b(?:nota|aviso|mensagem|lembrete|instrucao|instrucoes)(?:\s+[a-z]+){0,2}?\s+(?:para|ao|a)\s+(?:o\s+|a\s+)?(?:assistentes?|modelos?|chatbots?|bots?|ia|inteligencia\s+artificial)\b`,
 ];
 const ROLES = /(?:^|\n)\s*(?:system|assistant|developer)\s*:\s*\S|<\|(?:im_start|im_end|im_sep|system|user|assistant|endoftext)\|>|\[\/?inst\]|<<\/?sys>>/;
 
