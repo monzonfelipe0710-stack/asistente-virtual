@@ -97,6 +97,7 @@ export default function HeroCinematicBackground() {
                 className="hero-cinematic-bg__image"
                 loading={index === 0 ? "eager" : "lazy"}
                 decoding="async"
+                fetchPriority={index === 0 ? "high" : "low"}
                 draggable={false}
               />
             </div>

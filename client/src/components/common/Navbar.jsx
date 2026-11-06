@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useRef, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../../context/AuthContext";
 import { roleLabel } from "../../lib/roles";
-import GooeyNav from "./GooeyNav";
+
+const GooeyNav = lazy(() => import("./GooeyNav"));
 
 const preloadAdmin = () => {
   import("../../pages/AdminLayout");
@@ -311,10 +312,20 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [scrollDirection, setScrollDirection] = useState("");
+  const [isMobileNav, setIsMobileNav] = useState(() =>
+    typeof window === "undefined" ? false : window.matchMedia("(max-width: 767px)").matches
+  );
   const { user, isAuthenticated, isStaff, userRole, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const navRef = useRef(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const handleChange = (event) => setIsMobileNav(event.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
   const activeNavIndex = useMemo(
     () => NAV_LINKS.findIndex((l) => isLinkActive(location.pathname, l)),
@@ -451,17 +462,21 @@ export default function Navbar() {
           </div>
 
           <nav aria-label="Navegación principal" className="hidden md:flex items-center">
-            <GooeyNav
-              items={NAV_LINKS.map((l) => ({ label: l.label, href: l.to }))}
-              initialActiveIndex={activeNavIndex}
-              onItemClick={(item) => navigate(item.href)}
-              particleCount={15}
-              particleDistances={[90, 10]}
-              particleR={100}
-              animationTime={600}
-              timeVariance={300}
-              colors={[1, 2, 3, 1, 2, 3, 1, 4]}
-            />
+            {!isMobileNav && (
+              <Suspense fallback={null}>
+                <GooeyNav
+                  items={NAV_LINKS.map((l) => ({ label: l.label, href: l.to }))}
+                  initialActiveIndex={activeNavIndex}
+                  onItemClick={(item) => navigate(item.href)}
+                  particleCount={15}
+                  particleDistances={[90, 10]}
+                  particleR={100}
+                  animationTime={600}
+                  timeVariance={300}
+                  colors={[1, 2, 3, 1, 2, 3, 1, 4]}
+                />
+              </Suspense>
+            )}
           </nav>
 
           <div className="nav-pill-side nav-pill-side--end">
