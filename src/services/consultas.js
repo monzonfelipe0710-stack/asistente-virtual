@@ -13,15 +13,27 @@ export async function resumenConsultas() {
 }
 
 /** PATCH /api/consultas/:id/calificar — calificación propia de la respuesta. */
-export async function calificarConsulta(id, calificacion, { publico = false, motivo = "" } = {}) {
-  const endpoint = publico
-    ? `/api/consultas/${id}/calificar-publica`
-    : `/api/consultas/${id}/calificar`;
-  const { data } = await api.patch(endpoint, { calificacion, motivo: motivo || undefined });
+export async function calificarConsulta(id, calificacion, { motivo = "", token } = {}) {
+  const body = { calificacion };
+  if (motivo) body.motivo = motivo;
+  if (token) body.token = token;
+  const { data } = await api.patch(`/api/consultas/${id}/calificar`, body);
   return data;
 }
 
-/** DELETE /api/consultas/:id — elimina una consulta propia del historial. */
+/** GET /api/consultas/calificaciones — supervisor y empleados, con filtros. */
+export async function listarCalificaciones(filtros = {}) {
+  const params = { ...filtros };
+  if (params.limit != null) {
+    params.limit = Math.min(50, Math.max(1, Number(params.limit) || 1));
+  }
+  const { data } = await api.get("/api/consultas/calificaciones", {
+    params,
+  });
+  return data;
+}
+
+/** DELETE /api/consultas/:id — desvincula la consulta propia del historial. */
 export async function eliminarConsulta(id) {
   const { data } = await api.delete(`/api/consultas/${id}`);
   return data;
