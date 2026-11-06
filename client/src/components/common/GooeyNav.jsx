@@ -145,7 +145,6 @@ export default function GooeyNav({
 
       if (textRef.current) {
         textRef.current.classList.remove("active");
-        void textRef.current.offsetWidth;
         textRef.current.classList.add("active");
       }
 

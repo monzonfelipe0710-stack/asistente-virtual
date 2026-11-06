@@ -138,7 +138,7 @@ function getInstitutionalLogos(isDark) {
       node: (
         <span className="institutional-mark institutional-mark--official" aria-hidden="true">
           <img
-            src={isDark ? "/assets/logos/todos-unidos-dark.png" : "/assets/logos/todos-unidos-light.png"}
+            src={isDark ? "/assets/logos/todos-unidos-dark.webp" : "/assets/logos/todos-unidos-light.webp"}
             alt="Todos Unidos"
             className="institutional-mark__image"
             width={336}
@@ -154,7 +154,7 @@ function getInstitutionalLogos(isDark) {
       node: (
         <span className="institutional-mark institutional-mark--official" aria-hidden="true">
           <img
-            src={isDark ? "/assets/logos/gobierno-formosa-dark.png" : "/assets/logos/gobierno-formosa-light.png"}
+            src={isDark ? "/assets/logos/gobierno-formosa-dark.webp" : "/assets/logos/gobierno-formosa-light.webp"}
             alt="Gobierno de Formosa"
             className="institutional-mark__image"
             width={426}
@@ -180,6 +180,7 @@ function getInstitutionalLogos(isDark) {
 export default function HomePage() {
   const theme = useTheme();
   const [openFaq, setOpenFaq] = useState(null);
+  const [enhancementsReady, setEnhancementsReady] = useState(false);
 
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -191,6 +192,16 @@ export default function HomePage() {
     const onChange = (e) => setIsMobile(e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!("requestIdleCallback" in window)) {
+      const timeoutId = window.setTimeout(() => setEnhancementsReady(true), 1200);
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    const idleId = window.requestIdleCallback(() => setEnhancementsReady(true), { timeout: 1800 });
+    return () => window.cancelIdleCallback(idleId);
   }, []);
 
   // El fondo WebGL solo anima mientras la sección principal está visible.
@@ -228,7 +239,7 @@ export default function HomePage() {
           un degradado estático equivalente. */}
       {isMobile ? (
         <div className="home-fallback-drift" aria-hidden="true" />
-      ) : (
+      ) : enhancementsReady ? (
         <Suspense fallback={null}>
           <div className="home-particles-bg" aria-hidden="true">
             <Particles
@@ -242,6 +253,8 @@ export default function HomePage() {
             />
           </div>
         </Suspense>
+      ) : (
+        <div className="home-fallback-drift" aria-hidden="true" />
       )}
 
       <Navbar />
@@ -260,7 +273,8 @@ export default function HomePage() {
           <div className="ed-max hero-cinematic__inner relative z-10 flex flex-col items-center justify-center flex-1 w-full text-center px-4">
             {/* Gran Titular Editorial con ScrollFloat */}
             <div className="hero-anim-title max-w-4xl mx-auto">
-              <Suspense fallback={<h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0">El Estado te responde a la primera.</h1>}>
+              {enhancementsReady ? (
+                <Suspense fallback={<h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0">El Estado te responde a la primera.</h1>}>
                 <ScrollFloat
                   as="h1"
                   mode="once"
@@ -272,7 +286,10 @@ export default function HomePage() {
                 >
                   El Estado te responde a la primera.
                 </ScrollFloat>
-              </Suspense>
+                </Suspense>
+              ) : (
+                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-ink leading-[1.08] m-0">El Estado te responde a la primera.</h1>
+              )}
             </div>
 
             {/* Subtítulo comercial y directo */}
@@ -327,6 +344,7 @@ export default function HomePage() {
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted/70 font-semibold m-0 select-none">
                 Un proyecto del Gobierno de la Provincia de Formosa
               </p>
+              {enhancementsReady ? (
               <Suspense fallback={<div className="h-7" aria-hidden="true" />}>
                 <LogoLoop
                   logos={institutionalLogos}
@@ -340,6 +358,9 @@ export default function HomePage() {
                   ariaLabel="Todos Unidos, Gobierno de Formosa y ChatAP"
                 />
               </Suspense>
+              ) : (
+                <div className="h-7" aria-hidden="true" />
+              )}
             </div>
           </div>
         </section>
@@ -494,11 +515,15 @@ export default function HomePage() {
                 Seguí el recorrido de una consulta
                 <span className="assistant-showcase__label-tag">Experiencia interactiva</span>
               </div>
+              {enhancementsReady ? (
               <Suspense fallback={<div className="assistant-showcase__mockup min-h-[420px]" aria-hidden="true" />}>
                 <div className="assistant-showcase__mockup">
                   <InteractiveChatMockup />
                 </div>
               </Suspense>
+              ) : (
+                <div className="assistant-showcase__mockup min-h-[420px]" aria-hidden="true" />
+              )}
             </div>
 
             <div className="assistant-showcase__action">
@@ -609,9 +634,13 @@ export default function HomePage() {
           <div className="ed-max">
             <div className="max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
               <div className="p-2 rounded-2xl bg-brand/10 border border-brand/20">
+                {enhancementsReady ? (
                 <Suspense fallback={<span className="block h-14 w-14 rounded-full bg-brand/10" aria-hidden="true" />}>
                   <ChatBotAvatar size={56} reaction="happy" followMouse={false} />
                 </Suspense>
+                ) : (
+                  <span className="block h-14 w-14 rounded-full bg-brand/10" aria-hidden="true" />
+                )}
               </div>
 
               <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-ink m-0">
