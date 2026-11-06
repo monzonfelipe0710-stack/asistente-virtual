@@ -11,6 +11,12 @@ const MS_POR_PASO = 12;
 
 const PASOS_MAXIMOS = 100;
 
+const REGLAS_MARKDOWN = { image: () => null };
+
+function esEnlaceWeb(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
 function MessageBubbleBase({
   message,
   escribiendo: pideEscribir = false,
@@ -51,6 +57,8 @@ function MessageBubbleBase({
     <View style={styles.filaAsistente}>
       <View style={styles.markdown} accessible accessibilityLabel={message.text}>
         <Markdown
+          rules={REGLAS_MARKDOWN}
+          onLinkPress={esEnlaceWeb}
           style={{
             body: {
               color: C.ink,
