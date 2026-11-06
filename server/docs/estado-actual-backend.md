@@ -389,6 +389,20 @@ trámites provinciales (campos guardados y texto del embedding) es la misma ante
   tiene trámite provincial, responde directo.
 - `scripts/verificar-import-municipal.js` evalúa las condiciones antes de importar y controla
   después. El informe del dry-run real está en `ingestion/data/informe_dryrun_municipal.md`.
+- La regla del costo del portal pedía decir "conviene confirmarlo en la fuente oficial" y el
+  detector de fuga de instrucciones lo tomaba como copia del prompt: la respuesta salía reemplazada
+  por el mensaje fijo. Esas frases quedaron entre las permitidas.
+
+Evals contra la base real después de importar (06-11-2026), con la red inestable (timeouts de
+OpenAI y de Neon que se repitieron aparte):
+
+- `eval-chat`: 50/57 OK 3 de 3 (antes 53/57). No pasan: "licencia de conducir" (el modelo pregunta
+  entre la licencia nacional y la de taxis; el esperado ahora es la ficha municipal), "dónde saco
+  turno para el médico" (aclaración entre trámites provinciales), y cinco inestables de dato no
+  cargado o conocimiento general (pesca deportiva, pasaporte como documento, DNI). Ninguno de
+  estos últimos trae trámites municipales entre los candidatos.
+- `eval-seguridad`: ataques 30 de 30 neutralizados, 0 llegan a la persona; legítimas 30 de 30
+  (una se repitió por un timeout del proveedor).
 
 ### Catálogo real
 

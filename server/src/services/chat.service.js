@@ -403,6 +403,9 @@ IMPORTANTE: este mensaje no pide un trámite. "tipo" DEBE ser "conversacion" y s
 const FRASES_DE_RESPUESTA = [
   "el asistente virtual de trámites de la provincia de Formosa y sus municipios",
   "consultar en una mesa de entrada o en la fuente oficial",
+  // La regla del costo del portal: el modelo la dice tal cual y no es una fuga.
+  "que es el costo según el portal oficial a esa fecha",
+  "conviene confirmarlo en la fuente oficial, porque puede haber cambiado",
 ];
 let detectorDeFuga = null;
 export const buscarFugaDeInstrucciones = (texto) => {

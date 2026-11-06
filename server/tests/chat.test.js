@@ -51,7 +51,7 @@ mock.module(servicio('services/metrica.service.js'), {
 
 const cache = await import('../src/services/cache.service.js');
 const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
-const { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
+const { responderConsulta, responderConsultaStream, buscarFugaDeInstrucciones, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
   await import('../src/services/chat.service.js');
 const { MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA } = await import('../src/services/verificacion.service.js');
@@ -770,6 +770,16 @@ describe('chat', () => {
       assert.equal((await responderConsulta(turno('¿quién sos?'))).respuesta, legitima);
       salidaModelo = salida({ tipo: 'conversacion', respuesta: '¡De nada! Cuando quieras, preguntame por otro trámite.' });
       assert.equal((await responderConsulta(turno('gracias'))).respuesta, '¡De nada! Cuando quieras, preguntame por otro trámite.');
+    });
+
+    it('la aclaración que pide la regla del costo del portal no es una fuga', () => {
+      for (const texto of [
+        'El carnet cuesta 8 módulos: $8.058,80, que es el costo según el portal oficial a esa fecha; conviene confirmarlo en la fuente oficial, porque puede haber cambiado.',
+        'Cuesta $4.029,40, pero conviene confirmarlo en la fuente oficial, porque puede haber cambiado.',
+      ]) {
+        assert.equal(buscarFugaDeInstrucciones(texto), null, texto);
+      }
+      assert.notEqual(buscarFugaDeInstrucciones('Solo pido aclaración si dos o más trámites DISTINTOS del contexto corresponden a lo que pide la persona y no podés determinar cuál quiere.'), null);
     });
   });
 
