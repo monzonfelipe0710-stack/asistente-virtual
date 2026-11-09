@@ -1,6 +1,6 @@
 // Mide la latencia de punta a punta y el tamaño de la instrucción de sistema que le llega al modelo
 // para una pregunta, y repite unas frases N veces mostrando el tipo y el texto de cada respuesta.
-// Llama a OpenAI de verdad; las consultas que registra se borran por id al terminar.
+// Llama a OpenAI de verdad; las consultas que registra se borran por id al terminar (solo esas).
 //
 //   node scripts/medir-prompt.js [--corridas 5] [--pregunta "cómo saco el pasaporte"] [--frase "..."]... [--todas]
 // Cada corrida muestra las correcciones de la verificación de la salida; --todas muestra el texto de
@@ -43,7 +43,8 @@ const describirCorrecciones = () => {
   return texto;
 };
 
-const desde = (await prisma.consulta.aggregate({ _max: { id: true } }))._max.id ?? 0;
+// Se borran solo las consultas que registró esta medición: la base puede ser la real, en uso.
+const consultasCreadas = [];
 const mediana = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
 try {
@@ -54,6 +55,7 @@ try {
     const desdeUso = usos.length;
     const t0 = performance.now();
     const r = await responderConsulta([{ rol: 'usuario', texto: PREGUNTA }], null, conVerificacion);
+    if (r.consultaId) consultasCreadas.push(r.consultaId);
     tiempos.push(performance.now() - t0);
     const tokens = usos.slice(desdeUso).map((u) => `${u.entrada} (${u.cacheados} cacheados)`).join('+');
     const tramite = r.tramitesEncontrados?.[0]?.id ?? '-';
@@ -72,11 +74,12 @@ try {
       cache.limpiar();
       const desdeUso = usos.length;
       const r = await responderConsulta([{ rol: 'usuario', texto: frase }], null, conVerificacion);
+      if (r.consultaId) consultasCreadas.push(r.consultaId);
       const tokens = usos.slice(desdeUso).map((u) => `${u.entrada} (${u.cacheados} cacheados)`).join('+');
       console.log(`[${frase}] ${i + 1}: ${tokens} tokens de entrada, tipo ${r.tipo}, tramite ${r.tramitesEncontrados?.[0]?.id ?? '-'}, verificación: ${describirCorrecciones()}: ${String(r.respuesta ?? r.texto ?? '').replace(/\n/g, ' / ').slice(0, 300)}`);
     }
   }
 } finally {
-  await prisma.consulta.deleteMany({ where: { id: { gt: desde } } });
+  await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
   await prisma.$disconnect();
 }
