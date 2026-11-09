@@ -2,7 +2,9 @@
 // para una pregunta, y repite unas frases N veces mostrando el tipo y el texto de cada respuesta.
 // Llama a OpenAI de verdad; las consultas que registra se borran por id al terminar.
 //
-//   node scripts/medir-prompt.js [--corridas 5] [--pregunta "cómo saco el pasaporte"] [--frase "..."]...
+//   node scripts/medir-prompt.js [--corridas 5] [--pregunta "cómo saco el pasaporte"] [--frase "..."]... [--todas]
+// Cada corrida muestra las correcciones de la verificación de la salida; --todas muestra el texto de
+// todas las respuestas de la pregunta, no solo la primera.
 import 'dotenv/config';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
@@ -14,6 +16,7 @@ const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [pr
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 5);
 const PREGUNTA = argumento('--pregunta')[0] ?? 'cómo saco el pasaporte';
 const FRASES = argumento('--frase');
+const MOSTRAR_TODAS = process.argv.includes('--todas');
 
 const tamanos = [];
 const original = ia.generarRespuesta.bind(ia);
@@ -31,6 +34,15 @@ openai.chat.completions.create = async (...argumentos) => {
   return r;
 };
 
+// Correcciones de la verificación de la salida en cada respuesta.
+const correcciones = [];
+const conVerificacion = { alCorregirSalida: (c) => correcciones.push(c) };
+const describirCorrecciones = () => {
+  const texto = correcciones.length === 0 ? 'sin correcciones' : correcciones.map((c) => `${c.capa}: "${c.original.slice(0, 120)}"`).join('; ');
+  correcciones.length = 0;
+  return texto;
+};
+
 const desde = (await prisma.consulta.aggregate({ _max: { id: true } }))._max.id ?? 0;
 const mediana = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
@@ -41,11 +53,12 @@ try {
     tamanos.length = 0;
     const desdeUso = usos.length;
     const t0 = performance.now();
-    const r = await responderConsulta([{ rol: 'usuario', texto: PREGUNTA }]);
+    const r = await responderConsulta([{ rol: 'usuario', texto: PREGUNTA }], null, conVerificacion);
     tiempos.push(performance.now() - t0);
     const tokens = usos.slice(desdeUso).map((u) => `${u.entrada} (${u.cacheados} cacheados)`).join('+');
-    console.log(`[${PREGUNTA}] ${i + 1}: ${Math.round(tiempos.at(-1))} ms, prompt ${tamanos.join('+')} caracteres, ${tokens} tokens de entrada, tipo ${r.tipo}, tramite ${r.tramiteId ?? '-'}`);
-    if (i === 0) console.log(`  ${String(r.respuesta ?? r.texto ?? '').replace(/\n/g, ' / ').slice(0, 600)}`);
+    const tramite = r.tramitesEncontrados?.[0]?.id ?? '-';
+    console.log(`[${PREGUNTA}] ${i + 1}: ${Math.round(tiempos.at(-1))} ms, prompt ${tamanos.join('+')} caracteres, ${tokens} tokens de entrada, tipo ${r.tipo}, tramite ${tramite}, verificación: ${describirCorrecciones()}`);
+    if (i === 0 || MOSTRAR_TODAS) console.log(`  ${String(r.respuesta ?? r.texto ?? '').replace(/\n/g, ' / ').slice(0, 600)}`);
   }
   console.log(`Latencia mediana: ${Math.round(mediana(tiempos))} ms (min ${Math.round(Math.min(...tiempos))}, max ${Math.round(Math.max(...tiempos))})`);
   const entrada = usos.reduce((s, u) => s + u.entrada, 0);
@@ -58,9 +71,9 @@ try {
     for (let i = 0; i < CORRIDAS; i++) {
       cache.limpiar();
       const desdeUso = usos.length;
-      const r = await responderConsulta([{ rol: 'usuario', texto: frase }]);
+      const r = await responderConsulta([{ rol: 'usuario', texto: frase }], null, conVerificacion);
       const tokens = usos.slice(desdeUso).map((u) => `${u.entrada} (${u.cacheados} cacheados)`).join('+');
-      console.log(`[${frase}] ${i + 1}: ${tokens} tokens de entrada, tipo ${r.tipo}, tramite ${r.tramiteId ?? '-'}: ${String(r.respuesta ?? r.texto ?? '').replace(/\n/g, ' / ').slice(0, 300)}`);
+      console.log(`[${frase}] ${i + 1}: ${tokens} tokens de entrada, tipo ${r.tipo}, tramite ${r.tramitesEncontrados?.[0]?.id ?? '-'}, verificación: ${describirCorrecciones()}: ${String(r.respuesta ?? r.texto ?? '').replace(/\n/g, ' / ').slice(0, 300)}`);
     }
   }
 } finally {

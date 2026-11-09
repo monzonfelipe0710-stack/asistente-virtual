@@ -32,5 +32,20 @@ export const recortarEnOracion = (texto, tope) => {
   return `${texto.slice(0, corte).trimEnd()}…`;
 };
 
+// Junta los renglones con "; " mientras entren en el tope, sin partir ninguno (un renglón es un ítem
+// con su monto). Devuelve el texto y cuántos renglones quedaron afuera.
+export const juntarRenglones = (texto, tope, separador = '; ') => {
+  const renglones = texto.split('\n').map((r) => r.trim()).filter(Boolean);
+  const entran = [];
+  let largo = 0;
+  for (const renglon of renglones) {
+    const conEste = largo + (entran.length > 0 ? separador.length : 0) + renglon.length;
+    if (conEste > tope) break;
+    entran.push(renglon);
+    largo = conEste;
+  }
+  return { texto: entran.join(separador), faltan: renglones.length - entran.length };
+};
+
 export const normalizarNombre = (nombre) =>
   String(nombre ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();

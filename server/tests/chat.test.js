@@ -501,6 +501,39 @@ describe('chat', () => {
     }
   });
 
+  it('el costo en texto del elegido entra entero (17 filas) y el de un secundario se recorta por renglón completo', async () => {
+    const filas = Array.from({ length: 17 }, (_, i) =>
+      `${i + 1}) Según dimensiones del local a habilitar (más de ${i * 100} m 2): ${i + 3} módulos: $${(i + 3) * 5}.036,76 (módulo de habilitaciones, vigente desde 01/10/2026)`);
+    const costoDetalle = ['Se Abona al Inicio del Trámite de: HABILITACIÓN, RENOVACIÓN, TRASLADO DE LOCAL, etc.', ...filas,
+      'Montos calculados con el valor del módulo (habilitaciones: $5.036,76) vigente desde 01/10/2026, según el Código Tarifario 2026.'].join('\n');
+    assert.ok(costoDetalle.length > 2500 && costoDetalle.length <= TOPES_CONTEXTO.costoDetalle);
+    const otro = await prisma.tramite.create({
+      data: { nombre: `Otro ${SUFIJO}`, descripcion: 'otro', costoDetalle, fuenteUrl: `https://example.invalid/otro-${SUFIJO}`, sectorId: sector.id, encargadoId: tramite.encargadoId },
+    });
+    const costosDelContexto = async (orden) => {
+      llamadasModelo = [];
+      cache.limpiar();
+      candidatos = orden.map((id) => ({ id }));
+      salidaModelo = salida({ tipo: 'conversacion', respuesta: 'Hola.' });
+      await responderConsulta(turno('cuánto cuesta'));
+      const contexto = llamadasModelo[0].instruccionSistema.split('Contexto (trámites candidatos):')[1];
+      return Object.fromEntries(contexto.split(/^### /m).slice(1).map((s) => [Number(s.match(/^Trámite \(id (\d+)\)/)[1]), s.match(/^Costo: (.*)$/m)[1]]));
+    };
+    try {
+      const comoElegido = (await costosDelContexto([otro.id, tramite.id]))[otro.id];
+      assert.equal(comoElegido, costoDetalle.split('\n').join('; '));
+
+      const comoSecundario = (await costosDelContexto([tramite.id, otro.id]))[otro.id];
+      const [, mostrado, faltan] = comoSecundario.match(/^(.*); \(y (\d+) renglones más: el detalle completo está en la fuente oficial\)$/);
+      assert.ok(mostrado.length <= TOPES_CONTEXTO.costoDetalleSecundario);
+      const partes = mostrado.split('; ');
+      assert.deepEqual(partes, costoDetalle.split('\n').slice(0, partes.length), 'renglones completos, en orden');
+      assert.equal(partes.length + Number(faltan), 19);
+    } finally {
+      await prisma.tramite.delete({ where: { id: otro.id } });
+    }
+  });
+
   it('los candidatos después del primero van con la descripción y la información adicional más cortas', async () => {
     const oracion = 'Esta es una oración de prueba que se repite para llegar al largo. ';
     const largo = oracion.repeat(30);

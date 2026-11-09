@@ -13,7 +13,7 @@ import * as cache from "./cache.service.js";
 import { asegurarCacheVigente } from "./version-catalogo.service.js";
 import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
-import { cortarEnOracion, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
+import { cortarEnOracion, juntarRenglones, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { costoDelPortal } from "../utils/huella.js";
 import { MENSAJE_SOLO_ESPANOL, esOtroIdioma, pareceEspanol } from "../utils/idioma.js";
@@ -175,9 +175,11 @@ const entradaBloqueada = (mensajes) => {
 };
 
 // Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
+// El costo en texto más largo del catálogo (la escala de habilitaciones, 17 filas) tiene 2971
+// caracteres: el del trámite elegido entra entero.
 export const TOPES_CONTEXTO = {
-  descripcion: 1200, costoDetalle: 300, informacionAdicional: 500,
-  descripcionSecundario: 400, informacionAdicionalSecundario: 250,
+  descripcion: 1200, costoDetalle: 3500, informacionAdicional: 500,
+  descripcionSecundario: 400, costoDetalleSecundario: 300, informacionAdicionalSecundario: 250,
   requisitos: 15, documentos: 3, nombreDocumento: 60, mesas: 6, mesasDeMuestra: 3, mesasDeLaLocalidad: 5, localidades: 10,
 };
 
@@ -188,12 +190,18 @@ const acortarNombre = (nombre, tope) => {
   return `${nombre.slice(0, espacio > tope / 2 ? espacio : tope - 1).replace(/[\s,;:-]+$/, "")}…`;
 };
 
-const enUnaLinea = (texto) => texto.replace(/\s*\n+\s*/g, "; ");
+// El costo en texto se recorta por renglón completo, nunca en medio de un monto.
+const costoEnTexto = (costoDetalle, { tope, dondeSigue }) => {
+  const { texto, faltan } = juntarRenglones(costoDetalle, tope);
+  if (faltan === 0) return texto;
+  if (!texto) return `(el detalle del costo está ${dondeSigue})`;
+  return `${texto}; (y ${faltan} ${faltan === 1 ? "renglón" : "renglones"} más: el detalle completo está ${dondeSigue})`;
+};
 
 // null es "no se cargó", no "gratis": solo un 0 explícito es gratuito. Lo que no entra en un monto
 // (varias filas, importes en UT) va como texto.
-const valorDelCosto = ({ costo, costoDetalle }) => {
-  if (costo == null) return costoDetalle ? recortarEnOracion(enUnaLinea(costoDetalle), TOPES_CONTEXTO.costoDetalle) : "no informado";
+const valorDelCosto = ({ costo, costoDetalle }, opciones) => {
+  if (costo == null) return costoDetalle ? costoEnTexto(costoDetalle, opciones) : "no informado";
   return Number(costo) === 0 ? "gratuito" : `$${costo}`;
 };
 
@@ -201,8 +209,8 @@ const FECHA_AR = new Intl.DateTimeFormat("es-AR", { timeZone: "America/Argentina
 
 // Un costo que vino de la ficha del portal (y nadie lo cambió desde el panel) se marca con la fecha
 // de la captura: el modelo tiene que aclarar que conviene confirmarlo en la fuente oficial.
-export const formatearCosto = (t) => {
-  const valor = valorDelCosto(t);
+export const formatearCosto = (t, { tope = TOPES_CONTEXTO.costoDetalle, dondeSigue = "en la fuente oficial" } = {}) => {
+  const valor = valorDelCosto(t, { tope, dondeSigue });
   if (valor === "no informado" || !costoDelPortal(t)) return valor;
   return `${valor} (según el portal oficial, consultado el ${FECHA_AR.format(new Date(t.verificadoEn))})`;
 };
@@ -248,7 +256,7 @@ const formatearTramite = (t, organismo, { consulta = "", secundario = false } = 
     `### Trámite (id ${t.id}): ${t.nombre}`,
     ...(organismo ? [`Organismo: ${nombreConRaiz(organismo)}`, `Jurisdicción: ${describirOrganismo(organismo)}`] : []),
     `Descripción: ${descripcion}${descripcion === t.descripcion ? "" : ` (descripción resumida: hay más información ${dondeSigue})`}`,
-    `Costo: ${formatearCosto(t)}`,
+    `Costo: ${formatearCosto(t, { tope: secundario ? TOPES_CONTEXTO.costoDetalleSecundario : TOPES_CONTEXTO.costoDetalle, dondeSigue })}`,
   ];
 
   if (t.informacionAdicional) {
