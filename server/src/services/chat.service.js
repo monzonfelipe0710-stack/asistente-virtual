@@ -12,7 +12,7 @@ import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 import { asegurarCacheVigente } from "./version-catalogo.service.js";
 import { primerNombre } from "../utils/nombres.js";
-import { componerSaludo, contieneSaludo, sanitizarSaludo } from "../utils/saludo.js";
+import { componerSaludo, contieneSaludo, respuestaDeCortesia, sanitizarSaludo } from "../utils/saludo.js";
 import { cortarEnOracion, juntarRenglones, normalizarNombre, recortarEnOracion } from "../utils/texto.js";
 import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { costoDelPortal } from "../utils/huella.js";
@@ -426,6 +426,8 @@ export const buscarFugaDeInstrucciones = (texto) => {
 };
 
 const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, verificar, signal, limpiar = limpiarCuerpo }) => {
+  // Sin texto ("chau" con solo la META), una frase amable según el mensaje.
+  if (!cuerpo.trim()) return respuestaDeCortesia(mensajes.at(-1).texto)?.texto ?? MENSAJE_CONVERSACION_VACIA;
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
 
@@ -1017,8 +1019,65 @@ async function* transmitirConsulta(mensajes, usuario, opciones, traza) {
     signal,
   });
   const ctx = { ...opciones, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
-  yield* streamIncremental() ? transmitirIncremental(deltas, ctx) : transmitirSalidaAnterior(deltas, ctx);
+  const revisada = await conMetaRevisada(deltas, ctx);
+  if (revisada.cortesia) {
+    yield { tipo: "delta", texto: componerSaludo(revisada.cortesia.saludo, nombre) + revisada.cortesia.texto };
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
+  yield* streamIncremental() ? transmitirIncremental(revisada.deltas, ctx) : transmitirSalidaAnterior(revisada.deltas, ctx);
 }
+
+// En streaming el modelo a veces manda solo la línea META sin salto de línea ("chau") o el texto sin
+// la META ("¡De nada!"). Nunca se responde un trámite sin una META válida: un mensaje que es solo
+// cortesía recibe una frase amable; cualquier otro se pide de nuevo por la ruta sin streaming (con
+// esquema JSON). Devuelve { cortesia } o { deltas } con el texto tal como lo leen las dos rutas.
+const conMetaRevisada = async (deltas, ctx) => {
+  const iterador = deltas[Symbol.asyncIterator]();
+  let buffer = "";
+  let nl = -1;
+  try {
+    while (nl === -1) {
+      const { value, done } = await iterador.next();
+      if (done) break;
+      buffer += value ?? "";
+      nl = buffer.indexOf("\n");
+    }
+  } catch (err) {
+    await iterador.return?.();
+    throw err;
+  }
+  const meta = leerMeta(nl === -1 ? buffer : buffer.slice(0, nl));
+  // Las dos rutas leen el texto completo de nuevo, con la META; al cortar se corta el modelo.
+  async function* resto() {
+    try {
+      if (buffer) yield buffer;
+      for (;;) {
+        const { value, done } = await iterador.next();
+        if (done) return;
+        yield value;
+      }
+    } finally {
+      await iterador.return?.();
+    }
+  }
+  const seguir = () => ({ deltas: resto() });
+  if (meta && nl !== -1) return seguir();
+  // Una META sin texto vale si dice que no hay trámite o que es una conversación (sin texto, una
+  // frase amable): el texto que falta no se inventa.
+  if (meta && (meta.tipo === "conversacion" || (meta.tipo === "respuesta" && meta.tramiteId == null))) {
+    buffer += "\n";
+    return seguir();
+  }
+  await iterador.return?.();
+  console.warn(`Chat: el streaming no trajo una línea META válida (${meta ? "META sin texto" : "sin META"})`);
+  const cortesia = respuestaDeCortesia(ctx.preguntaActual);
+  if (cortesia) return { cortesia };
+  ctx.traza.etapa("reintento");
+  const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, ctx.topeAlcanzado, ctx.candidatos.lista, ctx.candidatos), ctx.signal);
+  const { respuesta, ...datos } = JSON.parse(await ia.generarRespuesta({ instruccionSistema: instruccion, turnos: ctx.mensajes, esquema: ESQUEMA_SALIDA, signal: ctx.signal }));
+  return { deltas: (async function* () { yield `${JSON.stringify(datos)}\n${respuesta ?? ""}`; })() };
+};
 
 async function* transmitirSalidaAnterior(deltas, ctx) {
   const { alCorregirTuteo, alCorregirSalida, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
