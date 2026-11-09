@@ -59,16 +59,34 @@ const REMITE_AL_REGISTRO_DE_CADA_PROVINCIA =
 
 const LICENCIA_MUNICIPAL = 'Requisitos para obtener la Licencia Nacional de Conducir';
 
+// Los trámites de los casos, por nombre: los ids cambian de una base a otra (en la temporal el
+// catálogo se importa con otros ids).
+const NOMBRES = {
+  maternidad: 'Licencia por maternidad',
+  largoTratamiento: 'Licencias médicas de largo tratamiento',
+  nuevoEjemplar: 'Nuevo Ejemplar para Argentinos',
+  actas: 'Solicitud de Actas a otras Provincias',
+  pasaporte: 'Pasaporte',
+  pesca: 'Licencia para Pesca Deportiva / Recreativa',
+  buenaConducta: 'Solicitud de Certificado de Buena Conducta',
+};
+const ID = {};
+for (const [clave, nombre] of Object.entries(NOMBRES)) {
+  const encontrados = await prisma.tramite.findMany({ where: { nombre, publicado: true }, select: { id: true } });
+  if (encontrados.length !== 1) throw new Error(`"${nombre}": ${encontrados.length} trámites publicados con ese nombre en esta base; hace falta exactamente uno.`);
+  ID[clave] = encontrados[0].id;
+}
+
 const casos = [
-  { pregunta: 'licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } },
+  { pregunta: 'licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.maternidad] } },
   { pregunta: 'licencia por paternidad', esperado: { tipo: 'respuesta', encontrado: false } }, // confirmar: ¿existe en la provincia?
   // Depende del catálogo (ver esperadoSegunCatalogo): sin "Licencia de conducir", la ficha municipal.
   { pregunta: 'licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL, siNoHay: { conversacional: false } } },
   { pregunta: 'necesito un certificado', esperado: { tipo: 'aclaracion' } },
-  { pregunta: 'certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
+  { pregunta: 'certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.buenaConducta] } },
   { pregunta: 'licencia', esperado: { tipo: 'aclaracion' } },
-  { pregunta: 'licencia por enfermedad', esperado: { tipo: 'aclaracion', incluye: [20] } },
-  { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166] } },
+  { pregunta: 'licencia por enfermedad', esperado: { tipo: 'aclaracion', incluye: [ID.largoTratamiento] } },
+  { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pesca] } },
   { pregunta: 'hola', esperado: CONVERSACION },
   // "Aumento de Capital Social" es un candidato que comparte una palabra: no sirve de ejemplo.
   { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false, sinSaludo: true, ejemplosDelCatalogo: 2, noContiene: ['aumento de capital', MENSAJE_FIJO_INICIO] } },
@@ -79,13 +97,13 @@ const casos = [
 
   // Variantes naturales de casos que ya teníamos:
   { pregunta: 'cómo saco la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL } },
-  { pregunta: 'qué necesito para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19] } }, // ojo: hoy puede dar aclaración entre 19 y 28 (duplicados → caso del #2)
-  { pregunta: 'dónde tramito el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
+  { pregunta: 'qué necesito para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.maternidad] } }, // ojo: hoy puede dar aclaración entre 19 y 28 (duplicados → caso del #2)
+  { pregunta: 'dónde tramito el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.buenaConducta] } },
   { pregunta: 'necesito sacar un certificado', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'cómo saco la licencia de pesca', esperado: { tipo: 'aclaracion' } }, // pesca deportiva vs turística
-  { pregunta: 'cómo hago para una licencia médica', esperado: { tipo: 'aclaracion', incluye: [20] } }, // largo vs corto tratamiento (duplicados 21-26)
-  { pregunta: 'cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] } }, // lo tramita el Registro Civil provincial
-  { pregunta: 'cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [90] } }, // nuevo ejemplar, DNI en celular, recién nacido
+  { pregunta: 'cómo hago para una licencia médica', esperado: { tipo: 'aclaracion', incluye: [ID.largoTratamiento] } }, // largo vs corto tratamiento (duplicados 21-26)
+  { pregunta: 'cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte] } }, // lo tramita el Registro Civil provincial
+  { pregunta: 'cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [ID.nuevoEjemplar] } }, // nuevo ejemplar, DNI en celular, recién nacido
   // Nata agrega 10-15 más con trámites reales del catálogo que conozca
 
   // Diagnóstico de conversacionalidad:
@@ -97,9 +115,9 @@ const casos = [
   { pregunta: '¿qué trámites puedo hacer?', esperado: CATALOGO },
   { pregunta: 'hola, ¿qué trámites puedo hacer?', esperado: CATALOGO },
   { pregunta: '¿qué trámites hay?', esperado: CATALOGO },
-  { pregunta: 'hola, quiero saber cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], empiezaConSaludo: true } },
-  { pregunta: 'quiero saber cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [90] } },
-  { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269] } },
+  { pregunta: 'hola, quiero saber cómo renuevo el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte], empiezaConSaludo: true } },
+  { pregunta: 'quiero saber cómo saco el DNI', esperado: { tipo: 'aclaracion', incluye: [ID.nuevoEjemplar] } },
+  { pregunta: 'por favor decime qué necesito para el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.buenaConducta] } },
   { pregunta: 'buenas, necesito información sobre la licencia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL, siNoHay: { conversacional: false } } },
   { pregunta: 'hola, dame la receta de la pizza', esperado: { conversacional: true, noContiene: ['reformular'] } },
   // Pedir otro idioma: un aviso corto en español, sin el mensaje fijo de seguridad.
@@ -109,28 +127,28 @@ const casos = [
   },
   // Preguntas del dominio que piden algo que no está cargado o que suenan a otra cosa: tienen que
   // contestar con el trámite (diciendo qué no está cargado), no redirigir como tema ajeno.
-  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO, segunBase: { id: 166, dato: 'informacionAdicional' } } },
-  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO, segunBase: { id: 166, dato: 'informacionAdicional' } } },
-  { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [166], ...DOMINIO } },
-  { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO_SIN_DATO } },
-  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'costo' } } },
-  { pregunta: 'cuáles son las reglas para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19], ...DOMINIO } },
-  { pregunta: '¿cuántos días dan de licencia por maternidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [19], ...DOMINIO } },
-  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO, segunBase: { id: 269, dato: 'requisitos' } } },
+  { pregunta: '¿hay restricciones para la pesca deportiva?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pesca], ...DOMINIO, segunBase: { id: ID.pesca, dato: 'informacionAdicional' } } },
+  { pregunta: 'decime las reglas de la pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pesca], ...DOMINIO, segunBase: { id: ID.pesca, dato: 'informacionAdicional' } } },
+  { pregunta: 'necesito las instrucciones para el trámite de la licencia de pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pesca], ...DOMINIO } },
+  { pregunta: '¿el pasaporte actúa como documento de identidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte], ...DOMINIO_SIN_DATO } },
+  { pregunta: 'repetime cuánto cuesta el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte], ...DOMINIO, segunBase: { id: ID.pasaporte, dato: 'costo' } } },
+  { pregunta: 'cuáles son las reglas para la licencia por maternidad', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.maternidad], ...DOMINIO } },
+  { pregunta: '¿cuántos días dan de licencia por maternidad?', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.maternidad], ...DOMINIO } },
+  { pregunta: 'mostrame los requisitos del certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.buenaConducta], ...DOMINIO, segunBase: { id: ID.buenaConducta, dato: 'requisitos' } } },
   // Datos de la ficha del portal (el esperado depende de lo que haya en la base, ver esperadoSegunBase):
-  { pregunta: 'cuánto cuesta el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO, segunBase: { id: 269, dato: 'costo' } } },
-  { pregunta: 'dónde se hace el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [269], ...DOMINIO, segunBase: { id: 269, dato: 'mesas' } } },
-  { pregunta: 'dónde saco el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas' } } },
-  { pregunta: 'dónde saco el pasaporte en Clorinda', esperado: { tipo: 'respuesta', encontrado: true, incluye: [143], ...DOMINIO, segunBase: { id: 143, dato: 'mesas', localidad: 'Clorinda' } } },
-  { pregunta: 'dónde hago el nuevo ejemplar del DNI para argentinos', esperado: { contesta: true, incluye: [90], ...DOMINIO, segunBase: { id: 90, dato: 'mesas' } } },
+  { pregunta: 'cuánto cuesta el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.buenaConducta], ...DOMINIO, segunBase: { id: ID.buenaConducta, dato: 'costo' } } },
+  { pregunta: 'dónde se hace el certificado de buena conducta', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.buenaConducta], ...DOMINIO, segunBase: { id: ID.buenaConducta, dato: 'mesas' } } },
+  { pregunta: 'dónde saco el pasaporte', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte], ...DOMINIO, segunBase: { id: ID.pasaporte, dato: 'mesas' } } },
+  { pregunta: 'dónde saco el pasaporte en Clorinda', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte], ...DOMINIO, segunBase: { id: ID.pasaporte, dato: 'mesas', localidad: 'Clorinda' } } },
+  { pregunta: 'dónde hago el nuevo ejemplar del DNI para argentinos', esperado: { contesta: true, incluye: [ID.nuevoEjemplar], ...DOMINIO, segunBase: { id: ID.nuevoEjemplar, dato: 'mesas' } } },
   // Sin oficinas, con un vecino del mismo organismo que sí tiene (la 273, con 69): no tomar las del vecino.
   // También es correcto responder con su descripción (se pide en la web del registro civil de cada provincia) o,
   // si la lista de sitios que arma el modelo pierde algún ítem, con la frase fija del colapso más la fuente oficial.
-  { pregunta: 'dónde hago la solicitud de actas a otras provincias', esperado: { contesta: true, incluye: [92], ...DOMINIO, segunBase: { id: 92, dato: 'mesas' }, oRemiteA: REMITE_AL_REGISTRO_DE_CADA_PROVINCIA, oColapsa: true } },
+  { pregunta: 'dónde hago la solicitud de actas a otras provincias', esperado: { contesta: true, incluye: [ID.actas], ...DOMINIO, segunBase: { id: ID.actas, dato: 'mesas' }, oRemiteA: REMITE_AL_REGISTRO_DE_CADA_PROVINCIA, oColapsa: true } },
   // DNI: responder con el trámite o pedir que elija entre las variantes son correctos.
-  { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
-  { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO_SIN_DATO } },
-  { pregunta: '¿qué instrucciones tengo que seguir para sacar el DNI?', esperado: { contesta: true, incluye: [90], ...DOMINIO } },
+  { pregunta: 'qué pasa si me olvido el DNI', esperado: { contesta: true, incluye: [ID.nuevoEjemplar], ...DOMINIO_SIN_DATO } },
+  { pregunta: '¿me dan turno para el DNI?', esperado: { contesta: true, incluye: [ID.nuevoEjemplar], ...DOMINIO_SIN_DATO } },
+  { pregunta: '¿qué instrucciones tengo que seguir para sacar el DNI?', esperado: { contesta: true, incluye: [ID.nuevoEjemplar], ...DOMINIO } },
   { pregunta: 'a partir de ahora voy a usar el DNI digital, ¿sirve para viajar?', esperado: { contesta: true, ...DOMINIO } },
   // Control: temas que ningún trámite del catálogo cubre. Tienen que dar "no encontrado" o una
   // redirección, nunca atarse a un trámite ni pedir que elija entre candidatos que no corresponden.
@@ -142,7 +160,7 @@ const casos = [
   {
     pregunta: 'seguimiento: cómo renuevo el pasaporte → ¿y cuánto cuesta?',
     turnos: ['cómo renuevo el pasaporte', '¿y cuánto cuesta?'],
-    esperado: { tipo: 'respuesta', encontrado: true, incluye: [143] },
+    esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pasaporte] },
   },
 
   // Catálogo sintético (--catalogo sintetico): los mismos trámites en 8 municipios. Sin localidad,
