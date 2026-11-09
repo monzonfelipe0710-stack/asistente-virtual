@@ -8,3 +8,13 @@ export class ErrorProveedorIA extends Error {
     this.operacion = operacion;
   }
 }
+
+// La cuenta de OpenAI se quedó sin crédito: no es una falla pasajera, reintentar no sirve. Busca en
+// toda la cadena de causas (AsistenteNoDisponibleError → ErrorProveedorIA → APIError del SDK).
+const SIN_CREDITO = new Set(['insufficient_quota', 'credit_balance_exhausted']);
+export const esSinCredito = (err) => {
+  for (let e = err, i = 0; e && i < 10; e = e.cause, i++) {
+    if ([e.code, e.type, e.error?.code, e.error?.type].some((c) => SIN_CREDITO.has(c))) return true;
+  }
+  return false;
+};

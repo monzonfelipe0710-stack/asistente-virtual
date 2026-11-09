@@ -28,6 +28,7 @@ import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
 import { ia } from '../src/core/ai/index.js';
+import { CorridaSinCredito, SALIDA_SIN_CREDITO, cortarSiSinCredito } from './lib/sin-credito.js';
 import { MENSAJE_LISTA_COLAPSADA, montosEn } from '../src/services/verificacion.service.js';
 import { costoDelPortal } from '../src/utils/huella.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
@@ -587,6 +588,7 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
       correcciones,
     };
   } catch (err) {
+    cortarSiSinCredito(err);
     return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [], correcciones: [] };
   }
 };
@@ -630,9 +632,18 @@ const resultados = [];
 const idDelCaso = (caso) => `${caso.catalogo ? `${caso.catalogo}:` : ''}${normalizar(caso.pregunta).replace(/[^a-z0-9ñ]+/g, '-').replace(/^-|-$/g, '')}`;
 const inicio = new Date();
 
+// Sin crédito en OpenAI se corta: lo que queda se guarda marcado como inválido.
+let sinCredito = null;
 for (const caso of elegidos) {
   const corridas = [];
-  for (let i = 0; i < CORRIDAS; i++) corridas.push(await correr(caso));
+  try {
+    for (let i = 0; i < CORRIDAS; i++) corridas.push(await correr(caso));
+  } catch (err) {
+    if (!(err instanceof CorridaSinCredito)) throw err;
+    sinCredito = err;
+    console.error(`\n${err.message} (en "${caso.pregunta}")`);
+    break;
+  }
 
   const aciertos = corridas.filter((c) => c.motivo.length === 0).length;
   filas.push({
@@ -650,6 +661,8 @@ for (const caso of elegidos) {
     estado: estadoDe(aciertos),
     aciertos,
     obtenido: resumirCorridas(corridas),
+    // Corridas que terminaron en un error (de OpenAI, de la base): no dicen nada del chat.
+    erroresDeApi: corridas.filter((c) => c.motivo.includes('error')).length,
     ...(aciertos < CORRIDAS && { fallados: corridas.filter((c) => c.motivo.length > 0).map((c) => ({ motivo: c.motivo, respuesta: c.texto })) }),
   });
   tuteoPorCaso.push({
@@ -727,6 +740,9 @@ writeFileSync(archivo, JSON.stringify({
   base: (() => { try { return new URL(process.env.DATABASE_URL).host; } catch { return null; } })(),
   corridas: CORRIDAS,
   solo: SOLO,
+  valida: sinCredito === null,
+  ...(sinCredito && { invalida: 'sin crédito en OpenAI: la corrida se cortó' }),
+  erroresDeApi: resultados.reduce((n, c) => n + c.erroresDeApi, 0),
   total: elegidos.length,
   ok: conEstado('OK').length,
   casos: resultados,
@@ -734,4 +750,5 @@ writeFileSync(archivo, JSON.stringify({
 console.log(`Resultado por caso en ${archivo}`);
 
 if (conEstado('OK').length < elegidos.length) process.exitCode = 1;
+if (sinCredito) process.exitCode = SALIDA_SIN_CREDITO;
 await prisma.$disconnect();

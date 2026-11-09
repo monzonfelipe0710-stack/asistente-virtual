@@ -6,6 +6,8 @@
 // Cada corrida muestra las correcciones de la verificación de la salida; --todas muestra el texto de
 // todas las respuestas de la pregunta, no solo la primera.
 import 'dotenv/config';
+import { esSinCredito } from '../src/core/ai/errores.js';
+import { MENSAJE_SIN_CREDITO, SALIDA_SIN_CREDITO } from './lib/sin-credito.js';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { ia } from '../src/core/ai/index.js';
@@ -79,6 +81,10 @@ try {
       console.log(`[${frase}] ${i + 1}: ${tokens} tokens de entrada, tipo ${r.tipo}, tramite ${r.tramitesEncontrados?.[0]?.id ?? '-'}, verificación: ${describirCorrecciones()}: ${String(r.respuesta ?? r.texto ?? '').replace(/\n/g, ' / ').slice(0, 300)}`);
     }
   }
+} catch (err) {
+  if (!esSinCredito(err)) throw err;
+  console.error(`\n${MENSAJE_SIN_CREDITO}`);
+  process.exitCode = SALIDA_SIN_CREDITO;
 } finally {
   await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
   await prisma.$disconnect();

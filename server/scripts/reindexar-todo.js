@@ -9,6 +9,8 @@ import 'dotenv/config';
 import prisma from '../src/config/prisma.js';
 import { reindexarCatalogo } from '../src/services/embedding.service.js';
 import { marcarCatalogoCambiado } from '../src/services/version-catalogo.service.js';
+import { esSinCredito } from '../src/core/ai/errores.js';
+import { MENSAJE_SIN_CREDITO, SALIDA_SIN_CREDITO } from './lib/sin-credito.js';
 
 const valor = (nombre) => {
   const i = process.argv.indexOf(nombre);
@@ -35,7 +37,8 @@ try {
 } catch (e) {
   console.error(e.message);
   if (e.cause) console.error('Causa:', e.cause.message);
-  process.exitCode = 1;
+  if (esSinCredito(e)) console.error(MENSAJE_SIN_CREDITO);
+  process.exitCode = esSinCredito(e) ? SALIDA_SIN_CREDITO : 1;
 } finally {
   await prisma.$disconnect();
 }

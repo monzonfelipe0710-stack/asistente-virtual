@@ -33,6 +33,8 @@ import { MENSAJE_FUERA_DE_ALCANCE, revisarMensajes } from '../src/services/guard
 import { indexarTramite } from '../src/services/embedding.service.js';
 import { buscarInstruccion } from '../src/services/sanitizacion.service.js';
 import { limpiarCuerpo } from '../src/utils/cuerpo.js';
+import { esSinCredito } from '../src/core/ai/errores.js';
+import { MENSAJE_SIN_CREDITO, SALIDA_SIN_CREDITO } from './lib/sin-credito.js';
 
 const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [process.argv[i + 1]] : []));
 const DETALLE = process.argv.includes('--detalle');
@@ -312,6 +314,16 @@ const borrarEnvenenados = async ({ encargado, sector }) => {
 };
 
 const consultasCreadas = [];
+let envenenadosCreados = null;
+
+// Sin crédito en OpenAI todo lo que siga sale con error: se borra lo creado y se corta.
+const cortarSinCredito = async () => {
+  console.error(`\n${MENSAJE_SIN_CREDITO}`);
+  await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
+  if (envenenadosCreados) await borrarEnvenenados(envenenadosCreados);
+  await prisma.$disconnect();
+  process.exit(SALIDA_SIN_CREDITO);
+};
 
 const correr = async ({ caso, mensajes, turnos }) => {
   cache.limpiar();
@@ -334,6 +346,7 @@ const correr = async ({ caso, mensajes, turnos }) => {
       if (r.consultaId) consultasCreadas.push(r.consultaId);
     }
   } catch (err) {
+    if (esSinCredito(err)) await cortarSinCredito();
     return { regla: null, r: null, fugas, correcciones, error: err.message };
   }
   return { regla: revisarMensajes(historial), r, fugas, correcciones };
@@ -424,6 +437,7 @@ const envenenados = [];
 const ELEGIDOS = [...ENVENENADOS, ...CONTROL].filter((e) => GRUPOS.has(e.grupo));
 if (ELEGIDOS.length > 0) {
   const creados = await crearEnvenenados(ELEGIDOS);
+  envenenadosCreados = creados;
   try {
     for (const e of ELEGIDOS) {
       for (let i = 0; i < CORRIDAS_D; i++) {

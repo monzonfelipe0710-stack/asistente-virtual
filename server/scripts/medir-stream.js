@@ -4,6 +4,8 @@
 //
 //   node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]...
 import 'dotenv/config';
+import { esSinCredito } from '../src/core/ai/errores.js';
+import { MENSAJE_SIN_CREDITO, SALIDA_SIN_CREDITO } from './lib/sin-credito.js';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsultaStream } from '../src/services/chat.service.js';
@@ -64,6 +66,10 @@ try {
     }
   }
   console.table(filas);
+} catch (err) {
+  if (!esSinCredito(err)) throw err;
+  console.error(`\n${MENSAJE_SIN_CREDITO}`);
+  process.exitCode = SALIDA_SIN_CREDITO;
 } finally {
   delete process.env.STREAM_INCREMENTAL;
   const { count } = await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
