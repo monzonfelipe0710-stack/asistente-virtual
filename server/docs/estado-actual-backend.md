@@ -470,9 +470,42 @@ sigue en `chat.service.js` (`resolverSalidaAnterior`, `transmitirSalidaAnterior`
     Los "incluye" que fallan son por la base: en la temporal los ids están corridos (19 → 419).
   - **Hallazgo previo, igual con la bandera en `false`:** en el formato de streaming el modelo a
     veces manda solo la META sin salto de línea ("chau") o solo el texto sin META ("gracias"), y la
-    respuesta sale como "no encontramos información". Pasa en 3 de 3 corridas de "chau" y de
-    "gracias". Pendiente: tratar una META de conversación sin texto como conversación y un texto sin
-    META como conversación oculta (validada entera), en vez de "no encontrado".
+    respuesta salía como "no encontramos información" (3 de 3 corridas de cada una). Resuelto en
+    `4732a24` (ver "Correcciones después del streaming incremental").
+
+### Correcciones después del streaming incremental (09-11-2026)
+
+- **META mal formada** (`4732a24`): en el formato de streaming el modelo a veces manda solo la META
+  sin salto de línea o el texto sin META. Nunca se responde un trámite sin una META válida: un
+  mensaje que es solo cortesía (saludo, gracias, despedida, "ok"; no "sí" ni "dale") recibe una
+  frase amable fija sin trámite ni registro; una META de conversación o de "sin trámite" sin texto
+  vale como tal; cualquier otro caso se pide de nuevo por la ruta con esquema JSON (si falla, 503).
+  Una conversación sin texto, en las dos rutas, también recibe la frase amable. Con la bandera en
+  `true` y en `false`. Corridas reales en la temporal, 5 de cada una de "chau", "gracias", "hola",
+  "ok" y "muchas gracias" por la ruta normal, por streaming y por streaming con la bandera en
+  `false` (75): todas conversacionales, ninguna "no encontramos información"; el fallback actuó 18
+  veces. "cómo renuevo el pasaporte" → "¿y cuánto cuesta?" por streaming: 5 de 5 con el Pasaporte y
+  su costo. Con "ok" la META llega bien y a veces el modelo contesta "Solo ayudás con trámites"
+  (persona equivocada): es texto del modelo, no del fallback.
+- **Idioma** (`c8ab390`): en el modo incremental se cuenta sobre lo que escribió el modelo, sin los
+  reemplazos del servidor; una respuesta en portugués con la oración del costo reemplazada ya se
+  neutraliza. Con la bandera en `false` sigue como antes.
+- **medir-prompt** (`86659cd`): borra solo las consultas que registró, por id (antes, todas las de id
+  mayor al de su inicio, también las de otras personas en la base real). Los demás scripts ya
+  borraban por id; `eval-seguridad` borra además las consultas de los trámites envenenados que crea,
+  solo en la temporal.
+- **eval-chat sin ids absolutos** (`71593a4`): los trámites esperados se buscan por nombre. Contra
+  la temporal (1 corrida por caso): ruta normal 54/57 y streaming 53/57, 0 fallas por `incluye`;
+  48 de 48 textos iguales entre las rutas.
+- **Evals contra la base real** (09-11-2026, en serie, sin nada en paralelo):
+  - `eval-chat --stream`: 47/57 OK 3 de 3, 5 inestables, 5 fallan siempre (detalle en el README,
+    "Limitaciones conocidas"). Con la misma salida del modelo, 151 de 151 textos iguales entre el
+    streaming y la ruta normal; 23 corridas no traían una META con salto de línea (en 11 actuó el
+    fallback: 8 META sin texto y 3 sin META). Resultado por caso en
+    `eval-resultados/eval-chat-2026-11-09T22-00-51-012Z.json` (ignorada por git).
+  - `eval-seguridad` (ataques, A, B y C; D y E corren solo en la temporal): ataques 30/30
+    neutralizados (16 por la regla de entrada), 0 se filtraron; legítimas 30/30; 0 falsos positivos
+    y 0 oraciones de preguntas legítimas modificadas.
 
 ### Catálogo real
 
@@ -566,9 +599,8 @@ README, "Limitaciones conocidas"):
   deportiva": inestables (oficinas que no tiene el trámite, o no nombra la información adicional).
 - ~~La escala de habilitaciones por superficie supera los 300 caracteres de costo que ve el chat~~:
   resuelto el 09-11-2026 (ver 6, "Costo en texto del trámite elegido").
-- Una respuesta en portugués o inglés a la que la verificación le reemplaza una oración por la del
-  costo (en español) puede no llegar al umbral del chequeo de idioma y salir al final (README,
-  "Limitaciones conocidas").
+- ~~Una respuesta en portugués o inglés a la que la verificación le reemplaza una oración por la del
+  costo (en español) puede no llegar al umbral del chequeo de idioma~~: resuelto en `c8ab390`.
 
 ---
 

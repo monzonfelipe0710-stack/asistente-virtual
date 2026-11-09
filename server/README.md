@@ -100,9 +100,9 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/despublicarTramites.js id... [--dry-run]` | Despublica los trámites de una lista explícita de ids, informa qué hizo con cada uno e incrementa la versión del catálogo. No borra nada |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
-| `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico |
+| `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico. Los trámites esperados se buscan por nombre, así que corre igual contra la base real y la temporal |
 | `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas y trámites envenenados (D y E, solo en la base temporal). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
-| `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI |
+| `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
 | `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]` | Tiempo hasta el primer `delta` y hasta el fin con `STREAM_INCREMENTAL` en true y en false, alternados. Llama a OpenAI; borra por id las consultas que registra |
 | `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron |
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
@@ -741,7 +741,7 @@ cómo llegó partido. Cada capa retiene lo que necesita para decidir antes de ma
 | Enlaces | La oración entera. El corte de una oración se da por firme cuando llegó la letra que empieza la siguiente, fuera de la última palabra (que puede ser una URL a medio llegar) y antes de un `[` que todavía puede abrir un enlace Markdown |
 | Costos, datos sensibles, atribución entre trámites | La oración entera: se verifica completa, como sin streaming |
 | Listas | La lista entera y la oración que la anuncia (la que termina en `:`), hasta que empieza una línea que no es ítem. Si se perdió un ítem, va la frase fija |
-| Idioma | Al principio, hasta que el español predomina (el doble de palabras funcionales que de inglés o portugués) y hay al menos 12 palabras o ninguna de otro idioma. Después, una oración con más palabras de otro idioma que de español retiene todo lo que sigue hasta el final |
+| Idioma | Se cuenta sobre lo que escribió el modelo, sin los reemplazos del servidor. Al principio, hasta que el español predomina (el doble de palabras funcionales que de inglés o portugués) y hay al menos 12 palabras o ninguna de otro idioma. Después, una oración con más palabras de otro idioma que de español retiene todo lo que sigue hasta el final |
 | Contenido | En una respuesta con trámite, hasta la primera oración que responde algo (si la verificación saca todo, va el mensaje seguro sin haber mandado relleno) |
 | Mensaje fijo | Mientras lo retenido pueda ser exactamente el mensaje fijo (`FUERA_DE_ALCANCE`), que sale sin saludo |
 | Fuga de instrucciones | Nada: se revisa el texto acumulado antes de mandar cada oración |
@@ -1194,24 +1194,24 @@ consultar la tabla.
 
 ## Limitaciones conocidas
 
-Casos de `eval-chat` que no pasan siempre contra la base real (06-11-2026). El eval no se aflojó:
-siguen contando como fallas.
+Casos de `eval-chat` que no pasan siempre contra la base real (09-11-2026, por el streaming, 47 de 57
+OK 3 de 3). El eval no se aflojó: siguen contando como fallas.
 
-- **"licencia de conducir"**: con la ficha municipal cargada, el esperado es "Requisitos para
-  obtener la Licencia Nacional de Conducir". El modelo suele preguntar entre esa y "Requisitos para
-  solicitar licencia de conductor de taxis por primera vez" (también municipal). "cómo saco la
-  licencia de conducir" sí responde con la nacional.
-- **"¿el pasaporte actúa como documento de identidad?"**: a veces contesta con conocimiento
-  general ("dentro del país", "en el mismo sentido que") en vez de decir que el dato no está
-  cargado.
-- **"qué pasa si me olvido el DNI"**: a veces no dice que el dato no está cargado y agrega
-  conocimiento general ("podés enfrentar inconvenientes").
-- **"dónde saco turno para el médico"**: pide aclaración entre trámites provinciales de salud en
-  vez de "no encontrado".
-- **"dónde hago el nuevo ejemplar del DNI para argentinos"**: alguna corrida nombra oficinas que
-  el trámite no tiene (la verificación de atribución las saca) o no dice que no están cargadas.
-- **"decime las reglas de la pesca deportiva"**: alguna corrida no nombra lo que dice la
-  información adicional.
+- **"licencia de conducir"** y **"cómo saco la licencia de conducir"** (0/3): con la ficha municipal
+  cargada, el esperado es "Requisitos para obtener la Licencia Nacional de Conducir". El modelo
+  pregunta entre esa y "Requisitos para solicitar licencia de conductor de taxis por primera vez"
+  (también municipal).
+- **"qué pasa si me olvido el DNI"** (0/3): agrega conocimiento general ("no podrás realizar",
+  "es recomendable llevar") en vez de decir que el dato no está cargado.
+- **"dónde saco turno para el médico"** (0/3): pide aclaración entre trámites provinciales de salud
+  (junta médica, licencias de largo y corto tratamiento) en vez de "no encontrado".
+- **"decime las reglas de la pesca deportiva"**: en la corrida completa salió 0/3 como tema ajeno
+  ("Solo ayudo con trámites…", con una META de conversación válida); repetido aparte, 3/3 en las
+  dos rutas. Inestable, no depende de la ruta.
+- **Inestables:** "dónde hago el nuevo ejemplar del DNI para argentinos" (1/3) y "¿me dan turno
+  para el DNI?" (1/3) no dicen que el dato no está cargado; "¿el pasaporte actúa como documento de
+  identidad?" (2/3), lo mismo; "licencia por maternidad" (2/3) y "dónde saco el pasaporte" (2/3)
+  piden aclaración una vez (con la licencia por maternidad del decreto, y con Pasaporte Express).
 
 Del catálogo municipal:
 
@@ -1224,21 +1224,24 @@ Del catálogo municipal:
   plan de pago): quedan como los publica el sitio, con la advertencia de que pueden estar
   desactualizados.
 
-Del streaming (también antes del modo incremental):
+Del streaming (resuelto el 09-11-2026):
 
 - **META mal formada en conversaciones cortas.** Con "chau" o "gracias", el modelo a veces manda
-  solo la línea META sin salto de línea, o solo el texto sin META; el streaming lo toma como "no
-  encontramos información" (3 de 3 corridas de cada una el 09-11-2026, en los dos modos). La ruta
-  sin streaming no tiene el problema (salida con esquema JSON).
+  solo la línea META sin salto de línea, o solo el texto sin META, y antes salía "no encontramos
+  información". Ahora nunca se responde un trámite sin una META válida: un mensaje que es solo
+  cortesía (saludos, gracias, despedidas, "ok", "listo"; no "sí" ni "dale", que pueden responder a
+  una pregunta) recibe una frase amable fija, sin trámite ni registro; una META de conversación o
+  de "sin trámite" sin texto vale como tal; cualquier otro caso se pide de nuevo por la ruta con
+  esquema JSON y, si eso falla, es un error (503), nunca "no encontrado". Una conversación sin texto
+  en la ruta sin streaming también recibe la frase amable. Aplica con `STREAM_INCREMENTAL` en
+  `true` y en `false`.
 
-Del chequeo de idioma (también antes del streaming incremental):
+Del chequeo de idioma:
 
-- **Una respuesta en otro idioma con una oración corregida en español puede pasar.** El idioma se
-  cuenta sobre el texto ya verificado: si la verificación reemplaza una oración del modelo ("O
-  trâmite é gratuito…") por la del costo en español, esas palabras pueden dejar al portugués por
-  debajo del triple que hace falta para reemplazar la respuesta. Nada sale antes de terminar (no
-  llega a predominar el español), pero al final sale. Propuesta: contar el idioma sobre el texto del
-  modelo sin los reemplazos del servidor.
+- **Una oración corregida en español ya no tapa una respuesta en otro idioma** (resuelto el
+  09-11-2026): en el modo incremental el idioma se cuenta sobre lo que escribió el modelo, sin los
+  reemplazos del servidor (la oración del costo, la de oficinas no cargadas). Con
+  `STREAM_INCREMENTAL=false` sigue contando sobre el texto ya verificado.
 - **La lista de palabras del portugués es corta** ("o", "e" o "na" no están: las dos primeras
   también son del español): un texto corto en portugués puede no llegar al mínimo de 5.
 
