@@ -8,6 +8,8 @@ import { MENSAJE_FUERA_DE_ALCANCE } from '../src/services/guardrail.service.js';
 
 const tramite = { id: 1, nombre: 'Permiso de Feria', costo: 4500, descripcion: 'Se presenta el DNI.', requisitos: [], documentos: [], fuenteUrl: 'https://www.formosa.gob.ar/tramite/1' };
 const verificador = () => crearVerificador({ tramites: [tramite], principales: [tramite] });
+const textos = (pedazos) => pedazos.filter((p) => p.texto).map((p) => p.texto);
+const de = (texto) => ({ texto });
 
 describe('salida de a oraciones', () => {
   describe('oracionesFirmes', () => {
@@ -44,19 +46,19 @@ describe('salida de a oraciones', () => {
   describe('limpiador', () => {
     it('manda cada oración en cuanto llega la siguiente', () => {
       const limpiador = crearLimpiadorPorOraciones({ verificar: verificador() });
-      assert.deepEqual(limpiador.agregar('El trámite es personal. Se pres'), ['El trámite es personal.']);
-      assert.deepEqual(limpiador.agregar('enta el DNI. '), []);
-      assert.deepEqual(limpiador.agregar('Cuesta $4.500.'), [' Se presenta el DNI.']);
-      assert.deepEqual(limpiador.cerrar(), [' Cuesta $4.500.']);
+      assert.deepEqual(textos(limpiador.agregar('El trámite es personal. Se pres')), ['El trámite es personal.']);
+      assert.deepEqual(textos(limpiador.agregar('enta el DNI. ')), []);
+      assert.deepEqual(textos(limpiador.agregar('Cuesta $4.500.')), [' Se presenta el DNI.']);
+      assert.deepEqual(textos(limpiador.cerrar()), [' Cuesta $4.500.']);
     });
 
     it('retiene la lista y su anuncio hasta que termina', () => {
       const limpiador = crearLimpiadorPorOraciones({ verificar: verificador() });
-      assert.deepEqual(limpiador.agregar('Es simple. Requisitos:\n- DNI\n'), ['Es simple.']);
-      assert.deepEqual(limpiador.agregar('- Foto\n'), []);
+      assert.deepEqual(textos(limpiador.agregar('Es simple. Requisitos:\n- DNI\n')), ['Es simple.']);
+      assert.deepEqual(textos(limpiador.agregar('- Foto\n')), []);
       // Una línea que ya no puede ser ítem cierra la lista.
-      assert.deepEqual(limpiador.agregar('\nListo.'), [' Requisitos:\n- DNI\n- Foto']);
-      assert.deepEqual(limpiador.cerrar(), ['\n\nListo.']);
+      assert.deepEqual(textos(limpiador.agregar('\nListo.')), [' Requisitos:\n- DNI\n- Foto']);
+      assert.deepEqual(textos(limpiador.cerrar()), ['\n\nListo.']);
     });
 
     it('da lo mismo que el limpiador por líneas en lo que no cambió', () => {
@@ -72,22 +74,36 @@ describe('salida de a oraciones', () => {
   describe('liberador', () => {
     it('no manda nada hasta ver el idioma', () => {
       const liberador = crearLiberador();
-      assert.deepEqual(liberador.agregar('Sure!'), []);
-      assert.deepEqual(liberador.agregar(' El trámite se hace en la mesa de entradas con el DNI y la partida.'), ['Sure! El trámite se hace en la mesa de entradas con el DNI y la partida.']);
+      assert.deepEqual(liberador.agregar(de('Sure!')), []);
+      assert.deepEqual(liberador.agregar(de(' El trámite se hace en la mesa de entradas con el DNI y la partida.')), ['Sure! El trámite se hace en la mesa de entradas con el DNI y la partida.']);
     });
 
     it('lo que podría ser el mensaje fijo se retiene hasta el final', () => {
       const liberador = crearLiberador();
       const [primera] = MENSAJE_FUERA_DE_ALCANCE.split(/(?<=\.) /);
-      assert.deepEqual(liberador.agregar(primera), []);
-      assert.deepEqual(liberador.agregar(MENSAJE_FUERA_DE_ALCANCE.slice(primera.length)), []);
+      assert.deepEqual(liberador.agregar(de(primera)), []);
+      assert.deepEqual(liberador.agregar(de(MENSAJE_FUERA_DE_ALCANCE.slice(primera.length))), []);
       assert.equal(liberador.cerrar().decision, 'fuera_de_alcance');
     });
 
     it('una conversación no sale hasta el final', () => {
       const liberador = crearLiberador({ oculto: true });
-      assert.deepEqual(liberador.agregar('¡De nada! Cuando quieras, preguntame por otro trámite.'), []);
+      assert.deepEqual(liberador.agregar(de('¡De nada! Cuando quieras, preguntame por otro trámite.')), []);
       assert.equal(liberador.cerrar().decision, 'retenida');
     });
+  });
+});
+
+describe('idioma sobre el texto del modelo', () => {
+  it('una oración reemplazada por el servidor no tapa una respuesta en portugués', () => {
+    const verificar = crearVerificador({ tramites: [tramite], principales: [tramite] });
+    const limpiador = crearLimpiadorPorOraciones({ verificar });
+    const liberador = crearLiberador({ retenerContenido: true });
+    const texto = 'Claro! Para fazer o trâmite você precisa do seu documento e de uma foto. O trâmite é gratuito e pode ser feito na prefeitura. Também é possível agendar um horário.';
+    const pedazos = [...limpiador.agregar(texto), ...limpiador.cerrar()];
+    assert.ok(pedazos.some((p) => p.texto.includes('El costo del trámite')), 'la verificación reemplazó el "gratuito"');
+    const mandado = pedazos.flatMap((p) => liberador.agregar(p));
+    assert.deepEqual(mandado, []);
+    assert.equal(liberador.cerrar().decision, 'otro_idioma');
   });
 });

@@ -211,6 +211,10 @@ describe('streaming incremental', () => {
       const respuestas = [
         "Sure! To get this document you need your ID and a recent photo. The procedure is free and you can do it at the main office. Please bring the original documents with you.",
         'Claro! Para fazer o trâmite você precisa do seu documento e de uma foto. O atendimento é feito na prefeitura, de segunda a sexta. Também é possível agendar um horário quando você quiser.',
+        // Con una oración que la verificación reemplaza por la del costo, en español: el idioma se
+        // cuenta sobre lo que escribió el modelo, así que el reemplazo no la tapa.
+        'Claro! Para fazer o trâmite você precisa do seu documento e de uma foto. O trâmite é gratuito e pode ser feito na prefeitura. Também é possível agendar um horário.',
+        'Sure! The procedure is free of charge. You need your ID and a recent photo, and you can do it at the main office. Please bring the original documents with you.',
       ];
       for (const cuerpo of respuestas) {
         for (const pedazos of cortesDe(lineaMeta(conTramite()) + cuerpo)) {

@@ -858,7 +858,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
     return todo;
   };
   function* pasar(pedazos) {
-    for (const pedazo of pedazos) for (const texto of liberador.agregar(reemplazarMarca(pedazo))) yield delta(conSaludoPendiente(texto));
+    for (const { texto, modelo } of pedazos) for (const listo of liberador.agregar({ texto: reemplazarMarca(texto), modelo })) yield delta(conSaludoPendiente(listo));
   }
 
   for await (const parte of partes) if (parte) yield* pasar(limpiador.agregar(parte));
