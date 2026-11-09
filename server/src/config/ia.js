@@ -8,6 +8,10 @@ const enteroDeEntorno = (nombre, porDefecto, minimo) => {
   return porDefecto;
 };
 
+// STREAM_INCREMENTAL (por defecto true): las dos rutas del chat pasan la salida del modelo por el
+// mismo camino, de a oración (ver services/salida.service.js). Con false vuelve el de antes.
+export const streamIncremental = () => !['false', '0', 'no'].includes(process.env.STREAM_INCREMENTAL?.trim().toLowerCase());
+
 export const TIEMPOS_IA = {
   embedding: {
     timeout: enteroDeEntorno('OPENAI_TIMEOUT_EMBEDDING_MS', 4000, 1),

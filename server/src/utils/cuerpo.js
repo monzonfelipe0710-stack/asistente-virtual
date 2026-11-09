@@ -15,7 +15,7 @@ import { MENSAJE_LISTA_COLAPSADA, itemVacio } from '../services/verificacion.ser
 // ítem (la verificación lo sacó o quedó sin contenido útil) no sale la lista incompleta, sino una
 // frase fija en su lugar, con la línea que la anunciaba ("…las siguientes direcciones:"). Una lista
 // que sobrevive entera no se toca.
-const ITEM = /^\s*(?:[-*•]|\d+[.)])\s+/;
+export const ITEM = /^\s*(?:[-*•]|\d+[.)])\s+/;
 
 export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {}) => {
   let pendiente = '';

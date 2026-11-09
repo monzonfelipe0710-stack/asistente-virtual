@@ -1,7 +1,7 @@
 import { ia } from "../core/ai/index.js";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
-import { TIEMPOS_IA } from "../config/ia.js";
+import { TIEMPOS_IA, streamIncremental } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
@@ -19,6 +19,7 @@ import { costoDelPortal } from "../utils/huella.js";
 import { MENSAJE_SOLO_ESPANOL, esOtroIdioma, pareceEspanol } from "../utils/idioma.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
 import { MENSAJE_INFORMACION_OCULTA, crearVerificador, quedoSinContenido, sinContenidoPropio } from "./verificacion.service.js";
+import { PALABRAS_PARA_EL_IDIOMA, crearLiberador, crearLimpiadorPorOraciones, cuantasPalabras, limpiarPorOraciones } from "./salida.service.js";
 import {
   MARCA_FUERA_DE_ALCANCE,
   MENSAJE_FUERA_DE_ALCANCE,
@@ -424,7 +425,7 @@ export const buscarFugaDeInstrucciones = (texto) => {
   return detectorDeFuga(texto);
 };
 
-const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, verificar, signal }) => {
+const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, verificar, signal, limpiar = limpiarCuerpo }) => {
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
 
@@ -437,7 +438,7 @@ const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCor
       signal,
     }),
   );
-  return limitarConversacion(reemplazarMarca(limpiarCuerpo(salida.respuesta ?? "", { saludo, alCorregirTuteo, verificar })));
+  return limitarConversacion(reemplazarMarca(limpiar(salida.respuesta ?? "", { saludo, alCorregirTuteo, verificar })));
 };
 
 const SIN_REGISTRO = { consultaId: null, calificarToken: null };
@@ -514,8 +515,9 @@ const tramitesConFuente = async (tramitesEncontrados) => {
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 
-// Chequeo de salida, solo sin streaming (en streaming el texto ya salió): si la respuesta copia
-// las instrucciones fijas, se reemplaza por el mensaje fijo, sin cachear ni registrar.
+// Chequeo de salida sobre un texto entero (la conversación, y todo con STREAM_INCREMENTAL=false; si
+// no, se revisa de a oración en salida.service.js): si copia las instrucciones fijas, se reemplaza
+// por el mensaje fijo, sin cachear ni registrar.
 const copiaInstrucciones = (texto, alDetectarFuga) => {
   const fragmento = buscarFugaDeInstrucciones(texto);
   if (fragmento === null) return false;
@@ -534,10 +536,6 @@ const enOtroIdioma = (texto, alCorregir) => {
   avisarOtroIdioma(texto, alCorregir);
   return true;
 };
-// En streaming se retienen al menos estas palabras antes de mandar, que alcanzan para ver el
-// idioma, salvo que lo retenido ya se vea en español.
-const PALABRAS_PARA_EL_IDIOMA = 12;
-const cuantasPalabras = (texto) => texto.match(/\p{L}+/gu)?.length ?? 0;
 
 const textoDeLaPersona = (mensajes) =>
   mensajes
@@ -641,8 +639,8 @@ export const responderConsulta = async (mensajes, usuario = null, opciones = {})
   }
 };
 
-const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectarFuga, alCorregirSalida, signal: externa }, traza) => {
-  const signal = crearPlazo(externa);
+const resolverConsulta = async (mensajes, usuario, opciones, traza) => {
+  const signal = crearPlazo(opciones.signal);
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
@@ -687,6 +685,15 @@ const resolverConsulta = async (mensajes, usuario, { alCorregirTuteo, alDetectar
   });
 
   const salida = JSON.parse(salidaRaw);
+  const ctx = { ...opciones, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
+  if (!streamIncremental()) return resolverSalidaAnterior(salida, ctx);
+  return juntarEventos(responderConSalida({ salida, valida: true, partes: [salida.respuesta ?? ""] }, ctx));
+};
+
+// Las dos rutas con STREAM_INCREMENTAL=false: el comportamiento de antes, por líneas, con la fuga y
+// el idioma revisados sobre el texto entero. Se borra cuando el modo incremental quede validado.
+const resolverSalidaAnterior = async (salida, ctx) => {
+  const { alCorregirTuteo, alDetectarFuga, alCorregirSalida, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
   const saludo = saludoPara(preguntaActual, salida.saludo);
   const atribucion = { contexto, fijo, pregunta: textoDeLaPersona(mensajes) };
   const verificar = verificadorPara(tramites, idsUsadosDe(salida, idsResueltos), alCorregirSalida, atribucion);
@@ -784,6 +791,173 @@ const leerMeta = (linea) => {
   }
 };
 
+const delta = (texto) => ({ tipo: "delta", texto });
+
+const juntarEventos = async (eventos) => {
+  let respuesta = "";
+  let fin = null;
+  for await (const evento of eventos) {
+    if (evento.tipo === "delta") respuesta += evento.texto;
+    else fin = evento;
+  }
+  const { tipo: _, tipoRespuesta, ...resto } = fin;
+  return { tipo: tipoRespuesta, respuesta, ...resto };
+};
+
+const avisarFuga = (fragmento, alDetectarFuga) => {
+  console.warn(`Chat: respuesta reemplazada, copiaba las instrucciones: "${fragmento}"`);
+  alDetectarFuga?.(fragmento);
+};
+
+// La conversación se valida entera (nombra un candidato, se pasa del tope) y recién después sale.
+const conversacionFinal = async (cuerpo, opciones, { alDetectarFuga, alCorregirSalida }) => {
+  const texto = await textoDeConversacion(cuerpo, { ...opciones, limpiar: limpiarPorOraciones });
+  if (copiaInstrucciones(texto, alDetectarFuga)) return MENSAJE_FUERA_DE_ALCANCE;
+  if (texto === MENSAJE_FUERA_DE_ALCANCE) return texto;
+  if (enOtroIdioma(texto, alCorregirSalida)) return MENSAJE_SOLO_ESPANOL;
+  return texto;
+};
+
+const FIJOS_SIN_SALUDO = new Set([MENSAJE_FUERA_DE_ALCANCE, MENSAJE_SOLO_ESPANOL]);
+
+// Lo que sigue a la respuesta del modelo, igual en las dos rutas (con STREAM_INCREMENTAL): `salida` es
+// la línea META del streaming o el JSON de la ruta sin streaming, y `partes`, el texto para la
+// persona, entero o de a pedazos. Emite los eventos delta y fin; cada delta es texto ya verificado.
+// Solo se cachea y se registra después de que el texto llegó completo: si el modelo se corta, el
+// error sale de `partes` antes.
+async function* responderConSalida({ salida, valida, partes }, ctx) {
+  const { candidatos, tramites, idsResueltos, mensajes, preguntaActual, usuario, usuarioId, esUnTurno, topeAlcanzado, contexto, fijo, alCorregirTuteo, alCorregirSalida, alDetectarFuga, signal, traza } = ctx;
+  const saludo = saludoPara(preguntaActual, salida?.saludo);
+  const prefijo = componerSaludo(saludo, nombreParaSaludo(usuario));
+
+  const grupo = grupoElegido(salida, candidatos);
+  if (grupo) {
+    const { texto, opciones } = aclaracionDeGrupo(grupo);
+    yield delta(prefijo + texto);
+    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones, conversacional: false, ...SIN_REGISTRO };
+    return;
+  }
+
+  const idsUsados = idsUsadosDe(salida, idsResueltos);
+  const esConversacion = salida?.tipo === "conversacion";
+  const esAclaracion = salida?.tipo === "aclaracion" && !topeAlcanzado;
+  const encontrado = !esConversacion && !esAclaracion && idsUsados.length > 0;
+  const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
+  const verificar = verificadorPara(tramites, idsUsados, alCorregirSalida, { contexto, fijo, pregunta: textoDeLaPersona(mensajes) });
+  const limpiador = crearLimpiadorPorOraciones({ saludo, alCorregirTuteo, verificar });
+  // Sin trámite no se muestra el texto del modelo, pero se revisa igual (fuga, idioma).
+  const liberador = crearLiberador({ oculto: esConversacion || (!esAclaracion && !encontrado), retenerContenido: encontrado, buscarFuga: buscarFugaDeInstrucciones });
+
+  // El saludo sale con el primer texto.
+  let saludoPendiente = prefijo;
+  const conSaludoPendiente = (texto) => {
+    const todo = saludoPendiente + texto;
+    saludoPendiente = "";
+    return todo;
+  };
+  function* pasar(pedazos) {
+    for (const pedazo of pedazos) for (const texto of liberador.agregar(reemplazarMarca(pedazo))) yield delta(conSaludoPendiente(texto));
+  }
+
+  for await (const parte of partes) if (parte) yield* pasar(limpiador.agregar(parte));
+  yield* pasar(limpiador.cerrar());
+  const final = liberador.cerrar();
+
+  // El mensaje fijo sale sin saludo (como cuando lo frena la regla de entrada), sin cachear ni registrar.
+  if (final.motivo === "fuga") avisarFuga(final.fragmento, alDetectarFuga);
+  if (final.decision === "fuera_de_alcance" || final.decision === "otro_idioma") {
+    if (final.decision === "otro_idioma") avisarOtroIdioma(final.original, alCorregirSalida);
+    yield delta(final.decision === "otro_idioma" ? MENSAJE_SOLO_ESPANOL : MENSAJE_FUERA_DE_ALCANCE);
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
+  // Ya se mandó texto verificado y no se puede retirar: el resto se reemplaza por el mensaje fijo.
+  if (final.decision === "cortada") {
+    if (final.motivo === "idioma") avisarOtroIdioma(final.original, alCorregirSalida);
+    yield delta(`\n\n${final.motivo === "idioma" ? MENSAJE_SOLO_ESPANOL : MENSAJE_FUERA_DE_ALCANCE}`);
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
+  const { cuerpo } = final;
+
+  if (esConversacion) {
+    traza.etapa("conversacion");
+    const texto = await conversacionFinal(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal }, ctx);
+    yield delta(FIJOS_SIN_SALUDO.has(texto) ? texto : prefijo + texto);
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
+
+  if (!esAclaracion && !encontrado) {
+    if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: MENSAJE_SIN_RESPUESTA, saludo, tramitesEncontrados: [], encontrado: false });
+    const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta: MENSAJE_SIN_RESPUESTA });
+    yield delta(prefijo + MENSAJE_SIN_RESPUESTA);
+    yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: false, tramitesEncontrados: [], opciones: [], conversacional: false, ...registro };
+    return;
+  }
+
+  if (encontrado && final.decision === "retenida" && quedoSinContenido(verificar, cuerpo)) {
+    avisarSinContenido(usados);
+    yield delta(prefijo + MENSAJE_INFORMACION_OCULTA);
+    const fuentes = conFuentes(MENSAJE_INFORMACION_OCULTA, usados).slice(MENSAJE_INFORMACION_OCULTA.length);
+    if (fuentes) yield delta(fuentes);
+    yield FIN_SIN_CONTENIDO;
+    return;
+  }
+
+  // Lo que quedó retenido hasta el final (una respuesta corta, o que no llegó a verse en español).
+  if (final.texto || saludoPendiente) yield delta(conSaludoPendiente(final.texto));
+
+  if (esAclaracion) {
+    // Una aclaración no es una consulta resuelta: no se registra.
+    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones: opcionesDeLaAclaracion(salida?.opciones, candidatos), conversacional: false, ...SIN_REGISTRO };
+    return;
+  }
+
+  // La caché y `consultas` guardan el cuerpo; el saludo y las fuentes se agregan al servir.
+  const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
+  if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado: true });
+  const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: idsUsados[0], encontrado: true, usuarioId, respuesta: cuerpo });
+  const fuentes = conFuentes(cuerpo, usados).slice(cuerpo.length);
+  if (fuentes) yield delta(fuentes);
+  yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: true, tramitesEncontrados, opciones: [], conversacional: false, ...registro };
+}
+
+// Streaming: la primera línea es la META; el resto es el texto, que sigue de largo a medida que llega.
+async function* transmitirIncremental(deltas, ctx) {
+  const iterador = deltas[Symbol.asyncIterator]();
+  try {
+    let buffer = "";
+    let nl = -1;
+    while (nl === -1) {
+      const { value, done } = await iterador.next();
+      if (done) break;
+      buffer += value ?? "";
+      nl = buffer.indexOf("\n");
+    }
+    // Sin salto de línea no hubo META separada: el buffer entero puede ser el JSON, y no hay texto.
+    if (nl === -1) {
+      const meta = leerMeta(buffer);
+      yield* responderConSalida({ salida: meta && { saludo: meta.saludo, tipo: "respuesta", tramiteId: null }, valida: meta !== null, partes: [] }, ctx);
+      return;
+    }
+    const meta = leerMeta(buffer.slice(0, nl));
+    const resto = buffer.slice(nl + 1);
+    async function* partes() {
+      if (resto) yield resto;
+      for (;;) {
+        const { value, done } = await iterador.next();
+        if (done) return;
+        yield value;
+      }
+    }
+    yield* responderConSalida({ salida: meta, valida: meta !== null, partes: partes() }, ctx);
+  } finally {
+    // Una aclaración armada por el servidor no espera al resto: se corta la llamada al modelo.
+    await iterador.return?.();
+  }
+}
+
 export async function* responderConsultaStream(mensajes, usuario = null, opciones = {}) {
   const traza = crearTraza();
   try {
@@ -793,8 +967,8 @@ export async function* responderConsultaStream(mensajes, usuario = null, opcione
   }
 }
 
-async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorregirSalida, signal: externa }, traza) {
-  const signal = crearPlazo(externa);
+async function* transmitirConsulta(mensajes, usuario, opciones, traza) {
+  const signal = crearPlazo(opciones.signal);
   const usuarioId = usuario?.id ?? null;
   const nombre = nombreParaSaludo(usuario);
   const esUnTurno = mensajes.length === 1;
@@ -842,7 +1016,13 @@ async function* transmitirConsulta(mensajes, usuario, { alCorregirTuteo, alCorre
     turnos: mensajes,
     signal,
   });
+  const ctx = { ...opciones, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
+  yield* streamIncremental() ? transmitirIncremental(deltas, ctx) : transmitirSalidaAnterior(deltas, ctx);
+}
 
+async function* transmitirSalidaAnterior(deltas, ctx) {
+  const { alCorregirTuteo, alCorregirSalida, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
+  const nombre = nombreParaSaludo(usuario);
   let buffer = "";
   let meta = null;
   let saludo = "";

@@ -13,7 +13,7 @@
 // Además, como el servidor saca los enlaces del modelo (no los dominios sueltos), un ítem de lista
 // al que se le saca un enlace se saca entero y una oración que queda rota sin su enlace ("para
 // Buenos Aires es [url].") también.
-// Se aplica por línea, en la limpieza común de las dos rutas (ver utils/cuerpo.js).
+// Se aplica por oración, en la limpieza común de las dos rutas (ver services/salida.service.js).
 import { DOMINIO_SUELTO, ENLACE_MARKDOWN, URL_SUELTA, seQuitaDelTexto } from '../utils/enlaces.js';
 import { buscarInstruccion } from './sanitizacion.service.js';
 
@@ -27,24 +27,58 @@ const URL_EN_TEXTO = new RegExp(`${ENLACE_MARKDOWN}|${URL_SUELTA}|${DOMINIO_SUEL
 const MARCA = '\u0001';
 
 // Parte una línea en oraciones. Las URL se enmascaran antes (tienen puntos) y una abreviatura
-// ("Av.", "hs.") no corta. Devuelve las oraciones con sus URL y el separador original.
+// ("Av.", "hs.") no corta. Devuelve las oraciones con sus URL y el espacio que las separa de la
+// anterior: la línea es la concatenación de separador + texto de cada una.
 export const partirEnOraciones = (linea) => {
   const urls = [];
   const enmascarada = linea.replace(URL_EN_TEXTO, (url) => `${MARCA}${urls.push(url) - 1}${MARCA}`);
   const oraciones = [];
   let inicio = 0;
+  let separador = '';
   const corte = /[.!?…]+["')\]*]*(\s+)(?=[\p{Lu}\d¡¿"(*\u0001])/gu;
   for (const m of enmascarada.matchAll(corte)) {
     const antes = enmascarada.slice(inicio, m.index);
     const palabra = normalizar(antes.match(/([\p{L}]+)$/u)?.[1] ?? '');
     if (palabra.length <= 4 && ABREVIATURAS.has(palabra)) continue;
     const fin = m.index + m[0].length - m[1].length;
-    oraciones.push(enmascarada.slice(inicio, fin));
+    oraciones.push({ crudo: enmascarada.slice(inicio, fin), separador });
+    separador = m[1];
     inicio = m.index + m[0].length;
   }
-  if (inicio < enmascarada.length) oraciones.push(enmascarada.slice(inicio));
+  if (inicio < enmascarada.length) oraciones.push({ crudo: enmascarada.slice(inicio), separador });
   const restaurar = (texto) => texto.replace(new RegExp(`${MARCA}(\\d+)${MARCA}`, 'g'), (_, i) => urls[Number(i)]);
-  return oraciones.map((o) => ({ texto: restaurar(o), urls: [...o.matchAll(new RegExp(`${MARCA}(\\d+)${MARCA}`, 'g'))].map(([, i]) => urls[Number(i)]) }));
+  return oraciones.map(({ crudo, separador: antes }) => ({
+    texto: restaurar(crudo),
+    urls: [...crudo.matchAll(new RegExp(`${MARCA}(\\d+)${MARCA}`, 'g'))].map(([, i]) => urls[Number(i)]),
+    separador: antes,
+  }));
+};
+
+// Para el streaming: en una línea que todavía no terminó, cuántas oraciones ya no pueden cambiar.
+// Un corte es firme si lo que lo decide (la letra que sigue) está antes de la última palabra (que
+// puede ser una URL a medio llegar) y antes de un "[" que todavía puede abrir un enlace markdown
+// (su texto puede tener puntos que dejan de cortar cuando el enlace se completa).
+const PUEDE_ABRIR_ENLACE = new RegExp(ENLACE_MARKDOWN, 'g');
+const enlaceAbierto = (linea) => {
+  const sinEnlaces = linea.replace(PUEDE_ABRIR_ENLACE, (m) => ' '.repeat(m.length));
+  for (let i = sinEnlaces.indexOf('['); i !== -1; i = sinEnlaces.indexOf('[', i + 1)) {
+    const cierre = sinEnlaces.indexOf(']', i);
+    if (cierre === -1 || cierre === sinEnlaces.length - 1) return i;
+    if (sinEnlaces[cierre + 1] === '(') return i;
+  }
+  return Infinity;
+};
+export const oracionesFirmes = (lineaParcial) => {
+  const oraciones = partirEnOraciones(lineaParcial);
+  const limite = Math.min(enlaceAbierto(lineaParcial), lineaParcial.search(/\S+$/) === -1 ? lineaParcial.length : lineaParcial.search(/\S+$/));
+  let posicion = 0;
+  let firmes = 0;
+  for (let i = 0; i < oraciones.length - 1; i++) {
+    posicion += oraciones[i].separador.length + oraciones[i].texto.length;
+    if (posicion + oraciones[i + 1].separador.length >= limite) break;
+    firmes = i + 1;
+  }
+  return oraciones.slice(0, firmes);
 };
 
 // --- Enlaces -----------------------------------------------------------------------------------
@@ -369,37 +403,46 @@ export const crearVerificador = ({ tramites = [], principales = [], atribucion, 
 
   let quitadas = 0;
   const reemplazos = new Set();
-  const verificar = (linea) => {
-    const prefijo = linea.match(PREFIJO_DE_LISTA)?.[1] ?? '';
-    const oraciones = partirEnOraciones(linea.slice(prefijo.length));
-    // Un ítem de lista al que se le saca el enlace se saca entero: quedaría "Buenos Aires:" solo.
-    if (prefijo && oraciones.some((o) => o.urls.some(seQuitaDelTexto))) {
-      quitadas++;
-      alCorregir?.({ capa: 'enlace', original: linea.trim(), corregida: '' });
-      return '';
-    }
-    let cambio = false;
+  // Revisa de a una las oraciones de una línea, en orden: devuelve lo que queda de cada una ('' si
+  // se saca) y si cambió. Un reemplazo que ya salió en la misma línea no se repite.
+  const nuevaLinea = () => {
     const salida = [];
-    for (const o of oraciones) {
+    return (o) => {
       const correccion = corregirOracion(o);
       if (!correccion) {
         salida.push(o.texto);
-        continue;
+        return { texto: o.texto, cambio: false };
       }
-      cambio = true;
       if (!correccion.texto) quitadas++;
       alCorregir?.({ capa: correccion.capa, original: o.texto.trim(), corregida: correccion.texto });
       if (correccion.capa === 'atribucion' && correccion.texto) {
-        if (reemplazos.has(correccion.texto)) continue;
+        if (reemplazos.has(correccion.texto)) return { texto: '', cambio: true };
         reemplazos.add(correccion.texto);
       }
-      if (correccion.texto && !salida.some((s) => s.trim() === correccion.texto)) salida.push(correccion.texto);
-    }
-    if (!cambio) return linea;
-    const cuerpo = salida.map((s) => s.trim()).filter(Boolean).join(' ');
+      if (!correccion.texto || salida.some((s) => s.trim() === correccion.texto)) return { texto: '', cambio: true };
+      salida.push(correccion.texto);
+      return { texto: correccion.texto, cambio: true };
+    };
+  };
+  // Un ítem de lista al que se le saca el enlace se saca entero: quedaría "Buenos Aires:" solo.
+  const itemSinEnlace = (linea, prefijo, oraciones) => {
+    if (!prefijo || !oraciones.some((o) => o.urls.some(seQuitaDelTexto))) return false;
+    quitadas++;
+    alCorregir?.({ capa: 'enlace', original: linea.trim(), corregida: '' });
+    return true;
+  };
+  const verificar = (linea) => {
+    const prefijo = linea.match(PREFIJO_DE_LISTA)?.[1] ?? '';
+    const oraciones = partirEnOraciones(linea.slice(prefijo.length));
+    if (itemSinEnlace(linea, prefijo, oraciones)) return '';
+    const revisar = nuevaLinea();
+    const revisadas = oraciones.map(revisar);
+    if (!revisadas.some((r) => r.cambio)) return linea;
+    const cuerpo = revisadas.map((r) => r.texto.trim()).filter(Boolean).join(' ');
     return cuerpo ? `${prefijo}${cuerpo}` : '';
   };
   verificar.quitadas = () => quitadas;
+  verificar.nuevaLinea = nuevaLinea;
   return verificar;
 };
 

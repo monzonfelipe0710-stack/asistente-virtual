@@ -57,8 +57,10 @@ const { LARGO_DE_FUGA, MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = awai
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA } = await import('../src/services/verificacion.service.js');
 const { MENSAJE_SOLO_ESPANOL } = await import('../src/utils/idioma.js');
 
-const DOMINIO = '@chat.test.invalid';
-const SUFIJO = `chat-test-${Date.now()}`;
+// Corre también con STREAM_INCREMENTAL=false en paralelo (chat-anterior.test.js): datos propios.
+const MODO = process.env.STREAM_INCREMENTAL === 'false' ? '-anterior' : '';
+const DOMINIO = `@chat${MODO}.test.invalid`;
+const SUFIJO = `chat-test${MODO}-${Date.now()}`;
 let tramite;
 let sector;
 
@@ -656,7 +658,7 @@ describe('chat', () => {
       for await (const e of responderConsultaStream(turno('hola, cómo hago el trámite'), maria)) eventos.push(e);
       const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
 
-      assert.equal(deltas[0], '¡Hola, María! ');
+      assert.ok(deltas[0].startsWith('¡Hola, María! '), 'el saludo sale con el primer texto');
       assert.equal(deltas.join(''), '¡Hola, María! Así se hace.');
       assert.equal(registros[0].respuesta, 'Así se hace.');
       assert.equal(cache.obtener('hola, cómo hago el trámite').respuesta, 'Así se hace.');

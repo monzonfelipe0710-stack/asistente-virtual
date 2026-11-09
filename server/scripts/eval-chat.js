@@ -14,6 +14,10 @@
 //                                         solo los casos de la Municipalidad de la Ciudad de Formosa
 //                                         (base-temporal.js --municipal). También solo en la temporal.
 //
+//   node scripts/eval-chat.js --stream    las respuestas por el streaming; además, la misma salida
+//                                         del modelo se pasa por la ruta sin streaming y se compara
+//                                         el texto final (tiene que ser idéntico)
+//
 // responderConsulta registra las consultas en `consultas`; al terminar se borran
 // por id las que creó esta corrida para no ensuciar las métricas.
 import 'dotenv/config';
@@ -22,7 +26,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
-import { responderConsulta, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
+import { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
+import { ia } from '../src/core/ai/index.js';
 import { MENSAJE_LISTA_COLAPSADA, montosEn } from '../src/services/verificacion.service.js';
 import { costoDelPortal } from '../src/utils/huella.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
@@ -469,6 +474,73 @@ const fallas = (esperado, r) => {
 
 const consultasCreadas = [];
 
+// --stream: se graban las salidas del modelo (la del streaming y, si la conversación se pide de nuevo,
+// la otra) y se repiten en el mismo orden para la ruta sin streaming.
+const STREAM = process.argv.includes('--stream');
+let grabadas = null;
+let aRepetir = null;
+const generarOriginal = ia.generarRespuesta.bind(ia);
+ia.generarRespuesta = async (args) => {
+  if (aRepetir) return aRepetir.shift();
+  const salida = await generarOriginal(args);
+  grabadas?.push(salida);
+  return salida;
+};
+const transmitirOriginal = ia.generarRespuestaStream.bind(ia);
+ia.generarRespuestaStream = async function* (args) {
+  let crudo = '';
+  for await (const delta of transmitirOriginal(args)) {
+    crudo += delta;
+    yield delta;
+  }
+  // Como la ruta sin streaming: la META con el texto en "respuesta". Sin META válida no se compara.
+  const nl = crudo.indexOf('\n');
+  let meta = null;
+  try {
+    meta = nl === -1 ? null : JSON.parse(crudo.slice(0, nl));
+  } catch {
+    meta = null;
+  }
+  grabadas?.push(meta ? JSON.stringify({ ...meta, respuesta: crudo.slice(nl + 1) }) : null);
+};
+
+const comparaciones = [];
+const juntar = async (eventos) => {
+  let respuesta = '';
+  let fin = null;
+  for await (const e of eventos) {
+    if (e.tipo === 'delta') respuesta += e.texto;
+    else fin = e;
+  }
+  const { tipo: _, tipoRespuesta, ...resto } = fin;
+  return { tipo: tipoRespuesta, respuesta, ...resto };
+};
+const consultar = async (mensajes, opciones, pregunta) => {
+  if (!STREAM) return responderConsulta(mensajes, null, opciones);
+  const salidas = [];
+  grabadas = salidas;
+  let r;
+  try {
+    r = await juntar(responderConsultaStream(mensajes, null, opciones));
+  } finally {
+    grabadas = null;
+  }
+  if (salidas.length === 0 || salidas.includes(null)) {
+    comparaciones.push({ pregunta, igual: null });
+    return r;
+  }
+  cache.limpiar();
+  aRepetir = salidas;
+  try {
+    const normal = await responderConsulta(mensajes, null, {});
+    if (normal.consultaId) consultasCreadas.push(normal.consultaId);
+    comparaciones.push({ pregunta, igual: normal.respuesta === r.respuesta && normal.tipo === r.tipo && normal.encontrado === r.encontrado, stream: r.respuesta, normal: normal.respuesta });
+  } finally {
+    aRepetir = null;
+  }
+  return r;
+};
+
 const correr = async ({ pregunta, turnos, esperado: crudo }) => {
   const esperado = resolverEsperado(crudo);
   palabrasDeLaPregunta = new Set(palabrasDe((turnos ?? [pregunta]).join(' ')));
@@ -484,7 +556,7 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
     let r;
     for (const texto of turnos ?? [pregunta]) {
       mensajes.push({ rol: 'usuario', texto });
-      r = await responderConsulta(mensajes, null, { alCorregirTuteo, alCorregirSalida });
+      r = await consultar(mensajes, { alCorregirTuteo, alCorregirSalida }, texto);
       if (r.consultaId) consultasCreadas.push(r.consultaId);
       transversales.push(...fallasTransversales(r, mensajes.filter((m) => m.rol === 'usuario').map((m) => m.texto).join(' ')));
       mensajes.push({ rol: 'asistente', texto: r.respuesta });
@@ -607,6 +679,15 @@ for (const c of correccionesDeSalida) {
   console.log(`  - [${c.capa}] "${c.pregunta}": "${c.original}"${c.corregida ? ` → "${c.corregida}"` : ' → (se sacó)'}`);
 }
 
+if (STREAM) {
+  const comparadas = comparaciones.filter((c) => c.igual !== null);
+  const distintas = comparadas.filter((c) => !c.igual);
+  console.log(`\nStreaming contra la ruta sin streaming, con la misma salida del modelo: ${comparadas.length - distintas.length} iguales de ${comparadas.length}` +
+    `${comparaciones.length > comparadas.length ? ` (${comparaciones.length - comparadas.length} sin META válida, no comparadas)` : ''}`);
+  for (const c of distintas) console.log(`  - "${c.pregunta}":\n    stream: ${c.stream.replace(/\n/g, ' / ')}\n    normal: ${c.normal.replace(/\n/g, ' / ')}`);
+  if (distintas.length > 0) process.exitCode = 1;
+}
+
 console.log(
   `\nOK ${CORRIDAS}/${CORRIDAS}: ${conEstado('OK').length} | ` +
   `inestables: ${inestables.length} | ` +
@@ -624,6 +705,8 @@ writeFileSync(archivo, JSON.stringify({
   fecha: inicio.toISOString(),
   terminada: new Date().toISOString(),
   modo: MODO ?? 'real',
+  stream: STREAM,
+  base: (() => { try { return new URL(process.env.DATABASE_URL).host; } catch { return null; } })(),
   corridas: CORRIDAS,
   solo: SOLO,
   total: elegidos.length,

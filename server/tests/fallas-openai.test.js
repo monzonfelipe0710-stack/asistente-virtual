@@ -134,11 +134,13 @@ const pedir = async (ruta, pregunta, { cortarAlPrimerDelta = false } = {}) => {
   const decodificador = new TextDecoder();
   let texto = '';
   let corte = null;
+  const llegadas = [];
   try {
     for (;;) {
       const { done, value } = await lector.read();
       if (done) break;
       texto += decodificador.decode(value, { stream: true });
+      while (llegadas.length < texto.split('\n\n').length - 1) llegadas.push(Date.now() - inicio);
       if (cortarAlPrimerDelta && texto.includes('"tipo":"delta"')) {
         corte = Date.now();
         control.abort();
@@ -147,7 +149,7 @@ const pedir = async (ruta, pregunta, { cortarAlPrimerDelta = false } = {}) => {
   } catch (err) {
     if (err.name !== 'AbortError') throw err;
   }
-  return { status: res.status, texto, ms: Date.now() - inicio, corte };
+  return { status: res.status, texto, ms: Date.now() - inicio, corte, llegadas };
 };
 const pedirStream = async (pregunta, opciones) => {
   const r = await pedir('/api/chat/stream', pregunta, opciones);
@@ -157,8 +159,10 @@ const pedirStream = async (pregunta, opciones) => {
 const intentos = (ruta) => pedidos.filter((p) => p.ruta === ruta).length;
 const llegadas = (ruta) => pedidos.filter((p) => p.ruta === ruta).map((p) => p.llegada);
 
-const DOMINIO = '@fallas-openai.test.invalid';
-const SUFIJO = `fallas-openai-${Date.now()}`;
+// Corre también con STREAM_INCREMENTAL=false en paralelo (fallas-openai-anterior.test.js): datos propios.
+const MODO = process.env.STREAM_INCREMENTAL === 'false' ? '-anterior' : '';
+const DOMINIO = `@fallas-openai${MODO}.test.invalid`;
+const SUFIJO = `fallas-openai${MODO}-${Date.now()}`;
 let sector;
 let pregunta;
 let logs;
@@ -349,6 +353,45 @@ describe('fallas de OpenAI en el chat', () => {
       assert.ok(r.ms >= TIEMPOS.CHAT_INACTIVIDAD_STREAM_MS && r.ms < TIEMPOS.CHAT_PLAZO_MS, `tardó ${r.ms} ms`);
       sinCacheNiRegistro();
       logueado(/stream inactivo/);
+    });
+
+    // Con STREAM_INCREMENTAL=false (fallas-openai-anterior.test.js) se manda de a línea completa.
+    const incremental = process.env.STREAM_INCREMENTAL !== 'false';
+    const oracionesLentas = (cantidad, espera) => async (rs) => {
+      abrirStream(rs);
+      rs.write(pedazo(META()));
+      for (let i = 0; i < cantidad && !rs.destroyed; i++) {
+        rs.write(pedazo(`El turno ${i} se pide en la mesa de entradas. `));
+        await pausa(espera);
+      }
+      if (rs.destroyed) return;
+      rs.write(pedazo('', 'stop'));
+      rs.end('data: [DONE]\n\n');
+    };
+
+    it('las oraciones de una línea llegan a medida que el modelo las escribe', async () => {
+      alChat = oracionesLentas(4, 150);
+      const r = await pedirStream(pregunta);
+      assert.equal(r.tipos.at(-1), 'fin');
+      const deltas = r.tipos.map((t, i) => (t === 'delta' ? r.llegadas[i] : null)).filter((x) => x !== null);
+      if (incremental) {
+        assert.ok(deltas.length >= 3, `${deltas.length} deltas`);
+        assert.ok(deltas[0] < r.llegadas.at(-1) - 300, `el primero llegó a los ${deltas[0]} ms y el fin a los ${r.llegadas.at(-1)} ms`);
+      } else {
+        assert.equal(deltas.length, 1);
+      }
+      assert.notEqual(cache.obtener(pregunta), null);
+    });
+
+    it('un stream que sigue mandando pero no termina se corta con el plazo total', async () => {
+      alChat = oracionesLentas(100, 300);
+      const r = await pedirStream(pregunta);
+      assert.equal(r.tipos.at(-1), 'error');
+      assert.equal(r.eventos.at(-1).mensaje, MENSAJE_NO_DISPONIBLE);
+      assert.ok(r.ms >= TIEMPOS.CHAT_PLAZO_MS - 100 && r.ms < TIEMPOS.CHAT_PLAZO_MS + 1500, `tardó ${r.ms} ms`);
+      if (incremental) assert.ok(r.tipos.filter((t) => t === 'delta').length > 3, 'lo verificado salió antes del corte');
+      sinCacheNiRegistro();
+      logueado(/plazo agotado/);
     });
 
     it('si el cliente se desconecta, se cancela la llamada al modelo', async () => {

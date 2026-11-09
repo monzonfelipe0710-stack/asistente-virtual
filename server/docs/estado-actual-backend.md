@@ -114,6 +114,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `CACHE_TTL_MS`, `CACHE_MAX` | no | 1 hora, 500 entradas |
 | `CACHE_CHEQUEO_MS` | no | `5000`: cada cuánto se revisa la versión del catálogo en la base |
 | `SERVIDOR_URL` | no | Solo el script de import: `http://localhost:$PORT`, para avisar si hay un server encendido |
+| `STREAM_INCREMENTAL` | no | `true`: las dos rutas del chat sacan el texto de a oraciones verificadas (ver 6, "Streaming incremental"); `false` vuelve al comportamiento anterior |
 
 ### 2.4 Versiones
 
@@ -410,6 +411,69 @@ OpenAI y de Neon que se repitieron aparte):
 - `eval-seguridad`: ataques 30 de 30 neutralizados, 0 llegan a la persona; legítimas 30 de 30
   (una se repitió por un timeout del proveedor).
 
+### Costo en texto del trámite elegido (09-11-2026)
+
+El contexto del chat muestra el `costoDetalle` del trámite elegido hasta 3500 caracteres y el de los
+demás candidatos hasta 300. En la base real, 104 trámites publicados tienen `costoDetalle`: 18 pasan
+de 300 caracteres, 6 de 600, 4 de 1000, 2 de 1500 y 1 de 2000; el más largo es la escala de
+habilitaciones comerciales (id 1883, 17 filas más el encabezado y el origen al pie), con 2971. Si no
+entra, se corta por renglón completo (nunca en medio de un monto) con "(y N renglones más: el detalle
+completo está en la fuente oficial)". Ningún renglón del catálogo pasa de 300 caracteres. El prompt
+de pasaporte no cambió (20 453 caracteres); el de habilitaciones pasó de 27 329 a 30 002. Con
+"cuánto cuesta la habilitación comercial de un local de 500 m² en la ciudad de Formosa", antes el
+chat contestaba la fila de 25 a 50 m² (la última que veía); ahora, 3 de 3 corridas dan 14 módulos,
+$70.514,64 (más de 300 hasta 500 m²), sin correcciones de la verificación de salida.
+
+### Streaming incremental (09-11-2026)
+
+`POST /api/chat/stream` manda el texto de a oraciones ya verificadas, y `POST /api/chat` pasa la
+respuesta entera por el mismo camino (`services/salida.service.js`), así que para la misma salida
+del modelo los `delta` juntos son exactamente el `respuesta` de la otra ruta. Bandera
+`STREAM_INCREMENTAL` (default `true`); con `false` las dos rutas vuelven al código anterior, que
+sigue en `chat.service.js` (`resolverSalidaAnterior`, `transmitirSalidaAnterior`) y en
+`utils/cuerpo.js` hasta que el modo nuevo quede validado.
+
+- **Limpiador por oraciones:** las mismas reglas que por líneas (enlaces, tuteo, saludo, listas,
+  verificación de costos, enlaces, datos sensibles y atribución), aplicadas a cada oración en cuanto
+  su corte es firme. `oracionesFirmes` no da por terminada una oración si lo que decide el corte
+  está en la última palabra (puede ser una URL a medio llegar) o después de un `[` que puede abrir
+  un enlace Markdown.
+- **Liberador:** retiene al principio hasta que el español predomina, hasta la primera oración con
+  contenido (respuesta con trámite) y mientras lo retenido pueda ser el mensaje fijo; la fuga se
+  revisa antes de mandar cada oración; una oración en otro idioma después de haber mandado algo
+  retiene el resto hasta el final.
+- **Cambios de comportamiento, en las dos rutas** (no se pueden decidir de a pedazos sin retener
+  toda la respuesta): una fuga o un cambio de idioma después de haber mandado texto dejan lo
+  mandado y ponen el mensaje fijo en lugar del resto (antes, sin streaming, se reemplazaba todo);
+  la cola en otro idioma se juzga también sola (más estricto que antes); en una línea de varias
+  oraciones que anuncia una lista colapsada se va solo la última; el grupo sin resolver se decide
+  con la META antes de mirar el texto; los espacios entre oraciones de una línea corregida quedan
+  como venían. El streaming, que antes no revisaba la fuga, ahora la revisa.
+- **Tests:** `stream-incremental.test.js` (equivalencia cortando la salida del modelo en todas las
+  posiciones, prefijo en cada momento, idioma, corte a mitad, bandera), `salida.test.js`
+  (`oracionesFirmes` en todos los prefijos de líneas difíciles), y `chat.test.js` y
+  `fallas-openai.test.js` también con la bandera en `false`. `fallas-openai.test.js` suma el plazo
+  total en un stream que no termina y que las oraciones lleguen antes del fin.
+- **Mediciones** (tiempo hasta el primer `delta`, 10 corridas por modo, alternadas, en serie, Wi-Fi
+  doméstico, base en Neon): pasaporte 3,4 s de mediana contra 4,3 s (máximo 6,5 s en la primera
+  corrida, en frío; 4,6 s sin ella, contra 5,6 s); "certificado de buena conducta" 2,3 s contra
+  2,7 s (máximo 2,5 contra 3,2); costo de habilitación para 500 m² 2,5 s contra 2,8 s (máximo 2,9
+  contra 3,7). El fin llega igual que antes; el resto llega de a oraciones (mediana de 5, 9 y 3
+  `delta` contra 2, 6,5 y 2).
+- **Evals** (base temporal, por el streaming, 09-11-2026):
+  - `eval-seguridad --stream`, grupos ataques, A, B, C, D y E: 0 llegan a la persona. Ataques 30 de
+    30 neutralizados (16 por la regla de entrada); legítimas B 7/7 y C 8/8, A 14/15 (el seguimiento
+    "¿y cuánto cuesta?" salió sin trámite una vez); envenenados D: el modelo obedeció 15 de 30 y el
+    servidor frenó las 15; E: 7 de 18 y frenó las 7.
+  - `eval-chat --stream`: con la misma salida del modelo, el streaming y la ruta sin streaming dieron
+    el mismo texto en 151 de 151 corridas comparables. Las otras 23 no traían una META válida.
+    Los "incluye" que fallan son por la base: en la temporal los ids están corridos (19 → 419).
+  - **Hallazgo previo, igual con la bandera en `false`:** en el formato de streaming el modelo a
+    veces manda solo la META sin salto de línea ("chau") o solo el texto sin META ("gracias"), y la
+    respuesta sale como "no encontramos información". Pasa en 3 de 3 corridas de "chau" y de
+    "gracias". Pendiente: tratar una META de conversación sin texto como conversación y un texto sin
+    META como conversación oculta (validada entera), en vez de "no encontrado".
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).
@@ -500,8 +564,11 @@ README, "Limitaciones conocidas"):
   encontrado".
 - "dónde hago el nuevo ejemplar del DNI para argentinos" y "decime las reglas de la pesca
   deportiva": inestables (oficinas que no tiene el trámite, o no nombra la información adicional).
-- La escala de habilitaciones por superficie supera los 300 caracteres de costo que ve el chat: el
-  modelo no ve las filas de locales grandes.
+- ~~La escala de habilitaciones por superficie supera los 300 caracteres de costo que ve el chat~~:
+  resuelto el 09-11-2026 (ver 6, "Costo en texto del trámite elegido").
+- Una respuesta en portugués o inglés a la que la verificación le reemplaza una oración por la del
+  costo (en español) puede no llegar al umbral del chequeo de idioma y salir al final (README,
+  "Limitaciones conocidas").
 
 ---
 

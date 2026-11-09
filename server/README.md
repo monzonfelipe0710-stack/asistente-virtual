@@ -77,6 +77,7 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `OPENAI_ESPERA_MAXIMA_REINTENTO_MS` | no | Espera máxima antes de reintentar, aunque OpenAI pida más con `retry-after`. Default `2000` |
 | `CHAT_PLAZO_MS` | no | Plazo total de una consulta del chat. Default `18000` |
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
+| `STREAM_INCREMENTAL` | no | `true` (default): el texto del chat sale de a oraciones ya verificadas, igual en las dos rutas (ver [Streaming incremental](#streaming-incremental)). `false` (o `0`, `no`): vuelve el comportamiento anterior en las dos rutas |
 
 El modelo de embeddings no es configurable: cambiarlo invalida los vectores guardados.
 Los tiempos tienen sus valores por defecto en el código ([`src/config/ia.js`](src/config/ia.js)):
@@ -99,7 +100,10 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/despublicarTramites.js id... [--dry-run]` | Despublica los trámites de una lista explícita de ids, informa qué hizo con cada uno e incrementa la versión del catálogo. No borra nada |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
-| `node scripts/eval-chat.js` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git) |
+| `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico |
+| `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas y trámites envenenados (D y E, solo en la base temporal). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
+| `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI |
+| `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]` | Tiempo hasta el primer `delta` y hasta el fin con `STREAM_INCREMENTAL` en true y en false, alternados. Llama a OpenAI; borra por id las consultas que registra |
 | `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron |
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
 | `npm run base:temporal [-- --sintetico] [-- --recrear]` | Arma la base temporal de Docker (`chatap-temporal`, `localhost:55432`): crea el contenedor si no está, migra e importa el catálogo real (y el sintético con `--sintetico`, el municipal con `--municipal`). Ver [La base temporal](#la-base-temporal) |
@@ -684,8 +688,11 @@ atiende en español.
 fija de las instrucciones del sistema, se reemplaza por el mismo mensaje fijo y se loguea. Se
 compara solo contra el texto estático del prompt, no contra el resumen del catálogo ni los
 trámites, y no cuentan las frases que el prompt le pide decir (las que van entre comillas, quién
-es el asistente y adónde derivar). **El chequeo de salida aplica solo a `POST /api/chat`:** en
-`/api/chat/stream` el texto ya se transmitió y no se puede retractar.
+es el asistente y adónde derivar). Se revisa oración por oración en las dos rutas, antes de
+mandar cada una: si la copia aparece después de haber mandado texto, lo mandado queda (no tenía
+la copia) y en lugar del resto va el mensaje fijo (ver [Streaming incremental](#streaming-incremental)).
+Con `STREAM_INCREMENTAL=false` vuelve el chequeo anterior: solo en `POST /api/chat`, sobre el texto
+entero.
 
 **Conversación y temas ajenos.** Una conversación (saludo, pregunta sobre el asistente o el
 catálogo, tema ajeno) solo nombra trámites del resumen del catálogo: para un tema ajeno da dos
@@ -699,7 +706,7 @@ es una línea `data: <json>` seguida de una línea en blanco:
 
 | Evento | Forma | Cuándo |
 |---|---|---|
-| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Si la persona saludó, el primer `delta` es el saludo compuesto (`"¡Hola, María! "`). El cuerpo sale de a líneas completas (ya limpias de enlaces); las fuentes oficiales llegan como último `delta`. Si la respuesta sale de la caché o no se encontró nada, el texto llega entero en un solo `delta` |
+| `delta` | `{ "tipo": "delta", "texto": "..." }` | Una o más veces: fragmentos del texto, en orden. Cada uno es texto ya verificado: el cuerpo sale de a oraciones (una lista, entera), y cada `delta` trae el espacio o los saltos de línea que lo separan del anterior. Si la persona saludó, el saludo compuesto (`"¡Hola, María! "`) llega al principio del primer `delta`. Las fuentes oficiales llegan como último `delta`. Si la respuesta sale de la caché, es una conversación o no se encontró nada, el texto llega entero en un solo `delta`. Juntos, los `delta` son exactamente el `respuesta` de `POST /api/chat` para la misma salida del modelo |
 | `fin` | `{ "tipo": "fin", "tipoRespuesta": "respuesta" \| "aclaracion", "encontrado": bool, "tramitesEncontrados": [{ id, nombre }], "opciones": [{ id, nombre }], "conversacional": bool, "consultaId": number \| null, "calificarToken": string \| null }` | Una vez, al final. Mismos campos y significado que la respuesta sin streaming (`tipoRespuesta` equivale a `tipo`) |
 | `error` | `{ "tipo": "error", "mensaje": "El asistente no está disponible en este momento. Probá de nuevo en unos segundos." }` | Si algo falla a mitad del stream. En ese caso no llega `fin` y lo ya transmitido no vale como respuesta (no se cachea ni se registra). El mensaje es ese cuando falla OpenAI o se agota el plazo; ante un error propio del servidor es `"Ocurrió un error procesando la consulta."` |
 
@@ -715,6 +722,66 @@ data: {"tipo":"fin","tipoRespuesta":"respuesta","encontrado":true,"tramitesEncon
 
 Los errores de validación y el rate limit llegan antes de abrir el stream, como JSON común
 con su status. La conexión se cierra después de `fin` o `error`.
+
+**Para el front:** los `delta` traen Markdown partido (una lista o un `**negrita**` pueden quedar
+repartidos en dos). Hay que acumular el texto y renderizar lo acumulado, no cada `delta` por
+separado. Si llega `error`, lo ya mostrado era texto verificado, pero la respuesta no se completó.
+Una respuesta puede terminar con un `delta` `"\n\n"` + mensaje fijo y un `fin` con `conversacional:
+true` (ver abajo): conviene no ofrecer calificarla.
+
+#### Streaming incremental
+
+Con `STREAM_INCREMENTAL=true` (default), las dos rutas pasan el texto del modelo por el mismo camino
+([`salida.service.js`](src/services/salida.service.js)): la ruta sin streaming le da la respuesta
+entera de una vez y el streaming, a medida que llega. El resultado depende solo del texto, no de
+cómo llegó partido. Cada capa retiene lo que necesita para decidir antes de mandar:
+
+| Capa | Qué retiene |
+|---|---|
+| Enlaces | La oración entera. El corte de una oración se da por firme cuando llegó la letra que empieza la siguiente, fuera de la última palabra (que puede ser una URL a medio llegar) y antes de un `[` que todavía puede abrir un enlace Markdown |
+| Costos, datos sensibles, atribución entre trámites | La oración entera: se verifica completa, como sin streaming |
+| Listas | La lista entera y la oración que la anuncia (la que termina en `:`), hasta que empieza una línea que no es ítem. Si se perdió un ítem, va la frase fija |
+| Idioma | Al principio, hasta que el español predomina (el doble de palabras funcionales que de inglés o portugués) y hay al menos 12 palabras o ninguna de otro idioma. Después, una oración con más palabras de otro idioma que de español retiene todo lo que sigue hasta el final |
+| Contenido | En una respuesta con trámite, hasta la primera oración que responde algo (si la verificación saca todo, va el mensaje seguro sin haber mandado relleno) |
+| Mensaje fijo | Mientras lo retenido pueda ser exactamente el mensaje fijo (`FUERA_DE_ALCANCE`), que sale sin saludo |
+| Fuga de instrucciones | Nada: se revisa el texto acumulado antes de mandar cada oración |
+| Conversación, respuesta sin trámite | Todo, hasta el final (una conversación se valida entera; sin trámite no se muestra el texto del modelo) |
+
+Lo que no se puede decidir de a pedazos se decide igual en las dos rutas:
+
+- **Fuga o cambio de idioma después de haber mandado texto.** Lo mandado ya pasó todas las capas y
+  queda; en lugar del resto va `"\n\n"` + el mensaje fijo (`FUERA_DE_ALCANCE` o "Por ahora solo
+  atiendo en español…"), con `conversacional: true`, sin fuentes, sin caché ni registro. Antes, sin
+  streaming, se reemplazaba la respuesta entera. Para el idioma, la parte retenida se juzga también
+  sola: una respuesta que empieza en español y sigue en inglés se corta aunque en el total el inglés
+  no llegue al triple del español.
+- **Una línea de varias oraciones que anuncia una lista** ("Es personal. Los requisitos son:"):
+  solo la última oración es el anuncio. Si la lista se colapsa, las anteriores quedan (antes se iba
+  la línea entera).
+- **Grupo sin resolver** (trámite en varias jurisdicciones): la pregunta del servidor sale apenas
+  llega la línea META, también sin streaming (antes, sin streaming, una salida en otro idioma o con
+  fuga daba el mensaje fijo aunque el texto del modelo no se fuera a mostrar).
+- **Espacios:** una línea a la que la verificación le cambió una oración conserva los espacios
+  originales entre las oraciones que quedan (antes los normalizaba a uno).
+
+Solo se cachea y se registra una respuesta que llegó completa (`finish_reason: "stop"`). Un corte,
+el plazo total (18 s), 10 s sin pedazos del modelo o un error mandan el evento `error` con el
+mensaje del 503 y no dejan nada en caché ni en `consultas`; lo que ya se mandó era texto
+verificado. Si el cliente se desconecta, se cancela la llamada al modelo.
+
+Tiempo hasta el primer `delta` (09-11-2026, `scripts/medir-stream.js`, 10 corridas por modo
+alternadas, en serie, desde una PC por Wi-Fi doméstico, base en Neon sa-east-1, `gpt-4o-mini`):
+
+| Pregunta | Incremental: mediana / máximo | Anterior: mediana / máximo |
+|---|---|---|
+| "cómo saco el pasaporte" | 3,4 s / 6,5 s (4,6 s sin la primera corrida, en frío) | 4,3 s / 5,6 s |
+| "certificado de buena conducta" | 2,3 s / 2,5 s | 2,7 s / 3,2 s |
+| "cuánto cuesta la habilitación comercial de un local de 500 m²…" | 2,5 s / 2,9 s | 2,8 s / 3,7 s |
+
+El tiempo hasta el fin no cambia (mediana 4,0 / 4,7 / 2,9 s contra 4,4 / 4,7 / 2,8 s). La mejora
+del primer `delta` es chica porque antes de la primera oración llegan la búsqueda, la línea META del
+modelo y la retención por idioma; lo que cambia más es que el resto llega de a oraciones (mediana
+de 5, 9 y 3 `delta` contra 2, 6,5 y 2), en vez de casi todo junto al final.
 
 ### Métricas, historial y calificaciones
 
@@ -1011,6 +1078,16 @@ sin `[DONE]`, socket cortado, corte a mitad de la línea del JSON, stream inacti
 desconexión del cliente. En cada caso revisa qué recibe el cliente, que no se cachee ni se
 registre nada y que el log no tenga el texto de la consulta.
 
+`stream-incremental.test.js` compara el streaming con la ruta sin streaming para respuestas
+representativas (enlaces válidos e inválidos, listas, costos, lugares de otro trámite, datos
+sensibles, inglés, portugués, tuteo, fuga, conversación, aclaración): cortando la salida del
+modelo en cada posición, de a un carácter y en pedazos de 3, 7 y 13, el texto final, el `fin`, la
+caché y el registro son los mismos, y en cada momento lo mandado es el principio del texto final.
+También un corte a mitad (error, sin caché ni registro) y la bandera en `false`.
+`salida.test.js` prueba que una oración que se da por terminada en una línea a medio llegar no
+cambia cuando llega el resto. `chat-anterior.test.js` y `fallas-openai-anterior.test.js` corren
+`chat.test.js` y `fallas-openai.test.js` con `STREAM_INCREMENTAL=false`.
+
 `node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad (3 corridas por caso). Es
 para correr a demanda y borra por id las consultas que registra. Con `--detalle` imprime
 además el texto de cada corrida; con `--corridas N` cambia la cantidad de corridas y con
@@ -1138,13 +1215,32 @@ siguen contando como fallas.
 
 Del catálogo municipal:
 
-- **Costo largo**: el contexto del chat muestra los primeros 300 caracteres de `costoDetalle`
-  (`TOPES_CONTEXTO.costoDetalle`). Con los montos numerados y el origen al pie, entran los de casi
-  todos los trámites, pero la escala de habilitaciones por superficie tiene 17 filas: el modelo ve
-  las primeras (hasta unos 300 m²) y no las de locales más grandes.
+- **Costo largo** (resuelto el 09-11-2026): el `costoDetalle` del trámite elegido entra hasta 3500
+  caracteres (`TOPES_CONTEXTO.costoDetalle`; el más largo del catálogo, la escala de habilitaciones
+  con 17 filas, tiene 2971) y el de los demás candidatos hasta 300
+  (`costoDetalleSecundario`). Si no entra, se corta por renglón completo, nunca en medio de un monto,
+  y se avisa cuántos renglones faltan y dónde está el resto.
 - **Montos del portal sin contrastar** (cementerio, libre deuda de Tribunal de Faltas y de Tránsito,
   plan de pago): quedan como los publica el sitio, con la advertencia de que pueden estar
   desactualizados.
+
+Del streaming (también antes del modo incremental):
+
+- **META mal formada en conversaciones cortas.** Con "chau" o "gracias", el modelo a veces manda
+  solo la línea META sin salto de línea, o solo el texto sin META; el streaming lo toma como "no
+  encontramos información" (3 de 3 corridas de cada una el 09-11-2026, en los dos modos). La ruta
+  sin streaming no tiene el problema (salida con esquema JSON).
+
+Del chequeo de idioma (también antes del streaming incremental):
+
+- **Una respuesta en otro idioma con una oración corregida en español puede pasar.** El idioma se
+  cuenta sobre el texto ya verificado: si la verificación reemplaza una oración del modelo ("O
+  trâmite é gratuito…") por la del costo en español, esas palabras pueden dejar al portugués por
+  debajo del triple que hace falta para reemplazar la respuesta. Nada sale antes de terminar (no
+  llega a predominar el español), pero al final sale. Propuesta: contar el idioma sobre el texto del
+  modelo sin los reemplazos del servidor.
+- **La lista de palabras del portugués es corta** ("o", "e" o "na" no están: las dos primeras
+  también son del español): un texto corto en portugués puede no llegar al mínimo de 5.
 
 ## Pendiente
 

@@ -40,3 +40,16 @@ export const pareceEspanol = (texto) => {
   const { espanol, ingles, portugues } = contar(texto);
   return espanol >= 2 && ingles === 0 && portugues === 0;
 };
+
+// Para empezar a mandar: el español le gana por lejos al inglés y al portugués. "No es otro
+// idioma" no alcanza: unas pocas palabras en portugués todavía no llegan al mínimo.
+export const predominaEspanol = (texto) => {
+  const { espanol, ingles, portugues } = contar(texto);
+  return espanol >= 2 && 2 * Math.max(ingles, portugues) <= espanol;
+};
+
+// Un pedazo con más palabras de otro idioma que del español.
+export const tieneOtroIdioma = (texto) => {
+  const { espanol, ingles, portugues } = contar(texto);
+  return Math.max(ingles, portugues) > espanol;
+};
