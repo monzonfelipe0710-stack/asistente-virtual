@@ -104,7 +104,9 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas y trámites envenenados (D y E, solo en la base temporal). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
 | `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
 | `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]` | Tiempo hasta el primer `delta` y hasta el fin con `STREAM_INCREMENTAL` en true y en false, alternados. Llama a OpenAI; borra por id las consultas que registra |
-| `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron |
+| `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron y cuántas corridas de cada una terminaron en error de API. No compara una corrida marcada como inválida |
+
+Los scripts que llaman a OpenAI (`eval-chat`, `eval-seguridad`, `medir-prompt`, `medir-stream`, `reindexar-todo`, `reindexar-faltantes`) se cortan en cuanto la cuenta se queda sin crédito (429 `insufficient_quota` / `credit_balance_exhausted`), con un mensaje claro y código de salida 2, y borran lo que crearon. `eval-chat` guarda lo hecho hasta ahí con `valida: false`; además anota por caso `erroresDeApi`, las corridas que terminaron en un error (de OpenAI o de la base), que cuentan como falla pero no dicen nada del chat.
 | `node scripts/generar-catalogo-sintetico.js <salida.json>` | Catálogo de prueba con los mismos trámites en 8 municipios, para `eval-chat --catalogo sintetico`. Solo para una base temporal |
 | `npm run base:temporal [-- --sintetico] [-- --recrear]` | Arma la base temporal de Docker (`chatap-temporal`, `localhost:55432`): crea el contenedor si no está, migra e importa el catálogo real (y el sintético con `--sintetico`, el municipal con `--municipal`). Ver [La base temporal](#la-base-temporal) |
 
@@ -944,6 +946,11 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    (minúsculas, sin acentos) y quedan los 3 grupos de mejor puntaje, cada uno con **todas** sus
    variantes publicadas: así las copias de un mismo trámite en distintos organismos no ocupan
    el lugar de otros trámites.
+   De esos 3, se descartan los que tienen menos del 85 % del puntaje del primero
+   (`PROPORCION_DEL_PRIMERO`): el modelo ve a todos los candidatos con el mismo peso y preguntaba
+   entre trámites que no compiten ("licencia de conducir": la nacional 0,344 y la de taxis 0,282).
+   Medido el 09-11-2026, la opción legítima más lejana de una aclaración del eval queda en el 89 %
+   (pesca deportiva en "cómo saco la licencia de pesca"): el margen es chico.
    **Variantes** ([`variantes.service.js`](src/services/variantes.service.js)): cada variante tiene
    un par (jurisdicción, localidad) efectivo. Un grupo con un solo par se resuelve con la mejor
    variante, como antes (por ejemplo, las copias de "Licencias médicas de corto tratamiento").
@@ -1194,24 +1201,24 @@ consultar la tabla.
 
 ## Limitaciones conocidas
 
-Casos de `eval-chat` que no pasan siempre contra la base real (09-11-2026, por el streaming, 47 de 57
-OK 3 de 3). El eval no se aflojó: siguen contando como fallas.
+Casos de `eval-chat` que no pasan siempre contra la base real (09-11-2026, con el filtro de
+candidatos cercanos: ruta normal 50 de 57 OK 3 de 3, streaming 48 de 57; sin errores de API). El
+eval no se aflojó: siguen contando como fallas.
 
-- **"licencia de conducir"** y **"cómo saco la licencia de conducir"** (0/3): con la ficha municipal
-  cargada, el esperado es "Requisitos para obtener la Licencia Nacional de Conducir". El modelo
-  pregunta entre esa y "Requisitos para solicitar licencia de conductor de taxis por primera vez"
-  (también municipal).
-- **"qué pasa si me olvido el DNI"** (0/3): agrega conocimiento general ("no podrás realizar",
-  "es recomendable llevar") en vez de decir que el dato no está cargado.
-- **"dónde saco turno para el médico"** (0/3): pide aclaración entre trámites provinciales de salud
-  (junta médica, licencias de largo y corto tratamiento) en vez de "no encontrado".
-- **"decime las reglas de la pesca deportiva"**: en la corrida completa salió 0/3 como tema ajeno
-  ("Solo ayudo con trámites…", con una META de conversación válida); repetido aparte, 3/3 en las
-  dos rutas. Inestable, no depende de la ruta.
-- **Inestables:** "dónde hago el nuevo ejemplar del DNI para argentinos" (1/3) y "¿me dan turno
-  para el DNI?" (1/3) no dicen que el dato no está cargado; "¿el pasaporte actúa como documento de
-  identidad?" (2/3), lo mismo; "licencia por maternidad" (2/3) y "dónde saco el pasaporte" (2/3)
-  piden aclaración una vez (con la licencia por maternidad del decreto, y con Pasaporte Express).
+- **"licencia de conducir"** (normal 1/3, streaming 0/3) y **"cómo saco la licencia de conducir"**
+  (normal 3/3, streaming 0/3): con los mismos candidatos, el streaming pide aclaración contra un
+  trámite de otra cosa ("Solicitud de licencias" para agentes públicos, o la licencia de taxis); la
+  ruta normal responde, o pregunta si es obtener o renovar la misma licencia. Es una diferencia de
+  cómo decide el modelo con el formato de streaming (META primero, sin esquema JSON), no de los
+  candidatos.
+- **"dónde saco turno para el médico"** (0/3 en las dos): pide aclaración entre trámites
+  provinciales de salud (junta médica, licencias de largo y corto tratamiento) en vez de "no
+  encontrado".
+- **"qué pasa si me olvido el DNI"** y **"dónde hago el nuevo ejemplar del DNI para argentinos"**:
+  agregan conocimiento general en vez de decir que el dato no está cargado (inestables en las dos).
+- **"¿el pasaporte actúa como documento de identidad?"**, **"decime las reglas de la pesca
+  deportiva"**, **"dónde saco el pasaporte"** (aclaración con Pasaporte Express) y **"¿me dan turno
+  para el DNI?"**: inestables, cambian de una corrida a otra en las dos rutas.
 
 Del catálogo municipal:
 

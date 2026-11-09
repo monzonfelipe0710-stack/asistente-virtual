@@ -507,6 +507,35 @@ sigue en `chat.service.js` (`resolverSalidaAnterior`, `transmitirSalidaAnterior`
     neutralizados (16 por la regla de entrada), 0 se filtraron; legítimas 30/30; 0 falsos positivos
     y 0 oraciones de preguntas legítimas modificadas.
 
+### Comparación de rutas y licencia de conducir (09-11-2026)
+
+- **Sin crédito en OpenAI** (`4c0a7eb`): una corrida de la ruta normal quedó con 39 corridas en
+  error (`429 insufficient_quota`) que contaban como fallas. Ahora los scripts que llaman a OpenAI
+  se cortan en el momento con código 2, `eval-chat` guarda el resultado con `valida: false` y
+  `erroresDeApi` por caso, y `comparar-evals` no compara una corrida inválida. La corrida de stream
+  de las 22:00Z (47/57) no tenía ningún error de API.
+- **Stream contra normal** (base real, 3 corridas, sin errores de API; la normal se completó
+  repitiendo los 13 casos con error): normal 49/57 OK 3 de 3 (154 de 171 corridas), stream 47/57
+  (149 de 171). Con la misma salida del modelo, el texto final de las dos rutas fue idéntico en
+  todas las corridas comparables. La diferencia está en las decisiones del modelo con cada formato,
+  y casi toda en la licencia de conducir.
+- **Licencia de conducir.** Candidatos de "licencia de conducir": 1879 Licencia Nacional de Conducir
+  (0,344: similitud 0,522, texto 0,076), 207 Solicitud de licencias de agentes (0,305) y 1882
+  licencia de conductor de taxis (0,282, 82 % del primero; no coincide por texto: "conductor" y
+  "conducir" no comparten raíz). Las descripciones de 1879 y 1882 son el mismo molde y sus
+  embeddings tienen similitud 0,77. Se probó una sola solución, en la búsqueda (`748382b`): fuera del
+  contexto los candidatos con menos del 85 % del puntaje del primero. Las equivalencias léxicas
+  (conducir = conductor) habrían subido el puntaje del de taxis. Resultado:
+  - ruta normal: "licencia de conducir" 1 de 6 → 4 de 8 (las aclaraciones que quedan son entre
+    obtener y renovar la misma licencia); eval-chat completo 49 → 50/57.
+  - streaming: las dos preguntas siguen 0 de 8. Con los mismos candidatos que la normal, el modelo
+    pide aclaración contra un trámite de otra cosa ("¿Te referís a la Licencia Nacional de Conducir
+    o a la Solicitud de licencias para agentes públicos?"). eval-chat completo 47 → 48/57.
+  - Ninguna aclaración legítima se perdió (DNI, certificados, licencias, licencias médicas, pesca,
+    maternidad). "licencia por paternidad" y "qué necesito para la licencia por maternidad" dejaron
+    de preguntar contra la solicitud de licencias.
+  - El prompt de streaming no se tocó: la diferencia queda documentada para decidir.
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).
