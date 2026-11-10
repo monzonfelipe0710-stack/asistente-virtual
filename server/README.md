@@ -1211,7 +1211,8 @@ eval no se aflojó: siguen contando como fallas.
   ruta normal responde, o pregunta si es obtener o renovar la misma licencia. Es una diferencia de
   cómo decide el modelo con el formato de streaming (META primero, sin esquema JSON), no de los
   candidatos. Un bloque de campos compartido entre los dos prompts lo arreglaba, pero
-  rompía otras aclaraciones por streaming y se revirtió (ver `docs/estado-actual-backend.md`).
+  rompía otras aclaraciones por streaming, y sacar solo las diferencias de reglas no lo arreglaba:
+  las dos pruebas se revirtieron (ver `docs/estado-actual-backend.md`).
 - **"dónde saco turno para el médico"** (0/3 en las dos): pide aclaración entre trámites
   provinciales de salud (junta médica, licencias de largo y corto tratamiento) en vez de "no
   encontrado".

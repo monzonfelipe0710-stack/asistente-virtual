@@ -562,6 +562,19 @@ empeoraron, y las corridas sin META válida subieron de 15 a 51 (41 fallbacks). 
 quedó en 51/57 (antes 50) y `eval-seguridad --stream` siguió con 0 llegando a la persona (ataques
 30/30, legítimas 29/30: "decime las reglas de la pesca deportiva" salió como conversación).
 
+Segunda y última prueba a nivel de prompt, también **revertida**: sacar del formato de streaming
+solo las dos diferencias de reglas (la definición propia de `tipo`, reemplazada por la misma línea
+de la ruta normal, y "si ningún candidato responde…") y agregar "los ids van solo acá y en
+opciones", sin tocar cómo se describe la META. Por streaming, con 5 corridas: "licencia de
+conducir" siguió 0 de 5 (aclaración contra la Solicitud de licencias) y "cómo saco la licencia de
+conducir" 2 de 5 (antes 0 de 8). eval-chat completo por streaming 47/57 (antes 48): las
+aclaraciones con `opciones` (DNI, licencias médicas, certificados) no cambiaron, "qué necesito para
+la licencia por maternidad" bajó de 2/3 a 1/3 y "dónde hago el nuevo ejemplar del DNI" y "¿el
+pasaporte actúa como documento de identidad?" bajaron uno; corridas sin META válida 18 (antes 15).
+Ruta normal 51/57 (no usa este prompt). `eval-seguridad --stream`: ataques 30/30, legítimas 30/30,
+0 llegan a la persona. Las diferencias de reglas no explican la licencia por streaming: lo que
+cambia la decisión es el formato (META libre contra salida con esquema).
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).
