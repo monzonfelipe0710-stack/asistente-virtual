@@ -134,6 +134,14 @@ function claveHistorial(query) {
   return `legacy:${query?.at || ""}:${query?.text || ""}`;
 }
 
+function consultaIdsDeHilo(thread) {
+  return [...new Set(
+    (thread?.messages || [])
+      .map((message) => message?.consultaId)
+      .filter((id) => Number.isInteger(id))
+  )];
+}
+
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
@@ -153,6 +161,7 @@ export default function ChatWindow({ initialQuery = null }) {
     removeLocalConversation,
     clearHistory,
     clearLocalHistory,
+    reloadConsultas,
   } = useChat();
   const { user, isAuthenticated } = useAuth();
   const token = useSessionStore((state) => state.token);
@@ -206,6 +215,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [pendingDeleteKeys, setPendingDeleteKeys] = useState(() => new Set());
+  const [clearingHistory, setClearingHistory] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
   const activeThreadIdRef = useRef(activeThreadId);
   const [savedThreads, setSavedThreads] = useState(() =>
@@ -983,8 +993,9 @@ export default function ChatWindow({ initialQuery = null }) {
 
     // También protegemos el envío directo (por ejemplo, desde una búsqueda inicial):
     // un hilo nuevo no puede empezar si ya existen cuatro conversaciones.
-    const activeThreadSaved = savedThreads.some((thread) => thread.id === activeThreadId) ||
-      historyQueries.some((item) => item.threadId === activeThreadId);
+    const activeThreadSaved = savedThreads.some(
+      (thread) => thread.id === activeThreadId && !pendingDeleteKeys.has(`thread:${thread.id}`)
+    ) || displayedHistoryQueries.some((item) => item.threadId === activeThreadId);
     const currentThread = crearResumenConversacion(activeThreadId, messages);
     const conversationCount = getConversationCount();
     // Si el hilo ya está dentro del cupo, puede seguir recibiendo mensajes.
@@ -1328,9 +1339,12 @@ export default function ChatWindow({ initialQuery = null }) {
   // dos chats distintos pueden empezar con exactamente la misma consulta.
   function getConversationCount() {
     const currentThread = crearResumenConversacion(activeThreadId, messages);
-    const activeThreadSaved = savedThreads.some((thread) => thread.id === activeThreadId) ||
-      historyQueries.some((item) => item.threadId === activeThreadId);
-    return Math.max(historyQueries.length, savedThreads.length) +
+    const visibleSavedThreads = savedThreads.filter(
+      (thread) => !pendingDeleteKeys.has(`thread:${thread.id}`)
+    );
+    const activeThreadSaved = visibleSavedThreads.some((thread) => thread.id === activeThreadId) ||
+      displayedHistoryQueries.some((item) => item.threadId === activeThreadId);
+    return Math.max(displayedHistoryQueries.length, visibleSavedThreads.length) +
       (currentThread && !activeThreadSaved ? 1 : 0);
   }
 
@@ -1414,14 +1428,57 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   // Borrar una consulta puntual del historial guardado.
+  async function deleteRemoteConsultas(ids) {
+    const results = [];
+    for (let offset = 0; offset < ids.length; offset += 4) {
+      const batch = ids.slice(offset, offset + 4);
+      results.push(...await Promise.all(batch.map(async (id) => {
+        try {
+          await eliminarConsulta(id);
+          return { id, deleted: true };
+        } catch (error) {
+          if (error?.response?.status === 404) return { id, deleted: true };
+          return { id, deleted: false, error };
+        }
+      })));
+    }
+    return results;
+  }
+
   async function handleDeleteQuery(query) {
     const effectiveId = userId || "ciudadano_anonimo";
     if (query.threadId) {
-      const next = savedThreads.filter((thread) => thread.id !== query.threadId);
+      const thread = savedThreads.find((item) => item.id === query.threadId);
+      if (!thread) return;
+      const key = claveHistorial(query);
+      if (pendingDeleteKeys.has(key)) return;
+      const ids = token ? consultaIdsDeHilo(thread) : [];
+      const pendingKeys = [key, ...ids.map((id) => `consulta:${id}`)];
+      setPendingDeleteKeys((previous) => new Set([...previous, ...pendingKeys]));
+
+      const results = await deleteRemoteConsultas(ids);
+      const deletedIds = results.filter((result) => result.deleted).map((result) => result.id);
+      deletedIds.forEach(removeConsulta);
+
+      const next = savedThreads.filter((item) => item.id !== query.threadId);
       guardarConversaciones(effectiveId, next);
       setSavedThreads(next);
       if (query.threadId === activeThreadId) resetConversation();
-      setAnnounce("Conversación borrada del historial.");
+      setPendingDeleteKeys((previous) => {
+        const remaining = new Set(previous);
+        pendingKeys.forEach((pendingKey) => remaining.delete(pendingKey));
+        return remaining;
+      });
+      setHistoryVersion((version) => version + 1);
+      setAnnounce(
+        results.some((result) => !result.deleted)
+          ? "Se quitó la conversación localmente; algunas consultas no pudieron desvincularse del historial."
+          : "Conversación borrada del historial."
+      );
+      if (results.some((result) => !result.deleted)) {
+        toast?.("No se pudieron borrar todas las consultas. Las pendientes seguirán visibles para que puedas reintentarlo.", "error");
+      }
+      if (token && ids.length) await reloadConsultas();
       return;
     }
 
@@ -1463,8 +1520,25 @@ export default function ChatWindow({ initialQuery = null }) {
       if (isActiveConversation) resetConversation();
       setHistoryVersion((v) => v + 1);
       setAnnounce("Conversación borrada del historial.");
-      // La fila permanece oculta hasta que el estado de consultas se sincronice.
+      await reloadConsultas();
+      setPendingDeleteKeys((previous) => {
+        const next = new Set(previous);
+        next.delete(key);
+        return next;
+      });
     } catch (error) {
+      if (error?.response?.status === 404) {
+        removeConsulta(query.id);
+        if (isActiveConversation) resetConversation();
+        setHistoryVersion((v) => v + 1);
+        setAnnounce("Conversación borrada del historial.");
+        setPendingDeleteKeys((previous) => {
+          const next = new Set(previous);
+          next.delete(key);
+          return next;
+        });
+        return;
+      }
       setPendingDeleteKeys((previous) => {
         const next = new Set(previous);
         next.delete(key);
@@ -1474,14 +1548,53 @@ export default function ChatWindow({ initialQuery = null }) {
     }
   }
 
-  // Vaciar todo el historial guardado.
-  function handleClearHistory() {
+  // Vaciar el historial local y desvincular del usuario las consultas del backend.
+  async function handleClearHistory() {
     if (!isAuthenticated || !userId) return;
     const effectiveId = userId;
+    if (clearingHistory || isTyping || speakingRef.current) return;
+    if (token && historyError) {
+      toast?.("No se pudo cargar el historial completo. Actualizalo antes de borrarlo.", "error");
+      return;
+    }
+
+    const pendingKeys = new Set([
+      ...historyQueries.map(claveHistorial),
+      ...savedThreads.map(claveHistorial),
+      ...(token ? consultas.map((consulta) => `consulta:${consulta.id}`) : []),
+    ]);
+    const ids = token
+      ? [...new Set([
+          ...consultas.map((consulta) => consulta.id),
+          ...savedThreads.flatMap(consultaIdsDeHilo),
+        ].filter((id) => Number.isInteger(id)))]
+      : [];
+
+    setClearingHistory(true);
+    setPendingDeleteKeys((previous) => new Set([...previous, ...pendingKeys]));
     clearMemoryMessages(effectiveId);
     clearLocalHistory();
-    setHistoryVersion((v) => v + 1);
+    guardarConversaciones(effectiveId, []);
+    setSavedThreads([]);
+    resetConversation();
     setAnnounce("Historial borrado.");
+
+    const results = await deleteRemoteConsultas(ids);
+    results.filter((result) => result.deleted).forEach(({ id }) => removeConsulta(id));
+    if (token && ids.length) await reloadConsultas();
+
+    setPendingDeleteKeys((previous) => {
+      const remaining = new Set(previous);
+      pendingKeys.forEach((key) => remaining.delete(key));
+      return remaining;
+    });
+    setHistoryVersion((v) => v + 1);
+    setClearingHistory(false);
+    const failed = results.filter((result) => !result.deleted);
+    if (failed.length) {
+      setAnnounce(`Historial borrado parcialmente; quedaron ${failed.length} consulta${failed.length === 1 ? "" : "s"} sin desvincular.`);
+      toast?.(`No se pudieron borrar ${failed.length} consultas. Seguirán visibles para que puedas reintentarlo.`, "error");
+    }
   }
 
   // Volver a leer en voz alta la última respuesta del asistente.
@@ -1551,7 +1664,8 @@ export default function ChatWindow({ initialQuery = null }) {
               onSelect={handleHistorySelect}
               onNewChat={handleResetRequest}
               onDelete={handleDeleteQuery}
-              onClearAll={!token ? handleClearHistory : undefined}
+              onClearAll={isAuthenticated ? handleClearHistory : undefined}
+              clearingHistory={clearingHistory}
               loading={Boolean(token && historyLoading)}
               error={token ? historyError : ""}
             />
@@ -1936,7 +2050,8 @@ export default function ChatWindow({ initialQuery = null }) {
               queries={displayedHistoryQueries}
               onSelect={handleHistorySelect}
               onDelete={handleDeleteQuery}
-              onClearAll={!token ? handleClearHistory : undefined}
+              onClearAll={isAuthenticated ? handleClearHistory : undefined}
+              clearingHistory={clearingHistory}
               loading={Boolean(token && historyLoading)}
               error={token ? historyError : ""}
               onNewChat={handleResetRequest}

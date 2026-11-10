@@ -14,6 +14,7 @@ export default function ChatHistoryPanel({
   onNewChat,
   onDelete,
   onClearAll,
+  clearingHistory = false,
   loading = false,
   error = "",
   className = "",
@@ -79,9 +80,10 @@ export default function ChatHistoryPanel({
             <button
               type="button"
               onClick={() => onClearAll()}
-              className="rounded-md px-1.5 py-1 text-[11px] font-semibold text-muted transition-colors hover:bg-bad/10 hover:text-bad cursor-pointer"
+              disabled={clearingHistory || loading}
+              className="rounded-md px-1.5 py-1 text-[11px] font-semibold text-muted transition-colors hover:bg-bad/10 hover:text-bad disabled:cursor-wait disabled:opacity-50 cursor-pointer"
             >
-              Borrar
+              {clearingHistory ? "Borrando…" : "Borrar"}
             </button>
           )}
         </div>

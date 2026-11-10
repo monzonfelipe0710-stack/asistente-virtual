@@ -41,6 +41,7 @@ export function ChatProvider({ children }) {
   const [historyError, setHistoryError] = useState("");
   const ownerRef = useRef(null);
   const localHistoryRef = useRef([]);
+  const deletedConsultaIdsRef = useRef(new Set());
 
   // Las cuentas del backend hidratan el historial desde Consulta. La memoria
   // local queda solo como compatibilidad para las cuentas demo ya existentes.
@@ -53,6 +54,7 @@ export function ChatProvider({ children }) {
       setConsultas([]);
       setHistoryError("");
       setHistoryLoading(Boolean(ownerId && token));
+      deletedConsultaIdsRef.current.clear();
       const localHistory = ownerId && !token ? loadHistory(ownerId) : [];
       localHistoryRef.current = localHistory;
       setMessages([]);
@@ -69,9 +71,12 @@ export function ChatProvider({ children }) {
           const newestFirst = [...rows].sort(
             (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
           );
+          const visibleRows = newestFirst.filter(
+            (consulta) => !deletedConsultaIdsRef.current.has(String(consulta.id))
+          );
           setConsultas((previous) => [
             ...previous.filter((consulta) => !loadedIds.has(consulta.id)),
-            ...newestFirst,
+            ...visibleRows,
           ]);
           setMessages((previous) =>
             previous.filter(
@@ -173,9 +178,13 @@ export function ChatProvider({ children }) {
   }, []);
 
   const removeConsulta = useCallback((consultaId) => {
-    setConsultas((previous) => previous.filter((consulta) => consulta.id !== consultaId));
+    if (consultaId === null || consultaId === undefined) return;
+    deletedConsultaIdsRef.current.add(String(consultaId));
+    setConsultas((previous) =>
+      previous.filter((consulta) => String(consulta.id) !== String(consultaId))
+    );
     setMessages((previous) =>
-      previous.filter((message) => message.consultaId !== consultaId)
+      previous.filter((message) => String(message.consultaId) !== String(consultaId))
     );
   }, []);
 
@@ -222,7 +231,11 @@ export function ChatProvider({ children }) {
       const newestFirst = [...rows].sort(
         (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
       );
-      setConsultas(newestFirst);
+      setConsultas(
+        newestFirst.filter(
+          (consulta) => !deletedConsultaIdsRef.current.has(String(consulta.id))
+        )
+      );
     } catch (error) {
       setHistoryError(apiErrorMessage(error));
     } finally {
