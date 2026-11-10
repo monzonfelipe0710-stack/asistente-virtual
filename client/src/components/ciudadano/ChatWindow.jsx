@@ -142,6 +142,32 @@ function consultaIdsDeHilo(thread) {
   )];
 }
 
+function consultaRepresentadaPorHilo(consulta, thread) {
+  const consultaId = consulta?.id;
+  if (
+    consultaId !== null &&
+    consultaId !== undefined &&
+    consultaIdsDeHilo(thread).some((id) => String(id) === String(consultaId))
+  ) {
+    return true;
+  }
+
+  const textoConsulta = String(consulta?.textoConsulta || consulta?.pregunta || "")
+    .trim()
+    .toLocaleLowerCase("es");
+  const fechaConsulta = new Date(consulta?.fecha || "").getTime();
+  if (!textoConsulta || !Number.isFinite(fechaConsulta)) return false;
+
+  return (thread?.messages || []).some((message) => {
+    if (message?.type !== "user") return false;
+    const textoMensaje = String(message.text || "").trim().toLocaleLowerCase("es");
+    const fechaMensaje = new Date(message.timestamp || "").getTime();
+    return textoMensaje === textoConsulta &&
+      Number.isFinite(fechaMensaje) &&
+      Math.abs(fechaConsulta - fechaMensaje) <= 2 * 60 * 1000;
+  });
+}
+
 const MAX_PREGUNTA = 500;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
@@ -540,20 +566,12 @@ export default function ChatWindow({ initialQuery = null }) {
     // Los hilos locales ofrecen la conversación completa en este navegador.
     // En otro dispositivo, recuperamos las consultas persistidas por la API
     // para que el historial no dependa exclusivamente de localStorage.
-    const consultasIncluidasEnHilos = new Set(
-      savedThreads.flatMap((thread) =>
-        thread.messages
-          .map((message) => message.consultaId)
-          .filter((id) => id !== null && id !== undefined)
-          .map(String)
-      )
-    );
     const consultasRemotas = token
       ? consultas
           .filter((consulta) =>
             consulta?.id !== null &&
             consulta?.id !== undefined &&
-            !consultasIncluidasEnHilos.has(String(consulta.id))
+            !savedThreads.some((thread) => consultaRepresentadaPorHilo(consulta, thread))
           )
           .map((consulta) => ({
             id: consulta.id,
