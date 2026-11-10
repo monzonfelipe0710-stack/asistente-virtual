@@ -1371,8 +1371,8 @@ select {
   .animate-fade-out { animation: fade-out 0.18s ease-in both; }
   .animate-scale-in { animation: scale-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
   .animate-scale-out { animation: scale-out 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .animate-step-next { animation: step-slide-next 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
-  .animate-step-prev { animation: step-slide-prev 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-step-next { animation: step-slide-next 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-step-prev { animation: step-slide-prev 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
   .animate-avatar-pop { animation: avatar-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-theme-transition { animation: theme-transition 0.2s ease-out; }
   .animate-counter { animation: counter 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
@@ -1729,7 +1729,7 @@ select {
     border: 2px solid color-mix(in srgb, var(--color-brand) 82%, white);
     border-radius: 0.75rem;
     animation: tour-glow 1.8s ease-in-out infinite;
-    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1), left 0.42s cubic-bezier(0.22, 1, 0.36, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1), height 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: top 0.5s cubic-bezier(0.16, 1, 0.3, 1), left 0.5s cubic-bezier(0.16, 1, 0.3, 1), width 0.5s cubic-bezier(0.16, 1, 0.3, 1), height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
     pointer-events: none;
   }
   .tour-card {
@@ -1740,6 +1740,7 @@ select {
     background: color-mix(in srgb, var(--color-paper) 94%, transparent);
     box-shadow: 0 20px 60px rgba(5, 10, 25, 0.22);
     backdrop-filter: blur(18px);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .tour-avatar {
     border-radius: 1rem;

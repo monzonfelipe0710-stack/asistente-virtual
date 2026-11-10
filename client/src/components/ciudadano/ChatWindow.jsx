@@ -619,15 +619,26 @@ export default function ChatWindow({ initialQuery = null }) {
   function presentBotMessage(
     finalText,
     finalActions,
-    { error = false, consultaId = null, canRate = false, calificacion = null } = {}
+    {
+      error = false,
+      consultaId = null,
+      calificarToken = null,
+      canRate = false,
+      calificacion = null,
+      tipo = "respuesta",
+      conversacional = false,
+    } = {}
   ) {
     setIsTyping(false);
     clearInterval(typingTimerRef.current);
 
     const id = addMessage("bot", finalText, finalActions || undefined, {
       consultaId,
+      calificarToken,
       canRate,
       calificacion,
+      tipo,
+      conversacional,
       publicRating: !token,
     });
 
@@ -711,12 +722,16 @@ export default function ChatWindow({ initialQuery = null }) {
       const conversation = messages
         .filter((message) =>
           (message?.type === "user" || message?.type === "bot") &&
-          !message?.localWizardPrompt
+          !message?.localWizardPrompt &&
+          !message?.error
         )
         .map((message) => ({
           id: message.id,
           rol: message.type === "user" ? "usuario" : "asistente",
           texto: String(message.text || "").trim(),
+          tipo: message.type === "bot"
+            ? message.tipo || (message.conversacional ? "conversacion" : undefined)
+            : undefined,
         }))
         .filter((message) => message.text)
         .filter((message) => message.id !== userMessageId);
@@ -732,7 +747,11 @@ export default function ChatWindow({ initialQuery = null }) {
       }
 
       // El contrato del backend admite hasta 20 mensajes por solicitud.
-      const mensajes = conversation.slice(-20).map(({ rol, texto }) => ({ rol, texto }));
+      const mensajes = conversation.slice(-20).map(({ rol, texto, tipo }) => ({
+        rol,
+        texto,
+        ...(rol === "asistente" && tipo ? { tipo } : {}),
+      }));
       const data = await preguntar(
         userText.slice(0, MAX_PREGUNTA),
         image,
@@ -751,11 +770,18 @@ export default function ChatWindow({ initialQuery = null }) {
           finalActions = [{
             type: "chips",
             title: "¿Cuál de estos trámites necesitás?",
-            options: opciones.map((opcion) => ({
-              label: opcion.nombre,
-              // El backend busca por el nombre del trámite, no por el ID.
-              value: opcion.nombre,
-            })),
+            options: opciones.map((opcion) => {
+              const jurisdiccion = {
+                PROVINCIAL: "Provincial",
+                MUNICIPAL: "Municipal",
+              }[String(opcion.jurisdiccion || "").toUpperCase()] ||
+                opcion.jurisdiccion;
+              const detalle = [opcion.localidad, jurisdiccion].filter(Boolean).join(" · ");
+              return {
+                label: detalle ? `${opcion.nombre} — ${detalle}` : opcion.nombre,
+                value: opcion.nombre,
+              };
+            }),
           }];
         }
       } else {
@@ -791,6 +817,9 @@ export default function ChatWindow({ initialQuery = null }) {
       } else if (status === 400) {
         finalText =
           "No pude procesar la consulta. Revisá el texto e intentá de nuevo.";
+      } else if (status === 503) {
+        finalText =
+          "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
       } else {
         finalText =
           "El asistente no está disponible en este momento. Reintentá en unos instantes.";
@@ -799,7 +828,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
     // Primer mensaje de la sesión: el bot reconoce al usuario por su nombre
     // y/o le recuerda lo que venía consultando.
-    if (!error && isAuthenticated && user?.name && !greetedRef.current) {
+    if (!error && !consultationData?.conversacional && isAuthenticated && user?.name && !greetedRef.current) {
       greetedRef.current = true;
       const mem = userId ? (token ? welcomeMem : loadMemory(userId)) : null;
       const firstName = user.name.split(" ")[0];
@@ -812,13 +841,21 @@ export default function ChatWindow({ initialQuery = null }) {
     }
 
     const effectiveId = userId || "ciudadano_anonimo";
-    rememberAnswer(effectiveId, {
-      label: userText,
-      topic: detectTopic(userText),
-      kind: error ? "error" : "chat",
-    });
+    const hasConsultaId =
+      consultationData?.consultaId !== null &&
+      consultationData?.consultaId !== undefined;
+    const isConversational = consultationData?.conversacional === true;
+    if (!isConversational) {
+      rememberAnswer(effectiveId, {
+        label: userText,
+        topic: detectTopic(userText),
+        kind: error ? "error" : "chat",
+      });
+    }
 
-    if (consultationData?.consultaId && token) {
+    if (isConversational && immediateConsultaId) {
+      removeConsulta(immediateConsultaId);
+    } else if (hasConsultaId && token) {
       if (userMessageId) {
         updateMessage(userMessageId, { consultaId: consultationData.consultaId });
       }
@@ -859,7 +896,15 @@ export default function ChatWindow({ initialQuery = null }) {
     const responseMetadata = {
       error,
       consultaId: consultationData?.consultaId,
-      canRate: Boolean(consultationData?.consultaId),
+      calificarToken: consultationData?.calificarToken ?? null,
+      tipo:
+        consultationData?.tipo ||
+        (isConversational ? "conversacion" : "respuesta"),
+      conversacional: isConversational,
+      canRate:
+        !isConversational &&
+        hasConsultaId &&
+        (Boolean(token) || Boolean(consultationData?.calificarToken)),
       publicRating: !token,
       calificacion: null,
     };
@@ -874,7 +919,11 @@ export default function ChatWindow({ initialQuery = null }) {
         action: finalActions || undefined,
         timestamp: new Date().toISOString(),
         consultaId: consultationData?.consultaId,
-        canRate: Boolean(consultationData?.consultaId && token),
+        calificarToken: consultationData?.calificarToken ?? null,
+        tipo: responseMetadata.tipo,
+        conversacional: isConversational,
+        canRate: responseMetadata.canRate,
+        publicRating: !token,
         calificacion: null,
       };
       setSavedThreads((previous) => {
@@ -998,7 +1047,12 @@ export default function ChatWindow({ initialQuery = null }) {
           title: "Trámites disponibles:",
           options: opciones,
         }],
-        { consultaId: null, calificarToken: null, canRate: false }
+        {
+          consultaId: null,
+          calificarToken: null,
+          canRate: false,
+          tipo: "aclaracion",
+        }
       );
       return;
     }
@@ -1343,6 +1397,7 @@ export default function ChatWindow({ initialQuery = null }) {
             : null,
           timestamp,
           consultaId: query.id,
+          tipo: query.tipo || "respuesta",
           calificacion: query.calificacion,
           motivoCalificacion: query.motivoCalificacion ?? null,
           canRate: true,

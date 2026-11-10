@@ -154,9 +154,13 @@ export default function TramiteDetail() {
   }
 
   async function descargar(doc) {
+    if (doc.urlExterna) {
+      window.open(doc.urlExterna, "_blank", "noopener,noreferrer");
+      return;
+    }
     try {
       const { url } = await obtenerUrlDescarga(id, doc.id);
-      if (url) window.open(url, "_blank", "noopener");
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
     } catch (err) {
       addToast(apiErrorMessage(err), "error");
     }

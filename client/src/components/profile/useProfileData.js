@@ -1,0 +1,158 @@
+import { useMemo } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { loadUsers } from "../../lib/auth";
+import { loadEmployeeRequests } from "../../lib/employeeRequests";
+import { sigedRecords } from "../../data/mockSiged";
+import { loadNotifications } from "../../lib/notifications";
+import { loadSessionsFor, currentSession } from "../../lib/sessions";
+import { loadPreferences } from "../../lib/preferences";
+import { personalActivity, activityFeed } from "../../lib/activity";
+import { useChat } from "../../context/ChatContext";
+import { useSessionStore } from "../../store/session";
+
+const SIGED_LIVE = ["Ingresado", "En proceso"];
+
+// Agrupa los mensajes del chat en "conversaciones" separándolas por bloques
+// de inactividad (>= 40 min). El historial se guarda como lista plana.
+export function groupChatSessions(messages = []) {
+  const sessions = [];
+  let current = null;
+  for (const msg of messages) {
+    const t = msg.timestamp ? new Date(msg.timestamp).getTime() : 0;
+    if (!current || t - current.lastAt > 40 * 60 * 1000) {
+      current = { messages: [], startedAt: t, lastAt: t };
+      sessions.push(current);
+    }
+    current.messages.push(msg);
+    current.lastAt = Math.max(current.lastAt, t);
+  }
+  return sessions;
+}
+
+export function useProfileData() {
+  const { user, userRole, isSuperadmin } = useAuth();
+  const token = useSessionStore((state) => state.token);
+  const {
+    messages: chatMessages,
+    consultas,
+    historyError: chatHistoryError,
+    historyLoading: chatHistoryLoading,
+  } = useChat();
+
+  return useMemo(() => {
+    if (!user) return null;
+
+    const allRequests = loadEmployeeRequests();
+    const myRequests = allRequests
+      .filter((r) => r.userId === user.id)
+      .sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0));
+
+    // No asociar expedientes de demostración por coincidencia de nombre:
+    // no es una identificación segura. La lista personal se habilitará cuando
+    // la API devuelva una relación verificable (userId) para cada expediente.
+    const myTramites = [];
+
+    const allUsers = loadUsers();
+    const notifications = loadNotifications(user.id);
+    const sessions = loadSessionsFor(user.id);
+    const session = currentSession();
+    const prefs = loadPreferences(user.id);
+    // Las cuentas autenticadas reciben consultas del servidor, no el historial
+    // local de mensajes. Reconstruimos pares pregunta/respuesta para el perfil.
+    const backendMessages = [...consultas]
+      .sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0))
+      .flatMap((consulta) => {
+        const timestamp = consulta.fecha || new Date().toISOString();
+        const question = consulta.textoConsulta || consulta.pregunta || "";
+        const answer = consulta.respuesta || "";
+        return [
+          ...(question
+            ? [{
+                id: `consulta-${consulta.id}-pregunta`,
+                type: "user",
+                text: question,
+                timestamp,
+                consultaId: consulta.id,
+              }]
+            : []),
+          ...(answer
+            ? [{
+                id: `consulta-${consulta.id}-respuesta`,
+                type: "bot",
+                text: answer,
+                timestamp,
+                consultaId: consulta.id,
+                calificacion: consulta.calificacion ?? null,
+                motivoCalificacion: consulta.motivoCalificacion ?? null,
+                canRate: true,
+              }]
+            : []),
+        ];
+      });
+    const chatSessions = groupChatSessions(token ? backendMessages : chatMessages);
+
+    const requestsByStatus = (s) => allRequests.filter((r) => r.status === s).length;
+    const tramitesActivos = sigedRecords.filter((r) => SIGED_LIVE.includes(r.status)).length;
+
+    return {
+      user,
+      userRole,
+      isSuperadmin,
+      prefs,
+
+      // Solicitudes
+      myRequests,
+      requestsPendientes: requestsByStatus("Pendiente"),
+      requestsActivas: requestsByStatus("Activo"),
+      requestsSuspendidas: requestsByStatus("Suspendido"),
+      requestsRechazadas: requestsByStatus("Rechazado"),
+      requestsTotales: allRequests.length,
+
+      // Trámites
+      myTramites,
+      tramitesActivos,
+      tramitesTotales: sigedRecords.length,
+
+      // Usuarios (cuentas reales de chatap.users)
+      allUsers,
+      usersTotales: allUsers.length,
+      usersCiudadanos: allUsers.filter((u) => u.role === "Ciudadano").length,
+      usersAdministradores: allUsers.filter((u) => u.role === "Administrador").length,
+      usersSuperAdmins: allUsers.filter((u) => u.role === "Superadmin").length,
+      usersActivos: allUsers.filter((u) => u.status !== "Suspendido").length,
+      usersSuspendidos: allUsers.filter((u) => u.status === "Suspendido").length,
+      usersNuevos: allUsers.filter((u) => {
+        const c = new Date(u.createdAt || 0).getTime();
+        // La ventana de 30 días depende del reloj del dispositivo (dato volátil, no de render)
+        // eslint-disable-next-line react-hooks/purity
+        return c > Date.now() - 30 * 24 * 60 * 60 * 1000;
+      }).length,
+
+      // Notificaciones
+      notifications,
+      notificationsUnread: notifications.filter((n) => !n.read).length,
+
+      // Conversaciones
+      chatMessages,
+      chatSessions,
+      chatHistoryError,
+      chatHistoryLoading,
+
+      // Sesiones
+      sessions,
+      session,
+
+      // Actividad
+      myActivity: personalActivity(user.id, 50),
+      systemActivity: isSuperadmin ? activityFeed(60) : [],
+    };
+  }, [user, userRole, isSuperadmin, chatMessages, consultas, token, chatHistoryError, chatHistoryLoading]);
+}
+
+// Estado legible para la UI de cada solicitud de empleado.
+export const requestStatusMeta = {
+  Pendiente: { label: "Pendiente", tone: "bg-warn/10 text-warn", dots: "dot-ping bg-current" },
+  Activo: { label: "Activo", tone: "bg-ok/10 text-ok" },
+  Suspendido: { label: "Suspendido", tone: "bg-muted/15 text-muted" },
+  Rechazado: { label: "Rechazado", tone: "bg-bad/10 text-bad" },
+};
