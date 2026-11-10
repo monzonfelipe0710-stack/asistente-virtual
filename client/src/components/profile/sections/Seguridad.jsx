@@ -95,7 +95,7 @@ export default function Seguridad() {
     const keep = activeSessionId || "";
     endOtherSessions(user.id, keep);
     setSessions(loadSessionsFor(user.id));
-    toast("Se cerraron las demás sesiones de tu cuenta.", "success");
+    toast("Se eliminaron los demás registros locales de sesión.", "success");
   }
 
   async function handleDelete() {
@@ -154,7 +154,7 @@ export default function Seguridad() {
           </dl>
 
           <p className="text-[11px] uppercase tracking-widest text-muted font-semibold m-0 mb-2">
-            Sesiones activas ({currentSessions.length})
+            Registros de este navegador ({currentSessions.length})
           </p>
           <ul className="divide-y divide-line mb-4">
             {currentSessions.length === 0 && (
@@ -176,11 +176,11 @@ export default function Seguridad() {
           </ul>
 
           <button onClick={handleCloseOtherSessions} className="btn-ghost w-full text-[13px]!" disabled={currentSessions.length <= 1}>
-            Cerrar sesión en otros dispositivos
+            Borrar otros registros locales
           </button>
           <p className="text-[11px] text-faint m-0 mt-2 leading-relaxed">
-            En la versión local se registran las sesiones de este navegador. El cierre remoto de otras
-            máquinas requiere un backend de sesiones (ver README).
+            Estos registros solo describen el uso de este navegador; no representan sesiones de otros
+            dispositivos. El cierre remoto requiere una API de sesiones que todavía no está disponible.
           </p>
         </div>
       </div>
