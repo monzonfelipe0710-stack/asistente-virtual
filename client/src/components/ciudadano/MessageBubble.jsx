@@ -171,6 +171,7 @@ const MOTIVOS_NO_UTIL = [
 
 function MessageBubble({
   message,
+  isAuthenticated = false,
   speaking = false,
   typedText = "",
   reaction = "idle",
@@ -192,6 +193,12 @@ function MessageBubble({
   const motivoGroupName = `rating-motivo-${message.id}`;
   const pideDetalle = motivo === OTRO_MOTIVO;
   const tieneConsultaId = message.consultaId !== null && message.consultaId !== undefined;
+  const puedeCalificar =
+    message.canRate &&
+    tieneConsultaId &&
+    !message.conversacional &&
+    message.tipo !== "aclaracion" &&
+    (isAuthenticated || Boolean(message.calificarToken));
   // Los mensajes históricos o de ejemplo pueden llegar sin timestamp o con
   // un valor que Date no reconoce. Nunca convertir una fecha inválida a ISO.
   const parsedTimestamp = message.timestamp == null || message.timestamp === ""
@@ -220,7 +227,7 @@ function MessageBubble({
     try {
       const result = await calificarConsulta(message.consultaId, value, {
         motivo: motivoElegido,
-        token: message.publicRating ? message.calificarToken : undefined,
+        token: message.publicRating !== false ? message.calificarToken : undefined,
       });
       setRatingSubmitted(true);
       setPendingDislike(false);
@@ -304,7 +311,7 @@ function MessageBubble({
             }
             return null;
           })}
-          {!typing && isBot && message.canRate && tieneConsultaId && (
+          {!typing && isBot && puedeCalificar && (
             <div className="mt-3 border-t border-line/70 pt-2.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted">¿Te sirvió esta respuesta?</span>

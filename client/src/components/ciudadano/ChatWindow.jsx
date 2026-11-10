@@ -640,6 +640,7 @@ export default function ChatWindow({ initialQuery = null }) {
       tipo,
       conversacional,
       publicRating: !token,
+      error,
     });
 
     // La invitación se habilita después de que termine el tipeo de la respuesta.
@@ -903,6 +904,7 @@ export default function ChatWindow({ initialQuery = null }) {
       conversacional: isConversational,
       canRate:
         !isConversational &&
+        consultationData?.tipo !== "aclaracion" &&
         hasConsultaId &&
         (Boolean(token) || Boolean(consultationData?.calificarToken)),
       publicRating: !token,
@@ -1735,6 +1737,7 @@ export default function ChatWindow({ initialQuery = null }) {
                 )}
                 <MessageBubble
                   message={msg}
+                  isAuthenticated={Boolean(token)}
                   speaking={msg.id === speakingId}
                   typedText={msg.id === speakingId ? typedText : ""}
                   reaction={reaction}

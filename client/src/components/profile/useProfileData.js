@@ -84,7 +84,7 @@ export function useProfileData() {
                 consultaId: consulta.id,
                 calificacion: consulta.calificacion ?? null,
                 motivoCalificacion: consulta.motivoCalificacion ?? null,
-                canRate: true,
+                canRate: Boolean(token && consulta.id !== null && consulta.id !== undefined),
               }]
             : []),
         ];
