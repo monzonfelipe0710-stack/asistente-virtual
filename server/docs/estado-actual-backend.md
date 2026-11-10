@@ -536,6 +536,32 @@ sigue en `chat.service.js` (`resolverSalidaAnterior`, `transmitirSalidaAnterior`
     de preguntar contra la solicitud de licencias.
   - El prompt de streaming no se tocó: la diferencia queda documentada para decidir.
 
+### Prompt de streaming contra el de la ruta normal (09-11-2026)
+
+Las reglas (`ROL_Y_REGLAS`) son el mismo bloque en las dos rutas. Las diferencias están en
+"Formato de salida":
+
+- **De formato, necesarias:** la META en la primera línea, en una sola línea y sin `respuesta`; el
+  texto desde la segunda línea; "los candidatos que vas a nombrar" (el texto viene después); la
+  ruta normal usa salida estructurada con esquema JSON estricto (`tipo` como enum) y el streaming,
+  texto libre.
+- **De reglas, que no deberían estar en el formato:** el streaming define `tipo` con una
+  paráfrasis propia ("aclaracion" si pedís que elija entre varios trámites; "conversacion" si el
+  mensaje no pide un trámite; "respuesta" en cualquier otro caso), más amplia que la regla de
+  aclaración (que pide trámites DISTINTOS que correspondan); agrega "si ningún candidato responde,
+  tramiteId null y no escribas nada más"; le falta "los ids van solo acá y en opciones".
+  Detalles: "el número de 'Trámite (id N)'" en `tramiteId`, solo en el streaming.
+
+Variante probada y **revertida**: un solo bloque con el significado de los campos para las dos
+rutas, y cada prompt con solo el formato. Licencias por streaming: "licencia de conducir" 0 de 8 →
+2 de 5 y "cómo saco la licencia de conducir" 0 de 8 → 5 de 5. Pero eval-chat por streaming bajó
+de 48 a 43/57: "cómo saco el DNI", "quiero saber cómo saco el DNI", "licencia por enfermedad" y
+"cómo hago para una licencia médica" pasaron a aclarar con `opciones` vacías (1 de 3), "dónde hago
+el nuevo ejemplar del DNI" y "mostrame los requisitos del certificado de buena conducta"
+empeoraron, y las corridas sin META válida subieron de 15 a 51 (41 fallbacks). La ruta normal
+quedó en 51/57 (antes 50) y `eval-seguridad --stream` siguió con 0 llegando a la persona (ataques
+30/30, legítimas 29/30: "decime las reglas de la pesca deportiva" salió como conversación).
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).
