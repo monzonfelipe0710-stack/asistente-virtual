@@ -425,9 +425,21 @@ export const buscarFugaDeInstrucciones = (texto) => {
   return detectorDeFuga(texto);
 };
 
+// Tope: contamos las aclaraciones previas. Un mensaje del asistente cuenta salvo que el cliente diga
+// que fue una respuesta o una conversación; sin `tipo`, cuenta como antes. El historial lo arma el
+// cliente igual (puede no mandarlo), así que la pista no abre nada que no pudiera hacer ya.
+const TOPE_DE_ACLARACIONES = 2;
+const NO_SON_ACLARACION = new Set(["respuesta", "conversacion"]);
+const alcanzoElTope = (mensajes) =>
+  mensajes.filter((m) => m.rol === "asistente" && !NO_SON_ACLARACION.has(m.tipo)).length >= TOPE_DE_ACLARACIONES;
+
+// Después de una aclaración, "ok" o "listo" contestan la pregunta: no son cortesía.
+const cortesiaPara = (mensajes) =>
+  mensajes.findLast((m) => m.rol === "asistente")?.tipo === "aclaracion" ? null : respuestaDeCortesia(mensajes.at(-1).texto);
+
 const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, verificar, signal, limpiar = limpiarCuerpo }) => {
   // Sin texto ("chau" con solo la META), una frase amable según el mensaje.
-  if (!cuerpo.trim()) return respuestaDeCortesia(mensajes.at(-1).texto)?.texto ?? MENSAJE_CONVERSACION_VACIA;
+  if (!cuerpo.trim()) return cortesiaPara(mensajes)?.texto ?? MENSAJE_CONVERSACION_VACIA;
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
 
@@ -673,9 +685,7 @@ const resolverConsulta = async (mensajes, usuario, opciones, traza) => {
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
-  // Tope: contamos las aclaraciones previas (turnos del asistente).
-  const topeAlcanzado =
-    mensajes.filter((m) => m.rol === "asistente").length >= 2;
+  const topeAlcanzado = alcanzoElTope(mensajes);
 
   traza.etapa("modelo");
   const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal);
@@ -1008,8 +1018,7 @@ async function* transmitirConsulta(mensajes, usuario, opciones, traza) {
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
-  const topeAlcanzado =
-    mensajes.filter((m) => m.rol === "asistente").length >= 2;
+  const topeAlcanzado = alcanzoElTope(mensajes);
 
   traza.etapa("modelo");
   const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal);
@@ -1071,7 +1080,7 @@ const conMetaRevisada = async (deltas, ctx) => {
   }
   await iterador.return?.();
   console.warn(`Chat: el streaming no trajo una línea META válida (${meta ? "META sin texto" : "sin META"})`);
-  const cortesia = respuestaDeCortesia(ctx.preguntaActual);
+  const cortesia = cortesiaPara(ctx.mensajes);
   if (cortesia) return { cortesia };
   ctx.traza.etapa("reintento");
   const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, ctx.topeAlcanzado, ctx.candidatos.lista, ctx.candidatos), ctx.signal);

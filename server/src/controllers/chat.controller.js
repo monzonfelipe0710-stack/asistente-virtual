@@ -2,12 +2,18 @@ import * as chatService from '../services/chat.service.js';
 import { ClienteDesconectadoError } from '../utils/plazo.js';
 import { z } from 'zod';
 
-const mensajeSchema = z.object({
-  rol: z.enum(['usuario', 'asistente']),
-  texto: z.string().min(1, 'El texto es obligatorio').max(2000),
-});
+// `tipo` es el que devolvió cada respuesta del asistente ("tipo" de POST /api/chat, "tipoRespuesta"
+// del evento `fin`): una pista del cliente, no un dato confiable. Uno desconocido, o en un mensaje
+// del usuario, se descarta sin error; sin él todo funciona como antes.
+const mensajeSchema = z
+  .object({
+    rol: z.enum(['usuario', 'asistente']),
+    texto: z.string().min(1, 'El texto es obligatorio').max(2000),
+    tipo: z.enum(['respuesta', 'aclaracion', 'conversacion']).optional().catch(undefined),
+  })
+  .transform(({ tipo, ...mensaje }) => (mensaje.rol === 'asistente' && tipo ? { ...mensaje, tipo } : mensaje));
 
-const consultaMultivueltaSchema = z.object({
+export const consultaMultivueltaSchema = z.object({
   pregunta: z.string().min(1).max(500).optional(),
   mensajes: z.array(mensajeSchema).min(1).max(20).optional(),
 }).refine((d) => d.pregunta || d.mensajes, { message: 'Falta la pregunta o los mensajes.' });

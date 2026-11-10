@@ -300,7 +300,7 @@ En Zod 4, `z.object` **descarta en silencio** las claves que no declara. Ningún
 | `crearTramiteSchema` / `actualizarTramiteSchema` | `tramite.validator.js` | `nombre`, `descripcion`, `costo?` ≥ 0, `sectorId`, `requisitos[]`, `mesaIds[]`. Crear pone `[]` por defecto; actualizar es `.partial()` sin defaults |
 | `crearMesaSchema` / `actualizarMesaSchema` | `mesa.validator.js` | `nombre`, `direccion?`, `localidad?`, `horario?`, `esGeneral?`, `sectorId?` nullable |
 | `subirDocumentoSchema` / `actualizarDocumentoSchema` | `documento.validator.js` | `nombre?`: trim, 1 a 200; `urlExterna?`: trim, hasta 2000, URL http o https con host. Que venga archivo o URL (y el nombre de un enlace) lo exige el controller |
-| chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-2000 }`; uno de los dos obligatorio |
+| chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-2000, tipo? }`; uno de los dos obligatorio. `tipo` (`respuesta\|aclaracion\|conversacion`) solo en los del asistente; uno desconocido se descarta sin 400 |
 
 ### 5.2 Incompatibilidades con el frontend de `origin/dev-felipe`
 
@@ -347,7 +347,8 @@ POST /api/chat  (o /stream)
        ├─ contexto: requisitos, mesas y nombres de formularios de cada candidato
        ├─ modelo: JSON con { tipo, respuesta, encontrado, tramitesUsados, opciones }
        │    (en streaming, la primera línea es ese JSON y después el texto)
-       │    después de 2 aclaraciones se le exige responder
+       │    después de 2 aclaraciones se le exige responder (cuentan los mensajes del
+       │    asistente con tipo "aclaracion" o sin tipo)
        ├─ se descartan los ids que no estén en el contexto;
        │    encontrado = el modelo dice true y quedó algún id válido
        └─ registra la consulta en `consultas` (las aclaraciones no se registran ni se cachean)
@@ -487,6 +488,23 @@ sigue en `chat.service.js` (`resolverSalidaAnterior`, `transmitirSalidaAnterior`
   veces. "cómo renuevo el pasaporte" → "¿y cuánto cuesta?" por streaming: 5 de 5 con el Pasaporte y
   su costo. Con "ok" la META llega bien y a veces el modelo contesta "Solo ayudás con trámites"
   (persona equivocada): es texto del modelo, no del fallback.
+- **Cortesía tras una aclaración y `tipo` en el historial**: cada mensaje del asistente en
+  `mensajes` puede traer `tipo` (`respuesta`, `aclaracion` o `conversacion`), el mismo valor que
+  devuelve `POST /api/chat` en `tipo` y el evento `fin` en `tipoRespuesta`. El front tiene que
+  guardarlo y reenviarlo. Es una pista del cliente: uno desconocido se descarta sin 400 y sin él
+  todo sigue como antes. Si el último mensaje del asistente es una aclaración, "ok" o "listo" no
+  reciben la frase de cortesía (el streaming sin META va al reintento). El tope cuenta solo los
+  mensajes del asistente con `tipo: "aclaracion"` o sin `tipo`. Como el historial lo arma el cliente
+  (ya podía no mandarlo), la pista no abre un camino que no existiera; el máximo de 20 mensajes
+  sigue. Ejemplo:
+
+  ```json
+  { "mensajes": [
+    { "rol": "usuario", "texto": "licencia de conducir" },
+    { "rol": "asistente", "texto": "¿Cuál necesitás: ...?", "tipo": "aclaracion" },
+    { "rol": "usuario", "texto": "ok" }
+  ] }
+  ```
 - **Idioma** (`c8ab390`): en el modo incremental se cuenta sobre lo que escribió el modelo, sin los
   reemplazos del servidor; una respuesta en portugués con la oración del costo reemplazada ya se
   neutraliza. Con la bandera en `false` sigue como antes.

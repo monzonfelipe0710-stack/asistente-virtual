@@ -603,8 +603,10 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 ```json
 {
   "mensajes": [
+    { "rol": "usuario", "texto": "cómo renuevo el pasaporte" },
+    { "rol": "asistente", "texto": "Se hace en persona ...", "tipo": "respuesta" },
     { "rol": "usuario", "texto": "necesito un certificado" },
-    { "rol": "asistente", "texto": "¿Cuál necesitás: ...?" },
+    { "rol": "asistente", "texto": "¿Cuál necesitás: ...?", "tipo": "aclaracion" },
     { "rol": "usuario", "texto": "el de buena conducta" }
   ]
 }
@@ -613,6 +615,17 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 `pregunta` hasta 500 caracteres; `mensajes` de 1 a 20, cada `texto` de 1 a 2000 y `rol`
 `usuario` o `asistente`. Si vienen los dos, se usa `mensajes`. Errores 400:
 `Falta la pregunta o los mensajes.` y `El último mensaje debe ser del usuario.`
+
+**`tipo` en los mensajes del asistente (opcional).** El front tiene que guardar el tipo que
+devolvió cada respuesta (`tipo` de `POST /api/chat`, `tipoRespuesta` del evento `fin` del
+streaming: `respuesta`, `aclaracion` o `conversacion`) y reenviarlo en ese mensaje de `mensajes`.
+Es una pista del cliente, no un dato confiable: un valor desconocido, o un `tipo` en un mensaje del
+usuario, se descarta sin error, y sin `tipo` todo funciona como antes. Se usa para dos cosas:
+
+- **Cortesía:** si el último mensaje del asistente tiene `tipo: "aclaracion"`, un mensaje corto
+  como "ok" o "listo" se toma como respuesta a la aclaración y no recibe la frase de cortesía.
+- **Tope de aclaraciones:** solo cuentan los mensajes del asistente con `tipo: "aclaracion"` o sin
+  `tipo` (los que no lo traen cuentan como antes).
 
 **Respuesta de `POST /api/chat`:**
 
@@ -653,7 +666,8 @@ guardan el texto sin el saludo compuesto, así no queda guardado el nombre de na
 
 Para seguir después de una aclaración, se reenvía la conversación completa en `mensajes`,
 con la elección del usuario como último mensaje. **Tope de aclaraciones:** si `mensajes`
-ya trae 2 o más mensajes con `rol: "asistente"`, el asistente responde sí o sí (`tipo:
+ya trae 2 o más mensajes con `rol: "asistente"` que cuenten como aclaración (los de `tipo:
+"aclaracion"` o sin `tipo`; ver arriba), el asistente responde sí o sí (`tipo:
 "respuesta"`), describiendo los candidatos posibles si sigue sin poder elegir.
 
 El texto (`respuesta` y los `delta` del streaming) puede traer **Markdown reducido**: listas con
@@ -1239,7 +1253,8 @@ Del streaming (resuelto el 09-11-2026):
   solo la línea META sin salto de línea, o solo el texto sin META, y antes salía "no encontramos
   información". Ahora nunca se responde un trámite sin una META válida: un mensaje que es solo
   cortesía (saludos, gracias, despedidas, "ok", "listo"; no "sí" ni "dale", que pueden responder a
-  una pregunta) recibe una frase amable fija, sin trámite ni registro; una META de conversación o
+  una pregunta) recibe una frase amable fija, sin trámite ni registro, salvo que el último mensaje
+  del asistente traiga `tipo: "aclaracion"` (ahí sigue el flujo normal); una META de conversación o
   de "sin trámite" sin texto vale como tal; cualquier otro caso se pide de nuevo por la ruta con
   esquema JSON y, si eso falla, es un error (503), nunca "no encontrado". Una conversación sin texto
   en la ruta sin streaming también recibe la frase amable. Aplica con `STREAM_INCREMENTAL` en
