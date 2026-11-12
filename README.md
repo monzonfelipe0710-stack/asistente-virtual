@@ -71,7 +71,7 @@ src/
 
 ## Diseño
 
-Neutros sin tinte y un solo azul. Geist en tres pesos (400, 500, 600) y Geist Mono para números y fechas. Base de 4 pt, margen lateral de 20. Los valores están en `src/constants/theme.ts`; los componentes no escriben colores a mano.
+Neutros sin tinte y un solo azul. Figtree en cuatro pesos (400, 500, 600 y 700) e IBM Plex Mono para números y fechas. Con la opción de letra más legible se usa Atkinson Hyperlegible Next. Base de 4 pt, margen lateral de 20. Los valores están en `src/constants/theme.ts`; los componentes no escriben colores a mano.
 
 ## Verificación
 

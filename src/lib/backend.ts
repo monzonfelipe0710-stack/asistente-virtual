@@ -116,6 +116,7 @@ async function pedir<T>(
 export interface MensajeChat {
   rol: "usuario" | "asistente";
   texto: string;
+  tipo?: "respuesta" | "aclaracion";
 }
 
 export interface RespuestaChat {
@@ -271,7 +272,7 @@ export interface RequisitoDatos {
 export interface TramiteDatos {
   nombre: string;
   descripcion: string;
-  costo?: number;
+  costo?: number | null;
   sectorId: number;
   requisitos: RequisitoDatos[];
   mesaIds?: number[];

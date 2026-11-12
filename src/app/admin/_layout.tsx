@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { DialogoCerrarSesion } from "@/components/menu/DialogoCerrarSesion";
-import { Encabezado } from "@/components/menu/Encabezado";
+import { EncabezadoFlotante } from "@/components/menu/Encabezado";
 import {
   cerrarMenu,
   MenuLateral,
@@ -155,12 +155,15 @@ export default function LayoutAdmin() {
                 ],
               },
             ]}
-            lineaSobrePie
           >
             <PieAdmin drawer={drawer} />
           </MenuLateral>
         )}
-        screenOptions={{ ...opcionesDelMenu(C, width), header: () => <Encabezado /> }}
+        screenOptions={{
+          ...opcionesDelMenu(C, width),
+          headerTransparent: true,
+          header: () => <EncabezadoFlotante />,
+        }}
       >
         {PANTALLAS.map((p) => (
           <Drawer.Protected key={p.pantalla} guard={can(p.permiso)}>

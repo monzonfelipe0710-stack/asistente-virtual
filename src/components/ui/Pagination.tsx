@@ -11,7 +11,7 @@ import { Icon } from "./Icon";
 
 /**
  * Paginador compacto: anterior y siguiente como botones de 44 y las páginas en
- * Geist Mono; la actual en el tinte del ítem activo. Primera, última y las
+ * IBM Plex Mono; la actual en el tinte del ítem activo. Primera, última y las
  * vecinas de la actual; el resto se colapsa en puntos suspensivos.
  */
 export function Pagination({

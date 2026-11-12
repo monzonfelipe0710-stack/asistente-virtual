@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from "react-native";
 
 import { TarjetaDeDocumento } from "@/components/descargas/TarjetaDeDocumento";
-import { Encabezado } from "@/components/menu/Encabezado";
+import { PantallaConEncabezadoFlotante } from "@/components/menu/Encabezado";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Screen } from "@/components/ui/Screen";
@@ -158,8 +158,7 @@ export default function Descargas() {
   const sinTramites = !cargando && !error && tramites.length === 0;
 
   return (
-    <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
-      <Encabezado titulo="Descargas" />
+    <PantallaConEncabezadoFlotante titulo="Descargas">
 
       <Screen>
         <Text style={[Type.lead, { color: C.ink2, marginBottom: Spacing[2] }]}>
@@ -180,14 +179,11 @@ export default function Descargas() {
           <EmptyState title="Sin trámites" detalle="Todavía no hay trámites publicados." />
         )}
       </Screen>
-    </View>
+    </PantallaConEncabezadoFlotante>
   );
 }
 
 const styles = StyleSheet.create({
-  pantalla: {
-    flex: 1,
-  },
   lista: {
     gap: Spacing[2],
     marginTop: Spacing[4],

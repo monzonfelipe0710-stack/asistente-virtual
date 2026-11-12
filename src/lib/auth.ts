@@ -2,8 +2,6 @@ import type { EstadoApi, UsuarioApi } from "@/lib/backend";
 
 export type AuthRole = "Administración" | "Empleado" | "Ciudadano";
 
-export const authRoles: AuthRole[] = ["Administración", "Empleado", "Ciudadano"];
-
 export const rolesDePersonal: AuthRole[] = ["Administración", "Empleado"];
 
 export type AuthStatus = "Activo" | "Pendiente" | "Rechazado" | "Suspendido";

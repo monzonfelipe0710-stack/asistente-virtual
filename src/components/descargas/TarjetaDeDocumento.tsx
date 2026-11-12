@@ -15,7 +15,7 @@ function obtenerTipoDeArchivo(tipoMime: string | null) {
 
 /**
  * Fila de descarga: tarjeta gris de radio 16, ícono de documento en una caja de
- * 40 del color del fondo, nombre, y tipo de archivo en Geist Mono.
+ * 40 del color del fondo, nombre, y tipo de archivo en IBM Plex Mono.
  */
 export function TarjetaDeDocumento({
   documento,

@@ -1,6 +1,6 @@
 import { Linking, Pressable, StyleSheet, View } from "react-native";
 
-import { Encabezado } from "@/components/menu/Encabezado";
+import { PantallaConEncabezadoFlotante } from "@/components/menu/Encabezado";
 import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { Icon } from "@/components/ui/Icon";
 import { Screen } from "@/components/ui/Screen";
@@ -23,8 +23,7 @@ export default function Accesos() {
   }
 
   return (
-    <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
-      <Encabezado titulo="Accesos" />
+    <PantallaConEncabezadoFlotante titulo="Accesos">
 
       <Screen>
         <Text style={[Type.lead, { color: C.ink2, marginBottom: Spacing[4] }]}>
@@ -68,14 +67,11 @@ export default function Accesos() {
           <AvisoDeEjemplo texto="El teléfono y el horario son de ejemplo hasta que la Subsecretaría los confirme." />
         </View>
       </Screen>
-    </View>
+    </PantallaConEncabezadoFlotante>
   );
 }
 
 const styles = StyleSheet.create({
-  pantalla: {
-    flex: 1,
-  },
   fila: {
     flexDirection: "row",
     alignItems: "center",

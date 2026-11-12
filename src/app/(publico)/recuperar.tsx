@@ -3,7 +3,6 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
 import { BotonVolver } from "@/components/ui/BotonVolver";
 import { Btn } from "@/components/ui/Btn";
 import { ScrollConTeclado } from "@/components/ui/Screen";
@@ -63,9 +62,6 @@ export default function RecoverPasswordScreen() {
         <Text style={[Type.lead, { color: C.ink2, marginTop: 6 }]}>
           Ingresá tu correo y te enviamos un enlace.
         </Text>
-        <View style={{ marginTop: Spacing[4] }}>
-          <AvisoDeEjemplo texto="Esta función todavía no está conectada al servidor." />
-        </View>
 
         {enviado ? (
           <View style={[styles.sent, { backgroundColor: C.surface }]}>

@@ -38,7 +38,6 @@ export function MenuLateral({
   descripcion,
   secciones,
   acciones = [],
-  lineaSobrePie = false,
   contenidoDesplazable,
   children,
 }: {
@@ -48,8 +47,6 @@ export function MenuLateral({
   secciones: SeccionDeMenu[];
   /** Acciones sueltas bajo la marca: no llevan a una pantalla, ejecutan algo. */
   acciones?: { titulo: string; icono: IconName; onPress: () => void }[];
-  /** Dibuja una línea fina entre los ítems y el pie. */
-  lineaSobrePie?: boolean;
   /** Si viene, es lo único que se desplaza: las acciones y las secciones quedan fijas arriba, y una línea lo separa. */
   contenidoDesplazable?: React.ReactNode;
   /** Pie del menú: preferencias y cuenta. */

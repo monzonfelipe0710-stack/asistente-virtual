@@ -4,6 +4,7 @@ import {
   Easing,
   FlatList,
   Keyboard,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -98,8 +99,9 @@ function ChatWindowBase() {
     indiceFijado < 0 ? 0 : Math.max(0, altoDeLaLista - arriba - restante - paddingInferior);
 
   // Con el teclado arriba, el borde inferior lo pone el teclado y no la barra del sistema.
+  const tecladoQueTapa = Platform.OS === "ios" ? alturaDelTeclado : 0;
   const espacioInferior =
-    alturaDelTeclado > 0 ? alturaDelTeclado + Spacing[3] : Math.max(insets.bottom, Spacing[3]);
+    alturaDelTeclado > 0 ? tecladoQueTapa + Spacing[3] : Math.max(insets.bottom, Spacing[3]);
 
   // La barra sube y baja con la misma curva que el teclado en vez de saltar.
   const [espacioAnimado] = useState(() => new Animated.Value(espacioInferior));

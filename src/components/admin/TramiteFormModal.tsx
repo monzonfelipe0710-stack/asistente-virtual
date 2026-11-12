@@ -143,9 +143,9 @@ function validarDatosPrincipales(form: FormState, tieneSector: boolean, nuevos: 
   const descripcion = form.descripcion.trim();
 
   if (nombre.length < 3) nuevos.nombre = "Mínimo 3 caracteres";
-  else if (nombre.length > 200) nuevos.nombre = "Máximo 200 caracteres";
+  else if (nombre.length > 300) nuevos.nombre = "Máximo 300 caracteres";
   if (descripcion.length < 5) nuevos.descripcion = "Mínimo 5 caracteres";
-  else if (descripcion.length > 2000) nuevos.descripcion = "Máximo 2000 caracteres";
+  else if (descripcion.length > 10000) nuevos.descripcion = "Máximo 10000 caracteres";
   if (!numeroValido(form.costo)) nuevos.costo = "Ingresá un número mayor o igual a 0";
   if (!tieneSector) nuevos.sector = "Elegí un sector";
 }
@@ -154,8 +154,8 @@ function validarRequisitos(requisitos: RequisitoForm[], nuevos: Record<string, s
   requisitos.forEach((r, i) => {
     const d = r.descripcion.trim();
     if (!d) nuevos[`descripcion${i}`] = "Describí el requisito";
-    else if (d.length > 300) nuevos[`descripcion${i}`] = "Máximo 300 caracteres";
-    if (r.dondeSeConsigue.trim().length > 300) nuevos[`donde${i}`] = "Máximo 300 caracteres";
+    else if (d.length > 1000) nuevos[`descripcion${i}`] = "Máximo 1000 caracteres";
+    if (r.dondeSeConsigue.trim().length > 500) nuevos[`donde${i}`] = "Máximo 500 caracteres";
     if (!numeroValido(r.costo)) nuevos[`costo${i}`] = "Ingresá un número mayor o igual a 0";
   });
 }
@@ -175,6 +175,7 @@ function armarDatos(form: FormState, sectorId: number, mesaIds: number[]) {
     descripcion: form.descripcion.trim(),
   };
   if (form.costo.trim() !== "") datos.costo = Number(form.costo);
+  else datos.costo = null;
   datos.sectorId = sectorId;
   datos.requisitos = armarRequisitosDatos(form.requisitos);
   datos.mesaIds = mesaIds;

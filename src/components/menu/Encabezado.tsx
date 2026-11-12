@@ -1,8 +1,9 @@
-import { DrawerActions } from "expo-router/react-navigation";
+import { DrawerActions, HeaderHeightContext } from "expo-router/react-navigation";
 import { useNavigation } from "expo-router";
 import { Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Desvanecido } from "@/components/ui/Desvanecido";
 import { Icon } from "@/components/ui/Icon";
 import { Text } from "@/components/ui/Text";
 import { Shadows, Size, Spacing, Weight, useColors } from "@/constants/theme";
@@ -57,7 +58,49 @@ export function Encabezado({
   );
 }
 
+export function EncabezadoFlotante({ titulo }: { titulo?: string }) {
+  const insets = useSafeAreaInsets();
+  const altoDelDesvanecido = insets.top + Size.header + Spacing[4];
+
+  return (
+    <>
+      <Desvanecido alto={altoDelDesvanecido} solido={insets.top / altoDelDesvanecido} />
+      <Encabezado titulo={titulo} />
+    </>
+  );
+}
+
+export function PantallaConEncabezadoFlotante({
+  titulo,
+  children,
+}: {
+  titulo?: string;
+  children: React.ReactNode;
+}) {
+  const C = useColors();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
+      <HeaderHeightContext.Provider value={insets.top + Size.header}>{children}</HeaderHeightContext.Provider>
+      <View style={styles.flotante}>
+        <EncabezadoFlotante titulo={titulo} />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  pantalla: {
+    flex: 1,
+  },
+  flotante: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: "box-none",
+  },
   barra: {
     // En el chat flota sobre la lista: los toques fuera de los botones llegan a la lista.
     pointerEvents: "box-none",

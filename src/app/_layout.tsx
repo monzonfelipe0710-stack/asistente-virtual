@@ -24,7 +24,7 @@ import { useColors, useColorScheme } from "@/constants/theme";
 import { AuthProvider } from "@/context/AuthContext";
 import { cargarAjustes } from "@/lib/accesibilidad";
 
-// La splash queda hasta que Geist esté cargada: sin esto el primer cuadro sale
+// La splash queda hasta que las fuentes estén cargadas: sin esto el primer cuadro sale
 // con la fuente del sistema y salta al cambiar.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

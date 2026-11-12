@@ -15,7 +15,11 @@ function convertirMensajes(mensajes: ChatMessage[]): MensajeChat[] {
     if (mensaje.type === "user") {
       rol = "usuario";
     }
-    historial.push({ rol, texto: mensaje.text.slice(0, MAX_TEXTO) });
+    const item: MensajeChat = { rol, texto: mensaje.text.slice(0, MAX_TEXTO) };
+    if (rol === "asistente" && mensaje.tipo) {
+      item.tipo = mensaje.tipo;
+    }
+    historial.push(item);
   }
   return historial;
 }
@@ -65,12 +69,13 @@ export function useChat(
 
   useEffect(() => () => pedidoActual.current?.abort(), []);
 
-  const agregar = useCallback((type: ChatMessage["type"], text: string) => {
+  const agregar = useCallback((type: ChatMessage["type"], text: string, tipo?: ChatMessage["tipo"]) => {
     const mensaje: ChatMessage = {
       id: siguienteId.current++,
       type,
       text,
       timestamp: new Date().toISOString(),
+      tipo,
     };
     setMessages((anteriores) => [...anteriores, mensaje]);
   }, []);
@@ -83,12 +88,12 @@ export function useChat(
       setFallo(null);
       setIsTyping(true);
       try {
-        const { respuesta, opciones } = await consultarChat(
+        const { tipo, respuesta, opciones } = await consultarChat(
           armarHistorial(mensajesActuales.current, text),
           pedido.signal
         );
         if (!pedido.signal.aborted) {
-          agregar("bot", armarTextoDeRespuesta(respuesta, opciones));
+          agregar("bot", armarTextoDeRespuesta(respuesta, opciones), tipo);
         }
       } catch (error) {
         if (!pedido.signal.aborted) {

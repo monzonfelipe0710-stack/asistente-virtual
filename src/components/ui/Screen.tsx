@@ -1,5 +1,6 @@
+import { HeaderHeightContext } from "expo-router/react-navigation";
 import { createContext, useCallback, useContext, useEffect, useRef } from "react";
-import { ScrollView, useWindowDimensions, View, type ScrollViewInstance, type ScrollViewProps, type ViewInstance } from "react-native";
+import { Platform, ScrollView, useWindowDimensions, View, type ScrollViewInstance, type ScrollViewProps, type ViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Spacing, useColors } from "@/constants/theme";
@@ -71,7 +72,7 @@ export function ScrollConTeclado({
         {...rest}
       >
         {children}
-        {conEspacio && teclado > 0 && <View style={{ height: teclado }} />}
+        {conEspacio && Platform.OS === "ios" && teclado > 0 && <View style={{ height: teclado }} />}
       </ScrollView>
     </FocoContext.Provider>
   );
@@ -81,13 +82,14 @@ export function ScrollConTeclado({
 export function Screen({ children }: { children: React.ReactNode }) {
   const C = useColors();
   const insets = useSafeAreaInsets();
+  const altoDelEncabezado = useContext(HeaderHeightContext) ?? 0;
 
   return (
     <ScrollConTeclado
       style={{ flex: 1, backgroundColor: C.canvas }}
       contentContainerStyle={{
         paddingHorizontal: Spacing[5],
-        paddingTop: Spacing[1],
+        paddingTop: altoDelEncabezado + Spacing[1],
         paddingBottom: insets.bottom + Spacing[12],
       }}
     >
