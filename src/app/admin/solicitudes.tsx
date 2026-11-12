@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { Spacing, Type, useColors } from "@/constants/theme";
 import { usePagination } from "@/hooks/usePagination";
@@ -80,8 +80,13 @@ function FilaSolicitud({
   const detalle = [tramite.sector.nombre, tramite.encargado.nombre, formatearCosto(tramite.costo)].join(" · ");
 
   return (
-    <Row onPress={onPress} accessibilityLabel={`Ver ${tramite.nombre}`} style={{ paddingVertical: 14 }}>
-      <View style={styles.linea}>
+    <Row style={{ paddingVertical: 14 }}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Ver ${tramite.nombre}`}
+        style={styles.linea}
+      >
         <View style={styles.cuerpo}>
           <Text style={[Type.rowTitle, { color: C.ink }]} numberOfLines={2}>
             {tramite.nombre}
@@ -96,18 +101,18 @@ function FilaSolicitud({
             />
             <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(tramite.updatedAt)}</Text>
           </View>
-          <View style={styles.etiquetas}>
-            <Btn
-              label="Rechazar"
-              variant="danger"
-              size="md"
-              onPress={onRechazar}
-              disabled={trabajando || !tramite.publicado}
-            />
-            <Btn label="Aceptar" size="md" onPress={onAceptar} disabled={trabajando || tramite.publicado} />
-          </View>
         </View>
         <Icon name="chevronRight" size={20} color={C.ink2} />
+      </Pressable>
+      <View style={styles.etiquetas}>
+        <Btn
+          label="Rechazar"
+          variant="danger"
+          size="md"
+          onPress={onRechazar}
+          disabled={trabajando || !tramite.publicado}
+        />
+        <Btn label="Aceptar" size="md" onPress={onAceptar} disabled={trabajando || tramite.publicado} />
       </View>
     </Row>
   );

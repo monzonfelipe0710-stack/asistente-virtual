@@ -56,6 +56,7 @@ export function useChat(
   const [messages, setMessages] = useState<ChatMessage[]>(inicial);
   const [isTyping, setIsTyping] = useState(false);
   const [fallo, setFallo] = useState<string | null>(null);
+  const [interrumpido, setInterrumpido] = useState(false);
   const siguienteId = useRef(calcularSiguienteId(inicial));
   const mensajesIniciales = useRef(messages);
   const mensajesActuales = useRef(messages);
@@ -86,6 +87,7 @@ export function useChat(
       const pedido = new AbortController();
       pedidoActual.current = pedido;
       setFallo(null);
+      setInterrumpido(false);
       setIsTyping(true);
       try {
         const { tipo, respuesta, opciones } = await consultarChat(
@@ -122,10 +124,12 @@ export function useChat(
 
   // Corta la espera: la respuesta que llegue después se descarta.
   const detener = useCallback(() => {
-    pedidoActual.current?.abort();
+    if (!pedidoActual.current) return;
+    pedidoActual.current.abort();
     pedidoActual.current = null;
     setIsTyping(false);
+    setInterrumpido(true);
   }, []);
 
-  return { messages, isTyping, send, fallo, reintentar, detener };
+  return { messages, isTyping, send, fallo, interrumpido, reintentar, detener };
 }

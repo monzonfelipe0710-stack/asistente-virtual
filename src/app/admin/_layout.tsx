@@ -29,13 +29,13 @@ const PANTALLAS: {
   grupo: string;
   permiso: Permission;
 }[] = [
-  { pantalla: "index", titulo: "Panel general", icono: "home", grupo: "Principal", permiso: "dashboard" },
+  { pantalla: "index", titulo: "Resumen", icono: "home", grupo: "Principal", permiso: "dashboard" },
   { pantalla: "solicitudes", titulo: "Solicitudes", icono: "checkCircle", grupo: "Principal", permiso: "solicitudes" },
   { pantalla: "mesa-de-entrada", titulo: "Mesa de Entradas", icono: "box", grupo: "Principal", permiso: "mesa_entrada" },
   { pantalla: "tramites", titulo: "Trámites", icono: "files", grupo: "Principal", permiso: "tramites" },
   { pantalla: "usuarios", titulo: "Usuarios", icono: "users", grupo: "Gestión", permiso: "usuarios" },
   { pantalla: "documentos", titulo: "Documentos", icono: "folder", grupo: "Gestión", permiso: "documentos" },
-  { pantalla: "configuracion", titulo: "Configuración", icono: "settings", grupo: "Sistema", permiso: "configuracion" },
+  { pantalla: "calificaciones", titulo: "Calificaciones", icono: "checkDouble", grupo: "Sistema", permiso: "calificaciones" },
   { pantalla: "reportes", titulo: "Reportes", icono: "chart", grupo: "Sistema", permiso: "reportes" },
 ];
 

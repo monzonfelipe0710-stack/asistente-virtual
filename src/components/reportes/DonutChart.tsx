@@ -46,7 +46,7 @@ export function DonutChart({ segments }: { segments: Segment[] }) {
     <View style={{ alignItems: "center" }}>
       <View style={{ width: SIZE, height: SIZE }}>
         <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-          <G rotation={-90} origin={`${SIZE / 2}, ${SIZE / 2}`}>
+          <G transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
             <Circle
               cx={SIZE / 2}
               cy={SIZE / 2}

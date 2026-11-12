@@ -7,7 +7,7 @@ export type Permission =
   | "solicitudes"
   | "usuarios"
   | "documentos"
-  | "configuracion"
+  | "calificaciones"
   | "reportes";
 
 export const PERMISSIONS: Record<AuthRole, Permission[]> = {
@@ -17,7 +17,7 @@ export const PERMISSIONS: Record<AuthRole, Permission[]> = {
     "mesa_entrada",
     "usuarios",
     "documentos",
-    "configuracion",
+    "calificaciones",
     "reportes",
   ],
   // Sin "usuarios": el backend lo reserva al superusuario.
@@ -25,7 +25,7 @@ export const PERMISSIONS: Record<AuthRole, Permission[]> = {
     "dashboard",
     "tramites",
     "documentos",
-    "configuracion",
+    "calificaciones",
     "reportes",
   ],
   Ciudadano: [],

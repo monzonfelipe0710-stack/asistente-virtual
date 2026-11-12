@@ -320,6 +320,51 @@ export function pedirConsultasPorTramite(soloPropias = false) {
   return pedir<ConsultasPorTramiteApi[]>(ruta);
 }
 
+export interface CalificacionApi {
+  id: number;
+  fecha: string;
+  textoConsulta: string;
+  respuesta: string | null;
+  calificacion: number;
+  motivoCalificacion: string | null;
+  topico: string | null;
+  tramiteId: number | null;
+}
+
+export interface ReporteDeCalificacionesApi {
+  resumen: {
+    total: number;
+    utiles: number;
+    noUtiles: number;
+    satisfaccion: number | null;
+    porMotivo: { motivo: string; cantidad: number }[];
+    sinMotivo: number;
+    porTopico: { topico: string; cantidad: number }[];
+  };
+  items: CalificacionApi[];
+  total: number;
+}
+
+export interface FiltrosDeCalificaciones {
+  desde?: string;
+  hasta?: string;
+  tramiteId?: number;
+  calificacion?: number;
+  page: number;
+  limit: number;
+}
+
+export function pedirCalificaciones(filtros: FiltrosDeCalificaciones) {
+  const partes: string[] = [];
+  if (filtros.desde) partes.push(`desde=${encodeURIComponent(filtros.desde)}`);
+  if (filtros.hasta) partes.push(`hasta=${encodeURIComponent(filtros.hasta)}`);
+  if (filtros.tramiteId !== undefined) partes.push(`tramiteId=${filtros.tramiteId}`);
+  if (filtros.calificacion !== undefined) partes.push(`calificacion=${filtros.calificacion}`);
+  partes.push(`page=${filtros.page}`);
+  partes.push(`limit=${filtros.limit}`);
+  return pedir<ReporteDeCalificacionesApi>(`/consultas/calificaciones?${partes.join("&")}`);
+}
+
 export function pedirConsultasSinRespuesta() {
   return pedir<ConsultaSinRespuestaApi[]>("/metricas/sin-respuesta");
 }

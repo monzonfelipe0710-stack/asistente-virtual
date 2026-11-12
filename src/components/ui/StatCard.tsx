@@ -1,4 +1,4 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { toneColor, type Tone } from "./Badge";
 import { CountUp } from "./CountUp";
@@ -18,13 +18,15 @@ export function StatCard({
   tone = "brand",
   hint,
   ejemplo = false,
+  style,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   icon?: IconName;
   tone?: Tone;
   hint?: string;
   ejemplo?: boolean;
+  style?: StyleProp<ViewStyle>;
 }) {
   const C = useColors();
   const color = toneColor(C, tone);
@@ -38,9 +40,14 @@ export function StatCard({
           borderColor: ejemplo ? C.borderStrong : C.border,
           borderStyle: ejemplo ? "dashed" : "solid",
         },
+        style,
       ]}
     >
-      <CountUp value={value} style={[Type.figure, { color: C.ink }]} />
+      {value === null ? (
+        <Text style={[Type.figure, { color: C.ink }]}>—</Text>
+      ) : (
+        <CountUp value={value} style={[Type.figure, { color: C.ink }]} />
+      )}
       <View style={styles.top}>
         {!!icon && <Icon name={icon} size={18} color={color} />}
         <Text style={[Type.label, styles.label, { color: C.ink2 }]}>{label}</Text>

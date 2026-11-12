@@ -72,7 +72,7 @@ function ChatInputBase({
           multiline
           // Una línea al empezar: en web el textarea arranca con dos. En nativo
           // no se pasa porque en Android fijaría el alto y la barra no crecería.
-          {...(Platform.OS === "web" ? { numberOfLines: 1 } : null)}
+          {...(Platform.OS === "web" ? { numberOfLines: 1, blurOnSubmit: true } : null)}
           maxLength={500}
           returnKeyType="send"
           onSubmitEditing={enviar}

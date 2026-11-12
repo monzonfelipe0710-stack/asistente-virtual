@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -17,6 +17,7 @@ export function useMetricas() {
   const [sinRespuesta, setSinRespuesta] = useState<ConsultaSinRespuestaApi[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let activo = true;
@@ -36,7 +37,12 @@ export function useMetricas() {
     return () => {
       activo = false;
     };
-  }, [soloPropias]);
+  }, [soloPropias, version]);
 
-  return { porTramite, sinRespuesta, cargando, error };
+  const recargar = useCallback(() => {
+    setCargando(true);
+    setVersion((v) => v + 1);
+  }, []);
+
+  return { porTramite, sinRespuesta, cargando, error, recargar };
 }

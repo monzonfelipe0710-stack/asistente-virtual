@@ -53,6 +53,16 @@ function ErrorDeEnvio({ mensaje, onReintentar }: { mensaje: string; onReintentar
   );
 }
 
+function AvisoDeInterrupcion({ onReintentar }: { onReintentar: () => void }) {
+  const C = useColors();
+  return (
+    <View style={styles.interrumpidoFila} accessibilityRole="alert">
+      <Text style={[Type.meta, { color: C.ink2 }]}>Respuesta interrumpida.</Text>
+      <Btn label="Reintentar" icon="sync" variant="ghost" size="md" onPress={onReintentar} />
+    </View>
+  );
+}
+
 /**
  * La conversación. Vacía, muestra la bienvenida con las sugerencias; con
  * mensajes, la lista arranca arriba, ocupa toda la pantalla y pasa por detrás del encabezado,
@@ -73,7 +83,7 @@ function ChatWindowBase() {
     (mensajes: ChatMessage[]) => guardar(activa, mensajes),
     [activa, guardar]
   );
-  const { messages, isTyping, send, fallo, reintentar, detener } = useChat(inicial, alCambiar);
+  const { messages, isTyping, send, fallo, interrumpido, reintentar, detener } = useChat(inicial, alCambiar);
   const [escribiendo, setEscribiendo] = useState(false);
   const [altoDeLaBarra, setAltoDeLaBarra] = useState(Size.composer + 8);
   const [altoDeLaLista, setAltoDeLaLista] = useState(0);
@@ -209,6 +219,8 @@ function ChatWindowBase() {
                   <TypingIndicator />
                 ) : fallo ? (
                   <ErrorDeEnvio mensaje={fallo} onReintentar={reintentar} />
+                ) : interrumpido ? (
+                  <AvisoDeInterrupcion onReintentar={reintentar} />
                 ) : null}
               </View>
               <View style={{ height: relleno }} />
@@ -310,6 +322,14 @@ const styles = StyleSheet.create({
   },
   bajarAviso: {
     transform: [{ translateY: 6 }],
+  },
+  interrumpidoFila: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: Spacing[2],
+    marginTop: Spacing[4],
+    paddingHorizontal: Spacing[5],
   },
   errorFila: {
     marginTop: Spacing[6],
