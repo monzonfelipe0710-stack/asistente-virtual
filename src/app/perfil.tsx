@@ -3,27 +3,20 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { DialogoCerrarSesion } from "@/components/menu/DialogoCerrarSesion";
-import { Avatar } from "@/components/ui/Avatar";
-import { Badge, type Tone } from "@/components/ui/Badge";
-import { BotonVolver } from "@/components/ui/BotonVolver";
-import { Btn } from "@/components/ui/Btn";
-import { Desvanecido } from "@/components/ui/Desvanecido";
-import { KeyValue, KeyValueCard } from "@/components/ui/KeyValue";
-import { Screen } from "@/components/ui/Screen";
-import { Text } from "@/components/ui/Text";
-import { Spacing, Type, Weight, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { formatDate } from "@/utils/date";
+import { DialogoCerrarSesion } from "@/funcionalidades/menu/DialogoCerrarSesion";
+import { Avatar } from "@/compartido/ui/Avatar";
+import { Badge } from "@/compartido/ui/Badge";
+import { BotonVolver } from "@/compartido/ui/BotonVolver";
+import { Btn } from "@/compartido/ui/Btn";
+import { Desvanecido } from "@/compartido/ui/Desvanecido";
+import { KeyValue, KeyValueCard } from "@/compartido/ui/KeyValue";
+import { Screen } from "@/compartido/ui/Screen";
+import { Text } from "@/compartido/ui/Text";
+import { Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { TONO_DEL_ESTADO } from "@/compartido/sesion/tonoDelEstado";
+import { formatDate } from "@/compartido/utils/date";
 
-const TONO_DEL_ESTADO: Record<string, Tone> = {
-  Activo: "ok",
-  Pendiente: "warn",
-  Rechazado: "bad",
-  Suspendido: "bad",
-};
-
-/** Ruta "/perfil": los datos de la cuenta con la sesión abierta. */
 export default function Perfil() {
   const C = useColors();
   const router = useRouter();

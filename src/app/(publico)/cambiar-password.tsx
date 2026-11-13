@@ -3,13 +3,15 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Btn } from "@/components/ui/Btn";
-import { Field } from "@/components/ui/Field";
-import { PasswordInput } from "@/components/ui/PasswordInput";
-import { ScrollConTeclado } from "@/components/ui/Screen";
-import { Text } from "@/components/ui/Text";
-import { Spacing, Type, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
+import { Btn } from "@/compartido/ui/Btn";
+import { Field } from "@/compartido/ui/Field";
+import { PasswordInput } from "@/compartido/ui/PasswordInput";
+import { ScrollConTeclado } from "@/compartido/ui/Screen";
+import { Text } from "@/compartido/ui/Text";
+import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { validarCoincidencia } from "@/compartido/sesion/contrasenas";
+import { mensajeDeError } from "@/compartido/lib/backend";
 
 export default function CambiarPasswordScreen() {
   const C = useColors();
@@ -27,7 +29,7 @@ export default function CambiarPasswordScreen() {
     try {
       await changePassword(actual, nueva);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cambiar la contraseña.");
+      setError(mensajeDeError(err, "No se pudo cambiar la contraseña."));
     } finally {
       setSubmitting(false);
     }
@@ -35,9 +37,9 @@ export default function CambiarPasswordScreen() {
 
   async function guardar() {
     setError("");
-    const coinciden = nueva === confirmar;
-    if (!coinciden) {
-      setError("Las contraseñas no coinciden.");
+    const errorDeCoincidencia = validarCoincidencia(nueva, confirmar);
+    if (errorDeCoincidencia) {
+      setError(errorDeCoincidencia);
       return;
     }
     await enviarCambio();

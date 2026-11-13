@@ -2,14 +2,14 @@ import { Drawer, type DrawerContentComponentProps } from "expo-router/drawer";
 import { useState } from "react";
 import { useWindowDimensions } from "react-native";
 
-import { cerrarMenu, MenuLateral, type SeccionDeMenu } from "@/components/menu/MenuLateral";
-import { ListaDeChats } from "@/components/menu/ListaDeChats";
-import { opcionesDelMenu } from "@/components/menu/opcionesDelMenu";
-import { PieCiudadano } from "@/components/menu/PieCiudadano";
-import { VentanaAccesibilidad } from "@/components/menu/VentanaAccesibilidad";
-import { useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { ChatProvider, useConversacion } from "@/context/ChatContext";
+import { cerrarMenu, MenuLateral, type SeccionDeMenu } from "@/funcionalidades/menu/MenuLateral";
+import { ListaDeChats } from "@/funcionalidades/menu/ListaDeChats";
+import { opcionesDelMenu } from "@/funcionalidades/menu/opcionesDelMenu";
+import { PieCiudadano } from "@/funcionalidades/menu/PieCiudadano";
+import { VentanaAccesibilidad } from "@/funcionalidades/menu/VentanaAccesibilidad";
+import { useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { ChatProvider, useConversacion } from "@/funcionalidades/chat/ChatContext";
 
 function MenuCiudadano({
   drawer,
@@ -57,7 +57,6 @@ function MenuCiudadano({
   );
 }
 
-/** Menú lateral de la app: un archivo de esta carpeta es una pantalla del menú. */
 export default function LayoutCiudadano() {
   const C = useColors();
   const { width } = useWindowDimensions();

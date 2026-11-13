@@ -5,18 +5,19 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text } from "@/components/ui/Text";
+import { Text } from "@/compartido/ui/Text";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BotonVolver } from "@/components/ui/BotonVolver";
-import { Btn } from "@/components/ui/Btn";
-import { ScrollConTeclado } from "@/components/ui/Screen";
-import { Field } from "@/components/ui/Field";
-import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Spacing, Type, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
+import { BotonVolver } from "@/compartido/ui/BotonVolver";
+import { Btn } from "@/compartido/ui/Btn";
+import { ScrollConTeclado } from "@/compartido/ui/Screen";
+import { Field } from "@/compartido/ui/Field";
+import { PasswordInput } from "@/compartido/ui/PasswordInput";
+import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { validarCoincidencia } from "@/compartido/sesion/contrasenas";
+import { mensajeDeError } from "@/compartido/lib/backend";
 
-/** Misma composición que el login: volver arriba, título 28 y bajada. */
 export default function ResetPasswordScreen() {
   const C = useColors();
   const router = useRouter();
@@ -50,8 +51,9 @@ export default function ResetPasswordScreen() {
 
   async function submit() {
     setError("");
-    if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+    const errorDeCoincidencia = validarCoincidencia(password, confirm);
+    if (errorDeCoincidencia) {
+      setError(errorDeCoincidencia);
       return;
     }
     setSubmitting(true);
@@ -59,7 +61,7 @@ export default function ResetPasswordScreen() {
       await resetPassword(token ?? "", password);
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cambiar la contraseña.");
+      setError(mensajeDeError(err, "No se pudo cambiar la contraseña."));
     } finally {
       setSubmitting(false);
     }

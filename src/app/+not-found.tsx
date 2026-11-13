@@ -1,9 +1,8 @@
 import { useRouter } from "expo-router";
 
-import { Btn } from "@/components/ui/Btn";
-import { PantallaAviso } from "@/components/ui/PantallaAviso";
+import { Btn } from "@/compartido/ui/Btn";
+import { PantallaAviso } from "@/compartido/ui/PantallaAviso";
 
-/** Cualquier ruta que no existe cae acá. */
 export default function NoEncontrada() {
   const router = useRouter();
 

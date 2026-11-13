@@ -1,0 +1,118 @@
+import { DrawerActions, HeaderHeightContext } from "expo-router/react-navigation";
+import { useNavigation } from "expo-router";
+import { Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { Desvanecido } from "@/compartido/ui/Desvanecido";
+import { Icon } from "@/compartido/ui/Icon";
+import { Text } from "@/compartido/ui/Text";
+import { Shadows, Size, Spacing, Weight, useColors } from "@/compartido/constantes/theme";
+
+const ES_IOS = Platform.OS === "ios";
+
+export function Encabezado({ titulo }: { titulo?: string }) {
+  const C = useColors();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+
+  return (
+    <View style={[styles.barra, { paddingTop: insets.top, minHeight: insets.top + Size.header }]}>
+      <Pressable
+        onPress={() => {
+          Keyboard.dismiss();
+          navigation.dispatch(DrawerActions.openDrawer());
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Abrir menú"
+        style={({ pressed }) => [
+          styles.boton,
+          styles.circulo,
+          { backgroundColor: pressed ? C.surface2 : C.surface, borderColor: C.border },
+        ]}
+      >
+        <Icon name="menu" size={24} color={C.ink} />
+      </Pressable>
+
+      <Text
+        style={[styles.titulo, { color: C.ink, textAlign: ES_IOS ? "center" : "left" }]}
+        numberOfLines={1}
+        accessibilityRole="header"
+      >
+        {titulo}
+      </Text>
+
+      {ES_IOS ? <View style={styles.boton} /> : null}
+    </View>
+  );
+}
+
+export function EncabezadoFlotante({ titulo }: { titulo?: string }) {
+  const insets = useSafeAreaInsets();
+  const altoDelDesvanecido = insets.top + Size.header + Spacing[4];
+
+  return (
+    <>
+      <Desvanecido alto={altoDelDesvanecido} solido={insets.top / altoDelDesvanecido} />
+      <Encabezado titulo={titulo} />
+    </>
+  );
+}
+
+export function PantallaConEncabezadoFlotante({
+  titulo,
+  children,
+}: {
+  titulo?: string;
+  children: React.ReactNode;
+}) {
+  const C = useColors();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
+      <HeaderHeightContext.Provider value={insets.top + Size.header}>{children}</HeaderHeightContext.Provider>
+      <View style={styles.flotante}>
+        <EncabezadoFlotante titulo={titulo} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  pantalla: {
+    flex: 1,
+  },
+  flotante: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    pointerEvents: "box-none",
+  },
+  barra: {
+    pointerEvents: "box-none",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  boton: {
+    width: Size.touch,
+    height: Size.touch,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  circulo: {
+    marginLeft: Spacing[3] - 4,
+    borderWidth: 1,
+    ...Shadows.sm,
+  },
+  titulo: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 4,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: Weight.semibold,
+  },
+});

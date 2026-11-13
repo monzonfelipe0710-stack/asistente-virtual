@@ -13,43 +13,48 @@ Presioná `a` (Android), `i` (iOS) o `w` (web) en la terminal, o escaneá el QR 
 
 ## Estructura
 
-Expo Router: **un archivo dentro de `src/app` es una ruta**. Ahí solo van pantallas y layouts; todo lo demás vive en las otras carpetas.
+El código está en `src` y se divide en tres carpetas.
+
+- `app` tiene las rutas. Cada archivo de esa carpeta es una pantalla o un layout.
+- `funcionalidades` tiene una carpeta por cada parte de la app. Cada carpeta guarda lo que solo usa esa parte.
+- `compartido` tiene lo que usan dos o más partes.
 
 ```
 src/
   app/
-    _layout.tsx             Raíz: fuentes, sesión, avisos y las tres zonas de abajo
-    +not-found.tsx          Pantalla 404
+    _layout.tsx             Raíz: fuentes, sesión, avisos y la lista de pantallas
+    +not-found.tsx          Pantalla para una dirección que no existe
     +html.tsx               HTML base de la versión web
-    (ciudadano)/            Grupo con menú lateral (no aparece en la URL)
-      _layout.tsx           Drawer: Asistente, Descargas, Accesos
+    perfil.tsx              /perfil
+    (ciudadano)/            Grupo con menú lateral, no aparece en la dirección
+      _layout.tsx           Menú lateral: Asistente, Descargas y Accesos
       index.tsx             /            El chat
       descargas.tsx         /descargas
       accesos.tsx           /accesos
     (publico)/              Grupo sin layout propio
-      login.tsx             /login       Con sesión abierta redirige
-      recuperar.tsx         /recuperar   Pide el enlace para cambiar la contraseña
+      login.tsx             /login
+      recuperar.tsx         /recuperar
       restablecer.tsx       /restablecer
+      cambiar-password.tsx  /cambiar-password
     admin/
-      _layout.tsx           Guard de entrada + Drawer del panel + permisos por pantalla
-      index.tsx             /admin       Panel general
-      mesa-de-entrada.tsx · usuarios.tsx
-      documentos.tsx · configuracion.tsx · reportes.tsx
-  components/
-    auth/                   Campos de la solicitud de empleado del registro
-    avatar/                 ChatBotAvatar (se dibuja con el motor de src/bloub)
-    chat/                   Piezas del chat
+      _layout.tsx           Control de entrada, menú del panel y permisos por pantalla
+      index.tsx             /admin       Resumen
+      solicitudes.tsx · mesa-de-entrada.tsx · tramites.tsx · usuarios.tsx
+      documentos.tsx · calificaciones.tsx · reportes.tsx
+  funcionalidades/
+    chat/                   El chat: componentes, useChat, ChatContext, tipos y sugerencias
+    menu/                   Menú lateral, encabezado, pies y diálogos del menú
+    admin/                  Componentes, hooks y funciones del panel interno
     descargas/              Tarjeta de documento de /descargas
-    menu/                   Menú lateral compartido, sus filas, pies y encabezado
-    reportes/               Gráficos de la pantalla de reportes
-    ui/                     Piezas reutilizables: Btn, Input, Select, Tabs, Modal, Toast…
-  context/                  Sesión (AuthContext)
-  data/                     Tipos de datos y listas fijas (los registros vienen del backend)
-  hooks/                    useChat, useCuentas, usePagination, usePermisos, useSortable, useKeyboardHeight
-  lib/                      Validaciones, permisos, almacenamiento y el aviso de backend sin conectar
-  utils/                    Fechas, tamaño de archivo e iniciales
-  constants/theme.ts        Colores, tipografía, espaciado y radios
-  bloub/                    Motor que anima la mascota
+    accesos/                Lista de accesos de /accesos
+  compartido/
+    ui/                     Piezas de pantalla: Btn, Input, Select, Tabs, Modal, Toast y otras
+    sesion/                 Sesión, permisos y validaciones de cuenta
+    avatar/                 La mascota y el motor que la anima
+    lib/                    Conexión con el servidor, almacenamiento, accesibilidad y vibración
+    hooks/                  useKeyboardHeight
+    utils/                  Fechas, tamaño de archivo e iniciales
+    constantes/theme.ts     Colores, letras, espacios y radios
 ```
 
 ### Quién entra adónde
@@ -63,15 +68,17 @@ src/
 
 ## Convenciones
 
-- **Solo rutas en `src/app`.** Un componente o un hook ahí se convertiría en una ruta (`Boton.tsx` pasaría a ser `/Boton`).
-- **Un componente por archivo, con export nombrado.** Los archivos de `src/app` son la excepción: llevan `export default`, que Expo Router exige.
-- **Imports con `@/`.** `@/components/ui/Btn` en vez de `../../components/ui/Btn`. Dentro de la misma carpeta se usa `./`.
-- **Permisos en el layout, no en cada pantalla.** `src/app/admin/_layout.tsx` decide qué pantallas existen para cada rol, con los permisos de `src/lib/permisos.ts`.
-- **Dependencias con `npx expo install`**, no con `npm install`, para que la versión coincida con el SDK de Expo Go.
+- Solo van rutas en `src/app`. Un componente en esa carpeta se convertiría en una ruta, por ejemplo `Boton.tsx` pasaría a ser `/Boton`.
+- Lo que usa una sola parte de la app va en su carpeta de `src/funcionalidades`. Lo que usan dos o más partes va en `src/compartido`.
+- Cada archivo tiene un componente con export nombrado. Los archivos de `src/app` son la excepción y llevan `export default`, porque Expo Router lo exige.
+- Los imports usan `@/`, por ejemplo `@/compartido/ui/Btn`. Dentro de la misma carpeta se usa `./`.
+- El código no lleva comentarios.
+- Los permisos se deciden en el layout y no en cada pantalla. `src/app/admin/_layout.tsx` decide qué pantallas existen para cada rol, con los permisos de `src/compartido/sesion/permisos.ts`.
+- Las dependencias se instalan con `npx expo install` y no con `npm install`. Así la versión coincide con la de Expo Go.
 
 ## Diseño
 
-Neutros sin tinte y un solo azul. Figtree en cuatro pesos (400, 500, 600 y 700) e IBM Plex Mono para números y fechas. Con la opción de letra más legible se usa Atkinson Hyperlegible Next. Base de 4 pt, margen lateral de 20. Los valores están en `src/constants/theme.ts`; los componentes no escriben colores a mano.
+Neutros sin tinte y un solo azul. Figtree en cuatro pesos (400, 500, 600 y 700) e IBM Plex Mono para números y fechas. Con la opción de letra más legible se usa Atkinson Hyperlegible Next. Base de 4 pt, margen lateral de 20. Los valores están en `src/compartido/constantes/theme.ts`; los componentes no escriben colores a mano.
 
 ## Verificación
 

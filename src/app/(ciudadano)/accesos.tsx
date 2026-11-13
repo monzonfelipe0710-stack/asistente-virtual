@@ -1,15 +1,14 @@
 import { Linking, Pressable, StyleSheet, View } from "react-native";
 
-import { PantallaConEncabezadoFlotante } from "@/components/menu/Encabezado";
-import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
-import { Icon } from "@/components/ui/Icon";
-import { Screen } from "@/components/ui/Screen";
-import { Text } from "@/components/ui/Text";
-import { useToast } from "@/components/ui/Toast";
-import { Radius, Spacing, Type, useColors } from "@/constants/theme";
-import { accesos, type Acceso } from "@/data/mockAccesos";
+import { PantallaConEncabezadoFlotante } from "@/funcionalidades/menu/Encabezado";
+import { AvisoDeEjemplo } from "@/compartido/ui/AvisoDeEjemplo";
+import { Icon } from "@/compartido/ui/Icon";
+import { Screen } from "@/compartido/ui/Screen";
+import { Text } from "@/compartido/ui/Text";
+import { useToast } from "@/compartido/ui/Toast";
+import { Radius, Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { accesos, type Acceso } from "@/funcionalidades/accesos/accesos";
 
-/** Ruta "/accesos": sistemas y contactos de Recursos Humanos, en una lista. */
 export default function Accesos() {
   const C = useColors();
   const toast = useToast();

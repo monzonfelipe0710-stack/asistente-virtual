@@ -1,24 +1,24 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 
-import { Badge } from "@/components/ui/Badge";
-import { Btn } from "@/components/ui/Btn";
-import { Field } from "@/components/ui/Field";
-import { Icon } from "@/components/ui/Icon";
-import { Input } from "@/components/ui/Input";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Screen } from "@/components/ui/Screen";
-import { Select } from "@/components/ui/Select";
-import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
-import { useTramites } from "@/hooks/useTramites";
+import { Badge } from "@/compartido/ui/Badge";
+import { Btn } from "@/compartido/ui/Btn";
+import { Field } from "@/compartido/ui/Field";
+import { Icon } from "@/compartido/ui/Icon";
+import { Input } from "@/compartido/ui/Input";
+import { PageHeader } from "@/compartido/ui/PageHeader";
+import { Screen } from "@/compartido/ui/Screen";
+import { Select } from "@/compartido/ui/Select";
+import { Text } from "@/compartido/ui/Text";
+import { Radius, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
+import { useTramites } from "@/funcionalidades/admin/hooks/useTramites";
 import {
   mensajeDeError,
   pedirCalificaciones,
   type FiltrosDeCalificaciones,
   type ReporteDeCalificacionesApi,
-} from "@/lib/backend";
-import { formatDate } from "@/utils/date";
+} from "@/compartido/lib/backend";
+import { formatDate } from "@/compartido/utils/date";
 
 const TODOS_LOS_TRAMITES = "Todos los trámites";
 const OPCIONES_DE_CALIFICACION = ["Todas", "Útil", "No útil"] as const;

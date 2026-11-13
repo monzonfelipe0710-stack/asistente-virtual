@@ -3,25 +3,24 @@ import { Drawer } from "expo-router/drawer";
 import { useState } from "react";
 import { ActivityIndicator, StyleSheet, View, useWindowDimensions } from "react-native";
 
-import { DialogoCerrarSesion } from "@/components/menu/DialogoCerrarSesion";
-import { EncabezadoFlotante } from "@/components/menu/Encabezado";
+import { DialogoCerrarSesion } from "@/funcionalidades/menu/DialogoCerrarSesion";
+import { EncabezadoFlotante } from "@/funcionalidades/menu/Encabezado";
 import {
   cerrarMenu,
   MenuLateral,
   type ItemDeMenu,
   type SeccionDeMenu,
-} from "@/components/menu/MenuLateral";
-import { opcionesDelMenu } from "@/components/menu/opcionesDelMenu";
-import { PieAdmin } from "@/components/menu/PieAdmin";
-import { VentanaAccesibilidad } from "@/components/menu/VentanaAccesibilidad";
-import { Btn } from "@/components/ui/Btn";
-import { PantallaAviso } from "@/components/ui/PantallaAviso";
-import { useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { usePermisos } from "@/hooks/usePermisos";
-import type { Permission } from "@/lib/permisos";
+} from "@/funcionalidades/menu/MenuLateral";
+import { opcionesDelMenu } from "@/funcionalidades/menu/opcionesDelMenu";
+import { PieAdmin } from "@/funcionalidades/menu/PieAdmin";
+import { VentanaAccesibilidad } from "@/funcionalidades/menu/VentanaAccesibilidad";
+import { Btn } from "@/compartido/ui/Btn";
+import { PantallaAviso } from "@/compartido/ui/PantallaAviso";
+import { useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { usePermisos } from "@/compartido/sesion/usePermisos";
+import type { Permission } from "@/compartido/sesion/permisos";
 
-/** Una pantalla del panel: el archivo, su título, su grupo del menú y el permiso que pide. */
 const PANTALLAS: {
   pantalla: string;
   titulo: string;
@@ -99,11 +98,6 @@ function AccesoRestringido({
   );
 }
 
-/**
- * Entrada al panel. Sin sesión lleva al login; con una cuenta que no es de
- * personal muestra el acceso restringido; con una de personal, abre el menú.
- * Una pantalla sin permiso no existe para el navegador.
- */
 export default function LayoutAdmin() {
   const C = useColors();
   const { width } = useWindowDimensions();
@@ -112,8 +106,6 @@ export default function LayoutAdmin() {
   const [accesibilidadAbierta, setAccesibilidadAbierta] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
 
-  // La sesión se lee de forma asíncrona: sin esto, en el primer cuadro se vería
-  // el login incluso teniendo una sesión válida.
   if (loading) return <PantallaCargando />;
 
   if (!user) return <Redirect href="/login" />;

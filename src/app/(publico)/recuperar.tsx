@@ -3,15 +3,16 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BotonVolver } from "@/components/ui/BotonVolver";
-import { Btn } from "@/components/ui/Btn";
-import { ScrollConTeclado } from "@/components/ui/Screen";
-import { Field } from "@/components/ui/Field";
-import { Input } from "@/components/ui/Input";
-import { Icon } from "@/components/ui/Icon";
-import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Type, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
+import { BotonVolver } from "@/compartido/ui/BotonVolver";
+import { Btn } from "@/compartido/ui/Btn";
+import { ScrollConTeclado } from "@/compartido/ui/Screen";
+import { Field } from "@/compartido/ui/Field";
+import { Input } from "@/compartido/ui/Input";
+import { Icon } from "@/compartido/ui/Icon";
+import { Text } from "@/compartido/ui/Text";
+import { Radius, Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { mensajeDeError } from "@/compartido/lib/backend";
 
 export default function RecoverPasswordScreen() {
   const C = useColors();
@@ -31,7 +32,7 @@ export default function RecoverPasswordScreen() {
       await requestPasswordReset(email);
       setEnviado(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo generar el enlace.");
+      setError(mensajeDeError(err, "No se pudo generar el enlace."));
     } finally {
       setSubmitting(false);
     }

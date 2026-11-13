@@ -4,33 +4,32 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text } from "@/components/ui/Text";
+import { Text } from "@/compartido/ui/Text";
 
-import { Radius, Spacing, Type, useColors } from "@/constants/theme";
+import { Radius, Spacing, useColors } from "@/compartido/constantes/theme";
 import {
   documentCategories,
   documentFormats,
   type DocumentCategory,
   type DocumentFormat,
   type MockDocument,
-} from "@/data/mockDocuments";
-import { useSortable } from "@/hooks/useSortable";
-import { Modal } from "@/components/ui/Modal";
-import { Icon } from "@/components/ui/Icon";
-import { usePagination } from "@/hooks/usePagination";
-import { Pagination } from "@/components/ui/Pagination";
-import { Tabs } from "@/components/ui/Tabs";
-import { useAvisoNoDisponible } from "@/components/ui/AvisoNoDisponible";
-import { useToast } from "@/components/ui/Toast";
-import { AvisoDeEjemplo } from "@/components/ui/AvisoDeEjemplo";
-import { Btn } from "@/components/ui/Btn";
-import { Field } from "@/components/ui/Field";
-import { Input } from "@/components/ui/Input";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Row } from "@/components/ui/Row";
-import { Screen } from "@/components/ui/Screen";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Select } from "@/components/ui/Select";
+} from "@/funcionalidades/admin/documentos";
+import { useSortable } from "@/funcionalidades/admin/hooks/useSortable";
+import { Modal } from "@/compartido/ui/Modal";
+import { Icon } from "@/compartido/ui/Icon";
+import { usePagination } from "@/funcionalidades/admin/hooks/usePagination";
+import { Pagination } from "@/compartido/ui/Pagination";
+import { Tabs } from "@/compartido/ui/Tabs";
+import { useAvisoNoDisponible } from "@/compartido/ui/AvisoNoDisponible";
+import { useToast } from "@/compartido/ui/Toast";
+import { AvisoDeEjemplo } from "@/compartido/ui/AvisoDeEjemplo";
+import { Btn } from "@/compartido/ui/Btn";
+import { Field } from "@/compartido/ui/Field";
+import { Input } from "@/compartido/ui/Input";
+import { EmptyState } from "@/compartido/ui/EmptyState";
+import { Screen } from "@/compartido/ui/Screen";
+import { PageHeader } from "@/compartido/ui/PageHeader";
+import { Select } from "@/compartido/ui/Select";
 
 type DocCategory = Exclude<DocumentCategory, "Todos">;
 
@@ -54,7 +53,6 @@ const EDITABLE_CATEGORIES = documentCategories.filter(
   (c): c is DocCategory => c !== "Todos"
 );
 
-/** Etiqueta visible → campo por el que se ordena. */
 const SORT_OPTIONS = {
   Título: "title",
   Categoría: "category",
@@ -73,8 +71,6 @@ export default function DocumentManager() {
   const [filterCat, setFilterCat] = useState<DocumentCategory>("Todos");
   const [sortLabel, setSortLabel] = useState<SortLabel>("Título");
   const [formOpen, setFormOpen] = useState(false);
-  const [editDoc, setEditDoc] = useState<MockDocument | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState<DocForm>(EMPTY_DOC);
 
   const filtered = useMemo(
@@ -99,20 +95,7 @@ export default function DocumentManager() {
   }
 
   function openNew() {
-    setEditDoc(null);
     setForm(EMPTY_DOC);
-    setFormOpen(true);
-  }
-
-  function openEdit(doc: MockDocument) {
-    setEditDoc(doc);
-    setForm({
-      title: doc.title,
-      description: doc.description,
-      category: doc.category,
-      format: doc.format,
-      fileSize: doc.fileSize,
-    });
     setFormOpen(true);
   }
 
@@ -122,11 +105,6 @@ export default function DocumentManager() {
       return;
     }
 
-    avisarNoDisponible();
-  }
-
-  function confirmDelete() {
-    setDeleteId(null);
     avisarNoDisponible();
   }
 
@@ -152,7 +130,6 @@ export default function DocumentManager() {
         }}
       />
 
-      {/* Un desplegable y un botón de sentido, en vez de cuatro textos con flechas */}
       <View style={styles.sortBar}>
         <View style={{ flex: 1 }}>
           <Select
@@ -178,30 +155,6 @@ export default function DocumentManager() {
       </View>
 
       <View style={{ marginTop: Spacing[3] }}>
-        {paginatedItems.map((doc) => (
-          <Row
-            key={doc.id}
-            onPress={() => openEdit(doc)}
-            accessibilityLabel={`Editar ${doc.title}`}
-            style={styles.line}
-          >
-            <View style={[styles.fileIcon, { backgroundColor: C.surface }]}>
-              <Icon name="file" size={20} color={C.ink2} />
-            </View>
-
-            <View style={styles.body}>
-              <Text style={[styles.title, { color: C.ink }]} numberOfLines={2}>
-                {doc.title}
-              </Text>
-              <Text style={[styles.meta, { color: C.ink3 }]} numberOfLines={1}>
-                {doc.format} · {doc.fileSize} · {doc.downloads.toLocaleString("es-AR")} descargas
-              </Text>
-            </View>
-
-            <Text style={[Type.meta, { color: C.ink3 }]}>{doc.category}</Text>
-          </Row>
-        ))}
-
         {paginatedItems.length === 0 && (
           <EmptyState title="No hay documentos en esta categoría." />
         )}
@@ -223,10 +176,10 @@ export default function DocumentManager() {
 
       <Modal
         open={formOpen}
-        title={editDoc ? "Editar documento" : "Nuevo documento"}
+        title="Nuevo documento"
         onClose={() => setFormOpen(false)}
         footer={
-          <Btn label={editDoc ? "Guardar cambios" : "Crear documento"} onPress={save} />
+          <Btn label="Crear documento" onPress={save} />
         }
       >
         <Field label="Título">
@@ -274,35 +227,6 @@ export default function DocumentManager() {
             placeholder="245 KB"
           />
         </Field>
-
-        {!!editDoc && (
-          <Btn
-            label="Eliminar documento"
-            variant="danger"
-            size="md"
-            onPress={() => {
-              setFormOpen(false);
-              setDeleteId(editDoc.id);
-            }}
-          />
-        )}
-      </Modal>
-
-      <Modal
-        open={deleteId !== null}
-        title="Eliminar documento"
-        onClose={() => setDeleteId(null)}
-        footer={
-          <>
-            <Btn label="Cancelar" variant="secondary" onPress={() => setDeleteId(null)} />
-            <Btn label="Eliminar" variant="dangerFill" onPress={confirmDelete} />
-          </>
-        }
-      >
-        <Text style={[Type.body, { color: C.ink2 }]}>
-          Se elimina “{docs.find((d) => d.id === deleteId)?.title}”. No se puede
-          deshacer.
-        </Text>
       </Modal>
     </Screen>
   );
@@ -320,33 +244,6 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-  },
-  line: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[4],
-    paddingVertical: 14,
-  },
-  fileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  body: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "500",
-  },
-  meta: {
-    ...Type.overline,
-    letterSpacing: 0,
-    marginTop: 2,
   },
   upload: {
     flexDirection: "row",

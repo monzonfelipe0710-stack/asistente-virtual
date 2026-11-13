@@ -1,29 +1,31 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Spacing, Type, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { useTramites } from "@/hooks/useTramites";
-import { usePagination } from "@/hooks/usePagination";
-import { subirDocumento, type TramiteApi, type TramiteDatos, type TramiteDetalleApi } from "@/lib/backend";
-import { formatDate } from "@/utils/date";
-import { TramiteDetalle, formatearCosto } from "@/components/admin/TramiteDetalle";
-import { TramiteFormModal, type ArchivoAdjunto } from "@/components/admin/TramiteFormModal";
-import { Badge } from "@/components/ui/Badge";
-import { Btn } from "@/components/ui/Btn";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Icon } from "@/components/ui/Icon";
-import { Modal } from "@/components/ui/Modal";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Pagination } from "@/components/ui/Pagination";
-import { Row } from "@/components/ui/Row";
-import { Screen } from "@/components/ui/Screen";
-import { SearchInput } from "@/components/ui/SearchInput";
-import { SkeletonList } from "@/components/ui/SkeletonList";
-import { Tabs } from "@/components/ui/Tabs";
-import { Text } from "@/components/ui/Text";
-import { Toggle } from "@/components/ui/Toggle";
-import { useToast } from "@/components/ui/Toast";
+import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { useTramites } from "@/funcionalidades/admin/hooks/useTramites";
+import { usePagination } from "@/funcionalidades/admin/hooks/usePagination";
+import { mensajeDeError, subirDocumento, type TramiteApi, type TramiteDatos, type TramiteDetalleApi } from "@/compartido/lib/backend";
+import { formatDate } from "@/compartido/utils/date";
+import { TramiteDetalle, formatearCosto } from "@/funcionalidades/admin/componentes/TramiteDetalle";
+import { TramiteFormModal, type ArchivoAdjunto } from "@/funcionalidades/admin/componentes/TramiteFormModal";
+import { BloqueError } from "@/funcionalidades/admin/componentes/BloqueError";
+import { filtrarPorBusqueda, ordenarPorActualizacion } from "@/funcionalidades/admin/tramites";
+import { Badge } from "@/compartido/ui/Badge";
+import { Btn } from "@/compartido/ui/Btn";
+import { EmptyState } from "@/compartido/ui/EmptyState";
+import { Icon } from "@/compartido/ui/Icon";
+import { Modal } from "@/compartido/ui/Modal";
+import { PageHeader } from "@/compartido/ui/PageHeader";
+import { Pagination } from "@/compartido/ui/Pagination";
+import { Row } from "@/compartido/ui/Row";
+import { Screen } from "@/compartido/ui/Screen";
+import { SearchInput } from "@/compartido/ui/SearchInput";
+import { SkeletonList } from "@/compartido/ui/SkeletonList";
+import { Tabs } from "@/compartido/ui/Tabs";
+import { Text } from "@/compartido/ui/Text";
+import { Toggle } from "@/compartido/ui/Toggle";
+import { useToast } from "@/compartido/ui/Toast";
 
 type Filtro = "todos" | "aceptados" | "sinAceptar";
 
@@ -31,23 +33,6 @@ function filtrarPorEstado(lista: TramiteApi[], filtro: Filtro) {
   if (filtro === "todos") return lista;
   if (filtro === "aceptados") return lista.filter((t) => t.publicado);
   return lista.filter((t) => !t.publicado);
-}
-
-function filtrarPorBusqueda(lista: TramiteApi[], busqueda: string) {
-  const q = busqueda.trim().toLowerCase();
-  if (!q) return lista;
-  return lista.filter((t) => {
-    if (t.nombre.toLowerCase().includes(q)) return true;
-    if (t.sector.nombre.toLowerCase().includes(q)) return true;
-    if (t.encargado.nombre.toLowerCase().includes(q)) return true;
-    return false;
-  });
-}
-
-function ordenarPorActualizacion(lista: TramiteApi[]) {
-  const copia = [...lista];
-  copia.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
-  return copia;
 }
 
 async function subirArchivos(tramiteId: number, archivos: ArchivoAdjunto[]) {
@@ -91,16 +76,6 @@ function armarDetalleDeFila(tramite: TramiteApi, soloMios: boolean) {
     if (candidato) partes.push(candidato);
   }
   return partes.join(" · ");
-}
-
-function BloqueError({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
-  const C = useColors();
-  return (
-    <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
-      <Text style={[Type.meta, { color: C.danger }]}>{mensaje}</Text>
-      <Btn label="Reintentar" variant="secondary" size="md" onPress={onReintentar} />
-    </View>
-  );
 }
 
 function FilaTramite({
@@ -237,7 +212,7 @@ export default function Tramites() {
       push("Trámite eliminado");
       setVerId(null);
     } catch (e) {
-      push(e instanceof Error ? e.message : "No se pudo eliminar el trámite.");
+      push(mensajeDeError(e, "No se pudo eliminar el trámite."));
     } finally {
       setTrabajando(false);
     }

@@ -2,28 +2,21 @@ import Head from "expo-router/head";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ChatWindow } from "@/components/chat/ChatWindow";
-import { Encabezado } from "@/components/menu/Encabezado";
-import { Desvanecido } from "@/components/ui/Desvanecido";
-import { Size, Spacing, useColors } from "@/constants/theme";
-import { useConversacion } from "@/context/ChatContext";
+import { ChatWindow } from "@/funcionalidades/chat/componentes/ChatWindow";
+import { Encabezado } from "@/funcionalidades/menu/Encabezado";
+import { Desvanecido } from "@/compartido/ui/Desvanecido";
+import { Size, Spacing, useColors } from "@/compartido/constantes/theme";
+import { useConversacion } from "@/funcionalidades/chat/ChatContext";
 
-/**
- * Ruta "/": la conversación con el asistente. El chat ocupa toda la pantalla y
- * el encabezado flota encima, así los mensajes pasan por detrás al desplazarse.
- */
 export default function Asistente() {
   const C = useColors();
   const insets = useSafeAreaInsets();
   const altoDelDesvanecido = insets.top + Size.header + Spacing[4];
 
-  // Abrir otro chat o crear uno nuevo cambia la key y la conversación se vuelve a montar.
   const { activa } = useConversacion();
 
   return (
     <View style={[styles.pantalla, { backgroundColor: C.canvas }]}>
-      {/* expo-router maneja el <title> del build web con react-helmet; sin este
-          Head queda el <title data-rh> vacío y Lighthouse lo marca. */}
       <Head>
         <title>ChatAP · Asistente virtual de trámites</title>
         <meta

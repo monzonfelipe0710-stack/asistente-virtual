@@ -1,21 +1,22 @@
 import { useRouter } from "expo-router";
 import { StyleSheet, View, useWindowDimensions } from "react-native";
 
-import { Badge } from "@/components/ui/Badge";
-import { Btn } from "@/components/ui/Btn";
-import { Icon } from "@/components/ui/Icon";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Screen } from "@/components/ui/Screen";
-import { StatCard } from "@/components/ui/StatCard";
-import { StatGrid } from "@/components/ui/StatGrid";
-import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { useCuentas } from "@/hooks/useCuentas";
-import { useMetricas } from "@/hooks/useMetricas";
-import { usePermisos } from "@/hooks/usePermisos";
-import { useTramites } from "@/hooks/useTramites";
-import { formatDate } from "@/utils/date";
+import { Badge } from "@/compartido/ui/Badge";
+import { Btn } from "@/compartido/ui/Btn";
+import { Icon } from "@/compartido/ui/Icon";
+import { PageHeader } from "@/compartido/ui/PageHeader";
+import { Screen } from "@/compartido/ui/Screen";
+import { StatCard } from "@/compartido/ui/StatCard";
+import { StatGrid } from "@/compartido/ui/StatGrid";
+import { Text } from "@/compartido/ui/Text";
+import { Radius, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { useCuentas } from "@/funcionalidades/admin/hooks/useCuentas";
+import { useMetricas } from "@/funcionalidades/admin/hooks/useMetricas";
+import { usePermisos } from "@/compartido/sesion/usePermisos";
+import { useTramites } from "@/funcionalidades/admin/hooks/useTramites";
+import { sumarConsultasRespondidas } from "@/funcionalidades/admin/tramites";
+import { formatDate } from "@/compartido/utils/date";
 
 function Seccion({
   titulo,
@@ -80,10 +81,7 @@ export default function Resumen() {
   const misTramites = tramites.filter((t) => String(t.encargado?.id) === user?.id);
   const misPublicados = misTramites.filter((t) => t.publicado).length;
 
-  let totalConsultas = 0;
-  for (const r of metricasHook.porTramite) {
-    totalConsultas = totalConsultas + r.cantidad;
-  }
+  const totalConsultas = sumarConsultasRespondidas(metricasHook.porTramite);
 
   const aprobados = cuentasHook.usuarios.filter((u) => u.status === "Activo").length;
   const pendientes = cuentasHook.usuarios.filter((u) => u.status === "Pendiente").length;

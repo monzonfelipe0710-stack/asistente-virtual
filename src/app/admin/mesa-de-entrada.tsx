@@ -1,25 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Spacing, Type, useColors } from "@/constants/theme";
-import { useMesas } from "@/hooks/useMesas";
-import { usePagination } from "@/hooks/usePagination";
-import { pedirSectores, type MesaApi, type SectorApi } from "@/lib/backend";
-import { Btn } from "@/components/ui/Btn";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Field } from "@/components/ui/Field";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Pagination } from "@/components/ui/Pagination";
-import { Row } from "@/components/ui/Row";
-import { Screen } from "@/components/ui/Screen";
-import { SearchInput } from "@/components/ui/SearchInput";
-import { Select } from "@/components/ui/Select";
-import { Toggle } from "@/components/ui/Toggle";
-import { SkeletonList } from "@/components/ui/SkeletonList";
-import { Text } from "@/components/ui/Text";
-import { useToast } from "@/components/ui/Toast";
+import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useMesas } from "@/funcionalidades/admin/hooks/useMesas";
+import { usePagination } from "@/funcionalidades/admin/hooks/usePagination";
+import { mensajeDeError, pedirSectores, type MesaApi, type SectorApi } from "@/compartido/lib/backend";
+import { Btn } from "@/compartido/ui/Btn";
+import { EmptyState } from "@/compartido/ui/EmptyState";
+import { Field } from "@/compartido/ui/Field";
+import { Input } from "@/compartido/ui/Input";
+import { Modal } from "@/compartido/ui/Modal";
+import { PageHeader } from "@/compartido/ui/PageHeader";
+import { Pagination } from "@/compartido/ui/Pagination";
+import { Row } from "@/compartido/ui/Row";
+import { Screen } from "@/compartido/ui/Screen";
+import { SearchInput } from "@/compartido/ui/SearchInput";
+import { Select } from "@/compartido/ui/Select";
+import { Toggle } from "@/compartido/ui/Toggle";
+import { SkeletonList } from "@/compartido/ui/SkeletonList";
+import { Text } from "@/compartido/ui/Text";
+import { useToast } from "@/compartido/ui/Toast";
+import { BloqueError } from "@/funcionalidades/admin/componentes/BloqueError";
 
 function filtrarMesas(mesas: MesaApi[], busqueda: string) {
   const q = busqueda.trim().toLowerCase();
@@ -49,16 +50,6 @@ function textoRecortadoOValorVacio(texto: string, valorVacio: "" | undefined) {
 function textoVacio(busqueda: string) {
   if (busqueda.trim()) return "No hay mesas que coincidan con la búsqueda.";
   return "Todavía no hay mesas de entrada creadas.";
-}
-
-function BloqueError({ mensaje, onReintentar }: { mensaje: string; onReintentar: () => void }) {
-  const C = useColors();
-  return (
-    <View style={{ marginBottom: Spacing[3], gap: Spacing[2] }}>
-      <Text style={[Type.meta, { color: C.danger }]}>{mensaje}</Text>
-      <Btn label="Reintentar" variant="secondary" size="md" onPress={onReintentar} />
-    </View>
-  );
 }
 
 function FilaMesa({
@@ -193,7 +184,7 @@ export default function MesaDeEntrada() {
       push(editando ? "Mesa actualizada" : "Mesa creada");
       setFormAbierto(false);
     } catch (e) {
-      setErrorForm(e instanceof Error ? e.message : "No se pudo guardar la mesa.");
+      setErrorForm(mensajeDeError(e, "No se pudo guardar la mesa."));
     } finally {
       setTrabajando(false);
     }
@@ -208,7 +199,7 @@ export default function MesaDeEntrada() {
       await eliminar(objetivo.id);
       push("Mesa eliminada");
     } catch (e) {
-      push(e instanceof Error ? e.message : "No se pudo eliminar la mesa.");
+      push(mensajeDeError(e, "No se pudo eliminar la mesa."));
     } finally {
       setTrabajando(false);
     }

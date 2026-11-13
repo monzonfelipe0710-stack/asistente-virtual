@@ -3,34 +3,29 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Text } from "@/components/ui/Text";
+import { Text } from "@/compartido/ui/Text";
 
-import { Spacing, Type, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
-import { useCuentas } from "@/hooks/useCuentas";
-import { rolesDePersonal, type AuthRole, type AuthUser } from "@/lib/auth";
-import { formatDate } from "@/utils/date";
-import { NuevoEmpleadoModal } from "@/components/admin/NuevoEmpleadoModal";
-import { Badge, type Tone } from "@/components/ui/Badge";
-import { Btn } from "@/components/ui/Btn";
-import { Icon } from "@/components/ui/Icon";
-import { KeyValue, KeyValueCard } from "@/components/ui/KeyValue";
-import { Modal } from "@/components/ui/Modal";
-import { Tabs } from "@/components/ui/Tabs";
-import { useToast } from "@/components/ui/Toast";
-import { SearchInput } from "@/components/ui/SearchInput";
-import { Avatar } from "@/components/ui/Avatar";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Row } from "@/components/ui/Row";
-import { Screen } from "@/components/ui/Screen";
-import { PageHeader } from "@/components/ui/PageHeader";
-
-const TONO_DEL_ESTADO: Record<string, Tone> = {
-  Activo: "ok",
-  Pendiente: "warn",
-  Rechazado: "bad",
-  Suspendido: "bad",
-};
+import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { useCuentas } from "@/funcionalidades/admin/hooks/useCuentas";
+import { rolesDePersonal, type AuthRole, type AuthUser } from "@/compartido/sesion/auth";
+import { formatDate } from "@/compartido/utils/date";
+import { mensajeDeError } from "@/compartido/lib/backend";
+import { TONO_DEL_ESTADO } from "@/compartido/sesion/tonoDelEstado";
+import { NuevoEmpleadoModal } from "@/funcionalidades/admin/componentes/NuevoEmpleadoModal";
+import { Badge } from "@/compartido/ui/Badge";
+import { Btn } from "@/compartido/ui/Btn";
+import { Icon } from "@/compartido/ui/Icon";
+import { KeyValue, KeyValueCard } from "@/compartido/ui/KeyValue";
+import { Modal } from "@/compartido/ui/Modal";
+import { Tabs } from "@/compartido/ui/Tabs";
+import { useToast } from "@/compartido/ui/Toast";
+import { SearchInput } from "@/compartido/ui/SearchInput";
+import { Avatar } from "@/compartido/ui/Avatar";
+import { EmptyState } from "@/compartido/ui/EmptyState";
+import { Row } from "@/compartido/ui/Row";
+import { Screen } from "@/compartido/ui/Screen";
+import { PageHeader } from "@/compartido/ui/PageHeader";
 
 type FiltroDeRol = "todos" | AuthRole;
 
@@ -175,7 +170,7 @@ export default function UserTable() {
       }
       setSelected(null);
     } catch (e) {
-      push(e instanceof Error ? e.message : "No se pudo guardar.");
+      push(mensajeDeError(e, "No se pudo guardar."));
     } finally {
       setGuardando(false);
     }

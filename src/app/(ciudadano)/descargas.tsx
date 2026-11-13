@@ -1,22 +1,23 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from "react-native";
 
-import { TarjetaDeDocumento } from "@/components/descargas/TarjetaDeDocumento";
-import { PantallaConEncabezadoFlotante } from "@/components/menu/Encabezado";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Icon } from "@/components/ui/Icon";
-import { Screen } from "@/components/ui/Screen";
-import { SkeletonList } from "@/components/ui/SkeletonList";
-import { Text } from "@/components/ui/Text";
-import { useToast } from "@/components/ui/Toast";
-import { Radius, Spacing, Type, useColors } from "@/constants/theme";
+import { TarjetaDeDocumento } from "@/funcionalidades/descargas/TarjetaDeDocumento";
+import { PantallaConEncabezadoFlotante } from "@/funcionalidades/menu/Encabezado";
+import { EmptyState } from "@/compartido/ui/EmptyState";
+import { Icon } from "@/compartido/ui/Icon";
+import { Screen } from "@/compartido/ui/Screen";
+import { SkeletonList } from "@/compartido/ui/SkeletonList";
+import { Text } from "@/compartido/ui/Text";
+import { useToast } from "@/compartido/ui/Toast";
+import { Radius, Spacing, Type, useColors } from "@/compartido/constantes/theme";
 import {
+  mensajeDeError,
   pedirDocumentos,
   pedirTramitesPublicados,
   pedirUrlDeDescarga,
   type DocumentoApi,
   type TramitePublicadoApi,
-} from "@/lib/backend";
+} from "@/compartido/lib/backend";
 
 function CabeceraDelTramite({
   tramite,
@@ -91,7 +92,7 @@ function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
       const documentosDelTramite = await pedirDocumentos(tramite.id);
       setDocumentos(documentosDelTramite);
     } catch (e) {
-      push(e instanceof Error ? e.message : "No se pudieron cargar los documentos.");
+      push(mensajeDeError(e, "No se pudieron cargar los documentos."));
       setAbierto(false);
     } finally {
       setCargando(false);
@@ -111,7 +112,7 @@ function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
       const { url } = await pedirUrlDeDescarga(tramite.id, documento.id);
       if (url) await Linking.openURL(url);
     } catch (e) {
-      push(e instanceof Error ? e.message : "No se pudo abrir el documento.");
+      push(mensajeDeError(e, "No se pudo abrir el documento."));
     }
   }
 
@@ -131,7 +132,6 @@ function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
   );
 }
 
-/** Ruta "/descargas": formularios y notas de cada trámite publicado. */
 export default function Descargas() {
   const C = useColors();
   const [tramites, setTramites] = useState<TramitePublicadoApi[]>([]);
@@ -145,7 +145,7 @@ export default function Descargas() {
         if (activo) setTramites(lista);
       })
       .catch((e) => {
-        if (activo) setError(e instanceof Error ? e.message : "No se pudieron cargar los trámites.");
+        if (activo) setError(mensajeDeError(e, "No se pudieron cargar los trámites."));
       })
       .finally(() => {
         if (activo) setCargando(false);

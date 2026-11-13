@@ -1,23 +1,24 @@
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { DonutChart, type Segment } from "@/components/reportes/DonutChart";
-import { HBarRow } from "@/components/reportes/HBarRow";
-import { RankRow } from "@/components/reportes/RankRow";
-import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
-import { useCuentas } from "@/hooks/useCuentas";
-import { useMetricas } from "@/hooks/useMetricas";
-import { useTramites } from "@/hooks/useTramites";
-import { rolesDePersonal, type AuthUser } from "@/lib/auth";
-import type { ConsultaSinRespuestaApi, ConsultasPorTramiteApi } from "@/lib/backend";
-import { formatDate } from "@/utils/date";
-import { Screen } from "@/components/ui/Screen";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { SectionTitle } from "@/components/ui/SectionTitle";
-import { CountUp } from "@/components/ui/CountUp";
-import { StatCard } from "@/components/ui/StatCard";
-import { StatGrid } from "@/components/ui/StatGrid";
+import { DonutChart, type Segment } from "@/funcionalidades/admin/componentes/DonutChart";
+import { HBarRow } from "@/funcionalidades/admin/componentes/HBarRow";
+import { RankRow } from "@/funcionalidades/admin/componentes/RankRow";
+import { Text } from "@/compartido/ui/Text";
+import { Radius, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
+import { useCuentas } from "@/funcionalidades/admin/hooks/useCuentas";
+import { useMetricas } from "@/funcionalidades/admin/hooks/useMetricas";
+import { useTramites } from "@/funcionalidades/admin/hooks/useTramites";
+import { sumarConsultasRespondidas } from "@/funcionalidades/admin/tramites";
+import { rolesDePersonal, type AuthUser } from "@/compartido/sesion/auth";
+import type { ConsultaSinRespuestaApi, ConsultasPorTramiteApi } from "@/compartido/lib/backend";
+import { formatDate } from "@/compartido/utils/date";
+import { Screen } from "@/compartido/ui/Screen";
+import { PageHeader } from "@/compartido/ui/PageHeader";
+import { SectionTitle } from "@/compartido/ui/SectionTitle";
+import { CountUp } from "@/compartido/ui/CountUp";
+import { StatCard } from "@/compartido/ui/StatCard";
+import { StatGrid } from "@/compartido/ui/StatGrid";
 
 interface UsuariosDeUnRol {
   label: string;
@@ -40,14 +41,6 @@ function contarUsuariosPorRol(cuentas: AuthUser[]) {
     usuariosPorRol.push({ label: rol, count: usuariosDelRol.length });
   }
   return usuariosPorRol;
-}
-
-function sumarConsultasRespondidas(porTramite: ConsultasPorTramiteApi[]) {
-  let total = 0;
-  for (const tramite of porTramite) {
-    total = total + tramite.cantidad;
-  }
-  return total;
 }
 
 function calcularMaximoPorRol(usuariosPorRol: UsuariosDeUnRol[]) {

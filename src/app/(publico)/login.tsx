@@ -3,18 +3,17 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ChatBotAvatar } from "@/components/avatar/ChatBotAvatar";
-import { BotonVolver } from "@/components/ui/BotonVolver";
-import { Btn } from "@/components/ui/Btn";
-import { ScrollConTeclado } from "@/components/ui/Screen";
-import { Segmented } from "@/components/ui/Segmented";
-import { Field } from "@/components/ui/Field";
-import { Icon, type IconName } from "@/components/ui/Icon";
-import { Input } from "@/components/ui/Input";
-import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Text } from "@/components/ui/Text";
-import { Radius, Spacing, Type, Weight, useColors } from "@/constants/theme";
-import { useAuth } from "@/context/AuthContext";
+import { BotonVolver } from "@/compartido/ui/BotonVolver";
+import { Btn } from "@/compartido/ui/Btn";
+import { ScrollConTeclado } from "@/compartido/ui/Screen";
+import { Segmented } from "@/compartido/ui/Segmented";
+import { Field } from "@/compartido/ui/Field";
+import { Input } from "@/compartido/ui/Input";
+import { PasswordInput } from "@/compartido/ui/PasswordInput";
+import { Text } from "@/compartido/ui/Text";
+import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { useAuth } from "@/compartido/sesion/AuthContext";
+import { mensajeDeError } from "@/compartido/lib/backend";
 
 type Mode = "login" | "register";
 
@@ -31,72 +30,6 @@ const COPY = {
   },
 };
 
-const PASOS: { texto: string; icono: IconName; estado: "hecho" | "actual" | "futuro" }[] = [
-  { texto: "Solicitud enviada", icono: "check", estado: "hecho" },
-  { texto: "En revisión por Administración", icono: "clock", estado: "actual" },
-  { texto: "Cuenta aprobada", icono: "more", estado: "futuro" },
-];
-
-function PasoDeSolicitud({ paso }: { paso: (typeof PASOS)[number] }) {
-  const C = useColors();
-  const hecho = paso.estado === "hecho";
-  const futuro = paso.estado === "futuro";
-  const actual = paso.estado === "actual";
-
-  return (
-    <View style={styles.paso}>
-      <View
-        style={[
-          styles.pasoIcono,
-          {
-            backgroundColor: hecho ? C.accent : C.canvas,
-            borderColor: futuro ? C.borderStrong : C.accent,
-          },
-        ]}
-      >
-        <Icon name={paso.icono} size={18} color={hecho ? C.onAccent : C.ink} />
-      </View>
-      <Text
-        style={[
-          styles.pasoTexto,
-          {
-            color: C.ink,
-            fontWeight: actual ? Weight.bold : Weight.medium,
-          },
-        ]}
-      >
-        {paso.texto}
-      </Text>
-    </View>
-  );
-}
-
-/** Pantalla que sigue al envío de la solicitud: dice que quedó pendiente y en qué paso está. */
-function SolicitudEnviada({ onTerminar }: { onTerminar: () => void }) {
-  const C = useColors();
-  return (
-    <>
-      <View style={styles.centro}>
-        <ChatBotAvatar size={72} />
-        <Text style={[Type.pageTitle, { color: C.ink, textAlign: "center" }]}>Solicitud enviada</Text>
-        <Text style={[Type.lead, { color: C.ink2, textAlign: "center" }]}>
-          Tu cuenta está pendiente. Cuando Administración la apruebe, vas a poder ingresar con tu
-          correo y tu contraseña.
-        </Text>
-      </View>
-
-      <View style={[styles.pasos, { backgroundColor: C.surface, borderColor: C.border }]}>
-        {PASOS.map((paso) => (
-          <PasoDeSolicitud key={paso.texto} paso={paso} />
-        ))}
-      </View>
-
-      <View style={{ flex: 1, minHeight: Spacing[6] }} />
-      <Btn label="Volver al inicio" onPress={onTerminar} />
-    </>
-  );
-}
-
 export default function LoginRegisterScreen() {
   const C = useColors();
   const router = useRouter();
@@ -109,7 +42,6 @@ export default function LoginRegisterScreen() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [enviada, setEnviada] = useState(false);
 
   const isLogin = mode === "login";
   const copy = COPY[mode];
@@ -125,16 +57,10 @@ export default function LoginRegisterScreen() {
 
   async function enviarSolicitud() {
     await register({ name, email, password });
-    setPassword("");
-    setEnviada(true);
   }
 
   function volver() {
-    if (enviada) {
-      setEnviada(false);
-    } else {
-      router.replace("/");
-    }
+    router.replace("/");
   }
 
   function cambiarModoDesdeOpcion(opcion: string) {
@@ -155,13 +81,12 @@ export default function LoginRegisterScreen() {
         await enviarSolicitud();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo completar la acción.");
+      setError(mensajeDeError(err, "No se pudo completar la acción."));
     } finally {
       setSubmitting(false);
     }
   }
 
-  // Con una sesión abierta no hay nada que hacer acá: staff al panel, el resto al asistente.
   if (user) {
     if (user.debeCambiarPassword) return <Redirect href="/cambiar-password" />;
     if (isStaff) return <Redirect href="/admin" />;
@@ -179,90 +104,84 @@ export default function LoginRegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <BotonVolver
-          etiqueta={enviada ? "Volver" : "Volver al asistente"}
+          etiqueta="Volver al asistente"
           onPress={volver}
         />
 
-        {enviada ? (
-          <SolicitudEnviada onTerminar={() => router.replace("/")} />
-        ) : (
-          <>
-            <Text style={[Type.pageTitle, { color: C.ink, marginTop: Spacing[2] }]}>
-              {copy.title}
-            </Text>
-            <Text style={[Type.lead, { color: C.ink2, marginTop: 6 }]}>{copy.sub}</Text>
+        <Text style={[Type.pageTitle, { color: C.ink, marginTop: Spacing[2] }]}>
+          {copy.title}
+        </Text>
+        <Text style={[Type.lead, { color: C.ink2, marginTop: 6 }]}>{copy.sub}</Text>
 
-            <View style={{ marginTop: Spacing[5] }}>
-              <Segmented
-                value={isLogin ? "Ingresar" : "Crear cuenta"}
-                options={["Ingresar", "Crear cuenta"]}
-                onChange={cambiarModoDesdeOpcion}
+        <View style={{ marginTop: Spacing[5] }}>
+          <Segmented
+            value={isLogin ? "Ingresar" : "Crear cuenta"}
+            options={["Ingresar", "Crear cuenta"]}
+            onChange={cambiarModoDesdeOpcion}
+          />
+        </View>
+
+        <View style={styles.form}>
+          {!isLogin && (
+            <Field label="Nombre y apellido">
+              <Input
+                value={name}
+                onChangeText={setName}
+                placeholder="Ana Pérez"
+                autoCapitalize="words"
+                autoComplete="name"
               />
-            </View>
+            </Field>
+          )}
 
-            <View style={styles.form}>
-              {!isLogin && (
-                <Field label="Nombre y apellido">
-                  <Input
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Ana Pérez"
-                    autoCapitalize="words"
-                    autoComplete="name"
-                  />
-                </Field>
-              )}
-
-              <Field label="Correo electrónico">
-                <Input
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="nombre@formosa.gob.ar"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-              </Field>
-
-              <Field label="Contraseña" error={error || undefined}>
-                <PasswordInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder={isLogin ? "Tu contraseña" : "Mínimo 8 caracteres"}
-                  autoComplete={isLogin ? "current-password" : "new-password"}
-                  invalid={!!error}
-                />
-              </Field>
-            </View>
-
-            <Btn
-              label={copy.submit}
-              onPress={handleSubmit}
-              loading={submitting}
-              style={{ marginTop: Spacing[6] }}
+          <Field label="Correo electrónico">
+            <Input
+              value={email}
+              onChangeText={setEmail}
+              placeholder="nombre@formosa.gob.ar"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
             />
+          </Field>
 
-            {isLogin ? (
-              <Btn
-                label="¿Olvidaste tu contraseña?"
-                variant="ghost"
-                size="md"
-                onPress={() => router.push("/recuperar")}
-                style={{ marginTop: Spacing[2] }}
-              />
-            ) : (
-              <Text style={[Type.meta, { color: C.ink2, marginTop: Spacing[4] }]}>
-                Tu cuenta queda pendiente hasta que Administración la apruebe. Mientras tanto no
-                podés ingresar.
-              </Text>
-            )}
+          <Field label="Contraseña" error={error || undefined}>
+            <PasswordInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder={isLogin ? "Tu contraseña" : "Mínimo 8 caracteres"}
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              invalid={!!error}
+            />
+          </Field>
+        </View>
 
-            <View style={{ flex: 1, minHeight: Spacing[6] }} />
-            <Text style={[styles.footer, { color: C.ink3 }]}>
-              Subsecretaría de Recursos Humanos · Formosa
-            </Text>
-          </>
+        <Btn
+          label={copy.submit}
+          onPress={handleSubmit}
+          loading={submitting}
+          style={{ marginTop: Spacing[6] }}
+        />
+
+        {isLogin ? (
+          <Btn
+            label="¿Olvidaste tu contraseña?"
+            variant="ghost"
+            size="md"
+            onPress={() => router.push("/recuperar")}
+            style={{ marginTop: Spacing[2] }}
+          />
+        ) : (
+          <Text style={[Type.meta, { color: C.ink2, marginTop: Spacing[4] }]}>
+            Tu cuenta queda pendiente hasta que Administración la apruebe. Mientras tanto no
+            podés ingresar.
+          </Text>
         )}
+
+        <View style={{ flex: 1, minHeight: Spacing[6] }} />
+        <Text style={[styles.footer, { color: C.ink3 }]}>
+          Subsecretaría de Recursos Humanos · Formosa
+        </Text>
       </ScrollConTeclado>
     </View>
   );
@@ -276,36 +195,6 @@ const styles = StyleSheet.create({
   form: {
     gap: Spacing[4],
     marginTop: Spacing[5],
-  },
-  centro: {
-    alignItems: "center",
-    gap: Spacing[3],
-    paddingTop: Spacing[2],
-    paddingBottom: Spacing[5],
-  },
-  pasos: {
-    gap: Spacing[3],
-    padding: Spacing[4],
-    borderRadius: Radius["2xl"],
-    borderWidth: 1,
-  },
-  paso: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[3],
-  },
-  pasoIcono: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.full,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pasoTexto: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: 21,
   },
   footer: {
     fontSize: 14,
