@@ -47,6 +47,7 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {})
       colapsada = true;
       return emitir(MENSAJE_LISTA_COLAPSADA, blancos);
     }
+    if (lineas.length === 0) return '';
     const cabecera = anuncio ? emitir(anuncio.texto, anuncio.blancos) : '';
     return cabecera + lineas.map((l) => emitir(l.texto, l.blancos)).join('');
   };
@@ -73,8 +74,10 @@ export const crearLimpiador = ({ saludo = '', alCorregirTuteo, verificar } = {})
         encabezado = null;
         if (lista.lineas.length === 0 && lista.encabezado) enBlanco = 0;
       }
-      if (!limpia.trim() || itemVacio(limpia)) lista.perdido = true;
-      else lista.lineas.push({ texto: limpia, blancos: enBlanco });
+      // Un ítem que era estructura interna se omite: no es un ítem perdido.
+      const interno = !limpia.trim() && verificar?.sacadaPorEstructura?.();
+      if (!interno && (!limpia.trim() || itemVacio(limpia))) lista.perdido = true;
+      else if (!interno) lista.lineas.push({ texto: limpia, blancos: enBlanco });
       enBlanco = 0;
       return '';
     }

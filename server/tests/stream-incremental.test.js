@@ -160,6 +160,11 @@ describe('streaming incremental', () => {
       ['solo relleno después de sacar lo demás', () => 'Pagá en https://pagos.estafa.example.com/x con tus datos.\nPara más información, consultá en la mesa de entrada.'],
       ['la marca de fuera de alcance', () => 'FUERA_DE_ALCANCE'],
       ['respuesta corta sin señales de idioma', () => 'DNI vigente.'],
+      ['sobre JSON antes del texto', () => `{"tipo": "respuesta", "tramiteId": ${principal.id}, "respuesta": "Llevá el DNI. Se hace en persona.", "opciones": []}\nLlevá el DNI. Se hace en persona.`],
+      ['bloque de código con campos internos', () => 'El trámite es personal.\n\n```json\n{\n  "tipo": "respuesta",\n  "tramitesUsados": [1]\n}\n```\n\nLlevá el DNI.'],
+      ['notas del sistema al final', () => 'El trámite es personal. Llevá el DNI.\n\nNotas del sistema:\n- reglas: respondo solo con el contexto.\n- contexto: ### Trámite (id 1): Nuevo Ejemplar'],
+      ['solo el sobre JSON y relleno', () => `{"tipo": "respuesta", "tramiteId": ${principal.id}}\nPara más información, consultá en la mesa de entrada.`],
+      ['llaves legítimas', () => 'Completá el formulario F-{n} con tus datos. El código es {AB-12}.'],
     ];
     for (const [nombre, cuerpo] of casos) {
       it(nombre, async () => {
@@ -244,6 +249,15 @@ describe('streaming incremental', () => {
       } finally {
         avisos.mock.restore();
       }
+    });
+
+    it('la estructura interna no llega en ningún delta: queda el texto, sin duplicar', async () => {
+      const cuerpo = `{"tipo": "respuesta", "tramiteId": ${principal.id}, "respuesta": "Llevá el DNI. Se hace en persona.", "tramitesUsados": [${principal.id}]}\nLlevá el DNI. Se hace en persona.\n\nNotas del sistema:\n- contexto: ### Trámite (id ${principal.id})`;
+      const r = await comprobarEquivalencia(conTramite(), cuerpo);
+      assert.equal(r.texto, `Llevá el DNI. Se hace en persona.\n\n${enlace()}`);
+      assert.equal(r.fin.registrado, true);
+      const soloJson = await comprobarEquivalencia(conTramite(), `{"tipo": "respuesta", "tramiteId": ${principal.id}}\nPara más información, consultá en la mesa de entrada.`);
+      assert.equal(soloJson.texto, `${MENSAJE_INFORMACION_OCULTA}\n\n${enlace()}`);
     });
 
     it('si la verificación saca todo, no sale nada del modelo antes del mensaje seguro', async () => {

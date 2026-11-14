@@ -9,7 +9,8 @@
 //   3. datos sensibles: se saca la oración que le pide a la persona la tarjeta, el código de
 //      seguridad, una contraseña, un PIN o los datos de home banking;
 //   4. atribución: una oración que nombra un lugar (oficina, centro, calle) que solo figura en otro
-//      candidato del contexto se saca, o se reemplaza si el trámite no tiene oficinas cargadas.
+//      candidato del contexto se saca, o se reemplaza si el trámite no tiene oficinas cargadas;
+//   5. estructura: va primero; saca el sobre JSON, el contexto o las notas internas (ver abajo).
 // Además, como el servidor saca los enlaces del modelo (no los dominios sueltos), un ítem de lista
 // al que se le saca un enlace se saca entero y una oración que queda rota sin su enlace ("para
 // Buenos Aires es [url].") también.
@@ -369,6 +370,88 @@ export const sinContenidoPropio = (texto) =>
     .flatMap((l) => partirEnOraciones(l).map((o) => o.texto))
     .every(esRelleno);
 
+// --- Estructura interna ------------------------------------------------------------------------
+
+// El sobre de salida del modelo, el contexto que recibe o una sección de "notas del sistema" no
+// llegan a la persona. Se mira de a oración, con estado: un objeto JSON se saca hasta que cierra,
+// un bloque de código con un campo interno hasta su cierre y una sección de notas hasta el final.
+const CAMPOS_INTERNOS = 'tipo|saludo|tramiteId|tramitesUsados|opciones|respuesta|encontrado|reglas|contexto';
+const ESTRUCTURA = [
+  /\{\s*["'][^"'\n]{1,40}["']\s*:/,
+  new RegExp(String.raw`["'\x60]\s*(?:${CAMPOS_INTERNOS})\s*["'\x60]\s*[:=]`, 'i'),
+  /\b(?:tramiteId|tramitesUsados|tipoRespuesta|consultaId|calificarToken)\b/,
+  /\(\s*id\s*\d+\s*\)/i,
+  /contexto\s*\(tr[aá]mites candidatos\)|resumen del cat[aá]logo\s*:|fuente oficial\s*:\s*s[ií](?![\p{L}])/iu,
+  /^[\s*_#>"'\x60-]*contexto\s*:/i,
+  /^[\s*_#>"'\x60-]*reglas\s*:/,
+];
+const CAMPO_EN_BLOQUE = new RegExp(String.raw`^[\s*_#>"'\x60-]*(?:${CAMPOS_INTERNOS})\s*[:=]`, 'i');
+const SECCION_INTERNA = /^[\s*_#>"'\x60-]*notas?\s+(?:del\s+sistema|internas)\b/i;
+const CERCO = /```|~~~/g;
+const SOLO_LLAVES = /^[\s,]*[{}[\]][\s{}[\],]*$/;
+
+// Devuelve null, 'interna' (se saca y cuenta como quitada) o 'marca' (un cerco o llaves sueltas:
+// se sacan sin contar, no tenían contenido).
+export const crearDetectorDeEstructura = () => {
+  let enBloque = false;
+  let bloqueInterno = false;
+  let profundidad = 0;
+  let enCadena = false;
+  let resto = false;
+
+  const avanzarJson = (texto) => {
+    for (let i = 0; i < texto.length; i++) {
+      const c = texto[i];
+      if (enCadena) {
+        if (c === '\\') i++;
+        else if (c === '"') enCadena = false;
+      } else if (c === '"') enCadena = true;
+      else if (c === '{' || c === '[') profundidad++;
+      else if (c === '}' || c === ']') profundidad--;
+    }
+    if (profundidad <= 0) {
+      profundidad = 0;
+      enCadena = false;
+    }
+  };
+  const cerrarCercos = (texto) => {
+    const cercos = texto.match(CERCO)?.length ?? 0;
+    if (cercos % 2 === 1) enBloque = !enBloque;
+    if (!enBloque) bloqueInterno = false;
+    return cercos;
+  };
+
+  return (texto) => {
+    if (resto) return 'interna';
+    if (profundidad > 0) {
+      avanzarJson(texto);
+      cerrarCercos(texto);
+      if (enBloque) bloqueInterno = true;
+      return 'interna';
+    }
+    if (enBloque && bloqueInterno) {
+      cerrarCercos(texto);
+      return 'interna';
+    }
+    if (SECCION_INTERNA.test(texto)) {
+      resto = true;
+      return 'interna';
+    }
+    const interna = ESTRUCTURA.some((r) => r.test(texto)) || (enBloque && CAMPO_EN_BLOQUE.test(texto.replace(CERCO, '')));
+    const cercos = cerrarCercos(texto);
+    if (interna) {
+      if (enBloque) bloqueInterno = true;
+      avanzarJson(texto);
+      return 'interna';
+    }
+    if (SOLO_LLAVES.test(texto)) {
+      avanzarJson(texto);
+      return 'marca';
+    }
+    return cercos > 0 ? 'marca' : null;
+  };
+};
+
 // --- Verificador -------------------------------------------------------------------------------
 
 // `tramites`: todos los del contexto (con detalle); `principales`: los que usa la respuesta (el de
@@ -383,8 +466,11 @@ export const crearVerificador = ({ tramites = [], principales = [], atribucion, 
   const hosts = hostsPermitidos(conDetalle);
   const montos = montosPermitidos(conDetalle);
   const deOtroTramite = atribucion ? crearAtribucion(atribucion, elegidos) : () => null;
+  const estructura = crearDetectorDeEstructura();
 
   const corregirOracion = (oracion) => {
+    const interna = estructura(oracion.texto);
+    if (interna) return { capa: 'estructura', texto: '', cuenta: interna === 'interna' };
     if (oracion.urls.some((u) => !hostPermitido(hostDe(urlDe(u)), hosts))) return { capa: 'enlace', texto: '' };
     if (quedaRota(oracion)) return { capa: 'enlace', texto: '' };
     if (pideDatoSensible(oracion.texto)) return { capa: 'datos', texto: '' };
@@ -413,12 +499,13 @@ export const crearVerificador = ({ tramites = [], principales = [], atribucion, 
         salida.push(o.texto);
         return { texto: o.texto, cambio: false };
       }
-      if (!correccion.texto) quitadas++;
+      if (!correccion.texto && correccion.cuenta !== false) quitadas++;
       alCorregir?.({ capa: correccion.capa, original: o.texto.trim(), corregida: correccion.texto });
       if (correccion.capa === 'atribucion' && correccion.texto) {
         if (reemplazos.has(correccion.texto)) return { texto: '', cambio: true };
         reemplazos.add(correccion.texto);
       }
+      if (correccion.capa === 'estructura') return { texto: '', cambio: true, estructura: true };
       if (!correccion.texto || salida.some((s) => s.trim() === correccion.texto)) return { texto: '', cambio: true };
       salida.push(correccion.texto);
       return { texto: correccion.texto, cambio: true };
@@ -431,18 +518,23 @@ export const crearVerificador = ({ tramites = [], principales = [], atribucion, 
     alCorregir?.({ capa: 'enlace', original: linea.trim(), corregida: '' });
     return true;
   };
+  // Un ítem que se sacó entero por ser estructura interna no es un ítem perdido de la lista.
+  let sacadaPorEstructura = false;
   const verificar = (linea) => {
+    sacadaPorEstructura = false;
     const prefijo = linea.match(PREFIJO_DE_LISTA)?.[1] ?? '';
     const oraciones = partirEnOraciones(linea.slice(prefijo.length));
     if (itemSinEnlace(linea, prefijo, oraciones)) return '';
     const revisar = nuevaLinea();
     const revisadas = oraciones.map(revisar);
+    sacadaPorEstructura = revisadas.length > 0 && revisadas.every((r) => r.estructura);
     if (!revisadas.some((r) => r.cambio)) return linea;
     const cuerpo = revisadas.map((r) => r.texto.trim()).filter(Boolean).join(' ');
     return cuerpo ? `${prefijo}${cuerpo}` : '';
   };
   verificar.quitadas = () => quitadas;
   verificar.nuevaLinea = nuevaLinea;
+  verificar.sacadaPorEstructura = () => sacadaPorEstructura;
   return verificar;
 };
 
