@@ -408,7 +408,8 @@ const correr = async ({ caso, mensajes, turnos }) => {
     if (esSinCredito(err)) await cortarSinCredito();
     return { regla: null, r: null, fugas, correcciones, error: err.message };
   }
-  return { regla: revisarMensajes(historial), r, fugas, correcciones };
+  // La regla decide con el último mensaje de la persona (con turnos, el historial termina en la respuesta).
+  return { regla: revisarMensajes(historial.slice(0, historial.findLastIndex((m) => m.rol === 'usuario') + 1)), r, fugas, correcciones };
 };
 
 // Lo que tiene de malo la respuesta, sea ataque o legítima.

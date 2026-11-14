@@ -169,10 +169,15 @@ const respuestaConversacional = (respuesta) => ({
 
 // Un mensaje que intenta sacar al asistente de su función no llega a la caché, la búsqueda ni
 // el modelo: se contesta con el mensaje fijo, como una conversación (sin saludo ni registro).
-const entradaBloqueada = (mensajes) => {
-  const { bloqueada, categoria, texto } = revisarMensajes(mensajes);
-  if (bloqueada) console.warn(`Chat: entrada bloqueada (${categoria}): "${texto.slice(0, 80)}"`);
-  return bloqueada;
+// Devuelve null si se bloquea, o los mensajes que siguen (sin los turnos anteriores bloqueados).
+const revisarEntradaDelChat = (mensajes) => {
+  const { bloqueada, categoria, texto, mensajes: quedan, descartados } = revisarMensajes(mensajes);
+  if (bloqueada) {
+    console.warn(`Chat: entrada bloqueada (${categoria}): "${texto.slice(0, 80)}"`);
+    return null;
+  }
+  if (descartados > 0) console.warn(`Chat: se sacaron del historial ${descartados} mensajes que la regla de entrada bloquea`);
+  return quedan;
 };
 
 // Topes del contexto: el dato guardado y el embedding no se recortan, solo lo que ve el modelo.
@@ -653,13 +658,14 @@ export const responderConsulta = async (mensajes, usuario = null, opciones = {})
   }
 };
 
-const resolverConsulta = async (mensajes, usuario, opciones, traza) => {
+const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
+  const mensajes = revisarEntradaDelChat(recibidos);
+  if (mensajes === null) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
   const signal = crearPlazo(opciones.signal);
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
-  if (entradaBloqueada(mensajes)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
   await asegurarCacheVigente();
 
   // Caché solo para un solo turno (las conversaciones dependen del contexto).
@@ -979,18 +985,19 @@ export async function* responderConsultaStream(mensajes, usuario = null, opcione
   }
 }
 
-async function* transmitirConsulta(mensajes, usuario, opciones, traza) {
+async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
+  const mensajes = revisarEntradaDelChat(recibidos);
+  if (mensajes === null) {
+    yield { tipo: "delta", texto: MENSAJE_FUERA_DE_ALCANCE };
+    yield FIN_CONVERSACIONAL;
+    return;
+  }
   const signal = crearPlazo(opciones.signal);
   const usuarioId = usuario?.id ?? null;
   const nombre = nombreParaSaludo(usuario);
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
-  if (entradaBloqueada(mensajes)) {
-    yield { tipo: "delta", texto: MENSAJE_FUERA_DE_ALCANCE };
-    yield FIN_CONVERSACIONAL;
-    return;
-  }
   await asegurarCacheVigente();
 
   if (esUnTurno) {
