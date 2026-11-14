@@ -374,19 +374,24 @@ export const sinContenidoPropio = (texto) =>
 
 // El sobre de salida del modelo, el contexto que recibe o una sección de "notas del sistema" no
 // llegan a la persona. Se mira de a oración, con estado: un objeto JSON se saca hasta que cierra,
-// un bloque de código con un campo interno hasta su cierre y una sección de notas hasta el final.
+// un bloque de código con un campo interno hasta su cierre, y desde una sección de notas o el
+// contexto volcado (encabezado "### Trámite (id N)", rótulo "Contexto:") se saca todo lo que sigue:
+// después vienen sus líneas ("Organismo:", "Requisitos:"), que solas no se distinguen de una respuesta.
 const CAMPOS_INTERNOS = 'tipo|saludo|tramiteId|tramitesUsados|opciones|respuesta|encontrado|reglas|contexto';
 const ESTRUCTURA = [
   /\{\s*["'][^"'\n]{1,40}["']\s*:/,
   new RegExp(String.raw`["'\x60]\s*(?:${CAMPOS_INTERNOS})\s*["'\x60]\s*[:=]`, 'i'),
   /\b(?:tramiteId|tramitesUsados|tipoRespuesta|consultaId|calificarToken)\b/,
-  /\(\s*id\s*\d+\s*\)/i,
-  /contexto\s*\(tr[aá]mites candidatos\)|resumen del cat[aá]logo\s*:|fuente oficial\s*:\s*s[ií](?![\p{L}])/iu,
-  /^[\s*_#>"'\x60-]*contexto\s*:/i,
+  /fuente oficial\s*:\s*s[ií](?![\p{L}])/iu,
   /^[\s*_#>"'\x60-]*reglas\s*:/,
 ];
+const HASTA_EL_FINAL = [
+  /^[\s*_#>"'\x60-]*notas?\s+(?:del\s+sistema|internas)\b/i,
+  /^[\s*_#>"'\x60-]*contexto\s*:/i,
+  /\(\s*id\s*\d+\s*\)/i,
+  /contexto\s*\(tr[aá]mites candidatos\)|resumen del cat[aá]logo\s*:/i,
+];
 const CAMPO_EN_BLOQUE = new RegExp(String.raw`^[\s*_#>"'\x60-]*(?:${CAMPOS_INTERNOS})\s*[:=]`, 'i');
-const SECCION_INTERNA = /^[\s*_#>"'\x60-]*notas?\s+(?:del\s+sistema|internas)\b/i;
 const CERCO = /```|~~~/g;
 const SOLO_LLAVES = /^[\s,]*[{}[\]][\s{}[\],]*$/;
 
@@ -433,7 +438,7 @@ export const crearDetectorDeEstructura = () => {
       cerrarCercos(texto);
       return 'interna';
     }
-    if (SECCION_INTERNA.test(texto)) {
+    if (HASTA_EL_FINAL.some((r) => r.test(texto))) {
       resto = true;
       return 'interna';
     }

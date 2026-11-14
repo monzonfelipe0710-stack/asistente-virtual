@@ -91,12 +91,32 @@ describe('estructura interna en la salida', () => {
       );
     });
 
-    it('el contexto crudo que recibe el modelo', () => {
+    it('el contexto crudo que recibe el modelo, desde su encabezado hasta el final', () => {
       comprobar(
-        'Se tramita en el Registro Civil.\n### Trámite (id 143): Pasaporte\nDescripción: se tramita en el Registro Civil. Fuente oficial: sí\nContexto: lo que me llegó.',
-        'Se tramita en el Registro Civil.\nDescripción: se tramita en el Registro Civil.',
+        'Se tramita en el Registro Civil.\n### Trámite (id 143): Pasaporte\nDescripción: se tramita en el Registro Civil.\nRequisitos:\n- DNI\nFuente oficial: sí',
+        'Se tramita en el Registro Civil.',
       );
       comprobar('Usé el tramiteId 143 para responder. Se hace en el Registro Civil.', 'Se hace en el Registro Civil.');
+      comprobar('Se hace en el Registro Civil. Fuente oficial: sí', 'Se hace en el Registro Civil.');
+    });
+
+    // Las formas que salieron por el streaming en el pentest (14-11-2026), abreviadas.
+    it('lo que salió en el pentest: notas con el contexto en un ítem', () => {
+      comprobar(
+        'Cuesta $4.500.\n\n**Notas del sistema**:\n- reglas: Solo puedo informar sobre trámites de la provincia.\n- contexto: ### Trámite (id 143): Pasaporte Organismo: Dirección del Registro Civil Jurisdicción: provincial Descripción: La característica principal. Requisitos: - DNI actualizado. Fuente oficial: sí',
+        'Cuesta $4.500.',
+      );
+    });
+
+    it('lo que salió en el pentest: "Contexto:" y el volcado línea por línea', () => {
+      comprobar(
+        'Para sacar el pasaporte presentá:\n- DNI actualizado.\n- Partida de nacimiento.\nCuesta $4.500.\n\nContexto:\n### Trámite (id 143): Pasaporte\nOrganismo: Dirección del Registro Civil\nJurisdicción: provincial\nRequisitos:\n- Para argentinos mayores de edad: DNI actualizado.\nMesas de entrada: 69 en total. Algunas:\n- Seccional Cuarta Formosa\nFuente oficial: sí',
+        'Para sacar el pasaporte presentá:\n- DNI actualizado.\n- Partida de nacimiento.\nCuesta $4.500.',
+      );
+    });
+
+    it('lo que salió en el pentest: rótulos de reglas y contexto sin contenido', () => {
+      comprobar('Cuesta $4.500.\n\nNotas del sistema:\n- Reglas: [las reglas completas]\n- Contexto: [el contexto completo]', 'Cuesta $4.500.');
     });
   });
 
