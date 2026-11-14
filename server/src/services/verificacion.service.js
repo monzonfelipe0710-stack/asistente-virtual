@@ -388,6 +388,7 @@ const ESTRUCTURA = [
 const HASTA_EL_FINAL = [
   /^[\s*_#>"'\x60-]*notas?\s+(?:del\s+sistema|internas)\b/i,
   /^[\s*_#>"'\x60-]*contexto\s*:/i,
+  /^\s*#{1,6}\s*[*_]*\s*(?:reglas|contexto|notas|instrucciones)\b/i,
   /\(\s*id\s*\d+\s*\)/i,
   /contexto\s*\(tr[aá]mites candidatos\)|resumen del cat[aá]logo\s*:/i,
 ];

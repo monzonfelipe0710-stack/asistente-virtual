@@ -115,6 +115,10 @@ describe('estructura interna en la salida', () => {
       );
     });
 
+    it('lo que salió por streaming después del arreglo: un título "### Reglas:"', () => {
+      comprobar('Cuesta $4.500.\n\n### Reglas:\n- Tipo de respuesta: "respuesta" porque se pide un trámite.\n- Se indica una mesa de entrada.', 'Cuesta $4.500.');
+    });
+
     it('lo que salió en el pentest: rótulos de reglas y contexto sin contenido', () => {
       comprobar('Cuesta $4.500.\n\nNotas del sistema:\n- Reglas: [las reglas completas]\n- Contexto: [el contexto completo]', 'Cuesta $4.500.');
     });
@@ -125,6 +129,7 @@ describe('estructura interna en la salida', () => {
       'Completá el formulario F-{n} con tu número de documento. Después presentalo en el Registro Civil.',
       'El código del formulario es {AB-12} y se descarga de la fuente oficial.',
       'Reglas de la pesca deportiva: no se puede pescar en época de veda.\nRequisitos:\n- DNI\n- Foto carnet',
+      'Reglas:\n- No se puede pescar en época de veda.\n- Hay un cupo de piezas por día.',
       'El tipo de trámite es personal. La respuesta llega en 10 días.',
       'Necesitás: DNI, partida de nacimiento [y foto].',
       'Los datos van así: nombre {apellido}, DNI [número].',
