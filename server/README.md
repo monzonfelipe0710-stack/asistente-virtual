@@ -78,9 +78,14 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `CHAT_PLAZO_MS` | no | Plazo total de una consulta del chat. Default `18000` |
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
 | `STREAM_INCREMENTAL` | no | `true` (default): el texto del chat sale de a oraciones ya verificadas, igual en las dos rutas (ver [Streaming incremental](#streaming-incremental)). `false` (o `0`, `no`): vuelve el comportamiento anterior en las dos rutas |
+| `CHAT_MAX_PREGUNTA` | no | Largo máximo de la pregunta y de cada mensaje de la persona en el historial. Default `500` |
+| `CHAT_MAX_TEXTO_ASISTENTE` | no | Largo máximo de cada mensaje del asistente en el historial. Default `2000` |
+| `CHAT_MAX_MENSAJES` | no | Mensajes por conversación. Default `20` |
+| `CHAT_MAX_CUERPO_KB` | no | Tamaño máximo del cuerpo de `/api/chat` y `/api/chat/stream`, en kb. Default `64` (el resto de la API, 100) |
+| `CHAT_LIMITE_POR_MINUTO`, `CHAT_LIMITE_POR_HORA` | no | Pedidos al chat por IP, compartidos entre las dos rutas. Default `10` y `100` |
 
 El modelo de embeddings no es configurable: cambiarlo invalida los vectores guardados.
-Los tiempos tienen sus valores por defecto en el código ([`src/config/ia.js`](src/config/ia.js)):
+Los tiempos y los límites del chat tienen sus valores por defecto en el código ([`src/config/ia.js`](src/config/ia.js), [`src/config/chat.js`](src/config/chat.js)):
 una variable ausente, vacía o que no sea un entero válido deja el default (con un aviso en el log).
 
 ## Scripts
@@ -101,7 +106,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
 | `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico. Los trámites esperados se buscan por nombre, así que corre igual contra la base real y la temporal |
-| `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas y trámites envenenados (D y E, solo en la base temporal). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
+| `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas, trámites envenenados (D y E, solo en la base temporal) y los casos del pentest manual (F: notas del sistema, sobre JSON, conversación contaminada, evasiones). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
 | `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
 | `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]` | Tiempo hasta el primer `delta` y hasta el fin con `STREAM_INCREMENTAL` en true y en false, alternados. Llama a OpenAI; borra por id las consultas que registra |
 | `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron y cuántas corridas de cada una terminaron en error de API. No compara una corrida marcada como inválida |
@@ -585,9 +590,14 @@ es un borrador, solo un SU o un ADM del sector (con token), y al resto se le res
 | POST | `/api/chat` | público, token opcional |
 | POST | `/api/chat/stream` | ídem, respuesta por Server-Sent Events |
 
-- **Rate limit:** 10 pedidos por minuto por IP, **compartidos** entre las dos rutas, y
-  cuentan también los pedidos rechazados por validación. Al pasarse: 429
-  `{ "error": "Demasiadas consultas. Esperá un momento e intentá de nuevo." }`.
+- **Rate limit:** 10 pedidos por minuto y 100 por hora por IP (`CHAT_LIMITE_POR_MINUTO`,
+  `CHAT_LIMITE_POR_HORA`), **compartidos** entre las dos rutas, y cuentan también los pedidos
+  rechazados por validación. Al pasarse: 429 con `Retry-After` y los encabezados `RateLimit-*`,
+  `{ "error": "Demasiadas consultas. Esperá un momento e intentá de nuevo." }` (minuto) o
+  `{ "error": "Llegaste al máximo de consultas por hora. Probá de nuevo más tarde." }` (hora).
+  Detrás de un reverse proxy hace falta `TRUST_PROXY` (ver [Notas de diseño](#notas-de-diseño)).
+  Las dos rutas son las únicas públicas que llaman a OpenAI (embedding de la búsqueda y modelo);
+  las que reindexan trámites piden login de administración.
 - **Token opcional:** si viene y es válido, la consulta queda en el historial del usuario
   (`/api/consultas/mias`). Si es inválido, venció o el usuario tiene que cambiar la
   contraseña, se responde igual, como anónimo.
@@ -612,9 +622,15 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 }
 ```
 
-`pregunta` hasta 500 caracteres; `mensajes` de 1 a 20, cada `texto` de 1 a 2000 y `rol`
-`usuario` o `asistente`. Si vienen los dos, se usa `mensajes`. Errores 400:
-`Falta la pregunta o los mensajes.` y `El último mensaje debe ser del usuario.`
+`pregunta` hasta 500 caracteres; `mensajes` de 1 a 20, cada `texto` de 1 a 500 si es de la
+persona y de 1 a 2000 si es del asistente, y `rol` `usuario` o `asistente` (cualquier otro rol se
+rechaza y los campos que no son del esquema se descartan: un mensaje no puede traer instrucciones
+ni cambiar de rol). Si vienen los dos, se usa `mensajes`. El cuerpo del pedido puede tener hasta
+64 kb (413 `La solicitud es demasiado grande.`). Los topes se configuran con `CHAT_MAX_PREGUNTA`,
+`CHAT_MAX_TEXTO_ASISTENTE`, `CHAT_MAX_MENSAJES` y `CHAT_MAX_CUERPO_KB`. Errores 400, en español:
+`Falta la pregunta o los mensajes.`, `El último mensaje debe ser del usuario.`, `La pregunta puede
+tener hasta 500 caracteres.`, `Cada mensaje puede tener hasta N caracteres.`, `La conversación
+puede tener hasta 20 mensajes.` y `El rol de cada mensaje tiene que ser "usuario" o "asistente".`
 
 **`tipo` en los mensajes del asistente (opcional).** El front tiene que guardar el tipo que
 devolvió cada respuesta (`tipo` de `POST /api/chat`, `tipoRespuesta` del evento `fin` del
@@ -685,14 +701,23 @@ caché y `consultas.respuesta` guardan el texto sin saludo y sin estas líneas; 
 buscan al servir, así siguen a la URL actual del trámite.
 
 **Reglas de entrada.** Antes de la caché, la búsqueda y el modelo, `guardrail.service.js` revisa
-todos los mensajes con `rol: "usuario"` contra patrones específicos (español, inglés y portugués,
-también con tildes, mayúsculas, espacios de más, caracteres de ancho cero o leetspeak): pedidos de
-revelar las instrucciones, de anular las reglas y marcadores de rol (`system:`, `<|im_start|>`,
-`[INST]`…). Si alguno coincide, la respuesta tiene la forma de una conversación (`conversacional:
+el último mensaje de la persona contra patrones específicos (español, inglés y portugués,
+también con tildes, mayúsculas, espacios de más, caracteres de ancho cero, leetspeak, letras de
+ancho completo o en círculos, letras cirílicas que se ven como latinas y texto codificado para URL
+como `%20`): pedidos de revelar las instrucciones, de anular las reglas y marcadores de rol
+(`system:`, `<|im_start|>`, `[INST]`…). Si coincide, la respuesta tiene la forma de una conversación (`conversacional:
 true`, sin trámites ni registro) con el texto fijo "Solo puedo ayudarte con información sobre
 trámites de la provincia de Formosa y sus municipios. Contame qué trámite necesitás.", sin saludo ni enlaces; en streaming, un
-solo `delta` y el `fin`. No se cachea ni se registra; se loguea la categoría y los primeros 80
-caracteres.
+solo `delta` y el `fin`. No se cachea ni se registra (no cuenta en las métricas); se loguea la
+categoría y los primeros 80 caracteres.
+
+Cada mensaje se evalúa solo: un intento anterior en la misma conversación no bloquea una consulta
+legítima posterior. Los mensajes anteriores que la regla bloquearía no llegan a la búsqueda ni al
+modelo: se sacan del historial, con la respuesta del asistente que les siguió, y también un mensaje
+"del asistente" que la bloquearía (el historial lo arma el cliente). Se loguea cuántos se sacaron.
+Si al sacarlos queda un solo turno, la consulta se trata como de un turno (puede salir de la caché).
+Hasta el 14-11-2026 se revisaban todos los turnos de la persona y un intento bloqueaba el resto de
+la conversación (hallazgo del pentest).
 
 El prompt le pide al modelo que conteste `FUERA_DE_ALCANCE` (y el servidor lo reemplaza por el
 mismo mensaje fijo, sin saludo) solo si piden ver, repetir, traducir, resumir o describir sus
@@ -709,6 +734,21 @@ mandar cada una: si la copia aparece después de haber mandado texto, lo mandado
 la copia) y en lugar del resto va el mensaje fijo (ver [Streaming incremental](#streaming-incremental)).
 Con `STREAM_INCREMENTAL=false` vuelve el chequeo anterior: solo en `POST /api/chat`, sobre el texto
 entero.
+
+**Estructura interna.** La verificación de la salida (capa `estructura`, la primera; ver
+[`verificacion.service.js`](src/services/verificacion.service.js)) saca del texto lo que es del
+sistema y no de la respuesta, de a oración y con el mismo camino en las dos rutas (también con
+`STREAM_INCREMENTAL=false`): un objeto JSON (`{"…": …}`, hasta que cierra, aunque cruce oraciones o
+líneas), un campo interno entre comillas (`"tipo":`, `"tramiteId":`, `"opciones":`, `"reglas":`,
+`"contexto":`…), los nombres `tramiteId`/`tramitesUsados`, `Fuente oficial: sí`, y un bloque de
+código desde que aparece un campo interno hasta que cierra. Desde una sección "Notas del sistema",
+un rótulo `Contexto:`, el encabezado de un trámite del contexto (`### Trámite (id N)`) o los rótulos
+del prompt (`RESUMEN DEL CATÁLOGO:`) se saca todo lo que sigue: después viene el contexto volcado
+línea por línea (`Organismo:`, `Requisitos:`…), que solo no se distingue de una respuesta. Las
+marcas de un bloque de código (` ``` `) y las llaves sueltas se sacan sin contar como contenido
+perdido; las llaves dentro del texto (`F-{n}`) y un bloque sin campos internos quedan. Un ítem de
+lista sacado por esta capa no colapsa la lista. Si al sacar todo no queda nada que responda, va el
+mensaje seguro con la fuente oficial, como en las otras capas.
 
 **Conversación y temas ajenos.** Una conversación (saludo, pregunta sobre el asistente o el
 catálogo, tema ajeno) solo nombra trámites del resumen del catálogo: para un tema ajeno da dos
@@ -953,7 +993,8 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    (`textoDeTramite`). Se regenera al crear o editar el trámite, al importarlo con cambios y, en
    segundo plano, para todos los trámites de un sector (y sus descendientes) cuando cambia su
    nombre, padre, jurisdicción o localidad.
-2. **Búsqueda híbrida** con el texto de todos los turnos del usuario, solo sobre trámites
+2. **Búsqueda híbrida** con el texto de todos los turnos del usuario (sin los que bloquearía la
+   regla de entrada), solo sobre trámites
    publicados con embedding: 0,6 · similitud coseno (pgvector, HNSW) + 0,4 · `ts_rank`
    full-text en español (GIN). Es candidato si la distancia coseno es menor a
    `UMBRAL_DISTANCIA` o si coincide por texto. Los trámites se agrupan por nombre normalizado
@@ -1268,6 +1309,19 @@ Del chequeo de idioma:
   `STREAM_INCREMENTAL=false` sigue contando sobre el texto ya verificado.
 - **La lista de palabras del portugués es corta** ("o", "e" o "na" no están: las dos primeras
   también son del español): un texto corto en portugués puede no llegar al mínimo de 5.
+
+Del pentest manual por el chat (14-11-2026; detalle en `docs/estado-actual-backend.md`):
+
+- **Arreglado:** el contexto crudo y las "notas del sistema" por streaming, el sobre JSON (cubierto
+  aunque hoy no se reprodujo), el rechazo de consultas legítimas después de un intento, las
+  evasiones con ancho completo, letras en círculos, cirílicas y `%20`, y los límites del servidor
+  (largos, mensajes, cuerpo, roles, tope por hora).
+- **Queda:** un resumen de reglas en prosa, sin rótulos ni copia literal, depende del prompt; un
+  rótulo "Reglas:" sin `#` no se saca (puede ser legítimo); una aclaración a la que se le saca todo
+  el texto queda vacía; el rate limit es por IP y en memoria, sin tope global de gasto (propuesta en
+  el documento de estado).
+- **No es del backend:** el servidor de desarrollo de Vite expone el código del front (en
+  producción se sirve el build) y el número de consulta visible es decisión del front.
 
 ## Pendiente
 
