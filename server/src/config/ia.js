@@ -1,5 +1,5 @@
 // Una variable vacía, ausente o inválida deja el valor por defecto.
-const enteroDeEntorno = (nombre, porDefecto, minimo) => {
+export const enteroDeEntorno = (nombre, porDefecto, minimo) => {
   const crudo = process.env[nombre]?.trim();
   if (!crudo) return porDefecto;
   const valor = Number(crudo);

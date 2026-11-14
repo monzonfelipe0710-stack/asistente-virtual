@@ -3,6 +3,9 @@ export const errorHandler = (err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'El cuerpo de la solicitud no es un JSON válido.' });
   }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'La solicitud es demasiado grande.' });
+  }
 
   if (err.name === 'ZodError') {
     const [issue] = err.issues;
