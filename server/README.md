@@ -105,7 +105,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/despublicarTramites.js id... [--dry-run]` | Despublica los trámites de una lista explícita de ids, informa qué hizo con cada uno e incrementa la versión del catálogo. No borra nada |
 | `node scripts/reindexar-faltantes.js` | Genera el embedding de los trámites que no lo tienen e incrementa la versión del catálogo |
 | `node scripts/reindexar-todo.js [--estimar] [--desde id] [--lote n]` | Regenera el embedding de todo el catálogo en lotes de 100, con 3 reintentos por lote. `--estimar` informa tokens y costo sin llamar a la API; si un lote falla, indica el `--desde` para retomar. Hace falta después de cambiar el texto del embedding. Al terminar incrementa la versión del catálogo |
-| `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico. Los trámites esperados se buscan por nombre, así que corre igual contra la base real y la temporal |
+| `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico. Los trámites esperados se buscan por nombre, así que corre igual contra la base real y la temporal. Con `--tipeo`, solo los casos con errores de tipeo y sus controles |
 | `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas, trámites envenenados (D y E, solo en la base temporal) y los casos del pentest manual (F: notas del sistema, sobre JSON, conversación contaminada, evasiones). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
 | `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
 | `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]` | Tiempo hasta el primer `delta` y hasta el fin con `STREAM_INCREMENTAL` en true y en false, alternados. Llama a OpenAI; borra por id las consultas que registra |
@@ -1337,6 +1337,18 @@ Del chequeo de idioma:
   `STREAM_INCREMENTAL=false` sigue contando sobre el texto ya verificado.
 - **La lista de palabras del portugués es corta** ("o", "e" o "na" no están: las dos primeras
   también son del español): un texto corto en portugués puede no llegar al mínimo de 5.
+
+Errores de tipeo (14-11-2026; detalle, mediciones y propuesta en `docs/estado-actual-backend.md`):
+
+- Si la **única** palabra que identifica el trámite está mal escrita ("hola, nscito renovar el
+  psporte", "pasaporet"), el trámite no llega como candidato: su embedding queda lejos (distancia
+  0,72 a 0,89, umbral 0,5) y el stemmer no une `psport` con `pasaport`. Si otra palabra está bien
+  ("renobar pasaporte", "partida de nacimento"), se encuentra. Cuando llega, el modelo lo elige.
+- Casos en `eval-chat --tipeo` (12 con errores y 3 de control): 11/15 en la temporal y 10/15 en la
+  real, en las dos rutas.
+- Se probó corregir palabras contra el vocabulario de los nombres solo para la parte léxica y se
+  revirtió: no arreglaba el caso reportado (lo corta el filtro del 85 %), sacaba la partida de
+  nacimiento de los candidatos y corregía palabras bien escritas ("conducir" → "conducta").
 
 Del pentest manual por el chat (14-11-2026; detalle en `docs/estado-actual-backend.md`):
 

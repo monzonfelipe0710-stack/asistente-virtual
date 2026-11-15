@@ -726,6 +726,83 @@ respaldo, un límite de gasto del proyecto en el panel de OpenAI.
 - El guardia contra la base real pasó de `npm test` a `tests/helpers/base-de-prueba.js`, que importa
   cada archivo de tests (ver README, "Tests").
 
+### Errores de tipeo en la búsqueda (14-11-2026)
+
+Caso real: "hola, nscito renovar el psporte" responde "No encontramos información sobre esta consulta".
+
+**Diagnóstico** (base real, solo lectura; `registrarConsulta` simulado para no escribir; 5 corridas por
+ruta). El problema es de **búsqueda**, no de decisión del modelo: cuando el trámite llega como
+candidato, el modelo lo elige en todas las corridas de las dos rutas; cuando no llega, no hay nada
+que elegir.
+
+| Frase | Pasaporte/esperado | Por qué | Llega / lo elige (normal, stream) |
+|---|---|---|---|
+| hola, nscito renovar el psporte | puesto 58, d=0,716 | umbral (0,5) y sin léxica (`psport` ≠ `pasaport`) | 0/5, 0/5 |
+| renovar el pasaporte | puesto 1, d=0,450 | pasa umbral y léxica | 5/5, 5/5 |
+| psporte | puesto 75, d=0,881 | umbral y sin léxica | 0/5, 0/5 |
+| necesito renovar el psporte | puesto 47, d=0,733 | umbral y sin léxica | 0/5, 0/5 |
+| nesesito sacar el dni | puesto 1, d=0,357 | "dni" bien escrito | 5/5 (aclaración), 5/5 |
+| licensia de conducir | puesto 1, d=0,475 | "conducir" bien escrito | 5/5, 5/5 |
+| partida de nacimento | puesto 4, d=0,649 | entra por la léxica ("partida") | 5/5, 5/5 |
+| renobar pasaporte | puesto 2, d=0,607 | entra por la léxica ("pasaporte") | 5/5, 5/5 |
+| pasaporet | puesto 14, d=0,892 | umbral y sin léxica | 0/5, 0/5 |
+| como saco el carnet de conducir | puesto 1, d=0,477 | control | 5/5, 5/5 |
+
+- El embedding de una palabra clave mal escrita queda lejos (distancia 0,72 a 0,89); subir el umbral
+  no sirve: el trámite queda en los puestos 14 a 75, detrás de otros sin relación.
+- La parte léxica no ayuda: el stemmer de Postgres no une `psport` con `pasaport`.
+- El saludo no es el problema ("hola, nscito…" 0,716 contra "necesito…" 0,733), así que limpiar
+  saludos y muletillas (opción a) no cambia nada.
+- Falla toda frase donde la **única** palabra que identifica el trámite está mal escrita; si alguna
+  otra está bien ("pasaporte", "dni", "partida", "conducir"), la búsqueda lo encuentra.
+
+**Casos nuevos de `eval-chat`** (`--tipeo`, 12 con errores y 3 de control). Estado antes de cambiar
+nada, 3 corridas: temporal 11/15 en las dos rutas, real 10/15 en las dos. Fallan los cuatro con
+"pasaporte" mal escrito y, en la real, "licensia de conducir" (pide aclaración por jurisdicción:
+el problema ya conocido de la licencia de conducir, no el tipeo). Los 3 controles, bien.
+
+**Lo que se probó y se revirtió: corrección de palabras para la parte léxica** (opción c). Vocabulario
+con las palabras de los nombres de los trámites publicados, cacheado con el catálogo; una palabra de
+la consulta que no está en el vocabulario y está a 1 edición (5-6 letras) o 2 (7 o más) de una que sí,
+con la misma primera letra (o s/c/z, b/v), agregaba esa palabra a la consulta léxica. Sin llamadas
+extra a OpenAI; 0,3 ms por consulta. Resultado (3 corridas):
+
+| | Temporal normal | Temporal stream | Real normal | Real stream |
+|---|---|---|---|---|
+| Tipeo, antes | 11/15 | 11/15 | 10/15 | 10/15 |
+| Tipeo, con la corrección | 12/15 | 12/15 | 11/15 | 11/15 |
+
+- Ganó "pasaporet" y "como saco el pasaprote" (0/3 → 3/3).
+- **No arregló el caso reportado** ni "necesito renovar el psporte": Pasaporte pasa a coincidir por la
+  léxica, pero su puntaje (similitud 0,17 + léxica 0,015) queda debajo del 85 % de "Renovación de
+  órdenes de consultas" (0,22, que coincide por "renovar"), y lo corta el filtro de candidatos cercanos.
+- **Rompió "partida de nacimento"** (3/3 → 0/3): al agregar "nacimiento", otros trámites de nacimiento
+  desplazan a la Partida de Nacimiento.
+- **Corrige palabras bien escritas** que no están tal cual en los nombres: cambió la parte léxica de 52
+  de las 179 preguntas de los evals (55 en la temporal) y los candidatos de 21 (22): "conducir" →
+  "conducta" (el Certificado de Buena Conducta entra en "licencia de conducir" en la temporal),
+  "patentes" → "pacientes", "podés" → "poder", "historial" → "historia". Los controles siguieron sin
+  trámite.
+- Se revirtió. No se corrieron eval-chat completo ni eval-seguridad con la corrección: las preguntas
+  cuya búsqueda cambiaba se midieron arriba, y en las demás la búsqueda era idéntica a la anterior.
+
+**Qué haría falta (a decidir, no implementado).** Cualquier arreglo solo léxico choca con lo mismo: la
+parte léxica pesa poco (0,4 · `ts_rank`, del orden de 0,015) frente a la similitud (0,6 · (1 − d)), y
+el filtro del 85 % saca al trámite cuando otra palabra de la frase trae candidatos más parecidos. Las
+opciones son pasar la corrección también al texto del embedding (el brief la limitaba a la léxica),
+darle más peso a una coincidencia con el **nombre** del trámite, o comparar por trigramas contra los
+nombres. Para lo último, la migración propuesta (a mano e idempotente):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS tramites_nombre_trgm_idx ON tramites
+  USING gin ((translate(lower(nombre), 'áàäâãéèëêíìïîóòöôõúùüûñç', 'aaaaaeeeeiiiiooooouuuunc')) gin_trgm_ops);
+```
+
+con una condición más en la búsqueda (`word_similarity(<palabra>, <nombre normalizado>) >= 0,5` por
+palabra de la consulta) y un término de puntaje propio. Cualquiera de las tres cambia el orden de los
+candidatos: hay que medirla contra el filtro del 85 % y las aclaraciones legítimas antes de dejarla.
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).
