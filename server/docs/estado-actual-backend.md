@@ -300,7 +300,7 @@ En Zod 4, `z.object` **descarta en silencio** las claves que no declara. Ningún
 | `crearTramiteSchema` / `actualizarTramiteSchema` | `tramite.validator.js` | `nombre`, `descripcion`, `costo?` ≥ 0, `sectorId`, `requisitos[]`, `mesaIds[]`. Crear pone `[]` por defecto; actualizar es `.partial()` sin defaults |
 | `crearMesaSchema` / `actualizarMesaSchema` | `mesa.validator.js` | `nombre`, `direccion?`, `localidad?`, `horario?`, `esGeneral?`, `sectorId?` nullable |
 | `subirDocumentoSchema` / `actualizarDocumentoSchema` | `documento.validator.js` | `nombre?`: trim, 1 a 200; `urlExterna?`: trim, hasta 2000, URL http o https con host. Que venga archivo o URL (y el nombre de un enlace) lo exige el controller |
-| chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-2000, tipo? }`; uno de los dos obligatorio. `tipo` (`respuesta\|aclaracion\|conversacion`) solo en los del asistente; uno desconocido se descarta sin 400 |
+| chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-500 (persona) o 1-6000 (asistente), tipo? }` (configurables, `config/chat.js`); uno de los dos obligatorio. `tipo` (`respuesta\|aclaracion\|conversacion`) solo en los del asistente; uno desconocido se descarta sin 400 |
 
 ### 5.2 Incompatibilidades con el frontend de `origin/dev-felipe`
 
@@ -676,7 +676,9 @@ temporal.
   cirílicas que se ven como latinas y `%XX` (ASCII). Las consultas bloqueadas siguen sin registrarse
   (no cuentan en las métricas, que leen solo `consultas`).
 - **Límites del servidor** (`config/chat.js`, configurables): pregunta y mensajes de la persona hasta
-  500, del asistente hasta 2000, 20 mensajes, cuerpo de 64 kb (413 en español), roles solo `usuario`
+  500, del asistente hasta 6000 (la respuesta honesta más larga mide 3546: el costo en texto completo
+  de la escala de habilitaciones, con saludo, lista y fuente; en la base real, 1691), 20 mensajes,
+  cuerpo de 128 kb (413 en español), roles solo `usuario`
   y `asistente` (cualquier otro es 400; los campos fuera del esquema se descartan). Rate limit por IP
   de 10 por minuto (como antes) y 100 por hora (nuevo), compartido entre las dos rutas, con
   `Retry-After` y `RateLimit-*`. Los mensajes de validación de zod salían en inglés: ahora en
@@ -704,8 +706,11 @@ respaldo, un límite de gasto del proyecto en el panel de OpenAI.
 - Los tests que necesitan base (`chat.test.js`, `stream-incremental.test.js`) se actualizaron pero no
   se corrieron: Docker Desktop no está instalado en la máquina (se desinstaló el 08-11-2026) y no hay
   base temporal.
-- Una aclaración a la que la capa le saca todo el texto queda vacía (con sus opciones): no hay frase
-  fija para ese caso.
+- Resuelto después: una aclaración a la que la capa le saca todo el texto lleva "¿Cuál de estas
+  opciones es la que buscás?" con sus opciones, y el detector de fuga toma como fuga los marcadores
+  de plantilla (los `<…>` del prompt y cualquiera de varias palabras, como el `<lo que seguís para
+  responder>` que repitió la respuesta en Fa por streaming). El tope del mensaje del asistente pasó
+  a 6000 y el cuerpo a 128 kb, medidos con la respuesta honesta más larga (README, "Chat").
 - El resumen de reglas en prosa, sin rótulos ni copia literal de 40 caracteres, no lo detecta la
   salida: depende del prompt.
 - El rate limit y el tope por hora son en memoria, por instancia.

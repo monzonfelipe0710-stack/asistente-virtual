@@ -79,10 +79,10 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
 | `STREAM_INCREMENTAL` | no | `true` (default): el texto del chat sale de a oraciones ya verificadas, igual en las dos rutas (ver [Streaming incremental](#streaming-incremental)). `false` (o `0`, `no`): vuelve el comportamiento anterior en las dos rutas |
 | `CHAT_MAX_PREGUNTA` | no | Largo máximo de la pregunta y de cada mensaje de la persona en el historial. Default `500` |
-| `CHAT_MAX_TEXTO_ASISTENTE` | no | Largo máximo de cada mensaje del asistente en el historial. Default `2000` |
+| `CHAT_MAX_TEXTO_ASISTENTE` | no | Largo máximo de cada mensaje del asistente en el historial. Default `6000`: la respuesta honesta más larga mide 3546 (ver [Chat](#chat)) |
 | `CHAT_MAX_MENSAJES` | no | Mensajes por conversación. Default `20` |
-| `CHAT_MAX_CUERPO_KB` | no | Tamaño máximo del cuerpo de `/api/chat` y `/api/chat/stream`, en kb. Default `64` (el resto de la API, 100) |
-| `CHAT_LIMITE_POR_MINUTO`, `CHAT_LIMITE_POR_HORA` | no | Pedidos al chat por IP, compartidos entre las dos rutas. Default `10` y `100` |
+| `CHAT_MAX_CUERPO_KB` | no | Tamaño máximo del cuerpo de `/api/chat` y `/api/chat/stream`, en kb. Default `128` (el resto de la API, 100) |
+| `CHAT_LIMITE_POR_MINUTO`, `CHAT_LIMITE_POR_HORA` | no | Pedidos al chat por IP, compartidos entre las dos rutas. Default `10` y `100`. Para el día de la demo, `120` y `2000` (ver [Chat](#chat)) |
 
 El modelo de embeddings no es configurable: cambiarlo invalida los vectores guardados.
 Los tiempos y los límites del chat tienen sus valores por defecto en el código ([`src/config/ia.js`](src/config/ia.js), [`src/config/chat.js`](src/config/chat.js)):
@@ -598,6 +598,12 @@ es un borrador, solo un SU o un ADM del sector (con token), y al resto se le res
   Detrás de un reverse proxy hace falta `TRUST_PROXY` (ver [Notas de diseño](#notas-de-diseño)).
   Las dos rutas son las únicas públicas que llaman a OpenAI (embedding de la búsqueda y modelo);
   las que reindexan trámites piden login de administración.
+- **Día de la demo:** con mucha gente en el mismo wifi, todos salen por la misma IP pública y
+  comparten el contador: con los defaults, el aula entera tiene 10 consultas por minuto. Para ese día
+  conviene `CHAT_LIMITE_POR_MINUTO=120` y `CHAT_LIMITE_POR_HORA=2000` (unas 60 personas con 2
+  consultas por minuto en el pico y unas 30 en la hora), y volver a los defaults después: con valores
+  altos, una sola IP puede gastar mucho más en OpenAI. Hay un test de que el límite configurado por
+  entorno se respeta (`tests/limites-chat-entorno.test.js`).
 - **Token opcional:** si viene y es válido, la consulta queda en el historial del usuario
   (`/api/consultas/mias`). Si es inválido, venció o el usuario tiene que cambiar la
   contraseña, se responde igual, como anónimo.
@@ -623,10 +629,15 @@ o, para seguir una conversación (hasta 20 mensajes, el último del usuario):
 ```
 
 `pregunta` hasta 500 caracteres; `mensajes` de 1 a 20, cada `texto` de 1 a 500 si es de la
-persona y de 1 a 2000 si es del asistente, y `rol` `usuario` o `asistente` (cualquier otro rol se
+persona y de 1 a 6000 si es del asistente, y `rol` `usuario` o `asistente` (cualquier otro rol se
 rechaza y los campos que no son del esquema se descartan: un mensaje no puede traer instrucciones
-ni cambiar de rol). Si vienen los dos, se usa `mensajes`. El cuerpo del pedido puede tener hasta
-64 kb (413 `La solicitud es demasiado grande.`). Los topes se configuran con `CHAT_MAX_PREGUNTA`,
+ni cambiar de rol). El tope del asistente sale de medir la respuesta honesta más larga, que el
+front reenvía tal cual: la verificación puede reemplazar un monto por el costo en texto completo
+del trámite (la escala de habilitaciones, 17 filas y unos 3000 caracteres), y con saludo, una lista
+y la fuente oficial queda en 3546 caracteres (test en `tests/limites-chat.test.js`); contra la base
+real, la más larga medida el 14-11-2026 fue de 1691 (requisitos del Registro de Proveedores).
+Si vienen los dos, se usa `mensajes`. El cuerpo del pedido puede tener hasta
+128 kb (413 `La solicitud es demasiado grande.`). Los topes se configuran con `CHAT_MAX_PREGUNTA`,
 `CHAT_MAX_TEXTO_ASISTENTE`, `CHAT_MAX_MENSAJES` y `CHAT_MAX_CUERPO_KB`. Errores 400, en español:
 `Falta la pregunta o los mensajes.`, `El último mensaje debe ser del usuario.`, `La pregunta puede
 tener hasta 500 caracteres.`, `Cada mensaje puede tener hasta N caracteres.`, `La conversación
@@ -729,7 +740,11 @@ atiende en español.
 fija de las instrucciones del sistema, se reemplaza por el mismo mensaje fijo y se loguea. Se
 compara solo contra el texto estático del prompt, no contra el resumen del catálogo ni los
 trámites, y no cuentan las frases que el prompt le pide decir (las que van entre comillas, quién
-es el asistente y adónde derivar). Se revisa oración por oración en las dos rutas, antes de
+es el asistente y adónde derivar). También es fuga un marcador de plantilla: los del prompt
+(`<saludo o vacío>`, `<id o null>`, `<ids>`…, que se toman del texto fijo) y cualquiera de varias
+palabras entre `< >` (`<lo que seguís para responder>`, que el modelo copió de una consulta que
+pedía un formato y después repitió la respuesta); una etiqueta HTML o un `<` de comparación no
+cuentan. Se revisa oración por oración en las dos rutas, antes de
 mandar cada una: si la copia aparece después de haber mandado texto, lo mandado queda (no tenía
 la copia) y en lugar del resto va el mensaje fijo (ver [Streaming incremental](#streaming-incremental)).
 Con `STREAM_INCREMENTAL=false` vuelve el chequeo anterior: solo en `POST /api/chat`, sobre el texto
@@ -748,7 +763,9 @@ línea por línea (`Organismo:`, `Requisitos:`…), que solo no se distingue de 
 marcas de un bloque de código (` ``` `) y las llaves sueltas se sacan sin contar como contenido
 perdido; las llaves dentro del texto (`F-{n}`) y un bloque sin campos internos quedan. Un ítem de
 lista sacado por esta capa no colapsa la lista. Si al sacar todo no queda nada que responda, va el
-mensaje seguro con la fuente oficial, como en las otras capas.
+mensaje seguro con la fuente oficial, como en las otras capas. Si una aclaración queda sin texto,
+va "¿Cuál de estas opciones es la que buscás?" con las mismas `opciones` (en las dos rutas y con
+`STREAM_INCREMENTAL=false`).
 
 **Conversación y temas ajenos.** Una conversación (saludo, pregunta sobre el asistente o el
 catálogo, tema ajeno) solo nombra trámites del resumen del catálogo: para un tema ajeno da dos
@@ -1094,6 +1111,13 @@ correr arma o pone al día con `scripts/base-temporal.js` (crea el contenedor si
 migraciones e importa el catálogo real). Hace falta Docker Desktop abierto. Se niega a correr si
 `DATABASE_URL_TEST` apunta a la misma base que el `.env`.
 
+**No correr los tests con `node --test` directo:** así toman la `DATABASE_URL` del `.env`, que es la
+base real. Pasó el 14-11-2026 con `chat-anterior.test.js` y `fallas-openai-anterior.test.js`, que
+parecen no usar la base pero importan `chat.test.js` y `fallas-openai.test.js` (crean y borran sus
+datos; no quedó nada). Para correr archivos sueltos, `npm test -- <archivos>`; si hace falta `node
+--test` (por ejemplo, sin Docker y solo los que no usan la base), con
+`DATABASE_URL=postgresql://nadie:x@127.0.0.1:1/ninguna` para que nada llegue a una base.
+
 **Tests del scraper.** La corrida completa (sin archivos) también corre `ingestion/tests` (Python,
 sin red ni base: parsers de las fichas, lectura del módulo, costos, privacidad) con
 `ingestion/.venv`. Si el venv no existe, avisa "falta ingestion/.venv, se omiten N tests" y
@@ -1317,8 +1341,7 @@ Del pentest manual por el chat (14-11-2026; detalle en `docs/estado-actual-backe
   evasiones con ancho completo, letras en círculos, cirílicas y `%20`, y los límites del servidor
   (largos, mensajes, cuerpo, roles, tope por hora).
 - **Queda:** un resumen de reglas en prosa, sin rótulos ni copia literal, depende del prompt; un
-  rótulo "Reglas:" sin `#` no se saca (puede ser legítimo); una aclaración a la que se le saca todo
-  el texto queda vacía; el rate limit es por IP y en memoria, sin tope global de gasto (propuesta en
+  rótulo "Reglas:" sin `#` no se saca (puede ser legítimo); el rate limit es por IP y en memoria, sin tope global de gasto (propuesta en
   el documento de estado).
 - **No es del backend:** el servidor de desarrollo de Vite expone el código del front (en
   producción se sirve el build) y el número de consulta visible es decisión del front.
