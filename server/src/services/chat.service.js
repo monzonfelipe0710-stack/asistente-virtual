@@ -445,11 +445,12 @@ const alcanzoElTope = (mensajes) =>
 const cortesiaPara = (mensajes) =>
   mensajes.findLast((m) => m.rol === "asistente")?.tipo === "aclaracion" ? null : respuestaDeCortesia(mensajes.at(-1).texto);
 
-const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, verificar, signal, limpiar = limpiarCuerpo }) => {
+const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, limpiar = limpiarCuerpo }) => {
   // Sin texto ("chau" con solo la META), una frase amable según el mensaje.
   if (!cuerpo.trim()) return cortesiaPara(mensajes)?.texto ?? MENSAJE_CONVERSACION_VACIA;
   const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
+  alPedirConversacionDeNuevo?.();
 
   const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []), signal);
   const salida = JSON.parse(
@@ -679,7 +680,8 @@ const crearTraza = () => {
   };
 };
 
-// `alCorregirTuteo`, `alDetectarFuga` y `alCorregirSalida` son opcionales: los usan los evals para medir.
+// `alCorregirTuteo`, `alDetectarFuga`, `alCorregirSalida` y `alPedirConversacionDeNuevo` son opcionales:
+// los usan los evals para medir.
 export const responderConsulta = async (mensajes, usuario = null, opciones = {}) => {
   const traza = crearTraza();
   try {
@@ -746,7 +748,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
 // Las dos rutas con STREAM_INCREMENTAL=false: el comportamiento de antes, por líneas, con la fuga y
 // el idioma revisados sobre el texto entero. Se borra cuando el modo incremental quede validado.
 const resolverSalidaAnterior = async (salida, ctx) => {
-  const { alCorregirTuteo, alDetectarFuga, alCorregirSalida, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
+  const { alCorregirTuteo, alDetectarFuga, alCorregirSalida, alPedirConversacionDeNuevo, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
   const saludo = saludoPara(preguntaActual, salida.saludo);
   const atribucion = { contexto, fijo, pregunta: textoDeLaPersona(mensajes) };
   const verificar = verificadorPara(tramites, idsUsadosDe(salida, idsResueltos), alCorregirSalida, atribucion);
@@ -758,7 +760,7 @@ const resolverSalidaAnterior = async (salida, ctx) => {
 
   if (salida.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
+    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
     if (enOtroIdioma(texto, alCorregirSalida)) return respuestaConversacional(MENSAJE_SOLO_ESPANOL);
@@ -880,7 +882,7 @@ const FIJOS_SIN_SALUDO = new Set([MENSAJE_FUERA_DE_ALCANCE, MENSAJE_SOLO_ESPANOL
 // Solo se cachea y se registra después de que el texto llegó completo: si el modelo se corta, el
 // error sale de `partes` antes.
 async function* responderConSalida({ salida, valida, partes }, ctx) {
-  const { candidatos, tramites, idsResueltos, mensajes, preguntaActual, usuario, usuarioId, esUnTurno, topeAlcanzado, contexto, fijo, alCorregirTuteo, alCorregirSalida, alDetectarFuga, signal, traza } = ctx;
+  const { candidatos, tramites, idsResueltos, mensajes, preguntaActual, usuario, usuarioId, esUnTurno, topeAlcanzado, contexto, fijo, alCorregirTuteo, alCorregirSalida, alDetectarFuga, alPedirConversacionDeNuevo, signal, traza } = ctx;
   const saludo = saludoPara(preguntaActual, salida?.saludo);
   const prefijo = componerSaludo(saludo, nombreParaSaludo(usuario));
 
@@ -936,7 +938,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
 
   if (esConversacion) {
     traza.etapa("conversacion");
-    const texto = await conversacionFinal(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal }, ctx);
+    const texto = await conversacionFinal(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal }, ctx);
     yield delta(FIJOS_SIN_SALUDO.has(texto) ? texto : prefijo + texto);
     yield FIN_CONVERSACIONAL;
     return;
@@ -1141,7 +1143,7 @@ const conMetaRevisada = async (deltas, ctx) => {
 };
 
 async function* transmitirSalidaAnterior(deltas, ctx) {
-  const { alCorregirTuteo, alCorregirSalida, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
+  const { alCorregirTuteo, alCorregirSalida, alPedirConversacionDeNuevo, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
   const nombre = nombreParaSaludo(usuario);
   let buffer = "";
   let meta = null;
@@ -1279,7 +1281,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const conversado = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, verificar, signal });
+    const conversado = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal });
     const texto = enOtroIdioma(conversado, alCorregirSalida) ? MENSAJE_SOLO_ESPANOL : conversado;
     const prefijo = componerSaludo(saludo, nombre);
     if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE && texto !== MENSAJE_SOLO_ESPANOL) yield { tipo: "delta", texto: prefijo };

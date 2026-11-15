@@ -41,7 +41,13 @@ try {
   const invalida = [antes, despues].find((r) => r.valida === false);
   if (invalida) throw new Error(`${invalida.ruta} está marcada como inválida (${invalida.invalida}): no se compara.`);
   const conErrores = (r) => r.casos.reduce((n, c) => n + erroresDeApi(c), 0);
-  const linea = (r) => `${r.fecha} (${r.modo}${r.stream ? ', stream' : ''}, ${r.corridas} corridas): ${r.ok}/${r.total} OK, ${conErrores(r)} corridas con error de API`;
+  // Las corridas viejas no traen las dos últimas cuentas.
+  const extras = (r) => [
+    r.sinMetaValida != null && `${r.sinMetaValida} sin META válida`,
+    r.conversacionDeNuevo != null && `${r.conversacionDeNuevo} conversaciones pedidas de nuevo`,
+  ].filter(Boolean).map((x) => `, ${x}`).join('');
+  const inestables = (r) => r.casos.filter((c) => c.estado === 'INESTABLE').length;
+  const linea = (r) => `${r.fecha} (${r.modo}${r.stream ? ', stream' : ''}, ${r.corridas} corridas): ${r.ok}/${r.total} OK, ${inestables(r)} inestables, ${conErrores(r)} corridas con error de API${extras(r)}`;
   console.log(`Antes:   ${linea(antes)}\nDespués: ${linea(despues)}\n`);
   if (conErrores(antes) + conErrores(despues) > 0) console.log('Ojo: una corrida con error de API cuenta como falla y no dice nada del chat.\n');
   const cambios = comparar(antes, despues);

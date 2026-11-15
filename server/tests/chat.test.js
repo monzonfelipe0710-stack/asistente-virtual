@@ -146,9 +146,12 @@ describe('chat', () => {
       const conCandidato = `Solo ayudo con trámites, por ejemplo el Trámite ${SUFIJO}.`;
       const sinCandidato = 'Solo ayudo con trámites, por ejemplo la Licencia por maternidad.';
       salidaModelo = [salida({ tipo: 'conversacion', respuesta: conCandidato }), salida({ tipo: 'conversacion', respuesta: sinCandidato })];
-      const r = await responderConsulta(turno('capital de francia'));
+      let deNuevo = 0;
+      const alPedirConversacionDeNuevo = () => deNuevo++;
+      const r = await responderConsulta(turno('capital de francia'), null, { alPedirConversacionDeNuevo });
 
       assert.equal(r.respuesta, sinCandidato);
+      assert.equal(deNuevo, 1);
       assert.equal(llamadasModelo.length, 2);
       assert.match(llamadasModelo[1].instruccionSistema, /Contexto \(trámites candidatos\):\n\(ninguno\)/);
       assert.match(llamadasModelo[1].instruccionSistema, /"tipo" DEBE ser "conversacion"/);
@@ -157,16 +160,19 @@ describe('chat', () => {
       salidaModelo = salida({ tipo: 'conversacion', respuesta: sinCandidato });
       pedazosStream = [meta({ tipo: 'conversacion' }), ...conCandidato.match(/.{1,4}/gs)];
       const eventos = [];
-      for await (const e of responderConsultaStream(turno('capital de francia'))) eventos.push(e);
+      for await (const e of responderConsultaStream(turno('capital de francia'), null, { alPedirConversacionDeNuevo })) eventos.push(e);
       const deltas = eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto);
       assert.deepEqual(deltas, [sinCandidato]);
       assert.equal(llamadasModelo.length, 2);
+      assert.equal(deNuevo, 2);
     });
 
     it('no se pide de nuevo si no nombra candidatos, aunque comparta alguna palabra', async () => {
       salidaModelo = [salida({ tipo: 'conversacion', respuesta: 'Solo ayudo con trámites, no con la capital de Francia.' })];
-      await responderConsulta(turno('capital de francia'));
+      let deNuevo = 0;
+      await responderConsulta(turno('capital de francia'), null, { alPedirConversacionDeNuevo: () => deNuevo++ });
       assert.equal(llamadasModelo.length, 1);
+      assert.equal(deNuevo, 0);
     });
 
     it('corta en la última oración completa, no a mitad de frase', async () => {

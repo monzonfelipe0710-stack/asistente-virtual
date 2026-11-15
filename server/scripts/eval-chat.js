@@ -594,10 +594,12 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
     const alCorregirTuteo = (formas) => tuteo.push(...formas);
     const correcciones = [];
     const alCorregirSalida = (c) => correcciones.push(c);
+    let conversacionDeNuevo = 0;
+    const alPedirConversacionDeNuevo = () => conversacionDeNuevo++;
     let r;
     for (const texto of turnos ?? [pregunta]) {
       mensajes.push({ rol: 'usuario', texto });
-      r = await consultar(mensajes, { alCorregirTuteo, alCorregirSalida }, texto);
+      r = await consultar(mensajes, { alCorregirTuteo, alCorregirSalida, alPedirConversacionDeNuevo }, texto);
       if (r.consultaId) consultasCreadas.push(r.consultaId);
       transversales.push(...fallasTransversales(r, mensajes.filter((m) => m.rol === 'usuario').map((m) => m.texto).join(' ')));
       mensajes.push({ rol: 'asistente', texto: r.respuesta });
@@ -608,10 +610,11 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
       texto: r.respuesta,
       tuteo,
       correcciones,
+      conversacionDeNuevo,
     };
   } catch (err) {
     cortarSiSinCredito(err);
-    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [], correcciones: [] };
+    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [], correcciones: [], conversacionDeNuevo: 0 };
   }
 };
 
@@ -685,6 +688,8 @@ for (const caso of elegidos) {
     obtenido: resumirCorridas(corridas),
     // Corridas que terminaron en un error (de OpenAI, de la base): no dicen nada del chat.
     erroresDeApi: corridas.filter((c) => c.motivo.includes('error')).length,
+    // Veces que la conversación se pidió de nuevo sin candidatos (nombraba uno que no está en el resumen).
+    conversacionDeNuevo: corridas.reduce((n, c) => n + c.conversacionDeNuevo, 0),
     ...(aciertos < CORRIDAS && { fallados: corridas.filter((c) => c.motivo.length > 0).map((c) => ({ motivo: c.motivo, respuesta: c.texto })) }),
   });
   tuteoPorCaso.push({
@@ -732,6 +737,14 @@ for (const c of correccionesDeSalida) {
   console.log(`  - [${c.capa}] "${c.pregunta}": "${c.original}"${c.corregida ? ` → "${c.corregida}"` : ' → (se sacó)'}`);
 }
 
+const conversacionDeNuevo = resultados.filter((c) => c.conversacionDeNuevo > 0);
+console.log(`
+Conversación pedida de nuevo sin candidatos: ${conversacionDeNuevo.reduce((n, c) => n + c.conversacionDeNuevo, 0)} veces en ${elegidos.length * CORRIDAS} corridas`);
+for (const c of conversacionDeNuevo) console.log(`  - "${c.pregunta}": ${c.conversacionDeNuevo}`);
+
+// Corridas del streaming sin una línea META válida (se respondió con cortesía o se pidió de nuevo sin streaming).
+const sinMetaValida = comparaciones.filter((c) => c.igual === null);
+
 if (STREAM) {
   const comparadas = comparaciones.filter((c) => c.igual !== null);
   const distintas = comparadas.filter((c) => !c.igual);
@@ -765,6 +778,8 @@ writeFileSync(archivo, JSON.stringify({
   valida: sinCredito === null,
   ...(sinCredito && { invalida: 'sin crédito en OpenAI: la corrida se cortó' }),
   erroresDeApi: resultados.reduce((n, c) => n + c.erroresDeApi, 0),
+  conversacionDeNuevo: resultados.reduce((n, c) => n + c.conversacionDeNuevo, 0),
+  ...(STREAM && { sinMetaValida: sinMetaValida.length, sinMetaValidaEn: sinMetaValida.map((c) => c.pregunta) }),
   total: elegidos.length,
   ok: conEstado('OK').length,
   casos: resultados,
