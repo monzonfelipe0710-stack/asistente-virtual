@@ -49,15 +49,6 @@ export const guardarJurisdicciones = (valor) => {
   jurisdicciones = { valor, expira: Date.now() + TTL_MS };
 };
 
-// Las palabras de los nombres de los trámites publicados, para corregir errores de tipeo en la búsqueda.
-let vocabulario = null;
-
-export const obtenerVocabulario = () => (vocabulario && Date.now() <= vocabulario.expira ? vocabulario.valor : null);
-
-export const guardarVocabulario = (valor) => {
-  vocabulario = { valor, expira: Date.now() + TTL_MS };
-};
-
 // version-catalogo.service.js registra acá el aviso a los demás procesos. Con `propagar: false`
 // (lo usa ese mismo módulo al ver una versión nueva) se vacía solo la caché local.
 let alInvalidar = null;
@@ -69,6 +60,5 @@ export const limpiar = (opciones) => {
   cache.clear();
   catalogo = null;
   jurisdicciones = null;
-  vocabulario = null;
   if (opciones?.propagar !== false) alInvalidar?.();
 };

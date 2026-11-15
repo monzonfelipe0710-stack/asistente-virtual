@@ -2,20 +2,8 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { generarEmbedding } from './embedding.service.js';
 import { conSenal } from '../utils/plazo.js';
-import { crearVocabulario, textoLexico } from '../utils/correccion.js';
-import * as cache from './cache.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
-
-// Se arma una vez y se vacía con la caché del catálogo (al cambiar trámites o catalogo_version).
-const cargarVocabulario = async () => {
-  const cacheado = cache.obtenerVocabulario();
-  if (cacheado) return cacheado;
-  const filas = await prisma.tramite.findMany({ where: { publicado: true }, select: { nombre: true } });
-  const vocabulario = crearVocabulario(filas.map((f) => f.nombre));
-  cache.guardarVocabulario(vocabulario);
-  return vocabulario;
-};
 
 // El mismo nombre normalizado que en JS: minúsculas, sin acentos, espacios colapsados.
 const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${columna})), 'áàäâãéèëêíìïîóòöôõúùüûñç', 'aaaaaeeeeiiiiooooouuuunc'), '\\s+', ' ', 'g')`;
@@ -24,12 +12,10 @@ const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${colu
 // publicadas (el mismo trámite en distintos organismos), y no solo las que pasaron el filtro:
 // así la lista de localidades está completa y las copias no ocupan el lugar de otros trámites.
 // `id` es la variante de mejor puntaje.
-// La parte léxica usa la pregunta con las correcciones de tipeo agregadas ("psporte" → "pasaporte",
-// ver utils/correccion.js); el embedding, la pregunta tal cual.
 export const buscarTramites = async (pregunta, { limite = 3, signal } = {}) => {
-  const [embedding, vocabulario] = await Promise.all([generarEmbedding(pregunta, { signal }), conSenal(cargarVocabulario(), signal)]);
+  const embedding = await generarEmbedding(pregunta, { signal });
   const vectorSql = `[${embedding.join(',')}]`;
-  const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${textoLexico(pregunta, vocabulario)})::text, '&', '|')::tsquery`;
+  const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery`;
 
   const filas = await conSenal(prisma.$queryRaw`
     WITH puntuados AS (
