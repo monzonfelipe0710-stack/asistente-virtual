@@ -29,6 +29,11 @@ mock.module(servicio('services/chat.service.js'), {
 
 const { default: app } = await import('../app.js');
 const { crearLimitadoresChat } = await import('../src/config/rateLimit.js');
+const { LIMITES_CHAT } = await import('../src/config/chat.js');
+const { crearVerificador } = await import('../src/services/verificacion.service.js');
+const { limpiarPorOraciones } = await import('../src/services/salida.service.js');
+const { conFuentes } = await import('../src/utils/enlaces.js');
+const { componerSaludo } = await import('../src/utils/saludo.js');
 
 const escuchar = (aplicacion) => new Promise((r) => { const s = aplicacion.listen(0, '127.0.0.1', () => r(s)); });
 const servidor = await escuchar(app);
@@ -63,14 +68,43 @@ describe('límites del chat', () => {
       assert.equal(recibidos.length, 1);
     });
 
-    it('cada mensaje de la persona tiene el tope de la pregunta y los del asistente, 2000', async () => {
+    it('cada mensaje de la persona tiene el tope de la pregunta y los del asistente, 6000', async () => {
       const r = await pedir({ mensajes: [usuario('a'.repeat(501))] });
       assert.equal(r.status, 400);
       assert.equal(r.cuerpo.error, 'Cada mensaje puede tener hasta 500 caracteres.');
-      assert.equal((await pedir({ mensajes: [usuario('hola'), asistente('b'.repeat(2000)), usuario('el pasaporte')] })).status, 200);
-      const largo = await pedir({ mensajes: [usuario('hola'), asistente('b'.repeat(2001)), usuario('el pasaporte')] });
+      assert.equal((await pedir({ mensajes: [usuario('hola'), asistente('b'.repeat(6000)), usuario('el pasaporte')] })).status, 200);
+      const largo = await pedir({ mensajes: [usuario('hola'), asistente('b'.repeat(6001)), usuario('el pasaporte')] });
       assert.equal(largo.status, 400);
-      assert.equal(largo.cuerpo.error, 'Cada mensaje puede tener hasta 2000 caracteres.');
+      assert.equal(largo.cuerpo.error, 'Cada mensaje puede tener hasta 6000 caracteres.');
+    });
+
+    // La respuesta honesta más larga: la verificación cambia un monto que no figura por el costo en
+    // texto completo del trámite (la escala de habilitaciones del catálogo municipal, 17 filas y 2971
+    // caracteres, la más larga), con saludo, una lista y la fuente oficial. Un historial con diez así
+    // y diez preguntas al tope no puede recibir un 400 ni un 413.
+    it('un historial honesto con la respuesta más larga pasa, con margen', async () => {
+      const filas = Array.from({ length: 17 }, (_, i) => `Categoría ${String.fromCharCode(65 + i)}: comercios con superficie de ${i * 50} a ${i * 50 + 49} m² y rubros de riesgo ${i % 3 === 0 ? 'alto' : 'medio'}, $${(i + 1) * 12500} por año y $${(i + 1) * 1100} de tasa de inspección y seguridad e higiene (*) según ordenanza tarifaria`);
+      const escala = { id: 1, nombre: 'Habilitación Comercial Municipal', costo: null, costoDetalle: filas.join('\n'), descripcion: 'Habilita comercios.', requisitos: [], documentos: [], fuenteUrl: 'https://formosatuciudad.gob.ar/tramite/1' };
+      assert.ok(escala.costoDetalle.length >= 2900, `escala de ${escala.costoDetalle.length}`);
+      const cuerpoModelo = [
+        'Para habilitar tu comercio tenés que presentar la solicitud en la Municipalidad. El costo es de $99.999 por año.',
+        'Necesitás:',
+        '- DNI del titular.',
+        '- Constancia de CUIT.',
+        '- Contrato de alquiler o escritura del local.',
+        '- Plano del local aprobado.',
+        '- Libreta sanitaria de quienes atienden, si vendés alimentos.',
+        'El trámite se hace en persona, de lunes a viernes de 7 a 13 hs.',
+      ].join('\n');
+      const cuerpo = limpiarPorOraciones(cuerpoModelo, { verificar: crearVerificador({ tramites: [escala], principales: [escala] }) });
+      const respuesta = componerSaludo('Hola', 'María de los Ángeles') + conFuentes(cuerpo, [escala]);
+      assert.ok(respuesta.includes(filas[16]), 'la escala entra entera');
+      assert.ok(respuesta.length <= LIMITES_CHAT.textoAsistente * 0.8, `${respuesta.length} de ${LIMITES_CHAT.textoAsistente}: sin margen`);
+      const mensajes = Array.from({ length: 19 }, (_, i) => (i % 2 === 0 ? usuario(`¿Cuánto cuesta la habilitación? ${'detalle '.repeat(70)}`.slice(0, 500)) : asistente(respuesta)));
+      for (const ruta of ['/api/chat', '/api/chat/stream']) {
+        const r = await pedir({ mensajes }, { ruta });
+        assert.equal(r.status, 200, `${ruta}: ${JSON.stringify(r.cuerpo).slice(0, 100)}`);
+      }
     });
 
     it('hasta 20 mensajes', async () => {
@@ -81,8 +115,8 @@ describe('límites del chat', () => {
       assert.equal(r.cuerpo.error, 'La conversación puede tener hasta 20 mensajes.');
     });
 
-    it('un cuerpo de más de 64 kb responde 413 en español, también en el streaming', async () => {
-      const crudo = JSON.stringify({ pregunta: 'hola', relleno: 'x'.repeat(70 * 1024) });
+    it('un cuerpo de más de 128 kb responde 413 en español, también en el streaming', async () => {
+      const crudo = JSON.stringify({ pregunta: 'hola', relleno: 'x'.repeat(130 * 1024) });
       for (const ruta of ['/api/chat', '/api/chat/stream']) {
         const r = await pedir(null, { ruta, crudo });
         assert.equal(r.status, 413, ruta);
