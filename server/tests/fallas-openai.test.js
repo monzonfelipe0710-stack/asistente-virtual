@@ -328,6 +328,29 @@ describe('fallas de OpenAI en el chat', () => {
       assert.deepEqual(lineas, []);
     });
 
+    it('el pedido lleva el tope de tokens de salida (1500)', async () => {
+      let cuerpo = null;
+      alChat = (rs, _intento, pedido) => {
+        cuerpo = pedido;
+        chatOk(rs);
+      };
+      assert.equal((await pedir('/api/chat', pregunta)).status, 200);
+      assert.equal(cuerpo.max_completion_tokens, 1500);
+    });
+
+    it('una respuesta cortada por el tope (finish_reason length) termina en 503 sin cachear ni registrar', async () => {
+      alChat = (rs) => {
+        const cortada = completion('{"tipo":"respuesta","saludo":"","tramiteId":1,"respuesta":"Se pide turno en');
+        cortada.choices[0].finish_reason = 'length';
+        rs.writeHead(200, { 'Content-Type': 'application/json' });
+        rs.end(JSON.stringify(cortada));
+      };
+      noDisponible(await pedir('/api/chat', pregunta));
+      assert.equal(intentos('/chat/completions'), 1);
+      sinCacheNiRegistro();
+      logueado(/finish_reason: length/);
+    });
+
     it('una falla del embedding termina en 503 sin llamar al modelo', async () => {
       alEmbedding = error(429);
       noDisponible(await pedir('/api/chat', pregunta));
@@ -356,6 +379,23 @@ describe('fallas de OpenAI en el chat', () => {
       assert.ok(linea.primerTexto > 0 && linea.primerTexto <= linea.total);
       for (const etapa of ['busqueda', 'detalle', 'modelo', 'registro']) assert.equal(typeof linea.etapas[etapa], 'number', etapa);
       assert.ok(!lineas[0].includes(pregunta));
+    });
+
+    it('un stream cortado por el tope (finish_reason length) es un error: no cachea ni registra', async () => {
+      let cuerpo = null;
+      alChat = (rs, _intento, pedido) => {
+        cuerpo = pedido;
+        abrirStream(rs);
+        for (const p of [META(), LINEAS[0]]) rs.write(pedazo(p));
+        rs.write(pedazo('', 'length'));
+        rs.end('data: [DONE]\n\n');
+      };
+      const r = await pedirStream(pregunta);
+      assert.equal(cuerpo.max_completion_tokens, 1500);
+      assert.equal(r.tipos.at(-1), 'error');
+      assert.ok(!r.tipos.includes('fin'));
+      sinCacheNiRegistro();
+      logueado(/finish_reason: length/);
     });
 
     it('sin trámite y con stop, manda el mensaje fijo y lo registra', async () => {

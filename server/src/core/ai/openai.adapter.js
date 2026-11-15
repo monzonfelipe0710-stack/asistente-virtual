@@ -1,11 +1,14 @@
 import { APIError } from 'openai';
 import { openai } from '../../config/openai.js';
-import { TIEMPOS_IA } from '../../config/ia.js';
+import { TIEMPOS_IA, enteroDeEntorno } from '../../config/ia.js';
 import { combinarSenales } from '../../utils/plazo.js';
 import { ErrorProveedorIA } from './errores.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
 const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
+// Red de seguridad, no un recorte: la respuesta más larga medida queda muy por debajo. Una salida
+// cortada por el tope (finish_reason "length") es una falla: no se cachea ni se registra.
+export const MAX_TOKENS_RESPUESTA = enteroDeEntorno('OPENAI_MAX_TOKENS_RESPUESTA', 1500, 1);
 
 // El modelo de embeddings queda fijo: cambiarlo invalida los vectores ya guardados
 // (otro espacio vectorial) y rompe la búsqueda sin dar error. Se cambia solo con una
@@ -73,6 +76,7 @@ export const openaiAdapter = {
         {
           model: MODELO_CHAT,
           temperature: TEMPERATURA,
+          max_completion_tokens: MAX_TOKENS_RESPUESTA,
           messages: construirMensajes(instruccionSistema, turnos),
           ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
         },
@@ -108,6 +112,7 @@ export const openaiAdapter = {
         {
           model: MODELO_CHAT,
           temperature: TEMPERATURA,
+          max_completion_tokens: MAX_TOKENS_RESPUESTA,
           stream: true,
           messages: construirMensajes(instruccionSistema, turnos),
         },
