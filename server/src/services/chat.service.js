@@ -34,6 +34,9 @@ export const MENSAJE_SIN_RESPUESTA =
 // Por si el modelo marca conversación pero no escribe nada.
 const MENSAJE_CONVERSACION_VACIA = "¿En qué trámite te puedo ayudar?";
 
+// Una aclaración que quedó sin texto (la verificación lo sacó todo): las opciones se mantienen.
+export const MENSAJE_ACLARACION_VACIA = "¿Cuál de estas opciones es la que buscás?";
+
 export const TOPE_CONVERSACION = 600;
 
 // El texto de los trámites viene de fuentes externas: lo que diga es dato, no una orden.
@@ -750,7 +753,7 @@ const resolverSalidaAnterior = async (salida, ctx) => {
     // No registramos consulta: una aclaración no es una consulta resuelta.
     return {
       tipo: "aclaracion",
-      respuesta: conSaludo(cuerpoModelo, saludo, usuario),
+      respuesta: conSaludo(cuerpoModelo.trim() ? cuerpoModelo : MENSAJE_ACLARACION_VACIA, saludo, usuario),
       opciones,
       encontrado: false,
       tramitesEncontrados: [],
@@ -924,7 +927,8 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   }
 
   // Lo que quedó retenido hasta el final (una respuesta corta, o que no llegó a verse en español).
-  if (final.texto || saludoPendiente) yield delta(conSaludoPendiente(final.texto));
+  const resto = esAclaracion && !cuerpo.trim() ? MENSAJE_ACLARACION_VACIA : final.texto;
+  if (resto || saludoPendiente) yield delta(conSaludoPendiente(resto));
 
   if (esAclaracion) {
     // Una aclaración no es una consulta resuelta: no se registra.
@@ -1224,7 +1228,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
     // Una respuesta corta, o solo relleno escrito así por el modelo: sale tal cual.
     if (retenido) yield { tipo: "delta", texto: retenido };
   } else if (meta?.tipo === "aclaracion" && !liberado) {
-    const todo = prefijoPendiente + retenido;
+    const todo = prefijoPendiente + (cuerpo.trim() ? retenido : MENSAJE_ACLARACION_VACIA);
     if (todo) yield { tipo: "delta", texto: todo };
   }
 

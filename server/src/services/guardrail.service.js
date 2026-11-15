@@ -116,6 +116,11 @@ export const revisarEntrada = (texto) => {
 // que el texto se corta ahí y no cuentan; lo mismo con las `permitidas`, frases sin comillas que
 // el prompt le pide decir (quién es, adónde derivar).
 export const LARGO_DE_FUGA = 40;
+// Los marcadores de plantilla tampoco van en una respuesta: los del prompt ("<saludo o vacío>",
+// "<ids>") y cualquiera de varias palabras entre < >, como "<lo que seguís para responder>" que el
+// modelo copió de una consulta que pedía un formato. Una etiqueta HTML ("<b>", "<a href=…>") no entra.
+const MARCADOR_DEL_PROMPT = /<[^<>\n]{1,80}>/g;
+const MARCADOR_DE_PLANTILLA = /<[a-z]+(?:[ |][a-z]+)+>/;
 const paraComparar = (texto) => normalizarParaRevisar(texto).replace(/[^a-z0-9]+/g, ' ').trim();
 
 export const crearDetectorDeFuga = (textosFijos, { permitidas = [], largo = LARGO_DE_FUGA } = {}) => {
@@ -128,8 +133,12 @@ export const crearDetectorDeFuga = (textosFijos, { permitidas = [], largo = LARG
   for (const pedazo of pedazos) {
     for (let i = 0; i + largo <= pedazo.length; i++) fragmentos.add(pedazo.slice(i, i + largo));
   }
-  // Devuelve el primer fragmento copiado, o null.
+  const marcadores = [...new Set(textosFijos.flatMap((t) => normalizarParaRevisar(t).match(MARCADOR_DEL_PROMPT) ?? []))];
+  // Devuelve el primer fragmento copiado o marcador, o null.
   return (respuesta) => {
+    const normal = normalizarParaRevisar(respuesta);
+    const marcador = marcadores.find((m) => normal.includes(m)) ?? normal.match(MARCADOR_DE_PLANTILLA)?.[0];
+    if (marcador) return marcador;
     const texto = paraComparar(respuesta);
     for (let i = 0; i + largo <= texto.length; i++) {
       if (fragmentos.has(texto.slice(i, i + largo))) return texto.slice(i, i + largo);

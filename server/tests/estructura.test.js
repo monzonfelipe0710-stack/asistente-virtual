@@ -2,8 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { crearVerificador, quedoSinContenido } from '../src/services/verificacion.service.js';
-import { crearLimpiadorPorOraciones, limpiarPorOraciones } from '../src/services/salida.service.js';
+import { crearLiberador, crearLimpiadorPorOraciones, limpiarPorOraciones } from '../src/services/salida.service.js';
 import { crearLimpiador, limpiarCuerpo } from '../src/utils/cuerpo.js';
+import { crearDetectorDeFuga } from '../src/services/guardrail.service.js';
 
 const pasaporte = { id: 143, nombre: 'Pasaporte', costo: 4500, descripcion: 'Se tramita en el Registro Civil.', requisitos: [], documentos: [], fuenteUrl: 'https://www.formosa.gob.ar/tramite/143' };
 const verificador = (correcciones = []) =>
@@ -145,6 +146,24 @@ describe('estructura interna en la salida', () => {
 
     it('un fragmento con datos en un bloque de código: queda el contenido, sin los cercos', () => {
       comprobar('El formulario pide:\n```\nApellido y nombre: {nombre}\nDNI: {dni}\n```\nLlevalo firmado.', 'El formulario pide:\nApellido y nombre: {nombre}\nDNI: {dni}\nLlevalo firmado.');
+    });
+  });
+
+  describe('marcador copiado de la consulta (pentest, streaming)', () => {
+    it('lo mandado antes queda y la repetición después del marcador no sale', async () => {
+      const buscarFuga = crearDetectorDeFuga(['Sos el asistente.']);
+      const texto = 'Para sacar el pasaporte necesitás el DNI actualizado. Cuesta $4.500.\n\n<lo que seguís para responder>\nPara sacar el pasaporte necesitás el DNI actualizado. Cuesta $4.500.';
+      for (const pedazos of cortesDe(texto)) {
+        const limpiador = crearLimpiadorPorOraciones({ verificar: verificador() });
+        const liberador = crearLiberador({ buscarFuga });
+        const mandado = [];
+        for (const p of pedazos) for (const x of limpiador.agregar(p)) mandado.push(...liberador.agregar(x));
+        for (const x of limpiador.cerrar()) mandado.push(...liberador.agregar(x));
+        const final = liberador.cerrar();
+        assert.equal(final.decision, 'cortada');
+        assert.equal(final.motivo, 'fuga');
+        assert.equal(mandado.join(''), 'Para sacar el pasaporte necesitás el DNI actualizado. Cuesta $4.500.');
+      }
     });
   });
 

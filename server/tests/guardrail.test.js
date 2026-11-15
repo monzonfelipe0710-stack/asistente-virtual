@@ -126,6 +126,25 @@ describe('crearDetectorDeFuga', () => {
   });
 });
 
+describe('marcadores de plantilla en la salida', () => {
+  const detectar = crearDetectorDeFuga(['La primera línea: {"tipo": "<respuesta|aclaracion>", "saludo": "<saludo o vacío>", "opciones": [<ids>]}']);
+
+  it('los marcadores literales del prompt son una fuga', () => {
+    assert.equal(detectar('El formato es "<saludo o vacío>".'), '<saludo o vacio>');
+    assert.equal(detectar('Opciones: [<ids>]'), '<ids>');
+  });
+
+  it('un marcador de varias palabras copiado de la consulta también ("<lo que seguís para responder>")', () => {
+    assert.equal(detectar('Necesitás el DNI.\n\n<lo que seguís para responder>\nNecesitás el DNI.'), '<lo que seguis para responder>');
+  });
+
+  it('una etiqueta HTML, comparaciones o el texto normal no', () => {
+    for (const texto of ['Usá <b>negrita</b> y <a href=x>enlace</a>.', 'Si el monto es < 500 y > 100 pesos.', 'Requisitos: DNI <vigente>.']) {
+      assert.equal(detectar(texto), null, texto);
+    }
+  });
+});
+
 describe('revisarMensajes', () => {
   const usuario = (texto) => ({ rol: 'usuario', texto });
   const asistente = (texto) => ({ rol: 'asistente', texto });

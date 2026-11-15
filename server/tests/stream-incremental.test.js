@@ -38,7 +38,7 @@ mock.module(servicio('services/metrica.service.js'), {
 
 const { default: prisma } = await import('../src/config/prisma.js');
 const cache = await import('../src/services/cache.service.js');
-const { responderConsulta, responderConsultaStream, AsistenteNoDisponibleError, MENSAJE_SIN_RESPUESTA } = await import('../src/services/chat.service.js');
+const { responderConsulta, responderConsultaStream, AsistenteNoDisponibleError, MENSAJE_SIN_RESPUESTA, MENSAJE_ACLARACION_VACIA } = await import('../src/services/chat.service.js');
 const { MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA, SIN_OFICINAS } = await import('../src/services/verificacion.service.js');
 const { MENSAJE_SOLO_ESPANOL } = await import('../src/utils/idioma.js');
@@ -178,6 +178,21 @@ describe('streaming incremental', () => {
 
     it('aclaración', async () => {
       await comprobarEquivalencia(META({ tipo: 'aclaracion', opciones: [principal.id, vecino.id] }), '¿Te referís al nuevo ejemplar o al pasaporte? Contame cuál necesitás.', 'necesito un documento');
+    });
+
+    it('aclaración a la que la verificación le saca todo el texto: frase fija y las mismas opciones', async () => {
+      const avisos = mock.method(console, 'warn', () => {});
+      try {
+        const meta = META({ tipo: 'aclaracion', opciones: [principal.id, vecino.id] });
+        const r = await comprobarEquivalencia(meta, `{"tipo": "aclaracion", "opciones": [${principal.id}, ${vecino.id}]}`, 'necesito un documento');
+        assert.equal(r.texto, MENSAJE_ACLARACION_VACIA);
+        assert.equal(r.fin.tipoRespuesta, 'aclaracion');
+        assert.deepEqual(r.fin.opciones.map((o) => o.id), [principal.id, vecino.id]);
+        const conSaludo = await comprobarEquivalencia({ ...meta, saludo: 'Hola' }, '```json\n{"tipo": "aclaracion"}\n```', 'hola, necesito un documento');
+        assert.equal(conSaludo.texto, `¡Hola! ${MENSAJE_ACLARACION_VACIA}`);
+      } finally {
+        avisos.mock.restore();
+      }
     });
 
     it('sin trámite, con saludo', async () => {

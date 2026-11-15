@@ -51,7 +51,7 @@ mock.module(servicio('services/metrica.service.js'), {
 
 const cache = await import('../src/services/cache.service.js');
 const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
-const { responderConsulta, responderConsultaStream, buscarFugaDeInstrucciones, TEXTOS_FIJOS_DEL_PROMPT, MENSAJE_SIN_RESPUESTA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
+const { responderConsulta, responderConsultaStream, buscarFugaDeInstrucciones, TEXTOS_FIJOS_DEL_PROMPT, MENSAJE_SIN_RESPUESTA, MENSAJE_ACLARACION_VACIA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
   await import('../src/services/chat.service.js');
 const { LARGO_DE_FUGA, MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA } = await import('../src/services/verificacion.service.js');
@@ -928,6 +928,26 @@ describe('chat', () => {
 
       salidaModelo = salida({ tipo: 'respuesta', respuesta: 'x' });
       assert.equal((await responderConsulta(turno('licencia de conducir'))).respuesta, MENSAJE_SIN_RESPUESTA);
+    });
+
+    it('una aclaración que quedó sin texto lleva la frase fija y conserva las opciones, en las dos rutas', async () => {
+      const avisos = mock.method(console, 'warn', () => {});
+      try {
+        const sobre = `{"tipo": "aclaracion", "tramiteId": null, "opciones": [${tramite.id}]}`;
+        salidaModelo = salida({ tipo: 'aclaracion', respuesta: sobre, opciones: [tramite.id] });
+        const r = await responderConsulta(turno('necesito un trámite'));
+        assert.equal(r.tipo, 'aclaracion');
+        assert.equal(r.respuesta, MENSAJE_ACLARACION_VACIA);
+        assert.deepEqual(r.opciones.map((o) => o.id), [tramite.id]);
+
+        pedazosStream = [meta({ tipo: 'aclaracion', opciones: [tramite.id] }), sobre];
+        const { texto, fin } = await consumir(responderConsultaStream(turno('necesito un trámite')));
+        assert.equal(texto, MENSAJE_ACLARACION_VACIA);
+        assert.equal(fin.tipoRespuesta, 'aclaracion');
+        assert.deepEqual(fin.opciones.map((o) => o.id), [tramite.id]);
+      } finally {
+        avisos.mock.restore();
+      }
     });
 
     it('en streaming limpia cada línea completa y manda la fuente como último delta', async () => {
