@@ -2,8 +2,17 @@ import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { generarEmbedding } from './embedding.service.js';
 import { conSenal } from '../utils/plazo.js';
+import * as cache from './cache.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
+
+const embeddingDe = async (pregunta, { signal, cachear }) => {
+  const guardado = cachear ? cache.obtenerEmbedding(pregunta) : null;
+  if (guardado) return guardado;
+  const embedding = await generarEmbedding(pregunta, { signal });
+  if (cachear) cache.guardarEmbedding(pregunta, embedding);
+  return embedding;
+};
 
 // El mismo nombre normalizado que en JS: minúsculas, sin acentos, espacios colapsados.
 const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${columna})), 'áàäâãéèëêíìïîóòöôõúùüûñç', 'aaaaaeeeeiiiiooooouuuunc'), '\\s+', ' ', 'g')`;
@@ -12,10 +21,11 @@ const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${colu
 // publicadas (el mismo trámite en distintos organismos), y no solo las que pasaron el filtro:
 // así la lista de localidades está completa y las copias no ocupan el lugar de otros trámites.
 // `id` es la variante de mejor puntaje. `alEtapa` avisa cuándo empieza el embedding y cuándo la
-// consulta a la base (para el log de latencia del chat).
-export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa } = {}) => {
+// consulta a la base (para el log de latencia del chat). Con `cachearEmbedding` el embedding de la
+// pregunta se reusa (cache.service.js): el chat lo pide solo para las consultas de un turno.
+export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, cachearEmbedding = false } = {}) => {
   alEtapa?.('embedding');
-  const embedding = await generarEmbedding(pregunta, { signal });
+  const embedding = await embeddingDe(pregunta, { signal, cachear: cachearEmbedding });
   alEtapa?.('busqueda');
   const vectorSql = `[${embedding.join(',')}]`;
   const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery`;

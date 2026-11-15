@@ -1,3 +1,5 @@
+import { enteroDeEntorno } from '../config/ia.js';
+
 const TTL_MS = Number(process.env.CACHE_TTL_MS ?? 60 * 60 * 1000);
 const MAX_ENTRADAS = Number(process.env.CACHE_MAX ?? 500);
 
@@ -48,6 +50,37 @@ export const obtenerJurisdicciones = () =>
 export const guardarJurisdicciones = (valor) => {
   jurisdicciones = { valor, expira: Date.now() + TTL_MS };
 };
+
+// Embeddings de las preguntas del chat (ver busqueda.service.js). No dependen del catálogo (el
+// modelo de embeddings es fijo), así que limpiar() no los toca: sirven también después de que
+// cambia el catálogo. Float32Array porque pgvector guarda float4: no se pierde nada y ocupa la mitad.
+const TTL_EMBEDDINGS_MS = Number(process.env.CACHE_EMBEDDINGS_TTL_MS ?? 60 * 60 * 1000);
+const MAX_EMBEDDINGS = Number(process.env.CACHE_EMBEDDINGS_MAX ?? 200);
+const embeddings = new Map();
+
+// Solo mayúsculas y espacios: el texto que va al embedding es el mismo salvo por eso.
+export const claveDeEmbedding = (texto) => texto.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+
+export const obtenerEmbedding = (texto) => {
+  const clave = claveDeEmbedding(texto);
+  const entrada = embeddings.get(clave);
+  if (!entrada) return null;
+  embeddings.delete(clave);
+  if (Date.now() > entrada.expira) return null;
+  embeddings.set(clave, entrada);
+  return Array.from(entrada.vector);
+};
+
+export const guardarEmbedding = (texto, vector) => {
+  if (MAX_EMBEDDINGS <= 0) return;
+  const clave = claveDeEmbedding(texto);
+  embeddings.delete(clave);
+  if (embeddings.size >= MAX_EMBEDDINGS) embeddings.delete(embeddings.keys().next().value);
+  embeddings.set(clave, { vector: Float32Array.from(vector), expira: Date.now() + TTL_EMBEDDINGS_MS });
+};
+
+export const limpiarEmbeddings = () => embeddings.clear();
+export const cantidadDeEmbeddings = () => embeddings.size;
 
 // version-catalogo.service.js registra acá el aviso a los demás procesos. Con `propagar: false`
 // (lo usa ese mismo módulo al ver una versión nueva) se vacía solo la caché local.

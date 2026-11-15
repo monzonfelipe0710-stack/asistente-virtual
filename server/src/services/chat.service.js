@@ -570,12 +570,14 @@ const textoDeLaPersona = (mensajes) =>
 // ids del contexto; `tramites`, solo los resueltos, que son los únicos que se pueden usar.
 const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Set(), consulta: "" };
 
-const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
+// El embedding de la búsqueda se cachea solo en las consultas de un turno: el texto de varios turnos
+// juntos casi nunca se repite.
+const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno) => {
   traza.etapa("busqueda");
   const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
   const localidades = localidadesConocidas(jurisdicciones);
   const textoDeBusqueda = quitarLocalidades(consultaBusqueda, localidades) || consultaBusqueda;
-  const encontrados = await buscarTramites(textoDeBusqueda, { signal, alEtapa: (nombre) => traza.etapa(nombre) });
+  const encontrados = await buscarTramites(textoDeBusqueda, { signal, alEtapa: (nombre) => traza.etapa(nombre), cachearEmbedding: esUnTurno });
   if (encontrados.length === 0) return SIN_CANDIDATOS;
 
   traza.etapa("detalle");
@@ -720,7 +722,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   }
 
   // La búsqueda usa el contexto acumulado (junta los turnos del usuario).
-  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza);
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno);
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
@@ -1064,7 +1066,7 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
     }
   }
 
-  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza);
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno);
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
