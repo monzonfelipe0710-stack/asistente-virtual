@@ -803,6 +803,47 @@ con una condición más en la búsqueda (`word_similarity(<palabra>, <nombre nor
 palabra de la consulta) y un término de puntaje propio. Cualquiera de las tres cambia el orden de los
 candidatos: hay que medirla contra el filtro del 85 % y las aclaraciones legítimas antes de dejarla.
 
+**Segunda variante, también revertida (15-11-2026): corregir el texto del embedding y de la léxica.**
+Vocabulario con todo el texto del catálogo publicado (nombres, descripciones, requisitos e información
+adicional: 5364 palabras en la real, 5015 en la temporal), cacheado y renovado con `catalogo_version`.
+Una palabra de la consulta que está en el vocabulario no se toca; las demás, con 5 letras o más, se
+reemplazan por la del vocabulario a distancia 1 (5 a 7 letras) o hasta 2 (8 o más; una transposición
+cuenta como 1), solo si es la única a esa distancia. El texto corregido iba al embedding y a la léxica;
+el modelo y el registro seguían con el original. Costo: 5 ms por consulta (máx. 35) y ~1 s al armar el
+vocabulario una vez por versión del catálogo.
+
+| `--tipeo`, 3 corridas | Temporal normal | Temporal stream | Real normal | Real stream |
+|---|---|---|---|---|
+| Sin la variante | 11/15 | 11/15 | 10/15 | 10/15 |
+| Con la variante | 12/15 | 12/15 | 11/15 (1 inestable) | 11/15 |
+
+- Ganan "pasaporet" y "como saco el pasaprote" (0/3 → 3/3 en las cuatro) y, en la real normal,
+  "licensia de conducir" (0/3 → 2/3: el problema de jurisdicción de siempre).
+- **No arregla el caso reportado** ni "necesito renovar el psporte" (0/3 en las cuatro): "psporte" tiene
+  7 letras y está a distancia 2 de "pasaporte", así que con la regla queda sin corregir; "nscito",
+  tampoco tiene corrección. La búsqueda de esas frases es idéntica a la de antes.
+- **Rompe "partida de nacimento"** (3/3 → 0/3 en las cuatro): corregida a "partida de nacimiento" queda
+  igual que la frase bien escrita, que ya fallaba (ver abajo).
+- Los 3 controles siguen sin trámite.
+- **Corrige palabras bien escritas que no están en el catálogo** (verbos conjugados, voseo, plurales,
+  temas ajenos): de las 175 preguntas de eval-chat y eval-seguridad (con los textos acumulados de los
+  turnos) cambia el texto de 56 en la real (62 en la temporal) y los candidatos de 28 (32), de las cuales
+  21 (25) son preguntas bien escritas. Ejemplos: "paternidad" → "maternidad" ("qué necesito para la
+  licencia por paternidad" pasa a tener candidatos de maternidad), "quiero" → "quiere", "pizza" → "pieza",
+  "mostrame" → "mostrar", "olvidá" → "olvido", "navegación" → "nivelacion", "temporada" → "temporaria",
+  "pasaje" → "pastaje".
+- No cumplía el criterio (arreglar el caso reportado, "psporte" y "pasaporet", no romper casos que pasan
+  y 0 preguntas bien escritas con otros candidatos), así que se revirtió sin correr eval-chat completo ni
+  eval-seguridad: el análisis de candidatos y `--tipeo` ya la descartaban. Queda pg_trgm como mejora futura.
+
+**Debilidad previa, aparte del tipeo: "partida de nacimiento" bien escrita** no encuentra la Solicitud
+Partida de Nacimiento, Matrimonio o Defunción (0/3 en las dos rutas, en la real y en la temporal, sin
+ninguna corrección). Los candidatos son Adición de apellido materno y las dos inscripciones de
+nacimiento: el modelo pide aclaración entre las inscripciones o responde sin trámite. Con "nacimento"
+mal escrito sí la encuentra (la palabra no suma a las inscripciones). "renovar el pasaporte" y
+"licencia de conducir" bien escritas responden con su trámite en la real (en la temporal no hay licencia
+de conducir; el stream de la real a veces pide aclaración por jurisdicción, el problema ya conocido).
+
 ### Catálogo real
 
 `node scripts/importarTramites.js <archivo>` carga el JSON que genera `ingestion/`: 278 trámites, publicados de entrada, a cargo de un usuario `sistema@chatap.local` que no puede loguearse. El catálogo trae solo nombre, descripción, sector y URL de origen, sin requisitos ni mesas. Los trámites se identifican por `fuenteUrl` o, sin URL, por (sector, nombre normalizado) entre los del importador; un trámite cargado a mano con el mismo nombre o una URL que ya es de otro sector quedan como conflicto y no se pisan. Opciones: `--dry-run`, `--lote n` y `--completa --despublicar-faltantes` (despublica solo trámites del importador, dentro de los sectores del JSON).

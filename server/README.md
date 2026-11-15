@@ -1349,6 +1349,12 @@ Errores de tipeo (14-11-2026; detalle, mediciones y propuesta en `docs/estado-ac
 - Se probó corregir palabras contra el vocabulario de los nombres solo para la parte léxica y se
   revirtió: no arreglaba el caso reportado (lo corta el filtro del 85 %), sacaba la partida de
   nacimiento de los candidatos y corregía palabras bien escritas ("conducir" → "conducta").
+- También se revirtió corregir el texto del embedding y de la léxica contra todo el texto del catálogo
+  (15-11-2026): "psporte" (7 letras, distancia 2) queda sin corregir, rompía "partida de nacimento" y
+  cambiaba los candidatos de 21 preguntas bien escritas ("paternidad" → "maternidad"). Queda pg_trgm
+  como mejora futura.
+- "partida de nacimiento" **bien escrita** no encuentra la Solicitud Partida de Nacimiento (0/3 en las
+  dos bases y rutas): es una debilidad de la búsqueda, no del tipeo.
 
 Del pentest manual por el chat (14-11-2026; detalle en `docs/estado-actual-backend.md`):
 
