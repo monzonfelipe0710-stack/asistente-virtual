@@ -1,3 +1,4 @@
+import './helpers/base-de-prueba.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { TipoSector, EstadoUsuario, Genero } from '@prisma/client';

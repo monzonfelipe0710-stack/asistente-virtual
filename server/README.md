@@ -1111,12 +1111,16 @@ correr arma o pone al día con `scripts/base-temporal.js` (crea el contenedor si
 migraciones e importa el catálogo real). Hace falta Docker Desktop abierto. Se niega a correr si
 `DATABASE_URL_TEST` apunta a la misma base que el `.env`.
 
-**No correr los tests con `node --test` directo:** así toman la `DATABASE_URL` del `.env`, que es la
-base real. Pasó el 14-11-2026 con `chat-anterior.test.js` y `fallas-openai-anterior.test.js`, que
-parecen no usar la base pero importan `chat.test.js` y `fallas-openai.test.js` (crean y borran sus
-datos; no quedó nada). Para correr archivos sueltos, `npm test -- <archivos>`; si hace falta `node
---test` (por ejemplo, sin Docker y solo los que no usan la base), con
-`DATABASE_URL=postgresql://nadie:x@127.0.0.1:1/ninguna` para que nada llegue a una base.
+**Guardia de la base.** Cada archivo de tests importa primero
+[`tests/helpers/base-de-prueba.js`](tests/helpers/base-de-prueba.js): corridos como se corran
+(`npm test`, `node --test` directo, un archivo suelto), se niegan a ejecutarse si `DATABASE_URL` (o
+la del `.env`, si falta) no es local (`localhost`, `127.0.0.1`, `::1`), salvo que se pida con
+`TESTS_BASE_NO_LOCAL=<host de esa base>`; `npm run test:real` lo pone después de la confirmación.
+Un `DATABASE_URL_TEST` remoto (por ejemplo, una rama de Neon) también necesita esa variable. Un
+archivo de tests nuevo tiene que empezar con ese import (lo controla `tests/base-de-prueba.test.js`).
+Antes del guardia, el 14-11-2026, `node --test` directo tomó la base real tres veces con
+`chat-anterior.test.js` y `fallas-openai-anterior.test.js`, que importan `chat.test.js` y
+`fallas-openai.test.js` (crean y borran sus datos; no quedó nada).
 
 **Tests del scraper.** La corrida completa (sin archivos) también corre `ingestion/tests` (Python,
 sin red ni base: parsers de las fichas, lectura del módulo, costos, privacidad) con

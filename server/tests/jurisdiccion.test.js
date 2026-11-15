@@ -1,3 +1,4 @@
+import './helpers/base-de-prueba.js';
 import 'dotenv/config';
 import { describe, it, after } from 'node:test';
 import assert from 'node:assert/strict';

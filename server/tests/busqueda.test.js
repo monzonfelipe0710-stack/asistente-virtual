@@ -1,3 +1,4 @@
+import './helpers/base-de-prueba.js';
 import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
