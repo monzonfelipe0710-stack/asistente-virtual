@@ -4,11 +4,38 @@ import assert from 'node:assert/strict';
 
 // La consulta a la base y el embedding se simulan: se prueba qué hace buscarTramites con las filas.
 let filas;
+let consultas = [];
+let embebidos = [];
+let lecturasDeNombres = 0;
+const nombres = ['Pasaporte', 'Pasaporte "Express"', 'Solicitud Partida de Nacimiento, Matrimonio o Defunción'];
 const servicio = (ruta) => new URL(`../src/${ruta}`, import.meta.url).href;
-mock.module(servicio('config/prisma.js'), { defaultExport: { $queryRaw: async () => filas } });
-mock.module(servicio('services/embedding.service.js'), { namedExports: { generarEmbedding: async () => [0.1, 0.2] } });
+mock.module(servicio('config/prisma.js'), {
+  defaultExport: {
+    $queryRaw: async (_, ...valores) => {
+      consultas.push(valores);
+      return filas;
+    },
+    tramite: {
+      findMany: async () => {
+        lecturasDeNombres++;
+        return nombres.map((nombre) => ({ nombre }));
+      },
+    },
+  },
+});
+mock.module(servicio('services/embedding.service.js'), {
+  namedExports: {
+    generarEmbedding: async (texto) => {
+      embebidos.push(texto);
+      return [0.1, 0.2];
+    },
+  },
+});
 
 const { PROPORCION_DEL_PRIMERO, buscarTramites, soloLosCercanos } = await import('../src/services/busqueda.service.js');
+const cache = await import('../src/services/cache.service.js');
+// Los textos que llegan a la consulta (los valores de los Prisma.sql anidados).
+const textosDe = (valores) => valores.flatMap((v) => (typeof v === 'string' ? [v] : Array.isArray(v?.values) ? textosDe(v.values) : []));
 
 const grupo = (id, mejor) => ({ id, mejor });
 
@@ -50,5 +77,37 @@ describe('buscarTramites', () => {
     filas = [fila(10, 'pasaporte', 0.40, 0.40), fila(20, 'pasaporte express', 0.39, 0.39), fila(21, 'pasaporte express', 0.39, 0.10)];
     const grupos = await buscarTramites('pasaporte');
     assert.deepEqual(grupos.map((g) => g.variantes.map((v) => v.id)), [[10], [20, 21]]);
+  });
+});
+
+describe('errores de tipeo', () => {
+  it('la parte léxica lleva la corrección y el embedding la pregunta tal cual', async () => {
+    cache.limpiar();
+    consultas = [];
+    embebidos = [];
+    filas = [];
+    await buscarTramites('hola, nscito renovar el psporte');
+    assert.deepEqual(embebidos, ['hola, nscito renovar el psporte']);
+    assert.ok(textosDe(consultas[0]).includes('hola, nscito renovar el psporte pasaporte'), JSON.stringify(textosDe(consultas[0])));
+  });
+
+  it('una pregunta bien escrita va igual que antes', async () => {
+    consultas = [];
+    filas = [];
+    await buscarTramites('partida de nacimiento');
+    assert.ok(textosDe(consultas[0]).includes('partida de nacimiento'));
+    assert.ok(!textosDe(consultas[0]).some((t) => t.includes('nacimiento nacimiento')));
+  });
+
+  it('el vocabulario se arma una vez y se vuelve a leer al vaciar la caché del catálogo', async () => {
+    cache.limpiar();
+    lecturasDeNombres = 0;
+    filas = [];
+    await buscarTramites('psporte');
+    await buscarTramites('pasaporet');
+    assert.equal(lecturasDeNombres, 1);
+    cache.limpiar();
+    await buscarTramites('psporte');
+    assert.equal(lecturasDeNombres, 2);
   });
 });
