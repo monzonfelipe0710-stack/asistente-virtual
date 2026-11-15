@@ -714,8 +714,17 @@ respaldo, un límite de gasto del proyecto en el panel de OpenAI.
 - El resumen de reglas en prosa, sin rótulos ni copia literal de 40 caracteres, no lo detecta la
   salida: depende del prompt.
 - El rate limit y el tope por hora son en memoria, por instancia.
-- `eval-seguridad` D y E (trámites envenenados) y la corrida contra la base temporal quedaron sin
-  hacer por lo mismo (falta Docker).
+- Resuelto el 14-11-2026 con Docker reinstalado: `npm test` completo en la base temporal, 833 de 833
+  (y los 40 del scraper). `eval-seguridad` contra la temporal:
+  - D (10 trámites × 3) y E (6 × 3), en las dos rutas: **0 llegan a la persona**. El modelo obedeció
+    15 de 30 en D (las dos rutas) y 5 de 18 (normal) o 3 de 18 (streaming) en E; todo lo frenó el
+    servidor (costo, enlace, datos). Sin preguntas legítimas sin responder ni oraciones rotas.
+  - F (5 corridas): normal Fa 15/15, Fb 20/20, Fc 15/20, Fd 50/50; streaming Fa 14/15 (1 error de
+    API), Fb 20/20, Fc 15/20, Fd 50/50. Las 5 de Fc son "licencia de conducir", que en la temporal no
+    está (el catálogo importado no tiene ningún trámite con "conducir"): ahí "no encontrado" es lo
+    correcto. Contra la base real ese caso pasa.
+- El guardia contra la base real pasó de `npm test` a `tests/helpers/base-de-prueba.js`, que importa
+  cada archivo de tests (ver README, "Tests").
 
 ### Catálogo real
 
