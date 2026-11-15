@@ -6,6 +6,7 @@
 //   node scripts/eval-chat.js --detalle   además, el texto de cada corrida
 //   node scripts/eval-chat.js --corridas 5 --solo "cómo renuevo el pasaporte" --solo "..."
 //                                         otra cantidad de corridas, o solo esos casos
+//   node scripts/eval-chat.js --tipeo     solo los casos con errores de tipeo y sus controles
 //   DATABASE_URL=<base temporal> node scripts/eval-chat.js --catalogo sintetico
 //                                         solo los casos de trámites repetidos en distintos
 //                                         municipios (catálogo de scripts/generar-catalogo-sintetico.js)
@@ -40,6 +41,7 @@ const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [pr
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 3);
 const DETALLE = process.argv.includes('--detalle');
 const SOLO = argumento('--solo');
+const TIPEO = process.argv.includes('--tipeo');
 const MODO = argumento('--catalogo')[0] ?? null;
 const SINTETICO = MODO === 'sintetico';
 if (MODO && !['sintetico', 'municipal'].includes(MODO)) throw new Error(`--catalogo ${MODO}: los catálogos son sintetico y municipal.`);
@@ -70,6 +72,7 @@ const NOMBRES = {
   pasaporte: 'Pasaporte',
   pesca: 'Licencia para Pesca Deportiva / Recreativa',
   buenaConducta: 'Solicitud de Certificado de Buena Conducta',
+  partida: 'Solicitud Partida de Nacimiento, Matrimonio o Defunción',
 };
 const ID = {};
 for (const [clave, nombre] of Object.entries(NOMBRES)) {
@@ -213,6 +216,25 @@ const casos = [
     pregunta: 'dónde hago el cambio de titularidad del auto en la municipalidad',
     esperado: { contesta: true, jurisdiccion: 'MUNICIPAL', ...DOMINIO, segunBase: { nombre: 'Cambio de Titularidad', dato: 'mesas' } },
   },
+
+  // Errores de tipeo (14-11-2026): letras que faltan, intercambiadas, sin tildes, mal escritas o con
+  // saludo. Cada uno tiene que llegar al trámite, respondido u ofrecido en una aclaración.
+  { tipeo: true, pregunta: 'hola, nscito renovar el psporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'necesito renovar el psporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'pasaporet', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'como saco el pasaprote', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'renobar pasaporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'cuanto sale el pasaporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'nesesito sacar el dni', esperado: { tipo: 'aclaracion', incluye: [ID.nuevoEjemplar] } },
+  { tipeo: true, pregunta: 'licensia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL, siNoHay: { conversacional: false } } },
+  { tipeo: true, pregunta: 'partida de nacimento', esperado: { contesta: true, incluye: [ID.partida] } },
+  { tipeo: true, pregunta: 'buenas, sertificado de buena condcta', esperado: { contesta: true, incluye: [ID.buenaConducta] } },
+  { tipeo: true, pregunta: 'lisencia por maternida', esperado: { contesta: true, incluye: [ID.maternidad] } },
+  { tipeo: true, pregunta: 'pesca deprotiva', esperado: { contesta: true, incluye: [ID.pesca] } },
+  // Control: mal escritos y fuera del catálogo, tienen que seguir sin trámite.
+  { tipeo: true, pregunta: 'capital de fransia', esperado: { tipo: 'respuesta', encontrado: false, noContiene: ['aumento de capital'] } },
+  { tipeo: true, pregunta: 'reseta de milanesa', esperado: { tipo: 'respuesta', encontrado: false } },
+  { tipeo: true, pregunta: 'resultado del partido de fubol', esperado: { tipo: 'respuesta', encontrado: false } },
 ];
 
 // Los ejemplos del resumen se eligen por consultas y las de la evaluación se borran recién al final,
@@ -622,7 +644,7 @@ const delModo = casos.filter((c) => {
   if (MODO === 'municipal') return c.catalogo === 'municipal';
   return SINTETICO ? c.catalogo === 'sintetico' || c.esperado.segunCatalogo : !c.catalogo;
 });
-const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunta)) : delModo;
+const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunta)) : TIPEO ? delModo.filter((c) => c.tipeo) : delModo;
 const desconocidos = SOLO.filter((p) => !delModo.some((c) => c.pregunta === p));
 if (desconocidos.length > 0) throw new Error(`Casos que no existen: ${desconocidos.join(' | ')}`);
 
