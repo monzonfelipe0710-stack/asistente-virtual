@@ -11,9 +11,12 @@ const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${colu
 // Devuelve los `limite` grupos de nombre con mejor puntaje, cada uno con todas sus variantes
 // publicadas (el mismo trámite en distintos organismos), y no solo las que pasaron el filtro:
 // así la lista de localidades está completa y las copias no ocupan el lugar de otros trámites.
-// `id` es la variante de mejor puntaje.
-export const buscarTramites = async (pregunta, { limite = 3, signal } = {}) => {
+// `id` es la variante de mejor puntaje. `alEtapa` avisa cuándo empieza el embedding y cuándo la
+// consulta a la base (para el log de latencia del chat).
+export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa } = {}) => {
+  alEtapa?.('embedding');
   const embedding = await generarEmbedding(pregunta, { signal });
+  alEtapa?.('busqueda');
   const vectorSql = `[${embedding.join(',')}]`;
   const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery`;
 

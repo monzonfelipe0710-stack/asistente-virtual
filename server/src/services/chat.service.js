@@ -1,7 +1,7 @@
 import { ia } from "../core/ai/index.js";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
-import { TIEMPOS_IA, streamIncremental } from "../config/ia.js";
+import { TIEMPOS_IA, logLatencia, streamIncremental } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
@@ -575,7 +575,7 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza) => {
   const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
   const localidades = localidadesConocidas(jurisdicciones);
   const textoDeBusqueda = quitarLocalidades(consultaBusqueda, localidades) || consultaBusqueda;
-  const encontrados = await buscarTramites(textoDeBusqueda, { signal });
+  const encontrados = await buscarTramites(textoDeBusqueda, { signal, alEtapa: (nombre) => traza.etapa(nombre) });
   if (encontrados.length === 0) return SIN_CANDIDATOS;
 
   traza.etapa("detalle");
@@ -629,14 +629,40 @@ export class AsistenteNoDisponibleError extends Error {
 
 // Una falla del modelo o el plazo agotado llegan a la persona con el mensaje fijo; la causa queda
 // en el log con la etapa y la duración, sin el texto de la consulta. Lo demás es un error propio.
+// Con CHAT_LOG_LATENCIA=true, cada consulta que termina bien deja una línea con los ms de cada
+// etapa (sin la pregunta ni datos de la persona). "inicio" es la regla de entrada, la versión del
+// catálogo y la caché; "registro", guardar la consulta.
 const crearTraza = () => {
   const inicio = Date.now();
   let etapa = "inicio";
   let desde = inicio;
+  let primerTexto = null;
+  let cacheada = false;
+  const duraciones = {};
+  const cerrarEtapa = (ahora) => {
+    duraciones[etapa] = (duraciones[etapa] ?? 0) + (ahora - desde);
+  };
   return {
     etapa(nombre) {
+      const ahora = Date.now();
+      cerrarEtapa(ahora);
       etapa = nombre;
-      desde = Date.now();
+      desde = ahora;
+    },
+    primerTexto() {
+      primerTexto ??= Date.now() - inicio;
+    },
+    cacheada() {
+      cacheada = true;
+    },
+    terminar(ruta) {
+      if (!logLatencia()) return;
+      const ahora = Date.now();
+      cerrarEtapa(ahora);
+      etapa = "fin";
+      desde = ahora;
+      const linea = { ruta, total: ahora - inicio, ...(primerTexto !== null && { primerTexto }), cacheada, etapas: duraciones };
+      console.info(`Chat latencia: ${JSON.stringify(linea)}`);
     },
     traducir(err) {
       const plazoAgotado = err?.name === "TimeoutError";
@@ -655,7 +681,9 @@ const crearTraza = () => {
 export const responderConsulta = async (mensajes, usuario = null, opciones = {}) => {
   const traza = crearTraza();
   try {
-    return await resolverConsulta(mensajes, usuario, opciones, traza);
+    const respuesta = await resolverConsulta(mensajes, usuario, opciones, traza);
+    traza.terminar("normal");
+    return respuesta;
   } catch (err) {
     throw traza.traducir(err);
   }
@@ -675,6 +703,8 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
+      traza.cacheada();
+      traza.etapa("registro");
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
       const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados);
       return {
@@ -784,6 +814,7 @@ const resolverSalidaAnterior = async (salida, ctx) => {
 
   // La caché y `consultas` guardan el cuerpo; el saludo y las fuentes se agregan al servir.
   const cuerpo = encontrado ? cuerpoModelo : MENSAJE_SIN_RESPUESTA;
+  traza.etapa("registro");
   const registro = await registrar({
     textoConsulta: preguntaActual,
     tramiteId: encontrado ? idsUsados[0] : null,
@@ -911,6 +942,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
 
   if (!esAclaracion && !encontrado) {
     if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: MENSAJE_SIN_RESPUESTA, saludo, tramitesEncontrados: [], encontrado: false });
+    traza.etapa("registro");
     const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta: MENSAJE_SIN_RESPUESTA });
     yield delta(prefijo + MENSAJE_SIN_RESPUESTA);
     yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: false, tramitesEncontrados: [], opciones: [], conversacional: false, ...registro };
@@ -939,6 +971,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   // La caché y `consultas` guardan el cuerpo; el saludo y las fuentes se agregan al servir.
   const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
   if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado: true });
+  traza.etapa("registro");
   const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: idsUsados[0], encontrado: true, usuarioId, respuesta: cuerpo });
   const fuentes = conFuentes(cuerpo, usados).slice(cuerpo.length);
   if (fuentes) yield delta(fuentes);
@@ -983,7 +1016,11 @@ async function* transmitirIncremental(deltas, ctx) {
 export async function* responderConsultaStream(mensajes, usuario = null, opciones = {}) {
   const traza = crearTraza();
   try {
-    yield* transmitirConsulta(mensajes, usuario, opciones, traza);
+    for await (const evento of transmitirConsulta(mensajes, usuario, opciones, traza)) {
+      if (evento.tipo === "delta" && evento.texto) traza.primerTexto();
+      yield evento;
+    }
+    traza.terminar("stream");
   } catch (err) {
     throw traza.traducir(err);
   }
@@ -1007,6 +1044,8 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
+      traza.cacheada();
+      traza.etapa("registro");
       const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
       const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados);
       const prefijo = componerSaludo(cacheado.saludo ?? "", nombre);
@@ -1262,6 +1301,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
     if (esUnTurno && metaValida) {
       cache.guardar(preguntaActual, { respuesta, saludo, tramitesEncontrados, encontrado });
     }
+    traza.etapa("registro");
     registro = await registrar({
       textoConsulta: preguntaActual,
       tramiteId: encontrado ? idsUsados[0] : null,

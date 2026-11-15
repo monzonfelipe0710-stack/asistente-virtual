@@ -228,6 +228,28 @@ describe('fallas de OpenAI en el chat', () => {
     assert.ok(!linea.includes(pregunta));
   };
 
+  // Junta las líneas "Chat latencia:" de lo que corre `fn`, con CHAT_LOG_LATENCIA en `valor` (null: sin la variable).
+  const conLogDeLatencia = async (fn, valor = 'true') => {
+    const antes = process.env.CHAT_LOG_LATENCIA;
+    const infoOriginal = console.info;
+    const lineas = [];
+    if (valor === null) delete process.env.CHAT_LOG_LATENCIA;
+    else process.env.CHAT_LOG_LATENCIA = valor;
+    console.info = (...args) => {
+      const texto = args.join(' ');
+      if (texto.startsWith('Chat latencia: ')) lineas.push(texto.slice('Chat latencia: '.length));
+      else infoOriginal(...args);
+    };
+    try {
+      await fn();
+    } finally {
+      console.info = infoOriginal;
+      if (antes === undefined) delete process.env.CHAT_LOG_LATENCIA;
+      else process.env.CHAT_LOG_LATENCIA = antes;
+    }
+    return lineas;
+  };
+
   describe('sin streaming', () => {
     it('un 429 se reintenta una vez y termina en 503 sin cachear ni registrar', async () => {
       alChat = error(429);
@@ -287,6 +309,25 @@ describe('fallas de OpenAI en el chat', () => {
       logueado(/plazo agotado/);
     });
 
+    it('con CHAT_LOG_LATENCIA, una consulta que termina bien deja los ms por etapa, sin la pregunta', async () => {
+      const lineas = await conLogDeLatencia(async () => assert.equal((await pedir('/api/chat', pregunta)).status, 200));
+      assert.equal(lineas.length, 1);
+      const linea = JSON.parse(lineas[0]);
+      assert.equal(linea.ruta, 'normal');
+      assert.equal(linea.cacheada, false);
+      for (const etapa of ['busqueda', 'detalle', 'modelo', 'registro']) assert.equal(typeof linea.etapas[etapa], 'number', etapa);
+      assert.ok(Math.abs(Object.values(linea.etapas).reduce((a, b) => a + b, 0) - linea.total) <= 1);
+      assert.ok(!lineas[0].includes(pregunta));
+
+      const deCache = await conLogDeLatencia(() => pedir('/api/chat', pregunta));
+      assert.equal(JSON.parse(deCache[0]).cacheada, true);
+    });
+
+    it('sin CHAT_LOG_LATENCIA no hay línea de latencia', async () => {
+      const lineas = await conLogDeLatencia(() => pedir('/api/chat', pregunta), null);
+      assert.deepEqual(lineas, []);
+    });
+
     it('una falla del embedding termina en 503 sin llamar al modelo', async () => {
       alEmbedding = error(429);
       noDisponible(await pedir('/api/chat', pregunta));
@@ -304,6 +345,17 @@ describe('fallas de OpenAI en el chat', () => {
       assert.equal(r.eventos.at(-1).encontrado, true);
       assert.notEqual(cache.obtener(pregunta), null);
       assert.equal(registros.length, 1);
+    });
+
+    it('con CHAT_LOG_LATENCIA, el streaming deja los ms por etapa y el del primer texto', async () => {
+      alChat = streamOk([META(), ...LINEAS]);
+      const lineas = await conLogDeLatencia(() => pedirStream(pregunta));
+      assert.equal(lineas.length, 1);
+      const linea = JSON.parse(lineas[0]);
+      assert.equal(linea.ruta, 'stream');
+      assert.ok(linea.primerTexto > 0 && linea.primerTexto <= linea.total);
+      for (const etapa of ['busqueda', 'detalle', 'modelo', 'registro']) assert.equal(typeof linea.etapas[etapa], 'number', etapa);
+      assert.ok(!lineas[0].includes(pregunta));
     });
 
     it('sin trámite y con stop, manda el mensaje fijo y lo registra', async () => {

@@ -12,6 +12,9 @@ export const enteroDeEntorno = (nombre, porDefecto, minimo) => {
 // mismo camino, de a oración (ver services/salida.service.js). Con false vuelve el de antes.
 export const streamIncremental = () => !['false', '0', 'no'].includes(process.env.STREAM_INCREMENTAL?.trim().toLowerCase());
 
+// CHAT_LOG_LATENCIA=true: una línea por consulta con los ms de cada etapa (ver chat.service.js).
+export const logLatencia = () => ['true', '1', 'si', 'sí'].includes(process.env.CHAT_LOG_LATENCIA?.trim().toLowerCase());
+
 export const TIEMPOS_IA = {
   embedding: {
     timeout: enteroDeEntorno('OPENAI_TIMEOUT_EMBEDDING_MS', 4000, 1),
