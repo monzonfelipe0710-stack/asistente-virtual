@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { describe, it, before, beforeEach, after, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { conEsquema, enElFormato } from './helpers/formato-stream.js';
 
 // Un OpenAI falso local simula cada falla; el chat se prueba de punta a punta por HTTP con los
 // controllers reales. La búsqueda y el registro de consultas se simulan (la búsqueda igual pide
@@ -106,15 +107,28 @@ const abrirStream = (rs) => {
   rs.writeHead(200, { 'Content-Type': 'text/event-stream' });
   rs.flushHeaders();
 };
+// Los pedazos se escriben como "línea META + texto" y van en el formato del streaming (con el
+// esquema, el objeto JSON). `cortado`: sin el cierre del JSON; lo que no llega a la línea META va tal cual.
+const delModelo = (partes, { cortado = false } = {}) => {
+  if (cortado && !partes.join('').includes('\n')) return partes;
+  const pedazos = [...enElFormato(partes)];
+  return cortado && conEsquema() ? pedazos.slice(0, -1) : pedazos;
+};
 const streamOk = (partes) => (rs) => {
   abrirStream(rs);
-  for (const p of partes) rs.write(pedazo(p));
+  for (const p of delModelo(partes)) rs.write(pedazo(p));
   rs.write(pedazo('', 'stop'));
+  rs.end('data: [DONE]\n\n');
+};
+const streamCrudo = (partes, finish_reason = 'stop') => (rs) => {
+  abrirStream(rs);
+  for (const p of partes) rs.write(typeof p === 'string' ? pedazo(p) : `data: ${JSON.stringify(p)}\n\n`);
+  rs.write(pedazo('', finish_reason));
   rs.end('data: [DONE]\n\n');
 };
 const streamQueSeCorta = (partes, final) => async (rs) => {
   abrirStream(rs);
-  for (const p of partes) {
+  for (const p of delModelo(partes, { cortado: true })) {
     rs.write(pedazo(p));
     await pausa(20);
   }
@@ -160,8 +174,9 @@ const pedirStream = async (pregunta, opciones) => {
 const intentos = (ruta) => pedidos.filter((p) => p.ruta === ruta).length;
 const llegadas = (ruta) => pedidos.filter((p) => p.ruta === ruta).map((p) => p.llegada);
 
-// Corre también con STREAM_INCREMENTAL=false en paralelo (fallas-openai-anterior.test.js): datos propios.
-const MODO = process.env.STREAM_INCREMENTAL === 'false' ? '-anterior' : '';
+// Corre también con STREAM_INCREMENTAL=false (fallas-openai-anterior.test.js) y con STREAM_ESQUEMA=false
+// (fallas-openai-meta.test.js) en paralelo: datos propios.
+const MODO = process.env.STREAM_INCREMENTAL === 'false' ? '-anterior' : process.env.STREAM_ESQUEMA === 'false' ? '-meta' : '';
 const DOMINIO = `@fallas-openai${MODO}.test.invalid`;
 const SUFIJO = `fallas-openai${MODO}-${Date.now()}`;
 let sector;
@@ -386,7 +401,7 @@ describe('fallas de OpenAI en el chat', () => {
       alChat = (rs, _intento, pedido) => {
         cuerpo = pedido;
         abrirStream(rs);
-        for (const p of [META(), LINEAS[0]]) rs.write(pedazo(p));
+        for (const p of delModelo([META(), LINEAS[0]], { cortado: true })) rs.write(pedazo(p));
         rs.write(pedazo('', 'length'));
         rs.end('data: [DONE]\n\n');
       };
@@ -432,6 +447,77 @@ describe('fallas de OpenAI en el chat', () => {
       sinCacheNiRegistro();
     });
 
+    it('el pedido lleva el esquema JSON con "respuesta" al final, o ninguno con la línea META', async () => {
+      let cuerpo = null;
+      alChat = (rs, _intento, pedido) => {
+        cuerpo = pedido;
+        streamOk([META(), ...LINEAS])(rs);
+      };
+      await pedirStream(pregunta);
+      assert.equal(cuerpo.stream, true);
+      if (!conEsquema()) return assert.equal(cuerpo.response_format, undefined);
+      assert.equal(cuerpo.response_format.type, 'json_schema');
+      assert.equal(cuerpo.response_format.json_schema.strict, true);
+      const { properties, required } = cuerpo.response_format.json_schema.schema;
+      assert.deepEqual(Object.keys(properties), ['tipo', 'saludo', 'tramiteId', 'tramitesUsados', 'opciones', 'respuesta']);
+      assert.deepEqual([...required].sort(), Object.keys(properties).sort());
+    });
+
+    describe('con el esquema JSON', { skip: !conEsquema() }, () => {
+      const APERTURA = () => delModelo([META()])[0];
+
+      it('una negativa del modelo (refusal) es un error: no cachea ni registra', async () => {
+        const negativa = { id: 'x', object: 'chat.completion.chunk', created: 0, model: 'x', choices: [{ index: 0, delta: { refusal: 'No puedo ayudar con eso.' }, finish_reason: null }] };
+        alChat = streamCrudo([negativa]);
+        const r = await pedirStream(pregunta);
+        assert.deepEqual(r.eventos, [{ tipo: 'error', mensaje: MENSAJE_NO_DISPONIBLE }]);
+        sinCacheNiRegistro();
+        logueado(/refusal/);
+      });
+
+      it('una negativa después de haber mandado texto: queda lo verificado y el error', async () => {
+        const negativa = { id: 'x', object: 'chat.completion.chunk', created: 0, model: 'x', choices: [{ index: 0, delta: { refusal: 'No.' }, finish_reason: null }] };
+        alChat = streamCrudo([APERTURA(), 'Se pide turno en la mesa de entrada.\\n', 'Hay que', negativa]);
+        const r = await pedirStream(pregunta);
+        assert.deepEqual(r.tipos, ['delta', 'error']);
+        sinCacheNiRegistro();
+      });
+
+      for (const [caso, partes] of [
+        ['texto suelto en vez del JSON', () => ['Se pide turno en la mesa de entrada.']],
+        ['un JSON que no cierra', () => [APERTURA(), 'Se pide turno en la mesa de entrada.']],
+        ['texto después del JSON', () => [APERTURA(), 'Se pide turno en la mesa de entrada.', '"}', ' y algo más']],
+        ['un escape inválido en el texto', () => [APERTURA(), 'Se pide \\q turno en la mesa de entrada.', '"}']],
+        ['un JSON sin los campos de decisión', () => ['{"respuesta":"Se pide turno en la mesa de entrada."}']],
+        ['nada', () => []],
+      ]) {
+        it(`${caso}, aunque termine con stop, es un error: no cachea ni registra`, async () => {
+          alChat = streamCrudo(partes());
+          const r = await pedirStream(pregunta);
+          assert.equal(r.tipos.at(-1), 'error');
+          assert.equal(r.eventos.at(-1).mensaje, MENSAJE_NO_DISPONIBLE);
+          assert.ok(!r.tipos.includes('fin'));
+          sinCacheNiRegistro();
+          logueado(/no es el JSON del esquema/);
+        });
+      }
+
+      it('con filtro de contenido (finish_reason content_filter) es un error', async () => {
+        alChat = streamCrudo([APERTURA(), 'Se pide turno en la mesa de entrada.', '"}'], 'content_filter');
+        const r = await pedirStream(pregunta);
+        assert.equal(r.tipos.at(-1), 'error');
+        sinCacheNiRegistro();
+        logueado(/finish_reason: content_filter/);
+      });
+
+      it('un solo llamado al modelo por consulta', async () => {
+        alChat = streamOk([META(), ...LINEAS]);
+        const r = await pedirStream(pregunta);
+        assert.equal(r.eventos.filter((e) => e.tipo === 'delta').map((e) => e.texto).join(''), LINEAS.join(''));
+        assert.equal(intentos('/chat/completions'), 1);
+      });
+    });
+
     it('un corte a mitad de la línea META es un error, nunca "no encontrado"', async () => {
       alChat = streamQueSeCorta(['{"tipo":"respuesta","saludo":"","tra'], (rs) => rs.end());
       const r = await pedirStream(pregunta);
@@ -452,12 +538,14 @@ describe('fallas de OpenAI en el chat', () => {
     const incremental = process.env.STREAM_INCREMENTAL !== 'false';
     const oracionesLentas = (cantidad, espera) => async (rs) => {
       abrirStream(rs);
-      rs.write(pedazo(META()));
+      const [apertura, cierre] = delModelo([META()]);
+      rs.write(pedazo(apertura));
       for (let i = 0; i < cantidad && !rs.destroyed; i++) {
         rs.write(pedazo(`El turno ${i} se pide en la mesa de entradas. `));
         await pausa(espera);
       }
       if (rs.destroyed) return;
+      if (cierre) rs.write(pedazo(cierre));
       rs.write(pedazo('', 'stop'));
       rs.end('data: [DONE]\n\n');
     };

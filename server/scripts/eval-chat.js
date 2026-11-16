@@ -29,6 +29,7 @@ import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
 import { ia } from '../src/core/ai/index.js';
+import { streamEsquema, streamIncremental } from '../src/config/ia.js';
 import { CorridaSinCredito, SALIDA_SIN_CREDITO, cortarSiSinCredito } from './lib/sin-credito.js';
 import { MENSAJE_LISTA_COLAPSADA, montosEn } from '../src/services/verificacion.service.js';
 import { costoDelPortal } from '../src/utils/huella.js';
@@ -520,12 +521,27 @@ const consultasCreadas = [];
 const STREAM = process.argv.includes('--stream');
 let grabadas = null;
 let aRepetir = null;
+// Llamadas al modelo por la ruta sin streaming mientras se responde por streaming: el reintento por
+// una línea META inválida o la conversación pedida de nuevo.
+let segundasLlamadas = 0;
 const generarOriginal = ia.generarRespuesta.bind(ia);
 ia.generarRespuesta = async (args) => {
   if (aRepetir) return aRepetir.shift();
+  if (grabadas) segundasLlamadas++;
   const salida = await generarOriginal(args);
   grabadas?.push(salida);
   return salida;
+};
+// La salida del streaming como la de la ruta sin streaming: con el esquema, el JSON tal cual; con la
+// línea META, la META con el texto en "respuesta". Sin una salida válida no se compara.
+const salidaDelStream = (crudo) => {
+  try {
+    if (streamIncremental() && streamEsquema()) return JSON.stringify(JSON.parse(crudo));
+    const nl = crudo.indexOf('\n');
+    return nl === -1 ? null : JSON.stringify({ ...JSON.parse(crudo.slice(0, nl)), respuesta: crudo.slice(nl + 1) });
+  } catch {
+    return null;
+  }
 };
 const transmitirOriginal = ia.generarRespuestaStream.bind(ia);
 ia.generarRespuestaStream = async function* (args) {
@@ -534,15 +550,7 @@ ia.generarRespuestaStream = async function* (args) {
     crudo += delta;
     yield delta;
   }
-  // Como la ruta sin streaming: la META con el texto en "respuesta". Sin META válida no se compara.
-  const nl = crudo.indexOf('\n');
-  let meta = null;
-  try {
-    meta = nl === -1 ? null : JSON.parse(crudo.slice(0, nl));
-  } catch {
-    meta = null;
-  }
-  grabadas?.push(meta ? JSON.stringify({ ...meta, respuesta: crudo.slice(nl + 1) }) : null);
+  grabadas?.push(salidaDelStream(crudo));
 };
 
 const comparaciones = [];
@@ -742,7 +750,8 @@ console.log(`
 Conversación pedida de nuevo sin candidatos: ${conversacionDeNuevo.reduce((n, c) => n + c.conversacionDeNuevo, 0)} veces en ${elegidos.length * CORRIDAS} corridas`);
 for (const c of conversacionDeNuevo) console.log(`  - "${c.pregunta}": ${c.conversacionDeNuevo}`);
 
-// Corridas del streaming sin una línea META válida (se respondió con cortesía o se pidió de nuevo sin streaming).
+// Corridas del streaming sin una salida válida: sin línea META (se respondió con cortesía o se pidió de
+// nuevo sin streaming) o, con el esquema, sin el JSON completo (la corrida terminó en error).
 const sinMetaValida = comparaciones.filter((c) => c.igual === null);
 
 if (STREAM) {
@@ -751,6 +760,7 @@ if (STREAM) {
   console.log(`\nStreaming contra la ruta sin streaming, con la misma salida del modelo: ${comparadas.length - distintas.length} iguales de ${comparadas.length}` +
     `${comparaciones.length > comparadas.length ? ` (${comparaciones.length - comparadas.length} sin META válida, no comparadas)` : ''}`);
   for (const c of distintas) console.log(`  - "${c.pregunta}":\n    stream: ${c.stream.replace(/\n/g, ' / ')}\n    normal: ${c.normal.replace(/\n/g, ' / ')}`);
+  console.log(`Llamadas al modelo por la ruta sin streaming durante el streaming: ${segundasLlamadas} (${resultados.reduce((n, c) => n + c.conversacionDeNuevo, 0)} por la conversación pedida de nuevo)`);
   if (distintas.length > 0) process.exitCode = 1;
 }
 
@@ -779,7 +789,8 @@ writeFileSync(archivo, JSON.stringify({
   ...(sinCredito && { invalida: 'sin crédito en OpenAI: la corrida se cortó' }),
   erroresDeApi: resultados.reduce((n, c) => n + c.erroresDeApi, 0),
   conversacionDeNuevo: resultados.reduce((n, c) => n + c.conversacionDeNuevo, 0),
-  ...(STREAM && { sinMetaValida: sinMetaValida.length, sinMetaValidaEn: sinMetaValida.map((c) => c.pregunta) }),
+  ...(STREAM && { formato: streamIncremental() && streamEsquema() ? 'esquema' : 'meta', sinMetaValida: sinMetaValida.length, sinMetaValidaEn: sinMetaValida.map((c) => c.pregunta), segundasLlamadas }),
+  aciertos: resultados.reduce((n, c) => n + c.aciertos, 0),
   total: elegidos.length,
   ok: conEstado('OK').length,
   casos: resultados,

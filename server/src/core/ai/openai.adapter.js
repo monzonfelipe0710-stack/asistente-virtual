@@ -94,7 +94,8 @@ export const openaiAdapter = {
 
   // El SDK termina el stream sin error si se corta sin [DONE] o si se lo aborta: por eso un abort
   // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
-  async *generarRespuestaStream({ instruccionSistema, turnos, signal }) {
+  // Con `esquema`, una negativa del modelo (refusal) también es una falla.
+  async *generarRespuestaStream({ instruccionSistema, turnos, esquema, signal }) {
     const inactividad = new AbortController();
     const senal = combinarSenales(signal, inactividad.signal);
     let temporizador;
@@ -115,6 +116,7 @@ export const openaiAdapter = {
           max_completion_tokens: MAX_TOKENS_RESPUESTA,
           stream: true,
           messages: construirMensajes(instruccionSistema, turnos),
+          ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
         },
         { ...TIEMPOS_IA.chat, signal: senal },
       );
@@ -123,6 +125,7 @@ export const openaiAdapter = {
         rearmar();
         const opcion = chunk.choices[0];
         finishReason = opcion?.finish_reason ?? finishReason;
+        if (opcion?.delta?.refusal) throw new ErrorProveedorIA('el modelo se negó a responder (refusal)', { operacion: 'chat_stream' });
         const delta = opcion?.delta?.content ?? '';
         if (delta) yield delta;
       }

@@ -323,7 +323,16 @@ ia.generarRespuesta = async (args) => {
   }
   return salida;
 };
-// En streaming, el texto que sigue a la línea META.
+// En streaming, el texto del modelo: el de "respuesta" (con el esquema JSON) o el que sigue a la línea META.
+const textoDelStream = (crudo) => {
+  try {
+    const salida = JSON.parse(crudo);
+    if (typeof salida?.respuesta === 'string') return salida.respuesta;
+  } catch {
+    // La línea META con su texto, o un JSON cortado.
+  }
+  return crudo.includes('\n') ? crudo.slice(crudo.indexOf('\n') + 1) : '';
+};
 const transmitirOriginal = ia.generarRespuestaStream.bind(ia);
 ia.generarRespuestaStream = async function* (args) {
   let crudo = '';
@@ -333,7 +342,7 @@ ia.generarRespuestaStream = async function* (args) {
       yield delta;
     }
   } finally {
-    salidasCrudas.push(crudo.includes('\n') ? crudo.slice(crudo.indexOf('\n') + 1) : '');
+    salidasCrudas.push(textoDelStream(crudo));
   }
 };
 

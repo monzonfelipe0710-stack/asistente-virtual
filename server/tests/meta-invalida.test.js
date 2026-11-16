@@ -4,6 +4,8 @@ import { describe, it, before, beforeEach, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 // La línea META del streaming mal formada: solo la META sin salto de línea, o el texto sin la META.
+// Es el formato de STREAM_ESQUEMA=false; con el esquema JSON, ver stream-esquema.test.js.
+process.env.STREAM_ESQUEMA = 'false';
 let candidatos;
 let salidasModelo;
 let pedazosStream;

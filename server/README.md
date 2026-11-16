@@ -78,6 +78,7 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `CHAT_PLAZO_MS` | no | Plazo total de una consulta del chat. Default `18000` |
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
 | `STREAM_INCREMENTAL` | no | `true` (default): el texto del chat sale de a oraciones ya verificadas, igual en las dos rutas (ver [Streaming incremental](#streaming-incremental)). `false` (o `0`, `no`): vuelve el comportamiento anterior en las dos rutas |
+| `STREAM_ESQUEMA` | no | `true` (default): el streaming le pide al modelo el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming, y manda el texto de `respuesta` a medida que llega (ver [Streaming con esquema JSON](#streaming-con-esquema-json)). `false` (o `0`, `no`): vuelve el formato anterior, una línea META y después el texto, con el pedido de nuevo si la META no es válida. Solo aplica con `STREAM_INCREMENTAL=true`: con `false` el streaming usa siempre el formato anterior |
 | `CHAT_MAX_PREGUNTA` | no | Largo máximo de la pregunta y de cada mensaje de la persona en el historial. Default `500` |
 | `CHAT_MAX_TEXTO_ASISTENTE` | no | Largo máximo de cada mensaje del asistente en el historial. Default `6000`: la respuesta honesta más larga mide 3546 (ver [Chat](#chat)) |
 | `CHAT_MAX_MENSAJES` | no | Mensajes por conversación. Default `20` |
@@ -108,7 +109,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/eval-chat.js [--stream]` | Evalúa el chat contra preguntas fijas (3 corridas por caso). Llama a OpenAI. Guarda el resultado por caso en `server/eval-resultados/` (ignorada por git). Con `--stream` responde por el streaming y pasa la misma salida del modelo por la ruta sin streaming: el texto final tiene que ser idéntico. Los trámites esperados se buscan por nombre, así que corre igual contra la base real y la temporal. Con `--tipeo`, solo los casos con errores de tipeo y sus controles |
 | `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas, trámites envenenados (D y E, solo en la base temporal) y los casos del pentest manual (F: notas del sistema, sobre JSON, conversación contaminada, evasiones). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
 | `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
-| `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."]` | Tiempo hasta el primer `delta` y hasta el fin con `STREAM_INCREMENTAL` en true y en false, alternados. Llama a OpenAI; borra por id las consultas que registra |
+| `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."] [--modos esquema,meta,anterior]` | Tiempo hasta el primer `delta` y hasta el fin, llamadas al modelo y tokens por consulta del streaming en cada modo, alternados: `esquema` (`STREAM_ESQUEMA=true`), `meta` (`STREAM_ESQUEMA=false`) y `anterior` (`STREAM_INCREMENTAL=false`). Por defecto, `esquema` y `meta`. Llama a OpenAI; borra por id las consultas que registra |
 | `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron y cuántas corridas de cada una terminaron en error de API. No compara una corrida marcada como inválida |
 
 Los scripts que llaman a OpenAI (`eval-chat`, `eval-seguridad`, `medir-prompt`, `medir-stream`, `reindexar-todo`, `reindexar-faltantes`) se cortan en cuanto la cuenta se queda sin crédito (429 `insufficient_quota` / `credit_balance_exhausted`), con un mensaje claro y código de salida 2, y borran lo que crearon. `eval-chat` guarda lo hecho hasta ahí con `valida: false`; además anota por caso `erroresDeApi`, las corridas que terminaron en un error (de OpenAI o de la base), que cuentan como falla pero no dicen nada del chat.
@@ -856,6 +857,34 @@ del primer `delta` es chica porque antes de la primera oración llegan la búsqu
 modelo y la retención por idioma; lo que cambia más es que el resto llega de a oraciones (mediana
 de 5, 9 y 3 `delta` contra 2, 6,5 y 2), en vez de casi todo junto al final.
 
+#### Streaming con esquema JSON
+
+Con `STREAM_ESQUEMA=true` (default) el streaming le pide al modelo lo mismo que la ruta sin
+streaming: el mismo prompt y el mismo esquema JSON estricto (`response_format: json_schema`), con
+`stream: true`. La única diferencia es el orden de las propiedades del esquema: en el streaming
+`respuesta` va última (el modelo emite las claves en el orden del esquema), así `tipo`, `saludo`,
+`tramiteId`, `tramitesUsados` y `opciones` llegan antes que el texto. Ya no hay línea META ni
+segunda llamada cuando la META viene mal.
+
+[`lector-json.js`](src/utils/lector-json.js) lee el JSON a medida que llega: junta los campos de
+decisión y, cuando están completos, el chat decide con ellos igual que antes con la línea META (no
+hay un evento nuevo: el contrato SSE no cambia); después decodifica el string de `respuesta` de a
+pedazos (los escapes `\n`, `\"`, `\\` y `\uXXXX`, también partidos entre dos pedazos, y los pares
+sustitutos de un emoji) y ese texto entra al camino de siempre, oración por oración
+([Streaming incremental](#streaming-incremental)): nada sale sin pasar las capas. Si el modelo
+mandara `respuesta` antes que los demás campos, el texto se retiene hasta tenerlos.
+
+Al terminar, el JSON entero tiene que parsear y coincidir con lo que se fue leyendo. Una salida que
+no es el JSON del esquema, una negativa del modelo (`refusal`), un `finish_reason` distinto de
+`stop` (el tope de tokens, el filtro de contenido), un corte, el plazo, la inactividad o un error
+terminan como siempre: evento `error` con el mensaje del 503, nada en caché ni en `consultas`, y lo
+ya mandado era texto verificado. Una conversación sin texto ("chau", "gracias") recibe la frase
+amable, como en la ruta sin streaming.
+
+Con `STREAM_ESQUEMA=false` vuelve el formato anterior: el prompt de streaming (una línea META en
+JSON y después el texto libre) y, si la META no es válida, la frase de cortesía o el pedido de nuevo
+por la ruta con esquema. Con `STREAM_INCREMENTAL=false` el streaming usa siempre ese formato.
+
 ### Métricas, historial y calificaciones
 
 | Método | Ruta | Acceso | Respuesta |
@@ -1177,6 +1206,19 @@ También un corte a mitad (error, sin caché ni registro) y la bandera en `false
 `salida.test.js` prueba que una oración que se da por terminada en una línea a medio llegar no
 cambia cuando llega el resto. `chat-anterior.test.js` y `fallas-openai-anterior.test.js` corren
 `chat.test.js` y `fallas-openai.test.js` con `STREAM_INCREMENTAL=false`.
+
+Los tests del chat escriben la salida del modelo por streaming como "línea META + texto" y
+`tests/helpers/formato-stream.js` la pasa al formato de las banderas: por defecto, el JSON del
+esquema. `chat-meta.test.js`, `fallas-openai-meta.test.js` y `stream-incremental-meta.test.js`
+corren los mismos tests con `STREAM_ESQUEMA=false` (la línea META), y `meta-invalida.test.js` es
+solo de ese formato. `lector-json.test.js` corta el JSON del streaming en todas las posiciones y en
+pedazos de 1, 3, 7 y 13 caracteres (también en medio de un escape, de un `\uXXXX` y de un par
+sustituto) y compara con `JSON.parse` del texto completo; además, las salidas que no son el JSON
+del esquema. `stream-esquema.test.js` comprueba que el pedido lleva el prompt de la ruta sin
+streaming y el esquema con `respuesta` al final, en una sola llamada; que si `respuesta` llega
+antes que los demás campos no sale texto hasta tenerlos; que una salida inválida es un error sin
+caché ni registro, y las frases de cortesía. `fallas-openai.test.js` suma la negativa del modelo
+(`refusal`), el JSON inválido con `stop` y el filtro de contenido.
 
 `node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad (3 corridas por caso). Es
 para correr a demanda y borra por id las consultas que registra. Con `--detalle` imprime

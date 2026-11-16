@@ -115,6 +115,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `CACHE_CHEQUEO_MS` | no | `5000`: cada cuánto se revisa la versión del catálogo en la base |
 | `SERVIDOR_URL` | no | Solo el script de import: `http://localhost:$PORT`, para avisar si hay un server encendido |
 | `STREAM_INCREMENTAL` | no | `true`: las dos rutas del chat sacan el texto de a oraciones verificadas (ver 6, "Streaming incremental"); `false` vuelve al comportamiento anterior |
+| `STREAM_ESQUEMA` | no | `true`: el streaming usa el mismo JSON con esquema y el mismo prompt que la ruta sin streaming y lee `respuesta` a medida que llega (ver 6, "Streaming con esquema JSON"); `false` vuelve a la línea META. Solo aplica con `STREAM_INCREMENTAL=true` |
 
 ### 2.4 Versiones
 

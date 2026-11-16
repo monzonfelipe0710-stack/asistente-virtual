@@ -1,7 +1,7 @@
 import { ia } from "../core/ai/index.js";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
-import { TIEMPOS_IA, logLatencia, streamIncremental } from "../config/ia.js";
+import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
@@ -18,6 +18,7 @@ import { conFuentes, esUrlHttp } from "../utils/enlaces.js";
 import { costoDelPortal } from "../utils/huella.js";
 import { MENSAJE_SOLO_ESPANOL, esOtroIdioma, pareceEspanol } from "../utils/idioma.js";
 import { crearLimpiador, limpiarCuerpo } from "../utils/cuerpo.js";
+import { crearLectorDeSalida } from "../utils/lector-json.js";
 import { MENSAJE_INFORMACION_OCULTA, crearVerificador, quedoSinContenido, sinContenidoPropio } from "./verificacion.service.js";
 import { PALABRAS_PARA_EL_IDIOMA, crearLiberador, crearLimpiadorPorOraciones, cuantasPalabras, limpiarPorOraciones } from "./salida.service.js";
 import {
@@ -141,6 +142,14 @@ const ESQUEMA_SALIDA = {
     },
     required: ["tipo", "saludo", "tramiteId", "respuesta", "tramitesUsados", "opciones"],
   },
+};
+
+// El mismo esquema para el streaming, con "respuesta" al final: el modelo emite las claves en el
+// orden del esquema, así los campos de decisión llegan antes que el texto.
+const { respuesta: CAMPO_RESPUESTA, ...CAMPOS_DE_DECISION } = ESQUEMA_SALIDA.schema.properties;
+const ESQUEMA_SALIDA_STREAM = {
+  ...ESQUEMA_SALIDA,
+  schema: { ...ESQUEMA_SALIDA.schema, properties: { ...CAMPOS_DE_DECISION, respuesta: CAMPO_RESPUESTA } },
 };
 
 const limitarConversacion = (texto) => {
@@ -1017,6 +1026,38 @@ async function* transmitirIncremental(deltas, ctx) {
   }
 }
 
+// Streaming con el esquema JSON: los campos de decisión llegan antes que "respuesta", cuyo texto
+// sigue de largo a medida que llega. Al final el JSON entero tiene que parsear y coincidir con lo
+// leído: si no, es una falla del modelo (como un corte), antes de cachear o registrar.
+const salidaInvalida = () => new ErrorProveedorIA("la salida del streaming no es el JSON del esquema", { operacion: "chat_stream" });
+
+async function* transmitirConEsquema(deltas, ctx) {
+  const iterador = deltas[Symbol.asyncIterator]();
+  const lector = crearLectorDeSalida({ campoTexto: "respuesta", camposMeta: Object.keys(CAMPOS_DE_DECISION) });
+  try {
+    let meta = null;
+    let primerTexto = "";
+    while (meta === null) {
+      const { value, done } = await iterador.next();
+      if (done) throw salidaInvalida();
+      ({ meta, texto: primerTexto } = lector.agregar(value ?? ""));
+    }
+    async function* partes() {
+      if (primerTexto) yield primerTexto;
+      for (;;) {
+        const { value, done } = await iterador.next();
+        if (done) break;
+        const { texto } = lector.agregar(value ?? "");
+        if (texto) yield texto;
+      }
+      if (lector.cerrar() === null) throw salidaInvalida();
+    }
+    yield* responderConSalida({ salida: meta, valida: true, partes: partes() }, ctx);
+  } finally {
+    await iterador.return?.();
+  }
+}
+
 export async function* responderConsultaStream(mensajes, usuario = null, opciones = {}) {
   const traza = crearTraza();
   try {
@@ -1075,13 +1116,21 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   const topeAlcanzado = alcanzoElTope(mensajes);
 
   traza.etapa("modelo");
-  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_STREAM_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal);
+  // Con el esquema, el prompt es el de la ruta sin streaming.
+  const conEsquema = streamIncremental() && streamEsquema();
+  const prompt = conEsquema ? SYSTEM_PROMPT_MULTIVUELTA : SYSTEM_PROMPT_STREAM_MULTIVUELTA;
+  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(prompt, topeAlcanzado, candidatos.lista, candidatos), signal);
   const deltas = ia.generarRespuestaStream({
     instruccionSistema: instruccion,
     turnos: mensajes,
+    ...(conEsquema && { esquema: ESQUEMA_SALIDA_STREAM }),
     signal,
   });
   const ctx = { ...opciones, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
+  if (conEsquema) {
+    yield* transmitirConEsquema(deltas, ctx);
+    return;
+  }
   const revisada = await conMetaRevisada(deltas, ctx);
   if (revisada.cortesia) {
     yield { tipo: "delta", texto: componerSaludo(revisada.cortesia.saludo, nombre) + revisada.cortesia.texto };
@@ -1091,6 +1140,7 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   yield* streamIncremental() ? transmitirIncremental(revisada.deltas, ctx) : transmitirSalidaAnterior(revisada.deltas, ctx);
 }
 
+// Solo con STREAM_ESQUEMA=false (o STREAM_INCREMENTAL=false), el formato de la línea META.
 // En streaming el modelo a veces manda solo la línea META sin salto de línea ("chau") o el texto sin
 // la META ("¡De nada!"). Nunca se responde un trámite sin una META válida: un mensaje que es solo
 // cortesía recibe una frase amable; cualquier otro se pide de nuevo por la ruta sin streaming (con

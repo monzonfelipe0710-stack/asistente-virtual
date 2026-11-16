@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { Prisma } from '@prisma/client';
 import prisma from '../src/config/prisma.js';
 import { huellaDeGrupo } from '../src/utils/huella.js';
+import { enElFormato } from './helpers/formato-stream.js';
 
 // El modelo, la búsqueda y el registro de consultas se simulan; el trámite de prueba
 // se crea en la base (sin publicar) y se borra al terminar.
@@ -36,7 +37,7 @@ mock.module(servicio('core/ai/index.js'), {
       },
       async *generarRespuestaStream(args) {
         llamadasModelo.push(args);
-        for (const p of pedazosStream) yield p;
+        for (const p of enElFormato(pedazosStream)) yield p;
       },
     },
   },
@@ -58,8 +59,9 @@ const { LARGO_DE_FUGA, MARCA_FUERA_DE_ALCANCE, MENSAJE_FUERA_DE_ALCANCE } = awai
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA } = await import('../src/services/verificacion.service.js');
 const { MENSAJE_SOLO_ESPANOL } = await import('../src/utils/idioma.js');
 
-// Corre también con STREAM_INCREMENTAL=false en paralelo (chat-anterior.test.js): datos propios.
-const MODO = process.env.STREAM_INCREMENTAL === 'false' ? '-anterior' : '';
+// Corre también con STREAM_INCREMENTAL=false (chat-anterior.test.js) y con STREAM_ESQUEMA=false
+// (chat-meta.test.js) en paralelo: datos propios.
+const MODO = process.env.STREAM_INCREMENTAL === 'false' ? '-anterior' : process.env.STREAM_ESQUEMA === 'false' ? '-meta' : '';
 const DOMINIO = `@chat${MODO}.test.invalid`;
 const SUFIJO = `chat-test${MODO}-${Date.now()}`;
 let tramite;
