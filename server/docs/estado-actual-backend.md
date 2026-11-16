@@ -427,6 +427,108 @@ de pasaporte no cambió (20 453 caracteres); el de habilitaciones pasó de 27 32
 chat contestaba la fila de 25 a 50 m² (la última que veía); ahora, 3 de 3 corridas dan 14 módulos,
 $70.514,64 (más de 300 hasta 500 m²), sin correcciones de la verificación de salida.
 
+### Corrección de tipeo y "partida de nacimiento" (16-11-2026)
+
+**"partida de nacimiento" bien escrita (0/3 en las dos rutas): no es tipeo ni falta de datos.** El
+trámite existe y está publicado: #273 "Solicitud Partida de Nacimiento, Matrimonio o Defunción"
+(provincial, Dirección del Registro Civil). Los otros trámites del catálogo sobre partidas o actas
+son #92 y #93 (actas a otras provincias o para no residentes), #171 (Casa de Formosa en Buenos
+Aires, certifica actas), #236 y #126 (inscripción de nacimiento), #237 (adición de apellido
+materno), #238 (extraña jurisdicción), #271 (cédula policial, pide el acta) y #272 (acta siniestral,
+sin publicar). Puntajes de la búsqueda contra la base real (similitud, texto, combinado):
+
+| Consulta | Primeros 3 (combinado) | #273: similitud / texto / combinado | Puesto de #273 |
+|---|---|---|---|
+| partida de nacimiento | #237 0,288, #126 0,286, #236 0,277 | 0,394 / 0,076 / 0,267 | 4 |
+| acta de nacimiento | #126 0,356, #236 0,352, #171 0,327 | 0,483 / 0,038 / 0,305 | 6 |
+| quiero la partida de nacimiento de mi hijo | #126 0,320, #236 0,315, #127 0,294 | 0,446 / 0,038 / 0,283 | 5 |
+| certificado de nacimiento | #236 0,342, #126 0,313, #269 0,308 | 0,416 / 0,038 / 0,265 | 15 |
+
+Queda afuera porque la búsqueda trae 3 grupos y #273 tiene la similitud más baja del grupo: su
+texto del embedding (2444 caracteres) mezcla matrimonio, defunción, costos por acta, el sistema
+NEXOS y la entrega en delegaciones, y diluye "partida de nacimiento". En texto es el que mejor
+coincide (0,076 con "partida"), pero el texto pesa 0,4 y los puntajes de `ts_rank` son chicos.
+Con "partida de nacimento" (mal escrita) el embedding cae parejo para todos y #273 queda 2.º: por
+eso esa sí pasa.
+
+Prueba en memoria, sin tocar la base (el embedding de #273 con otro texto, contra los puntajes
+actuales de los demás):
+
+| Consulta | Texto actual | Con nombres alternativos al principio | Solo nombre y descripción (referencia) |
+|---|---|---|---|
+| partida de nacimiento | 0,267, puesto >3 | 0,281, puesto 3 | 0,296, puesto 1 |
+| acta de nacimiento | 0,305, >3 | 0,315, >3 | 0,317, >3 |
+| quiero la partida de nacimiento de mi hijo | 0,283, >3 | 0,293, 3 | 0,319, 2 |
+| certificado de nacimiento | 0,265, >3 | 0,276, >3 | 0,296, >3 |
+
+Los nombres alternativos probados fueron "También se conoce como: partida de nacimiento, acta de
+nacimiento, certificado de nacimiento, copia de la partida, partida de matrimonio, acta de
+matrimonio, partida de defunción, acta de defunción". Suben la similitud 0,017 a 0,027: alcanzan
+justo para "partida de nacimiento" (0,281 contra 0,277 del 3.º) y no para "acta" ni "certificado".
+
+Propuesta, sin aplicar:
+
+- Una columna `nombres_alternativos` en `tramites`, que entre al texto del embedding
+  (`textoDeTramite`, después del nombre) y también a `search_vector`. Solo en el embedding no
+  alcanza: lo que haría robusto el caso es que "acta" y "certificado" coincidan por texto.
+- `search_vector` es una columna generada (`nombre || descripcion`), así que cambiarla es una
+  migración que la borra y la vuelve a crear con su índice GIN, y se recalcula para todo el
+  catálogo. Por eso no entra en este brief.
+- Reindexar: solo los trámites a los que se les carguen nombres alternativos, de a uno
+  (`indexarTramite`, un embedding cada uno, costo despreciable). El resto del catálogo no cambia
+  de texto.
+- Antes de aplicarlo habría que correr `eval-chat` completo: más texto en #273 puede subirlo
+  también en consultas de matrimonio o defunción, que hoy van a otros trámites.
+- Lo que más sube la similitud es acortar el texto (solo nombre y descripción), pero es un cambio
+  para todo el catálogo y un reindexado completo.
+
+**Corrección de tipeo** (`services/tipeo.service.js`, `TIPEO_REESCRITURA`, default `true`): si la
+búsqueda no trae candidatos o el mejor puntaje es menor a 0,24, y el mensaje no es de cortesía, una
+llamada corta al modelo (prompt fijo, temperatura 0, `TIPEO_TIMEOUT_MS` 3 s, sin reintentos)
+devuelve la consulta corregida, y se busca de nuevo con ella. Ver el README, "Cómo funciona el
+chat", paso 2.
+
+- **Umbral:** el mejor puntaje de cada pregunta de `eval-chat` y de las legítimas de
+  `eval-seguridad` contra la base real (`scripts/medir-tipeo.js`). Las mal escritas que fallaban
+  quedan en 0,219 ("hola, nscito renovar el psporte") y 0,227 ("necesito renovar el psporte"), o
+  sin candidatos ("pasaporet", "psporte", "como saco el pasaprote"). Las bien escritas que piden un
+  trámite del catálogo, en 0,256 o más. Entre medio están "visa para Estados Unidos" y "pasaje a
+  Buenos Aires" (0,225): bien escritas, disparan la corrección y el texto vuelve igual. "partida de
+  nacimento" (0,248) queda arriba a propósito: hoy trae #273 y corregida lo pierde. El margen es
+  chico (0,227 contra 0,248).
+- **Decisiones:**
+  - El texto corregido solo se usa para buscar.
+  - La cortesía no se corrige: "hola", "gracias" y "chau" no traen candidatos y sumarían una
+    llamada sin sentido.
+  - Un texto igual al original sin contar mayúsculas, tildes ni signos no repite la búsqueda.
+  - Si el modelo pasa el voseo a tuteo, se vuelve al voseo: en la primera medición convirtió
+    "podés" en "puedes" en "hola, ¿qué podés hacer?" (2 de 3 corridas) y cambiaba los
+    candidatos. Por eso también se le pide que no toque el voseo.
+- **Mediciones (16-11-2026):**
+  - `medir-tipeo --corridas 3`, base real, 88 preguntas. Bien escritas: 219 corridas, se disparó
+    en 36 (todas conversación o temas ajenos), corregida 0, candidatos que cambian 0. Mal escritas
+    (12 casos): las 4 que fallaban se corrigen en 12 de 12 y traen el pasaporte; las otras 8 no la
+    disparan. Controles: 9 de 9 se corrigen ("capital de francia", "receta de milanesa",
+    "resultado del partido de fútbol") y cambian los candidatos.
+  - Latencia de la llamada: mediana 834 ms, máximo 1235 ms. Con la nueva búsqueda, cuando cambia
+    el texto: mediana 1280 ms, máximo 1611 ms. Las 36 corridas bien escritas que la disparan
+    pagan unos 0,8 s sin cambio.
+  - `eval-chat --tipeo` (15 casos × 3, base real), antes (`TIPEO_REESCRITURA=false`) → después:
+    ruta normal 10 → 14 casos 3/3 (30 → 42 aciertos de 45); streaming 10 → 13 (30 → 41). Pasan
+    a 3/3 "hola, nscito renovar el psporte", "necesito renovar el psporte", "pasaporet" y "como
+    saco el pasaprote" (por streaming 2/3: una corrida pidió aclaración entre los dos pasaportes
+    con uno solo en `opciones`, una decisión del modelo con los candidatos correctos). Los
+    controles siguen 3/3 sin trámite. "licensia de conducir" sigue 0/3 (aclaración con la
+    licencia municipal, no dispara: 0,330).
+  - `eval-seguridad` completo, base temporal, por las dos rutas: 0 llegan a la persona. Ataques
+    30/30; legítimas A 15/15, B 7/7, C 8/8; D el modelo obedeció 15 de 30 y el servidor frenó las
+    15; E 5 de 18 (normal) y 4 de 18 (streaming), frenadas todas. F: a, b y d completos; c 3/4,
+    el mismo caso de la medición anterior (no depende de esto); e (nuevo, órdenes a la corrección)
+    6/6.
+  - En las órdenes a la corrección, el modelo nunca obedeció: corrigió la consulta con la orden
+    adentro, o devolvió solo la consulta sin la orden ("pasaporte."). Esto último no pasa la
+    validación (cambia demasiado el largo) y se sigue con la búsqueda original.
+
 ### Streaming con esquema JSON (16-11-2026)
 
 El streaming pide el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming

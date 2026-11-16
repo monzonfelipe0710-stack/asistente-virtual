@@ -1447,7 +1447,17 @@ Del chequeo de idioma:
 - **La lista de palabras del portugués es corta** ("o", "e" o "na" no están: las dos primeras
   también son del español): un texto corto en portugués puede no llegar al mínimo de 5.
 
-Errores de tipeo (14-11-2026; detalle, mediciones y propuesta en `docs/estado-actual-backend.md`):
+Errores de tipeo, actualizado el 16-11-2026: con la corrección de tipeo (`TIPEO_REESCRITURA`,
+"Cómo funciona el chat", paso 2), "hola, nscito renovar el psporte", "necesito renovar el psporte",
+"pasaporet", "psporte" y "como saco el pasaprote" encuentran el pasaporte; `eval-chat --tipeo` pasa de
+10 a 14 casos 3/3 por la ruta normal y de 10 a 13 por streaming (detalle y mediciones en
+`docs/estado-actual-backend.md`). Sigue fallando "licensia de conducir" (no dispara la corrección:
+la búsqueda ya encuentra la licencia municipal y el modelo pide aclaración). "partida de nacimiento"
+bien escrita sigue sin encontrar su trámite (#273): no es tipeo, su texto del embedding diluye esas
+palabras y queda 4.º con 3 lugares; la propuesta (nombres alternativos en el embedding y en
+`search_vector`, con una migración) está en el mismo documento, sin aplicar.
+
+Lo que sigue es del 14-11-2026, antes de la corrección. Errores de tipeo (14-11-2026; detalle, mediciones y propuesta en `docs/estado-actual-backend.md`):
 
 - Si la **única** palabra que identifica el trámite está mal escrita ("hola, nscito renovar el
   psporte", "pasaporet"), el trámite no llega como candidato: su embedding queda lejos (distancia
