@@ -1,10 +1,11 @@
 import { ia } from "../core/ai/index.js";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
-import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental } from "../config/ia.js";
+import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental, tipeoReescritura } from "../config/ia.js";
 import { combinarSenales, conSenal } from "../utils/plazo.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
+import { corregirConsulta, debeReescribir } from "./tipeo.service.js";
 import { describirJurisdiccion, nombreConRaiz, obtenerJurisdicciones } from "./jurisdiccion.service.js";
 import { aclaracionDeGrupo, etiquetarPorJurisdiccion, formatearGrupo, localidadesConocidas, loQueNombro, quitarLocalidades, resolverGrupos } from "./variantes.service.js";
 import { registrarConsulta } from "./metrica.service.js";
@@ -581,13 +582,21 @@ const textoDeLaPersona = (mensajes) =>
 const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Set(), consulta: "" };
 
 // El embedding de la búsqueda se cachea solo en las consultas de un turno: el texto de varios turnos
-// juntos casi nunca se repite.
-const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno) => {
+// juntos casi nunca se repite. Si la búsqueda no encuentra nada parecido (ver tipeo.service.js), se
+// busca de nuevo con la ortografía corregida; un mensaje de cortesía no se corrige.
+const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { esCortesia = false, alReescribir } = {}) => {
   traza.etapa("busqueda");
   const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
   const localidades = localidadesConocidas(jurisdicciones);
   const textoDeBusqueda = quitarLocalidades(consultaBusqueda, localidades) || consultaBusqueda;
-  const encontrados = await buscarTramites(textoDeBusqueda, { signal, alEtapa: (nombre) => traza.etapa(nombre), cachearEmbedding: esUnTurno });
+  const buscar = (texto, alPuntaje) => buscarTramites(texto, { signal, alEtapa: (nombre) => traza.etapa(nombre), alPuntaje, cachearEmbedding: esUnTurno });
+  let mejor = null;
+  let encontrados = await buscar(textoDeBusqueda, (p) => (mejor = p));
+  if (tipeoReescritura() && !esCortesia && debeReescribir(encontrados, mejor)) {
+    traza.etapa("tipeo");
+    const corregido = await corregirConsulta(textoDeBusqueda, { signal, alReescribir });
+    if (corregido !== null) encontrados = await buscar(corregido);
+  }
   if (encontrados.length === 0) return SIN_CANDIDATOS;
 
   traza.etapa("detalle");
@@ -607,6 +616,8 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno) =>
     jurisdicciones,
   };
 };
+
+const opcionesDeBusqueda = (mensajes, { alReescribir }) => ({ esCortesia: cortesiaPara(mensajes) !== null, alReescribir });
 
 const opcionesDeLaAclaracion = (ids, candidatos) =>
   etiquetarPorJurisdiccion(
@@ -733,7 +744,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   }
 
   // La búsqueda usa el contexto acumulado (junta los turnos del usuario).
-  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno);
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno, opcionesDeBusqueda(mensajes, opciones));
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
@@ -1109,7 +1120,7 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
     }
   }
 
-  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno);
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno, opcionesDeBusqueda(mensajes, opciones));
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 

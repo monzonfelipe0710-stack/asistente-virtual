@@ -30,6 +30,8 @@ mock.module(servicio('services/busqueda.service.js'), {
 mock.module(servicio('core/ai/index.js'), {
   namedExports: {
     ia: {
+      // La corrección de tipeo devuelve el texto igual: no se busca de nuevo (ver tipeo.test.js).
+      corregirTexto: async ({ texto }) => texto,
       // Con un array, cada llamada se lleva la siguiente salida.
       generarRespuesta: async (args) => {
         llamadasModelo.push(args);

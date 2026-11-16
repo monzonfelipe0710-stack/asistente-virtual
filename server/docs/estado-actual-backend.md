@@ -116,6 +116,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `SERVIDOR_URL` | no | Solo el script de import: `http://localhost:$PORT`, para avisar si hay un server encendido |
 | `STREAM_INCREMENTAL` | no | `true`: las dos rutas del chat sacan el texto de a oraciones verificadas (ver 6, "Streaming incremental"); `false` vuelve al comportamiento anterior |
 | `STREAM_ESQUEMA` | no | `true`: el streaming usa el mismo JSON con esquema y el mismo prompt que la ruta sin streaming y lee `respuesta` a medida que llega (ver 6, "Streaming con esquema JSON"); `false` vuelve a la línea META. Solo aplica con `STREAM_INCREMENTAL=true` |
+| `TIPEO_REESCRITURA` | no | `true`: si la búsqueda no encuentra nada parecido, el modelo corrige la ortografía de la consulta y se busca de nuevo (ver 6, "Corrección de tipeo"); `false` no corrige. `TIPEO_TIMEOUT_MS` (default 3000) es el timeout de esa llamada |
 
 ### 2.4 Versiones
 

@@ -92,6 +92,29 @@ export const openaiAdapter = {
     return message.content;
   },
 
+  // Una llamada corta, sin reintentos y con su propio timeout: devuelve el texto tal cual.
+  async corregirTexto({ instruccionSistema, texto, signal, timeout }) {
+    let completion;
+    try {
+      completion = await openai.chat.completions.create(
+        {
+          model: MODELO_CHAT,
+          temperature: 0,
+          max_completion_tokens: Math.min(MAX_TOKENS_RESPUESTA, Math.ceil(texto.length / 2) + 20),
+          messages: [{ role: 'system', content: instruccionSistema }, { role: 'user', content: texto }],
+        },
+        { timeout, maxRetries: 0, signal },
+      );
+    } catch (err) {
+      throw comoFalla(err, signal, 'tipeo');
+    }
+    const { finish_reason: finishReason, message } = completion.choices[0];
+    if (finishReason !== 'stop' || message.refusal) {
+      throw new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion: 'tipeo' });
+    }
+    return message.content;
+  },
+
   // El SDK termina el stream sin error si se corta sin [DONE] o si se lo aborta: por eso un abort
   // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
   // Con `esquema`, una negativa del modelo (refusal) también es una falla.

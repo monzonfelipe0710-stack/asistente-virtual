@@ -79,6 +79,8 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
 | `STREAM_INCREMENTAL` | no | `true` (default): el texto del chat sale de a oraciones ya verificadas, igual en las dos rutas (ver [Streaming incremental](#streaming-incremental)). `false` (o `0`, `no`): vuelve el comportamiento anterior en las dos rutas |
 | `STREAM_ESQUEMA` | no | `true` (default): el streaming le pide al modelo el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming, y manda el texto de `respuesta` a medida que llega (ver [Streaming con esquema JSON](#streaming-con-esquema-json)). `false` (o `0`, `no`): vuelve el formato anterior, una línea META y después el texto, con el pedido de nuevo si la META no es válida. Solo aplica con `STREAM_INCREMENTAL=true`: con `false` el streaming usa siempre el formato anterior |
+| `TIPEO_REESCRITURA` | no | `true` (default): si la búsqueda del chat no trae candidatos o el mejor puntaje es menor a 0,24, una llamada corta al modelo corrige la ortografía de la consulta y se busca de nuevo con el texto corregido (ver [Cómo funciona el chat](#cómo-funciona-el-chat), paso 2). `false` (o `0`, `no`): no se corrige |
+| `TIPEO_TIMEOUT_MS` | no | Timeout de la llamada que corrige la ortografía, sin reintentos (default 3000). Si se pasa, la consulta sigue con la búsqueda original |
 | `CHAT_MAX_PREGUNTA` | no | Largo máximo de la pregunta y de cada mensaje de la persona en el historial. Default `500` |
 | `CHAT_MAX_TEXTO_ASISTENTE` | no | Largo máximo de cada mensaje del asistente en el historial. Default `6000`: la respuesta honesta más larga mide 3546 (ver [Chat](#chat)) |
 | `CHAT_MAX_MENSAJES` | no | Mensajes por conversación. Default `20` |
@@ -110,6 +112,7 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/eval-seguridad.js [--stream] [--grupo ...]` | Ataques, preguntas legítimas, trámites envenenados (D y E, solo en la base temporal) y los casos del pentest manual (F: notas del sistema, sobre JSON, conversación contaminada, evasiones). Llama a OpenAI. Con `--stream`, evalúa lo que llega por el streaming |
 | `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
 | `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."] [--modos esquema,meta,anterior]` | Tiempo hasta el primer `delta` y hasta el fin, llamadas al modelo y tokens por consulta del streaming en cada modo, alternados: `esquema` (`STREAM_ESQUEMA=true`), `meta` (`STREAM_ESQUEMA=false`) y `anterior` (`STREAM_INCREMENTAL=false`). Por defecto, `esquema` y `meta`. Llama a OpenAI; borra por id las consultas que registra |
+| `node scripts/medir-tipeo.js [--corridas 1] [--pregunta "..."]` | Sobre las preguntas de `eval-chat` y las legítimas de `eval-seguridad`: cuáles disparan la corrección de tipeo, qué devuelve el modelo, si cambian los candidatos de la búsqueda (en las bien escritas tiene que ser 0) y cuánto tarda. Hace la búsqueda y la corrección, sin el modelo de la respuesta ni el registro. Llama a OpenAI |
 | `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron y cuántas corridas de cada una terminaron en error de API. No compara una corrida marcada como inválida |
 
 Los scripts que llaman a OpenAI (`eval-chat`, `eval-seguridad`, `medir-prompt`, `medir-stream`, `reindexar-todo`, `reindexar-faltantes`) se cortan en cuanto la cuenta se queda sin crédito (429 `insufficient_quota` / `credit_balance_exhausted`), con un mensaje claro y código de salida 2, y borran lo que crearon. `eval-chat` guarda lo hecho hasta ahí con `valida: false`; además anota por caso `erroresDeApi`, las corridas que terminaron en un error (de OpenAI o de la base), que cuentan como falla pero no dicen nada del chat.
@@ -1093,6 +1096,18 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    entre trámites que no compiten ("licencia de conducir": la nacional 0,344 y la de taxis 0,282).
    Medido el 09-11-2026, la opción legítima más lejana de una aclaración del eval queda en el 89 %
    (pesca deportiva en "cómo saco la licencia de pesca"): el margen es chico.
+   **Corrección de tipeo** ([`tipeo.service.js`](src/services/tipeo.service.js), `TIPEO_REESCRITURA`):
+   si la búsqueda no trae candidatos o el mejor puntaje es menor a 0,24 (`UMBRAL_REESCRITURA`), y el
+   mensaje no es de cortesía ("gracias", "chau", "hola"), una llamada corta al modelo (prompt fijo,
+   temperatura 0, 3 s, sin reintentos) devuelve la consulta con la ortografía corregida. La salida se
+   trata como no confiable: tiene que ser una sola línea, sin llaves, de largo parecido (hasta 1,3
+   veces más 10 caracteres y no menos de la mitad) y con a lo sumo 2 palabras de diferencia, y la
+   regla de entrada no la tiene que bloquear; si el modelo pasa el voseo a tuteo, se vuelve al
+   voseo. Si no cumple, falla o queda igual al original (sin contar mayúsculas, tildes ni signos), se
+   sigue con la primera búsqueda; si cambia, se busca de nuevo con el texto corregido y se usan esos
+   candidatos. El texto corregido solo se usa para buscar: el modelo de la respuesta, la caché, el
+   registro y la persona ven el original. Funciona igual en las dos rutas (es antes de llamar al
+   modelo de la respuesta). En el log de latencia es la etapa `tipeo`.
    **Variantes** ([`variantes.service.js`](src/services/variantes.service.js)): cada variante tiene
    un par (jurisdicción, localidad) efectivo. Un grupo con un solo par se resuelve con la mejor
    variante, como antes (por ejemplo, las copias de "Licencias médicas de corto tratamiento").
@@ -1260,6 +1275,13 @@ streaming y el esquema con `respuesta` al final, en una sola llamada; que si `re
 antes que los demás campos no sale texto hasta tenerlos; que una salida inválida es un error sin
 caché ni registro, y las frases de cortesía. `fallas-openai.test.js` suma la negativa del modelo
 (`refusal`), el JSON inválido con `stop` y el filtro de contenido.
+
+`tipeo.test.js` prueba la corrección de tipeo con la búsqueda y el modelo simulados: cuándo se
+dispara, qué salidas del modelo se aceptan (una respuesta, varias líneas, un JSON, otro largo, algo
+que la regla de entrada bloquea o el voseo pasado a tuteo no), que con el texto corregido se busque de
+nuevo y que el modelo de la respuesta, la caché y el registro vean el original, en las dos rutas; que
+un texto igual no repita la búsqueda, que una falla siga con la búsqueda original, que la cortesía y
+`TIPEO_REESCRITURA=false` no la disparen y que un corte del pedido durante la corrección sea un error.
 
 `node scripts/eval-chat.js` evalúa el chat con OpenAI de verdad (3 corridas por caso). Es
 para correr a demanda y borra por id las consultas que registra. Con `--detalle` imprime

@@ -23,7 +23,8 @@ const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${colu
 // `id` es la variante de mejor puntaje. `alEtapa` avisa cuándo empieza el embedding y cuándo la
 // consulta a la base (para el log de latencia del chat). Con `cachearEmbedding` el embedding de la
 // pregunta se reusa (cache.service.js): el chat lo pide solo para las consultas de un turno.
-export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, cachearEmbedding = false } = {}) => {
+// `alPuntaje` recibe el puntaje del mejor grupo, o null si no hubo ninguno.
+export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, alPuntaje, cachearEmbedding = false } = {}) => {
   alEtapa?.('embedding');
   const embedding = await embeddingDe(pregunta, { signal, cachear: cachearEmbedding });
   alEtapa?.('busqueda');
@@ -63,7 +64,9 @@ export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, ca
     if (!grupos.has(f.clave)) grupos.set(f.clave, { id: f.id, nombre: f.nombre, mejor: Number(f.mejor), variantes: [] });
     grupos.get(f.clave).variantes.push({ id: f.id, nombre: f.nombre, sectorId: f.sectorId });
   }
-  return soloLosCercanos([...grupos.values()]).map(({ mejor, ...grupo }) => grupo);
+  const ordenados = [...grupos.values()];
+  alPuntaje?.(ordenados[0]?.mejor ?? null);
+  return soloLosCercanos(ordenados).map(({ mejor, ...grupo }) => grupo);
 };
 
 // Un candidato con un puntaje mucho menor que el primero no va al contexto: el modelo ve a todos
