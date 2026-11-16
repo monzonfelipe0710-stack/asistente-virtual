@@ -426,6 +426,37 @@ de pasaporte no cambió (20 453 caracteres); el de habilitaciones pasó de 27 32
 chat contestaba la fila de 25 a 50 m² (la última que veía); ahora, 3 de 3 corridas dan 14 módulos,
 $70.514,64 (más de 300 hasta 500 m²), sin correcciones de la verificación de salida.
 
+### Streaming con esquema JSON (16-11-2026)
+
+El streaming pide el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming
+(`SYSTEM_PROMPT_MULTIVUELTA`), con `stream: true`. Bandera `STREAM_ESQUEMA` (default `true`); con
+`false`, o con `STREAM_INCREMENTAL=false`, vuelve el formato de la línea META
+(`SYSTEM_PROMPT_STREAM_MULTIVUELTA`, `conMetaRevisada` y el pedido de nuevo), que por eso sigue en
+`chat.service.js`.
+
+- **Esquema:** el de la ruta normal tiene `respuesta` en el cuarto lugar y no se tocó. El del
+  streaming (`ESQUEMA_SALIDA_STREAM`) se arma con las mismas propiedades y `respuesta` al final. Una
+  llamada real confirmó que con `strict` el modelo emite las claves en el orden de `properties`
+  (`tipo`, `saludo`, `tramiteId`, `tramitesUsados`, `opciones`, `respuesta`) y los emojis literales.
+- **Lector** (`utils/lector-json.js`): junta los campos de decisión y los entrega una vez; decodifica
+  `respuesta` de a pedazos (escapes y pares sustitutos partidos), retiene el texto si llegara antes
+  que los demás campos y al final exige que el JSON entero parsee y coincida con lo leído. El texto
+  entra a `responderConSalida`, el mismo camino de la ruta normal: no se duplicó ninguna regla.
+- **Contrato:** los eventos siguen siendo `delta`, `fin` y `error`. No existía un evento `meta`: los
+  campos de decisión se usan dentro del servidor, como antes la línea META.
+- **Fallas:** refusal (el adaptador la detecta en el stream), `finish_reason` distinto de `stop`,
+  JSON inválido o incompleto, corte, plazo, inactividad y desconexión: evento `error` con el mensaje
+  del 503, sin caché ni registro. La ruta sin streaming no detecta la refusal (no se tocó).
+- **Tests:** `lector-json.test.js`, `stream-esquema.test.js`, y `chat.test.js`,
+  `stream-incremental.test.js` y `fallas-openai.test.js` con los dos formatos (los archivos `-meta`
+  corren con `STREAM_ESQUEMA=false`).
+- **Resultado:** el streaming iguala a la ruta normal en `eval-chat` (62 casos 3/3 y 191 aciertos de
+  216, contra 54 y 174 con la línea META), con 0 turnos sin salida válida (antes 32 de 219) y sin
+  reintentos; `eval-seguridad --stream` completo con 0 llegando a la persona; la latencia, dentro
+  del ruido (primer `delta` 2,18 s contra 1,96 s en una medición de 30 consultas y 1,79 s contra
+  1,97 s en otra). Las tablas están en el README, "Streaming con esquema JSON". Por eso la bandera
+  queda en `true`.
+
 ### Streaming incremental (09-11-2026)
 
 `POST /api/chat/stream` manda el texto de a oraciones ya verificadas, y `POST /api/chat` pasa la

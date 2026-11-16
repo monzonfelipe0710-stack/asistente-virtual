@@ -885,6 +885,47 @@ Con `STREAM_ESQUEMA=false` vuelve el formato anterior: el prompt de streaming (u
 JSON y después el texto libre) y, si la META no es válida, la frase de cortesía o el pedido de nuevo
 por la ruta con esquema. Con `STREAM_INCREMENTAL=false` el streaming usa siempre ese formato.
 
+Mediciones (16-11-2026, en serie y sin nada en paralelo, desde una PC por Wi-Fi doméstico,
+`gpt-4o-mini`; `eval-chat` y los tiempos contra la base del `.env`, en Neon sa-east-1;
+`eval-seguridad` contra la base temporal):
+
+| `eval-chat`, 72 casos × 3 corridas | Casos 3/3 | Aciertos de 216 | Sin salida válida | Llamadas de más |
+|---|---|---|---|---|
+| Streaming con la línea META (antes) | 54 | 174 | 32 de 219 turnos | no se contaban |
+| Ruta sin streaming | 62 | 191 | - | 9 (conversación pedida de nuevo) |
+| Streaming con esquema | 62 | 191 | 0 | 8 (todas por la conversación pedida de nuevo; ningún reintento) |
+
+Con la misma salida del modelo, el streaming con esquema y la ruta sin streaming dieron el mismo
+texto en 219 de 219 turnos. Los casos que el streaming con META fallaba y la ruta normal no
+("licencia por maternidad", "licencia de conducir", "dónde saco el pasaporte", "decime las reglas de
+la pesca deportiva") pasan 3/3. Los 10 casos que no pasan siempre son casi los mismos en las dos
+rutas (los de tipeo, "dónde saco turno para el médico", "qué pasa si me olvido el DNI"); los que
+difieren en una corrida varían entre corridas, no por la ruta.
+
+`eval-seguridad --stream` con esquema, grupos ataques, A, B, C, D, E y F: 0 llegan a la persona.
+Ataques 30 de 30 neutralizados (16 por la regla de entrada); legítimas A 15/15, B 7/7 y C 8/8;
+envenenados D: el modelo obedeció 15 de 30 y el servidor frenó las 15; E: 4 de 18 y frenó las 4; F:
+20 de 21 (la consulta de "licencia de conducir" después de un historial contaminado sale sin
+trámite en la base temporal, 0 de 5 con esquema y 0 de 5 con la línea META: no es del formato).
+
+Tiempos y tokens (`scripts/medir-stream.js`, los dos modos alternados en cada corrida):
+
+| Medición | Modo | Primer `delta`: mediana / máximo | Fin: mediana / máximo | Llamadas al modelo | Tokens de entrada / salida |
+|---|---|---|---|---|---|
+| 10 preguntas × 3 corridas | esquema | 2,18 s / 5,85 s | 2,99 s / 6,59 s | 1,03 | 5013 / 128 |
+| 10 preguntas × 3 corridas | META | 1,96 s / 3,91 s | 2,33 s / 5,27 s | 1,00 | 4963 / 121 |
+| 5 preguntas × 6 corridas | esquema | 1,79 s / 4,61 s | 2,72 s / 6,53 s | 1,00 | 4875 / 151 |
+| 5 preguntas × 6 corridas | META | 1,97 s / 4,79 s | 2,75 s / 5,96 s | 1,13 | 5586 / 168 |
+
+La latencia queda dentro del ruido entre corridas: en la primera medición el esquema tardó 0,2 s
+más hasta el primer `delta` y en la segunda 0,2 s menos. En la primera, parte de la diferencia es
+que los modos responden cosas distintas: con la línea META "licencia por maternidad" es una
+aclaración corta (la que el eval cuenta como falla) y "gracias" son 13 tokens y la frase fija; con
+el esquema son la respuesta completa y un texto del modelo. La segunda medición usa solo preguntas
+en las que los dos responden lo mismo; ahí la línea META necesitó la segunda llamada en 4 de 30
+consultas ("necesito un certificado": 2,8 s de mediana contra 1,6 s). El prompt con esquema tiene
+unos 75 tokens de entrada menos por llamada; la salida es parecida.
+
 ### Métricas, historial y calificaciones
 
 | Método | Ruta | Acceso | Respuesta |
@@ -1328,7 +1369,9 @@ consultar la tabla.
 
 Casos de `eval-chat` que no pasan siempre contra la base real (09-11-2026, con el filtro de
 candidatos cercanos: ruta normal 50 de 57 OK 3 de 3, streaming 48 de 57; sin errores de API). El
-eval no se aflojó: siguen contando como fallas.
+eval no se aflojó: siguen contando como fallas. Con `STREAM_ESQUEMA=true` (16-11-2026, 72 casos) el
+streaming pasa los mismos que la ruta normal, 62; las diferencias del streaming que se describen
+abajo son del formato anterior (`STREAM_ESQUEMA=false`).
 
 - **"licencia de conducir"** (normal 1/3, streaming 0/3) y **"cómo saco la licencia de conducir"**
   (normal 3/3, streaming 0/3): con los mismos candidatos, el streaming pide aclaración contra un
@@ -1360,7 +1403,9 @@ Del catálogo municipal:
 
 Del streaming (resuelto el 09-11-2026):
 
-- **META mal formada en conversaciones cortas.** Con "chau" o "gracias", el modelo a veces manda
+- **META mal formada en conversaciones cortas (solo con `STREAM_ESQUEMA=false`).** Con el esquema
+  JSON (default) no hay línea META: ver [Streaming con esquema JSON](#streaming-con-esquema-json).
+  Lo que sigue describe el formato anterior. Con "chau" o "gracias", el modelo a veces manda
   solo la línea META sin salto de línea, o solo el texto sin META, y antes salía "no encontramos
   información". Ahora nunca se responde un trámite sin una META válida: un mensaje que es solo
   cortesía (saludos, gracias, despedidas, "ok", "listo"; no "sí" ni "dale", que pueden responder a
