@@ -28,6 +28,14 @@ export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, al
   alEtapa?.('embedding');
   const embedding = await embeddingDe(pregunta, { signal, cachear: cachearEmbedding });
   alEtapa?.('busqueda');
+  const ordenados = await puntuarGrupos(pregunta, embedding, { limite, signal });
+  alPuntaje?.(ordenados[0]?.mejor ?? null);
+  return soloLosCercanos(ordenados).map(({ mejor, ...grupo }) => grupo);
+};
+
+// Los `limite` grupos de mejor puntaje con su puntaje (`mejor`), antes del filtro de
+// soloLosCercanos. Lo usa también scripts/medir-busqueda.js.
+export const puntuarGrupos = async (pregunta, embedding, { limite = 3, signal } = {}) => {
   const vectorSql = `[${embedding.join(',')}]`;
   const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery`;
 
@@ -64,9 +72,7 @@ export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, al
     if (!grupos.has(f.clave)) grupos.set(f.clave, { id: f.id, nombre: f.nombre, mejor: Number(f.mejor), variantes: [] });
     grupos.get(f.clave).variantes.push({ id: f.id, nombre: f.nombre, sectorId: f.sectorId });
   }
-  const ordenados = [...grupos.values()];
-  alPuntaje?.(ordenados[0]?.mejor ?? null);
-  return soloLosCercanos(ordenados).map(({ mejor, ...grupo }) => grupo);
+  return [...grupos.values()];
 };
 
 // Un candidato con un puntaje mucho menor que el primero no va al contexto: el modelo ve a todos
