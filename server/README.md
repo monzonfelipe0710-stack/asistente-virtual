@@ -36,6 +36,26 @@ npx prisma db seed         # crea el superusuario inicial
 npm run dev
 ```
 
+**Scripts de instalación de las dependencias (npm 11).** npm ya no corre los scripts de instalación
+de las dependencias sin aprobarlos: la lista está en `allowScripts` de `package.json` y no hay que
+aprobar nada a mano. Al hacer pull alcanza con `npm install`; no tiene que aparecer el aviso
+`npm warn install-scripts`.
+
+| Paquete | Script | Decisión |
+|---|---|---|
+| `prisma`, `@prisma/client`, `@prisma/engines` | `preinstall` (chequeo de versión), `postinstall` (`prisma generate` y la descarga del motor) | Aprobados |
+| `bcrypt` | `install`: `node-gyp-build`, que usa el binario precompilado (trae para Windows, macOS y Linux x64/arm64) y compila solo si no hay uno para la plataforma | Aprobado |
+| `protobufjs` (de `@google/genai`) | `postinstall`: un aviso de versión | Denegado: no hace falta |
+
+- Las aprobaciones van con la versión fijada (`bcrypt@6.0.0`): si `npm update` sube una de esas
+  versiones, vuelve el aviso. Hay que revisar el script nuevo y aprobarlo con
+  `npm install-scripts approve <paquete>` (actualiza `package.json`), o volver a la versión aprobada.
+- Si alguien instaló antes de que estuviera la lista y le falta el motor de Prisma o bcrypt no carga:
+  `npx prisma generate` y `npm rebuild bcrypt`. Con todo en orden, `npm install-scripts ls` dice
+  `No packages with unreviewed install scripts.`
+- Verificado el 17-11-2026 con Node 26.7 y npm 11.19 en un clon limpio: `npm install`, el server
+  arriba (`/api/health`, login con bcrypt y Prisma contra la base) y `npm test` en exit 0.
+
 El seed crea (o deja como está) un superusuario `APROBADO` con las credenciales de
 [`prisma/seed.js`](prisma/seed.js). Son credenciales de desarrollo: **cambialas antes de
 usar el seed en un entorno compartido**.
@@ -1282,8 +1302,11 @@ Los embeddings no cambian nunca: son siempre `text-embedding-3-small` de OpenAI.
   activo no se puede usar (deshabilitado, sin clave), responde el por defecto de la base.
 - **Respaldo:** si el activo no es el por defecto y falla por una causa transitoria (5xx, 429,
   conexión), de cuota o por timeout, la llamada se repite una vez con el modelo por defecto si
-  quedan al menos 4 s del plazo de 18 s (`CHAT_RESPALDO_MARGEN_MS`). Nunca por contenido (refusal,
-  salida cortada, JSON inválido), por un pedido inválido (400) ni por una clave rechazada (401). El
+  quedan al menos 4 s del plazo de 18 s (`CHAT_RESPALDO_MARGEN_MS`). También si el proveedor rechaza
+  la clave del activo (401/403, un error de configuración): responde el por defecto y el log muestra
+  un error visible, `Chat: ATENCIÓN, la clave de anthropic del modelo activo claude-haiku-5-5 fue
+  rechazada (AuthenticationError 401 authentication_error): revisá la clave o elegí otro modelo.`
+  Nunca por contenido (refusal, salida cortada, JSON inválido) ni por un pedido inválido (400). El
   activo no reintenta: el reintento es el modelo por defecto. En streaming, solo si todavía no salió
   texto. El log dice `Chat: el modelo gpt-6-luna falló (chat: InternalServerError 500); responde el
   modelo por defecto gpt-4o-mini`, y el registro y la caché quedan con el que respondió. Si el activo
