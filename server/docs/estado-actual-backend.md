@@ -117,6 +117,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `STREAM_INCREMENTAL` | no | `true`: las dos rutas del chat sacan el texto de a oraciones verificadas (ver 6, "Streaming incremental"); `false` vuelve al comportamiento anterior |
 | `STREAM_ESQUEMA` | no | `true`: el streaming usa el mismo JSON con esquema y el mismo prompt que la ruta sin streaming y lee `respuesta` a medida que llega (ver 6, "Streaming con esquema JSON"); `false` vuelve a la línea META. Solo aplica con `STREAM_INCREMENTAL=true` |
 | `TIPEO_REESCRITURA` | no | `true`: si la búsqueda no encuentra nada parecido, el modelo corrige la ortografía de la consulta y se busca de nuevo (ver 6, "Corrección de tipeo"); `false` no corrige. `TIPEO_TIMEOUT_MS` (default 3000) es el timeout de esa llamada |
+| `BASE_ESPERA_REINTENTO_MS`, `BASE_MARGEN_REINTENTO_MS` | no | `1500` y `1000`: espera antes de reintentar una consulta del chat que falló por un error de conexión a la base, y lo que tiene que quedar del plazo después de esa espera para reintentar (ver 6, "Reintento ante caídas de la base") |
 
 ### 2.4 Versiones
 
@@ -528,6 +529,36 @@ chat", paso 2.
   - En las órdenes a la corrección, el modelo nunca obedeció: corrigió la consulta con la orden
     adentro, o devolvió solo la consulta sin la orden ("pasaporte."). Esto último no pasa la
     validación (cambia demasiado el largo) y se sigue con la búsqueda original.
+
+### Reintento ante caídas de la base (17-11-2026)
+
+Neon a veces tarda en despertar o hay un corte de red breve, y Prisma tira `P1001` "Can't reach
+database server": antes eso cortaba la consulta del chat con un 500 genérico.
+
+- **Helper** (`utils/reintento-base.js`, `conReintentoBase`): corre la operación de Prisma y, si
+  falla con `P1001`, `P1002`, `P1008` o `P1017` (en `code`, o en `errorCode` si falla al conectar),
+  espera 1,5 s y la corre **una vez** más. Otro error pasa directo.
+- **Dónde:** en la ruta del chat, normal y stream: versión del catálogo (`asegurarCacheVigente`),
+  sectores y resumen del catálogo cuando no están en caché, búsqueda, detalle de los trámites,
+  fuentes de una respuesta cacheada y registro de la consulta. Los servicios reciben el plazo del
+  chat como `signal` (parámetro opcional: los demás usos no cambian).
+- **Escrituras:** crear la consulta no es idempotente (genera el token de calificación). Se
+  reintenta solo con `P1001`, que garantiza que no hubo conexión; con `P1002`, `P1008` o `P1017`
+  pudo haberse guardado y no se reintenta. Si el registro falla, la respuesta sale sin `consultaId`,
+  como antes.
+- **Plazo:** el plazo del chat (`crearPlazoConVencimiento` en `utils/plazo.js`) sabe cuándo vence.
+  Si después de la espera quedaría menos de 1 s, no se reintenta y se responde directo; si vence
+  durante la espera o el reintento, corta ahí. Nunca se pasa de los 18 s.
+- **Falla final:** `traza.traducir` trata el error de conexión como "no disponible": 503 con
+  `MENSAJE_NO_DISPONIBLE` (o el evento `error`), sin caché ni registro. El log lleva solo el código
+  (`base P1001`), nunca el mensaje de Prisma, que trae el host. Un error de la base que no es de
+  conexión sigue siendo un 500 genérico.
+- **`DATABASE_URL`:** se recomienda `connect_timeout=15` (ejemplo con valores falsos en el README,
+  "Caídas de la base"). No se cambió ninguna cadena de conexión ni la base.
+- **Tests:** `reintento-base.test.js`, con la base simulada (se reemplaza `config/prisma.js`): falla
+  una vez y anda, falla dos veces y da 503, error no transitorio sin reintento, escritura solo con
+  `P1001`, tope del plazo (sin reintento si no alcanza y corte en el plazo si el reintento tarda) y
+  que ni la respuesta ni el log tengan el host ni el error de Prisma, en las dos rutas.
 
 ### Streaming con esquema JSON (16-11-2026)
 

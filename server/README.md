@@ -54,7 +54,7 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 
 | Variable | Obligatoria | Descripción |
 |---|---|---|
-| `DATABASE_URL` | sí | Conexión a PostgreSQL |
+| `DATABASE_URL` | sí | Conexión a PostgreSQL. Con Neon, conviene agregarle `connect_timeout=15` (ver [Caídas de la base](#caídas-de-la-base)) |
 | `JWT_SECRET` | sí | Secreto para firmar los tokens. Largo y aleatorio |
 | `OPENAI_API_KEY` | sí | Embeddings y chat |
 | `R2_ACCOUNT_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | sí | Cloudflare R2 para los documentos |
@@ -77,6 +77,8 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `OPENAI_ESPERA_MAXIMA_REINTENTO_MS` | no | Espera máxima antes de reintentar, aunque OpenAI pida más con `retry-after`. Default `2000` |
 | `CHAT_PLAZO_MS` | no | Plazo total de una consulta del chat. Default `18000` |
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
+| `BASE_ESPERA_REINTENTO_MS` | no | En el chat, espera antes de reintentar una consulta a la base que falló por un error de conexión. Default `1500` (ver [Caídas de la base](#caídas-de-la-base)) |
+| `BASE_MARGEN_REINTENTO_MS` | no | Lo que tiene que quedar del plazo del chat después de esa espera para que se reintente. Default `1000` |
 | `STREAM_INCREMENTAL` | no | `true` (default): el texto del chat sale de a oraciones ya verificadas, igual en las dos rutas (ver [Streaming incremental](#streaming-incremental)). `false` (o `0`, `no`): vuelve el comportamiento anterior en las dos rutas |
 | `STREAM_ESQUEMA` | no | `true` (default): el streaming le pide al modelo el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming, y manda el texto de `respuesta` a medida que llega (ver [Streaming con esquema JSON](#streaming-con-esquema-json)). `false` (o `0`, `no`): vuelve el formato anterior, una línea META y después el texto, con el pedido de nuevo si la META no es válida. Solo aplica con `STREAM_INCREMENTAL=true`: con `false` el streaming usa siempre el formato anterior |
 | `TIPEO_REESCRITURA` | no | `true` (default): si la búsqueda del chat no trae candidatos o el mejor puntaje es menor a 0,24, una llamada corta al modelo corrige la ortografía de la consulta y se busca de nuevo con el texto corregido (ver [Cómo funciona el chat](#cómo-funciona-el-chat), paso 2). `false` (o `0`, `no`): no se corrige |
@@ -417,7 +419,7 @@ uno solo:
 | 413 | Archivo de más de 10 MB |
 | 422 | El padrón no confirma la identidad en el registro |
 | 429 | Rate limit |
-| 503 | El padrón no responde; en el chat, OpenAI falla o se agota el plazo de la consulta (ver [Timeouts y fallas de OpenAI](#timeouts-y-fallas-de-openai)) |
+| 503 | El padrón no responde; en el chat, OpenAI falla, la base sigue sin responder después del reintento o se agota el plazo de la consulta (ver [Timeouts y fallas de OpenAI](#timeouts-y-fallas-de-openai) y [Caídas de la base](#caídas-de-la-base)) |
 | 500 | Error inesperado: mensaje genérico, el detalle queda en el log |
 
 ## Endpoints
@@ -1181,6 +1183,46 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **Log:** `Chat: asistente no disponible (etapa modelo, chat: RateLimitError 429, 713 ms en
   la etapa, 1518 ms en total)`: etapa (`busqueda`, `detalle`, `modelo`, `conversacion`), causa
   real y duración, sin el texto de la consulta.
+
+### Caídas de la base
+
+Neon a veces tarda en despertar o hay un corte de red breve, y Prisma falla con un error de
+conexión. En la ruta del chat (con y sin streaming), cada consulta a la base pasa por
+[`src/utils/reintento-base.js`](src/utils/reintento-base.js): la versión del catálogo, los
+sectores y el resumen del catálogo (cuando no están en caché), la búsqueda, el detalle de los
+trámites, las fuentes de una respuesta cacheada y el registro de la consulta.
+
+- **Qué se reintenta:** solo los errores de conexión transitorios: `P1001` (no se pudo llegar al
+  servidor), `P1002` (se llegó pero no contestó a tiempo), `P1008` (la operación superó su tiempo)
+  y `P1017` (el servidor cerró la conexión), venga el código en `code` o en `errorCode` (al
+  conectar). Se espera 1,5 s (`BASE_ESPERA_REINTENTO_MS`) y se reintenta **una sola vez**. Cualquier
+  otro error pasa directo, sin reintento.
+- **Escrituras:** el registro de la consulta (`consultas`, con su token de calificación) no es
+  idempotente: solo se reintenta con `P1001`, que asegura que no llegó a la base. Con `P1002`,
+  `P1008` o `P1017` pudo haberse guardado, y el reintento la duplicaría. Si el registro falla, la
+  respuesta sale igual con `consultaId` y `calificarToken` en `null`, como antes.
+- **Plazo:** el reintento respeta el tope de 18 s de la consulta. Si después de la espera no
+  quedaría al menos 1 s (`BASE_MARGEN_REINTENTO_MS`), no se reintenta y se responde en el momento;
+  si el plazo vence durante la espera o durante el reintento, la consulta corta ahí.
+- **Si sigue fallando:** **503** con el mensaje de siempre
+  (`"El asistente no está disponible en este momento. Probá de nuevo en unos segundos."`), o el
+  evento `error` con ese mensaje en streaming. Nada se cachea ni se registra, y la respuesta no
+  trae el error de Prisma ni el host de la base. Un error de la base que no es de conexión sigue
+  siendo un 500 genérico.
+- **Log:** el reintento deja `Base: búsqueda falló (P1001), se reintenta una vez en 1500 ms`, y la
+  falla final `Chat: asistente no disponible (etapa busqueda, base P1001, ...)`: solo el código,
+  nunca el mensaje de Prisma (trae el host).
+
+**`connect_timeout` en la `DATABASE_URL`.** Prisma espera 5 s por defecto para conectarse, y una
+base de Neon dormida puede tardar más en despertar. Se recomienda agregar `connect_timeout=15` a
+la cadena de conexión (valores de ejemplo, no son los reales):
+
+```
+DATABASE_URL=postgresql://usuario:contrasena@ep-ejemplo-123456.us-east-2.aws.neon.tech/basededatos?sslmode=require&connect_timeout=15
+```
+
+Con 15 s, un primer intento que agote ese tiempo deja poco plazo y el chat no reintenta: responde
+el 503 dentro del tope de 18 s. El caso que el reintento cubre es el corte breve, que falla rápido.
 
 ## Tests
 
