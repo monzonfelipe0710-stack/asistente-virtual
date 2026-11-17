@@ -560,6 +560,76 @@ database server": antes eso cortaba la consulta del chat con un 500 genérico.
   `P1001`, tope del plazo (sin reintento si no alcanza y corte en el plazo si el reintento tarda) y
   que ni la respuesta ni el log tengan el host ni el error de Prisma, en las dos rutas.
 
+### Partida de nacimiento sin migración: bono por frase y un grupo más (17-11-2026)
+
+Se probaron dos cambios en la búsqueda, sin tocar la base, para que #273 "Solicitud Partida de
+Nacimiento, Matrimonio o Defunción" llegue a los candidatos. **Ninguno cumple el criterio** y no
+se aplicó ninguno: el código del bono se revirtió. Quedó `puntuarGrupos` (el puntaje de los grupos
+separado de `buscarTramites`, sin cambio de comportamiento) y `scripts/medir-busqueda.js`, que mide
+el puesto de un trámite por pregunta, para usarlo antes y después de la migración.
+
+- **a) Bono por frase:** si la consulta (sin tildes, mayúsculas ni signos) contiene el nombre
+  entero de un trámite, o una frase de 2 o más palabras de su nombre que no empieza ni termina en
+  una palabra vacía ("partida de nacimiento" sí; "de nacimiento", no), su puntaje combinado suma
+  un bono, y entra aunque no pase los filtros de similitud y texto. Se hizo en JS: un índice
+  frase → ids con los nombres publicados y los ids con bono pasados a la consulta. Bonos probados:
+  0,02, 0,03, 0,05 y 0,08.
+- **b) 4 grupos en vez de 3** antes del filtro de `soloLosCercanos` (85 % del primero).
+- **c) a y b juntas** (bono 0,03 y 0,05 con 4 grupos): se midió igual porque ninguna alcanzaba sola.
+
+Puesto de #273 contra la base real (puntaje combinado; "llega" es estar entre los primeros N
+grupos con al menos el 85 % del primero):
+
+| Consulta | Actual | a (0,02 / 0,03 / 0,05 / 0,08) | b (4 grupos) | c (0,03 y 4) | Llega: actual / a 0,03 / b / c |
+|---|---|---|---|---|---|
+| partida de nacimiento | 4.º, 0,267 (93 %) | 2.º / 1.º / 1.º / 1.º | 4.º | 1.º | no / sí / sí / sí |
+| acta de nacimiento | 6.º, 0,305 (86 %) | 6.º (sin bono) | 6.º | 6.º | no / no / no / no |
+| quiero la partida de nacimiento de mi hijo | 4.º, 0,283 (88 %) | 3.º / 3.º / 1.º / 1.º | 4.º | 3.º | no / sí / sí / sí |
+| certificado de nacimiento | 11.º, 0,265 (77 %) | 11.º (sin bono) | 11.º | 11.º | no / no / no / no |
+| partida de matrimonio | 3.º, 0,283 (83 %) | 3.º, cae al 76 % con 0,03 | 3.º | 3.º | no / no / no / no |
+| partida de defunción | 2.º, 0,332 (98 %) | 2.º (sin bono) | 2.º | 2.º | sí / sí / sí / sí |
+
+- **Por qué no cumple:** el criterio pedía que #273 llegue en las tres primeras consultas, y
+  "acta de nacimiento" no llega con ninguna variante: "acta" no está en el nombre (no hay bono) y
+  #273 queda 6.º (con 4 grupos tampoco entra). Por eso no se corrieron `eval-chat`,
+  `eval-seguridad` ni `medir-tipeo`: el resultado de la búsqueda es determinístico y ya descarta las
+  tres variantes. Tampoco se recalibró el umbral 0,24 de la corrección de tipeo: no cambió nada.
+- **Regresiones del bono** (`medir-busqueda`, impacto sobre las 88 preguntas de los evals, sin
+  llamar al modelo de la respuesta): con 0,03 cambian los candidatos de 20 preguntas y con 0,05,
+  de 21. El bono concentra el puntaje en un trámite y `soloLosCercanos` saca a los demás: "pesca
+  deportiva" pierde #88 (el trámite que espera el eval) y queda solo #166; "cómo renuevo el
+  pasaporte" pierde #142 con 0,05; "licencia por maternidad" pierde #207; "habilitación comercial
+  Pirané" queda con un solo candidato. Los nombres de una palabra coinciden enteros: en "partida de
+  matrimonio", #146 "Matrimonio" suma el bono y #273 baja del 83 % al 76 % del primero.
+- **Costo de b:** con 4 grupos cambian los candidatos de 30 de las 88 preguntas, casi siempre por
+  un candidato más (conversaciones como "¿qué podés hacer?" o "¿quién sos?" incluidas). En 15 de
+  ellas la instrucción de sistema crece en promedio 1689 caracteres (mediana 1772, máximo 2316)
+  sobre unos 21 000: alrededor de 8 % más de entrada, unos 400 a 600 tokens, todos en la parte que
+  no cachea OpenAI (el contexto va después del prefijo fijo). La latencia no se midió con el modelo:
+  el detalle sale en la misma consulta a la base y el resto es el prefill de esos tokens.
+
+**Propuesta para la migración única (`nombres_alternativos`), actualizada.** Sigue la de la sección
+anterior: una columna en `tramites` que entra al texto del embedding (después del nombre) y a
+`search_vector` (columna generada: se borra y se recrea con su índice GIN), y reindexar solo los
+trámites con nombres cargados. Lo que agrega esta medición:
+
+- El bono por frase sirve si se aplica **solo a los nombres alternativos** (una lista curada), no
+  al nombre del trámite: así "acta de nacimiento" y "certificado de nacimiento" coinciden por
+  frase y los nombres genéricos ("Matrimonio", "Pasaporte", las licencias) no reciben bono ni
+  desplazan a los demás candidatos. Sumando el bono a los puntajes de hoy (sin contar lo que
+  suban el embedding y el texto): "acta de nacimiento" con 0,03 queda 0,335, 3.º (94 % del
+  primero); "certificado de nacimiento" con 0,03 queda 0,295 y no llega (el 3.º tiene 0,308), con
+  0,05 queda 0,315, 2.º. El bono hay que calibrarlo con la columna cargada.
+- Para #273: "partida de nacimiento", "acta de nacimiento", "certificado de nacimiento", "copia de
+  la partida", "partida de matrimonio", "acta de matrimonio", "certificado de matrimonio",
+  "partida de defunción", "acta de defunción", "certificado de defunción".
+- Antes de aplicarla: `medir-busqueda` para las seis consultas e `--impacto` sobre los evals, y
+  después `eval-chat` completo (normal y stream), `--tipeo`, `eval-seguridad` y `medir-tipeo` para
+  revisar el umbral 0,24 (el bono sube el mejor puntaje de las consultas que coinciden).
+- **Sin resolver hasta la migración:** "acta de nacimiento" (6.º) y "certificado de nacimiento"
+  (11.º) en todas las variantes; "partida de matrimonio" (3.º pero al 83 % del primero, #146
+  "Matrimonio"), que no estaba en el criterio. "partida de defunción" ya llega hoy.
+
 ### Streaming con esquema JSON (16-11-2026)
 
 El streaming pide el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming
