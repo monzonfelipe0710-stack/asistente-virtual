@@ -6,7 +6,8 @@
 //
 // --parametros reemplaza o agrega parámetros de las corridas (en el formato del proveedor), por
 // ejemplo para medir un modelo de razonamiento con su esfuerzo por defecto. Un valor null lo saca.
-// - Los modelos y sus precios (con fecha y fuente) están en scripts/lib/modelos-candidatos.json. Solo
+// - Los modelos, sus parámetros y sus precios (con fecha y fuente) son los del catálogo del chat,
+//   src/config/modelos-chat.json (parámetros en el formato de cada API, salvo los del chat). Solo
 //   se sondean los que tienen su clave en el entorno (OPENAI_API_KEY, ANTHROPIC_API_KEY,
 //   GEMINI_API_KEY); los demás se saltean con un aviso. La búsqueda usa los embeddings de OpenAI, así
 //   que OPENAI_API_KEY hace falta siempre. Las claves no se imprimen.
@@ -25,7 +26,7 @@
 //
 // El resultado queda en server/eval-resultados/sondeo-modelos-<fecha>.json (ignorado por git).
 import 'dotenv/config';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import OpenAI from 'openai';
@@ -37,6 +38,7 @@ import { crearLectorDeSalida } from '../src/utils/lector-json.js';
 import { corregirTuteo } from '../src/utils/voseo.js';
 import { MAX_TOKENS_RESPUESTA } from '../src/core/ai/openai.adapter.js';
 import { CorridaSinCredito, SALIDA_SIN_CREDITO, cortarSiSinCredito } from './lib/sin-credito.js';
+import { CLAVE_POR_PROVEEDOR, MODELOS_DEL_CATALOGO } from '../src/config/modelos-chat.js';
 
 const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [process.argv[i + 1]] : []));
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 5);
@@ -64,7 +66,18 @@ const PREGUNTAS = argumento('--pregunta').length > 0
     { texto: '¿qué podés hacer?', tipo: 'conversacion' },
   ];
 
-const CONFIG = JSON.parse(readFileSync(fileURLToPath(new URL('./lib/modelos-candidatos.json', import.meta.url)), 'utf8'));
+const NOMBRE_EN_LA_API = { reasoningEffort: 'reasoning_effort' };
+const DEL_CHAT = new Set(['temperature', 'maxTokens', 'timeoutMs', 'reintentos']);
+const CONFIG = {
+  modelos: MODELOS_DEL_CATALOGO.map((m) => ({
+    id: m.modeloApi,
+    proveedor: m.proveedor,
+    nombre: m.nombre,
+    clave: CLAVE_POR_PROVEEDOR[m.proveedor],
+    precio: { entradaNoCacheada: m.precios.entradaNoCacheada ?? m.precios.entrada, entradaCacheada: m.precios.entradaCacheada, salida: m.precios.salida },
+    parametros: Object.fromEntries(Object.entries(m.parametros).filter(([k]) => !DEL_CHAT.has(k)).map(([k, v]) => [NOMBRE_EN_LA_API[k] ?? k, v])),
+  })),
+};
 const elegidos = CONFIG.modelos.filter((m) => SOLO_MODELOS.length === 0 || SOLO_MODELOS.includes(m.id));
 const habilitados = elegidos.filter((m) => process.env[m.clave]);
 for (const m of elegidos.filter((x) => !process.env[x.clave])) console.warn(`Se saltea ${m.id}: falta ${m.clave} en el entorno.`);
@@ -598,7 +611,7 @@ try {
 
 resultado.gasto = Number(gasto.toFixed(4));
 resultado.valido = corte === null;
-console.log(`\nGasto real (según el uso informado y los precios de modelos-candidatos.json): ${gasto.toFixed(4)} USD`);
+console.log(`\nGasto real (según el uso informado y los precios de src/config/modelos-chat.json): ${gasto.toFixed(4)} USD`);
 const CARPETA = fileURLToPath(new URL('../eval-resultados/', import.meta.url));
 mkdirSync(CARPETA, { recursive: true });
 const archivo = join(CARPETA, `sondeo-modelos-${resultado.fecha.replace(/[:.]/g, '-')}.json`);

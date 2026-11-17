@@ -67,7 +67,7 @@ const normal = async (meta, cuerpo, pregunta) => {
   salidaModelo = { ...meta, respuesta: cuerpo };
   const r = await responderConsulta(turno(pregunta));
   const { respuesta, tipo: tipoRespuesta, ...fin } = r;
-  return { texto: respuesta, fin: resumenFin({ tipoRespuesta, ...fin }), cacheado: cache.obtener(pregunta), registros };
+  return { texto: respuesta, fin: resumenFin({ tipoRespuesta, ...fin }), cacheado: cache.obtener(pregunta, 'gpt-4o-mini'), registros };
 };
 
 // Devuelve el texto, el fin, los deltas y en qué pedazo del modelo salió cada uno.
@@ -82,7 +82,7 @@ const transmitir = async (pedazos, pregunta) => {
     if (e.tipo === 'delta') deltas.push({ texto: e.texto, entregados });
     else fin = e;
   }
-  return { texto: deltas.map((d) => d.texto).join(''), fin: resumenFin({ ...fin }), deltas, cacheado: cache.obtener(pregunta), registros };
+  return { texto: deltas.map((d) => d.texto).join(''), fin: resumenFin({ ...fin }), deltas, cacheado: cache.obtener(pregunta, 'gpt-4o-mini'), registros };
 };
 
 const cortesDe = (crudo) => [
@@ -314,7 +314,7 @@ describe(`streaming incremental${MODO}`, () => {
         assert.ok(error instanceof AsistenteNoDisponibleError, `corte en ${corte}`);
         assert.ok(completo.startsWith(mandado), `corte en ${corte}: ${JSON.stringify(mandado)}`);
         assert.doesNotMatch(mandado, /9\.999/);
-        assert.equal(cache.obtener('cómo lo hago'), null);
+        assert.equal(cache.obtener('cómo lo hago', 'gpt-4o-mini'), null);
         assert.deepEqual(registros, []);
       }
     });

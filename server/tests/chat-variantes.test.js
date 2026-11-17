@@ -107,7 +107,7 @@ describe('chat con trámites repetidos en distintos municipios', () => {
     assert.deepEqual(r.tramitesEncontrados, []);
     assert.equal(r.consultaId, null);
     assert.equal(registros.length, 0);
-    assert.equal(cache.obtener('cómo saco la habilitación comercial'), null);
+    assert.equal(cache.obtener('cómo saco la habilitación comercial', 'gpt-4o-mini'), null);
   });
 
   it('el modelo ve el grupo sin la descripción de ninguna variante', async () => {

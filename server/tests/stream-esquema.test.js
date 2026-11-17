@@ -213,7 +213,7 @@ describe('streaming con el esquema JSON', () => {
       it(`${caso}: error del asistente, sin caché, registro ni segunda llamada`, async (t) => {
         t.mock.method(console, 'error', () => {});
         await assert.rejects(transmitir('cómo saco el pasaporte', pedazos), AsistenteNoDisponibleError);
-        assert.equal(cache.obtener('cómo saco el pasaporte'), null);
+        assert.equal(cache.obtener('cómo saco el pasaporte', 'gpt-4o-mini'), null);
         assert.deepEqual(registros, []);
         assert.deepEqual(llamadas.map((l) => l.ruta), ['stream']);
       });
@@ -240,7 +240,7 @@ describe('streaming con el esquema JSON', () => {
       assert.ok(falla instanceof AsistenteNoDisponibleError);
       assert.ok(mandado.length > 0 && esperado.respuesta.startsWith(mandado), JSON.stringify(mandado));
       assert.doesNotMatch(mandado, /9\.999/);
-      assert.equal(cache.obtener('cómo saco el pasaporte'), null);
+      assert.equal(cache.obtener('cómo saco el pasaporte', 'gpt-4o-mini'), null);
       assert.deepEqual(registros, []);
     });
   });

@@ -161,7 +161,7 @@ describe('corrección de tipeo', () => {
           assert.deepEqual(respuesta.turnos, turno('necesito renovar el psporte'));
           assert.doesNotMatch(respuesta.instruccionSistema, /necesito renovar el pasaporte/);
           assert.equal(registros[0].textoConsulta, 'necesito renovar el psporte');
-          assert.equal(cache.obtener('necesito renovar el psporte')?.encontrado, true);
+          assert.equal(cache.obtener('necesito renovar el psporte', 'gpt-4o-mini')?.encontrado, true);
           assert.doesNotMatch(r.respuesta, /renovar el pasaporte/);
         });
 

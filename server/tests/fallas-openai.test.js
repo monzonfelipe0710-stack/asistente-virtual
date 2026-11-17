@@ -228,7 +228,7 @@ describe('fallas de OpenAI en el chat', () => {
   });
 
   const sinCacheNiRegistro = () => {
-    assert.equal(cache.obtener(pregunta), null);
+    assert.equal(cache.obtener(pregunta, 'gpt-4o-mini'), null);
     assert.equal(registros.length, 0);
   };
   const noDisponible = (r) => {
@@ -298,7 +298,7 @@ describe('fallas de OpenAI en el chat', () => {
       assert.equal(r.status, 200);
       assert.equal(JSON.parse(r.texto).encontrado, true);
       assert.equal(intentos('/chat/completions'), 2);
-      assert.notEqual(cache.obtener(pregunta), null);
+      assert.notEqual(cache.obtener(pregunta, 'gpt-4o-mini'), null);
       assert.equal(registros.length, 1);
     });
 
@@ -381,7 +381,7 @@ describe('fallas de OpenAI en el chat', () => {
       const r = await pedirStream(pregunta);
       assert.equal(r.tipos.at(-1), 'fin');
       assert.equal(r.eventos.at(-1).encontrado, true);
-      assert.notEqual(cache.obtener(pregunta), null);
+      assert.notEqual(cache.obtener(pregunta, 'gpt-4o-mini'), null);
       assert.equal(registros.length, 1);
     });
 
@@ -561,7 +561,7 @@ describe('fallas de OpenAI en el chat', () => {
       } else {
         assert.equal(deltas.length, 1);
       }
-      assert.notEqual(cache.obtener(pregunta), null);
+      assert.notEqual(cache.obtener(pregunta, 'gpt-4o-mini'), null);
     });
 
     it('un stream que sigue mandando pero no termina se corta con el plazo total', async () => {

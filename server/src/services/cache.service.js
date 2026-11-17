@@ -13,8 +13,11 @@ export const normalizar = (texto) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-export const obtener = (pregunta) => {
-  const clave = normalizar(pregunta);
+// Cada respuesta es del modelo que la generó: con otro modelo activo no se sirve.
+const claveDe = (pregunta, modeloId) => `${modeloId}|${normalizar(pregunta)}`;
+
+export const obtener = (pregunta, modeloId) => {
+  const clave = claveDe(pregunta, modeloId);
   const entrada = cache.get(clave);
   if (!entrada) return null;
   if (Date.now() > entrada.expira) {
@@ -24,8 +27,8 @@ export const obtener = (pregunta) => {
   return entrada.valor;
 };
 
-export const guardar = (pregunta, valor) => {
-  const clave = normalizar(pregunta);
+export const guardar = (pregunta, modeloId, valor) => {
+  const clave = claveDe(pregunta, modeloId);
   if (cache.size >= MAX_ENTRADAS && !cache.has(clave)) {
     cache.delete(cache.keys().next().value);
   }

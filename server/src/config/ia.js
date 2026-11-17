@@ -24,14 +24,22 @@ export const tipeoReescritura = () => !['false', '0', 'no'].includes(process.env
 // CHAT_LOG_LATENCIA=true: una línea por consulta con los ms de cada etapa (ver chat.service.js).
 export const logLatencia = () => ['true', '1', 'si', 'sí'].includes(process.env.CHAT_LOG_LATENCIA?.trim().toLowerCase());
 
+// El timeout y los reintentos del chat son de cada modelo (config/modelos-chat.json); estas variables,
+// si están definidas, los pisan para todos.
+const chatDelEntorno = {
+  timeout: enteroDeEntorno('OPENAI_TIMEOUT_CHAT_MS', null, 1),
+  maxRetries: enteroDeEntorno('OPENAI_REINTENTOS_CHAT', null, 0),
+};
+
 export const TIEMPOS_IA = {
   embedding: {
     timeout: enteroDeEntorno('OPENAI_TIMEOUT_EMBEDDING_MS', 4000, 1),
     maxRetries: enteroDeEntorno('OPENAI_REINTENTOS_EMBEDDING', 1, 0),
   },
+  chatDelEntorno,
   chat: {
-    timeout: enteroDeEntorno('OPENAI_TIMEOUT_CHAT_MS', 8000, 1),
-    maxRetries: enteroDeEntorno('OPENAI_REINTENTOS_CHAT', 1, 0),
+    timeout: chatDelEntorno.timeout ?? 8000,
+    maxRetries: chatDelEntorno.maxRetries ?? 1,
   },
   plazoChat: enteroDeEntorno('CHAT_PLAZO_MS', 18000, 1),
   inactividadStream: enteroDeEntorno('CHAT_INACTIVIDAD_STREAM_MS', 10000, 1),

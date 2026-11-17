@@ -27,3 +27,7 @@ export const revisarBaseDePrueba = (url = process.env.DATABASE_URL, permitida = 
 
 const problema = revisarBaseDePrueba();
 if (problema) throw new Error(problema);
+
+// El modelo del chat no depende de la configuración de la base compartida (los archivos corren en
+// paralelo y uno de ellos cambia el modelo activo): los tests de la resolución lo sacan.
+process.env.MODELO_CHAT_FORZADO ??= 'gpt-4o-mini';

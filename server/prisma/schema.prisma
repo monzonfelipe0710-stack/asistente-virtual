@@ -188,6 +188,8 @@ model Usuario {
   sectores      UsuarioSector[]
   tramitesACargo Tramite[]
   consultas     Consulta[]
+  configuracionesChat ConfiguracionChat[]
+  auditoriasModeloChat AuditoriaModeloChat[]
 
   @@map("usuarios")
 }
@@ -213,6 +215,7 @@ model Consulta {
   calificacion    Int?
   motivoCalificacion String? @map("motivo_calificacion")
   calificarToken  String? @unique @map("calificar_token")
+  modelo          String?
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)
@@ -231,4 +234,48 @@ model CatalogoVersion {
   actualizadoEn DateTime @default(now()) @map("actualizado_en")
 
   @@map("catalogo_version")
+}
+
+// Modelos de chat que el superusuario puede elegir (lista cerrada). Ver services/modelo-chat.service.js.
+model ModeloChat {
+  id            String   @id
+  proveedor     String
+  modeloApi     String   @map("modelo_api")
+  nombreVisible String   @map("nombre_visible")
+  parametros    Json     @default("{}")
+  precios       Json     @default("{}")
+  habilitado    Boolean  @default(false)
+  estadoEval    Json?    @map("estado_eval")
+  esPorDefecto  Boolean  @default(false) @map("es_por_defecto")
+  creadoEn      DateTime @default(now()) @map("creado_en")
+  actualizadoEn DateTime @default(now()) @updatedAt @map("actualizado_en")
+
+  configuraciones ConfiguracionChat[]
+
+  @@map("modelo_chat")
+}
+
+// Una sola fila (id = 1): el modelo activo.
+model ConfiguracionChat {
+  id             Int        @id @default(1)
+  modeloActivoId String     @map("modelo_activo_id")
+  modeloActivo   ModeloChat @relation(fields: [modeloActivoId], references: [id], onDelete: Restrict)
+  actualizadoPor Int?       @map("actualizado_por")
+  usuario        Usuario?   @relation(fields: [actualizadoPor], references: [id], onDelete: SetNull)
+  actualizadoEn  DateTime   @default(now()) @map("actualizado_en")
+
+  @@map("configuracion_chat")
+}
+
+model AuditoriaModeloChat {
+  id               Int      @id @default(autoincrement())
+  usuarioId        Int?     @map("usuario_id")
+  usuario          Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  modeloAnteriorId String?  @map("modelo_anterior_id")
+  modeloNuevoId    String   @map("modelo_nuevo_id")
+  motivo           String
+  fecha            DateTime @default(now())
+
+  @@index([fecha])
+  @@map("auditoria_modelo_chat")
 }

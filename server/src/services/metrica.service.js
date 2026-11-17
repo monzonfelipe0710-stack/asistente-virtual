@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import prisma from '../config/prisma.js';
 
-export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId, respuesta }) => {
+export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId, respuesta, modelo }) => {
   return prisma.consulta.create({
     data: {
       textoConsulta,
@@ -9,6 +9,7 @@ export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, 
       encontrado,
       usuarioId: usuarioId ?? null,
       respuesta: respuesta ?? null,
+      modelo: modelo ?? null,
       calificarToken: crypto.randomBytes(16).toString('hex'),
     },
     select: { id: true, calificarToken: true },

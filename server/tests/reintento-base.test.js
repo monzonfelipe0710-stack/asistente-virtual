@@ -295,7 +295,7 @@ describe('reintento ante caídas de la base', () => {
         assert.equal(cuantas('busqueda'), 2);
         assert.equal(cuantas('registro'), 0);
         assert.equal(modelo, 0);
-        assert.equal(cache.obtener(PREGUNTA), null);
+        assert.equal(cache.obtener(PREGUNTA, 'gpt-4o-mini'), null);
         sinDetallesInternos(r.cuerpo);
         assert.ok(logs.some((l) => l.includes('base P1017')), logs.join('\n'));
         for (const l of logs) assert.ok(!l.includes(HOST), l);

@@ -12,6 +12,7 @@ import { aclaracionDeGrupo, etiquetarPorJurisdiccion, formatearGrupo, localidade
 import { registrarConsulta } from "./metrica.service.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
+import { resolverModeloChat } from "./modelo-chat.service.js";
 import { asegurarCacheVigente } from "./version-catalogo.service.js";
 import { primerNombre } from "../utils/nombres.js";
 import { componerSaludo, contieneSaludo, respuestaDeCortesia, sanitizarSaludo } from "../utils/saludo.js";
@@ -456,7 +457,7 @@ const alcanzoElTope = (mensajes) =>
 const cortesiaPara = (mensajes) =>
   mensajes.findLast((m) => m.rol === "asistente")?.tipo === "aclaracion" ? null : respuestaDeCortesia(mensajes.at(-1).texto);
 
-const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, limpiar = limpiarCuerpo }) => {
+const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, sel, limpiar = limpiarCuerpo }) => {
   // Sin texto ("chau" con solo la META), una frase amable según el mensaje.
   if (!cuerpo.trim()) return cortesiaPara(mensajes)?.texto ?? MENSAJE_CONVERSACION_VACIA;
   const { ejemplos } = await conSenal(obtenerResumenCatalogo({ signal }), signal);
@@ -470,6 +471,7 @@ const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCor
       turnos: mensajes,
       esquema: ESQUEMA_SALIDA,
       signal,
+      ...pedidoDeModelo(sel),
     }),
   );
   return limitarConversacion(reemplazarMarca(limpiar(salida.respuesta ?? "", { saludo, alCorregirTuteo, verificar })));
@@ -508,9 +510,9 @@ const FIN_CONVERSACIONAL = {
 
 // Si falla el registro la respuesta igual sale, con consultaId y calificarToken null. Crear la
 // consulta no es idempotente: ante una caída de la base solo se reintenta si no llegó a conectarse.
-const registrar = async (datos, signal) => {
+const registrar = async (datos, signal, modelo) => {
   try {
-    const consulta = await conReintentoBase(() => registrarConsulta(datos), { signal, escritura: true, etiqueta: "registro" });
+    const consulta = await conReintentoBase(() => registrarConsulta({ ...datos, modelo }), { signal, escritura: true, etiqueta: "registro" });
     return { consultaId: consulta.id, calificarToken: consulta.calificarToken };
   } catch (err) {
     console.error("Error al registrar consulta:", err.message);
@@ -518,7 +520,7 @@ const registrar = async (datos, signal) => {
   }
 };
 
-const registrarConsultaCacheada = (pregunta, cacheado, usuarioId, signal) =>
+const registrarConsultaCacheada = (pregunta, cacheado, usuarioId, signal, modelo) =>
   registrar({
     textoConsulta: pregunta,
     tramiteId: cacheado.encontrado
@@ -527,7 +529,7 @@ const registrarConsultaCacheada = (pregunta, cacheado, usuarioId, signal) =>
     encontrado: cacheado.encontrado,
     usuarioId,
     respuesta: cacheado.respuesta,
-  }, signal);
+  }, signal, modelo);
 
 const nombreParaSaludo = (usuario) => (usuario ? primerNombre(usuario.nombre) : null);
 
@@ -586,7 +588,7 @@ const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Se
 // El embedding de la búsqueda se cachea solo en las consultas de un turno: el texto de varios turnos
 // juntos casi nunca se repite. Si la búsqueda no encuentra nada parecido (ver tipeo.service.js), se
 // busca de nuevo con la ortografía corregida; un mensaje de cortesía no se corrige.
-const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { esCortesia = false, alReescribir } = {}) => {
+const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { esCortesia = false, alReescribir, modelo } = {}) => {
   traza.etapa("busqueda");
   const jurisdicciones = await conSenal(obtenerJurisdicciones({ signal }), signal);
   const localidades = localidadesConocidas(jurisdicciones);
@@ -596,7 +598,7 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { 
   let encontrados = await buscar(textoDeBusqueda, (p) => (mejor = p));
   if (tipeoReescritura() && !esCortesia && debeReescribir(encontrados, mejor)) {
     traza.etapa("tipeo");
-    const corregido = await corregirConsulta(textoDeBusqueda, { signal, alReescribir });
+    const corregido = await corregirConsulta(textoDeBusqueda, { signal, alReescribir, modelo });
     if (corregido !== null) encontrados = await buscar(corregido);
   }
   if (encontrados.length === 0) return SIN_CANDIDATOS;
@@ -640,6 +642,17 @@ const grupoElegido = (salida, candidatos) => {
 };
 
 const crearPlazo = (signal) => crearPlazoConVencimiento(TIEMPOS_IA.plazoChat, signal);
+
+// El modelo se resuelve una vez por consulta; si responde el de respaldo, el resto de la consulta
+// (caché, registro y otra llamada al modelo) sigue con ese.
+const crearSeleccion = (modelo) => {
+  const sel = { modelo };
+  sel.alResponder = (respaldo) => {
+    sel.modelo = respaldo;
+  };
+  return sel;
+};
+const pedidoDeModelo = (sel) => (sel ? { modelo: sel.modelo, alResponder: sel.alResponder } : {});
 
 export const MENSAJE_NO_DISPONIBLE =
   "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
@@ -724,16 +737,17 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   const usuarioId = usuario?.id ?? null;
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
+  const sel = crearSeleccion(await resolverModeloChat());
 
   await asegurarCacheVigente({ signal });
 
   // Caché solo para un solo turno (las conversaciones dependen del contexto).
   if (esUnTurno) {
-    const cacheado = cache.obtener(preguntaActual);
+    const cacheado = cache.obtener(preguntaActual, sel.modelo.id);
     if (cacheado) {
       traza.cacheada();
       traza.etapa("registro");
-      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId, signal);
+      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId, signal, sel.modelo.id);
       const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados, signal);
       return {
         tipo: "respuesta",
@@ -748,7 +762,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   }
 
   // La búsqueda usa el contexto acumulado (junta los turnos del usuario).
-  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno, opcionesDeBusqueda(mensajes, opciones));
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno, { ...opcionesDeBusqueda(mensajes, opciones), modelo: sel.modelo });
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
@@ -761,10 +775,11 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
     turnos: mensajes,
     esquema: ESQUEMA_SALIDA,
     signal,
+    ...pedidoDeModelo(sel),
   });
 
   const salida = JSON.parse(salidaRaw);
-  const ctx = { ...opciones, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
+  const ctx = { ...opciones, sel, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
   if (!streamIncremental()) return resolverSalidaAnterior(salida, ctx);
   return juntarEventos(responderConSalida({ salida, valida: true, partes: [salida.respuesta ?? ""] }, ctx));
 };
@@ -772,7 +787,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
 // Las dos rutas con STREAM_INCREMENTAL=false: el comportamiento de antes, por líneas, con la fuga y
 // el idioma revisados sobre el texto entero. Se borra cuando el modo incremental quede validado.
 const resolverSalidaAnterior = async (salida, ctx) => {
-  const { alCorregirTuteo, alDetectarFuga, alCorregirSalida, alPedirConversacionDeNuevo, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
+  const { sel, alCorregirTuteo, alDetectarFuga, alCorregirSalida, alPedirConversacionDeNuevo, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
   const saludo = saludoPara(preguntaActual, salida.saludo);
   const atribucion = { contexto, fijo, pregunta: textoDeLaPersona(mensajes) };
   const verificar = verificadorPara(tramites, idsUsadosDe(salida, idsResueltos), alCorregirSalida, atribucion);
@@ -784,7 +799,7 @@ const resolverSalidaAnterior = async (salida, ctx) => {
 
   if (salida.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal });
+    const texto = await textoDeConversacion(cuerpoModelo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, sel });
     if (copiaInstrucciones(texto, alDetectarFuga)) return respuestaConversacional(MENSAJE_FUERA_DE_ALCANCE);
     if (texto === MENSAJE_FUERA_DE_ALCANCE) return respuestaConversacional(texto);
     if (enOtroIdioma(texto, alCorregirSalida)) return respuestaConversacional(MENSAJE_SOLO_ESPANOL);
@@ -849,9 +864,9 @@ const resolverSalidaAnterior = async (salida, ctx) => {
     encontrado,
     usuarioId,
     respuesta: cuerpo,
-  }, signal);
+  }, signal, sel.modelo.id);
 
-  if (esUnTurno) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado });
+  if (esUnTurno) cache.guardar(preguntaActual, sel.modelo.id, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado });
   return {
     tipo: "respuesta",
     respuesta: conSaludo(conFuentes(cuerpo, usados), saludo, usuario),
@@ -906,7 +921,7 @@ const FIJOS_SIN_SALUDO = new Set([MENSAJE_FUERA_DE_ALCANCE, MENSAJE_SOLO_ESPANOL
 // Solo se cachea y se registra después de que el texto llegó completo: si el modelo se corta, el
 // error sale de `partes` antes.
 async function* responderConSalida({ salida, valida, partes }, ctx) {
-  const { candidatos, tramites, idsResueltos, mensajes, preguntaActual, usuario, usuarioId, esUnTurno, topeAlcanzado, contexto, fijo, alCorregirTuteo, alCorregirSalida, alDetectarFuga, alPedirConversacionDeNuevo, signal, traza } = ctx;
+  const { sel, candidatos, tramites, idsResueltos, mensajes, preguntaActual, usuario, usuarioId, esUnTurno, topeAlcanzado, contexto, fijo, alCorregirTuteo, alCorregirSalida, alDetectarFuga, alPedirConversacionDeNuevo, signal, traza } = ctx;
   const saludo = saludoPara(preguntaActual, salida?.saludo);
   const prefijo = componerSaludo(saludo, nombreParaSaludo(usuario));
 
@@ -962,16 +977,16 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
 
   if (esConversacion) {
     traza.etapa("conversacion");
-    const texto = await conversacionFinal(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal }, ctx);
+    const texto = await conversacionFinal(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, sel }, ctx);
     yield delta(FIJOS_SIN_SALUDO.has(texto) ? texto : prefijo + texto);
     yield FIN_CONVERSACIONAL;
     return;
   }
 
   if (!esAclaracion && !encontrado) {
-    if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: MENSAJE_SIN_RESPUESTA, saludo, tramitesEncontrados: [], encontrado: false });
+    if (esUnTurno && valida) cache.guardar(preguntaActual, sel.modelo.id, { respuesta: MENSAJE_SIN_RESPUESTA, saludo, tramitesEncontrados: [], encontrado: false });
     traza.etapa("registro");
-    const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta: MENSAJE_SIN_RESPUESTA }, signal);
+    const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta: MENSAJE_SIN_RESPUESTA }, signal, sel.modelo.id);
     yield delta(prefijo + MENSAJE_SIN_RESPUESTA);
     yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: false, tramitesEncontrados: [], opciones: [], conversacional: false, ...registro };
     return;
@@ -998,9 +1013,9 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
 
   // La caché y `consultas` guardan el cuerpo; el saludo y las fuentes se agregan al servir.
   const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
-  if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado: true });
+  if (esUnTurno && valida) cache.guardar(preguntaActual, sel.modelo.id, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado: true });
   traza.etapa("registro");
-  const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: idsUsados[0], encontrado: true, usuarioId, respuesta: cuerpo }, signal);
+  const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: idsUsados[0], encontrado: true, usuarioId, respuesta: cuerpo }, signal, sel.modelo.id);
   const fuentes = conFuentes(cuerpo, usados).slice(cuerpo.length);
   if (fuentes) yield delta(fuentes);
   yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: true, tramitesEncontrados, opciones: [], conversacional: false, ...registro };
@@ -1098,15 +1113,16 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   const nombre = nombreParaSaludo(usuario);
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
+  const sel = crearSeleccion(await resolverModeloChat());
 
   await asegurarCacheVigente({ signal });
 
   if (esUnTurno) {
-    const cacheado = cache.obtener(preguntaActual);
+    const cacheado = cache.obtener(preguntaActual, sel.modelo.id);
     if (cacheado) {
       traza.cacheada();
       traza.etapa("registro");
-      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId, signal);
+      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId, signal, sel.modelo.id);
       const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados, signal);
       const prefijo = componerSaludo(cacheado.saludo ?? "", nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };
@@ -1124,7 +1140,7 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
     }
   }
 
-  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno, opcionesDeBusqueda(mensajes, opciones));
+  const candidatos = await prepararCandidatos(textoDeLaPersona(mensajes), signal, traza, esUnTurno, { ...opcionesDeBusqueda(mensajes, opciones), modelo: sel.modelo });
   const { tramites } = candidatos;
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
@@ -1140,8 +1156,9 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
     turnos: mensajes,
     ...(conEsquema && { esquema: ESQUEMA_SALIDA_STREAM }),
     signal,
+    ...pedidoDeModelo(sel),
   });
-  const ctx = { ...opciones, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
+  const ctx = { ...opciones, sel, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
   if (conEsquema) {
     yield* transmitirConEsquema(deltas, ctx);
     return;
@@ -1203,12 +1220,12 @@ const conMetaRevisada = async (deltas, ctx) => {
   if (cortesia) return { cortesia };
   ctx.traza.etapa("reintento");
   const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, ctx.topeAlcanzado, ctx.candidatos.lista, ctx.candidatos, ctx.signal), ctx.signal);
-  const { respuesta, ...datos } = JSON.parse(await ia.generarRespuesta({ instruccionSistema: instruccion, turnos: ctx.mensajes, esquema: ESQUEMA_SALIDA, signal: ctx.signal }));
+  const { respuesta, ...datos } = JSON.parse(await ia.generarRespuesta({ instruccionSistema: instruccion, turnos: ctx.mensajes, esquema: ESQUEMA_SALIDA, signal: ctx.signal, ...pedidoDeModelo(ctx.sel) }));
   return { deltas: (async function* () { yield `${JSON.stringify(datos)}\n${respuesta ?? ""}`; })() };
 };
 
 async function* transmitirSalidaAnterior(deltas, ctx) {
-  const { alCorregirTuteo, alCorregirSalida, alPedirConversacionDeNuevo, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
+  const { sel, alCorregirTuteo, alCorregirSalida, alPedirConversacionDeNuevo, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo } = ctx;
   const nombre = nombreParaSaludo(usuario);
   let buffer = "";
   let meta = null;
@@ -1346,7 +1363,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
   // Mismo texto que la ruta sin streaming (validado y cortado en el tope), en un solo delta.
   if (meta?.tipo === "conversacion") {
     traza.etapa("conversacion");
-    const conversado = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal });
+    const conversado = await textoDeConversacion(cuerpo, { candidatos: candidatos.lista, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, sel });
     const texto = enOtroIdioma(conversado, alCorregirSalida) ? MENSAJE_SOLO_ESPANOL : conversado;
     const prefijo = componerSaludo(saludo, nombre);
     if (prefijo && texto !== MENSAJE_FUERA_DE_ALCANCE && texto !== MENSAJE_SOLO_ESPANOL) yield { tipo: "delta", texto: prefijo };
@@ -1368,7 +1385,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
     const respuesta = encontrado ? cuerpo.trim() : MENSAJE_SIN_RESPUESTA;
     const metaValida = meta ? meta.valida : leerMeta(buffer) !== null;
     if (esUnTurno && metaValida) {
-      cache.guardar(preguntaActual, { respuesta, saludo, tramitesEncontrados, encontrado });
+      cache.guardar(preguntaActual, sel.modelo.id, { respuesta, saludo, tramitesEncontrados, encontrado });
     }
     traza.etapa("registro");
     registro = await registrar({
@@ -1377,7 +1394,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
       encontrado,
       usuarioId,
       respuesta,
-    }, signal);
+    }, signal, sel.modelo.id);
     if (!encontrado) {
       const prefijo = componerSaludo(saludo, nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };

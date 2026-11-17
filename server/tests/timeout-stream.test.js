@@ -34,7 +34,8 @@ process.env.OPENAI_API_KEY ||= 'sk-prueba';
 for (const nombre of ['OPENAI_TIMEOUT_CHAT_MS', 'OPENAI_REINTENTOS_CHAT', 'CHAT_INACTIVIDAD_STREAM_MS']) delete process.env[nombre];
 
 const { TIEMPOS_IA } = await import('../src/config/ia.js');
-const { openaiAdapter } = await import('../src/core/ai/openai.adapter.js');
+const { chatOpenai } = await import('../src/core/ai/openai.adapter.js');
+const { modeloDelCatalogo } = await import('../src/config/modelos-chat.js');
 
 describe('timeout del SDK en el streaming', () => {
   after(() => {
@@ -47,7 +48,7 @@ describe('timeout del SDK en el streaming', () => {
     assert.ok(INTERVALO_MS < TIEMPOS_IA.inactividadStream);
     const inicio = Date.now();
     let texto = '';
-    for await (const delta of openaiAdapter.generarRespuestaStream({ instruccionSistema: 'x', turnos: [{ rol: 'usuario', texto: 'x' }] })) texto += delta;
+    for await (const delta of chatOpenai.generarRespuestaStream(modeloDelCatalogo('gpt-4o-mini'), { instruccionSistema: 'x', turnos: [{ rol: 'usuario', texto: 'x' }] })) texto += delta;
     const ms = Date.now() - inicio;
     assert.ok(ms > TIEMPOS_IA.chat.timeout + INTERVALO_MS, `duró ${ms} ms`);
     assert.equal(texto.trim().split(' ').length, PEDAZOS);

@@ -41,10 +41,10 @@ export const validarCorreccion = (original, salida) => {
 
 // Devuelve el texto corregido si cambió y es válido; null si no hay que buscar de nuevo. Una falla
 // del modelo no corta la consulta (sigue con lo que encontró), salvo que se haya cortado el pedido.
-export const corregirConsulta = async (texto, { signal, alReescribir } = {}) => {
+export const corregirConsulta = async (texto, { signal, alReescribir, modelo } = {}) => {
   let salida;
   try {
-    salida = await ia.corregirTexto({ instruccionSistema: INSTRUCCION_TIPEO, texto, signal, timeout: TIEMPOS_IA.tipeo });
+    salida = await ia.corregirTexto({ instruccionSistema: INSTRUCCION_TIPEO, texto, signal, timeout: TIEMPOS_IA.tipeo, modelo });
   } catch (err) {
     if (signal?.aborted) throw signal.reason;
     console.warn(`Chat: la corrección de tipeo falló (${err?.causa ?? err?.name ?? 'error'}): se sigue con la búsqueda original`);

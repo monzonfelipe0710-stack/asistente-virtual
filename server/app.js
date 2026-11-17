@@ -11,6 +11,7 @@ import chatRoutes from './src/routes/chat.routes.js';
 import metricaRoutes from './src/routes/metrica.routes.js';
 import consultaRoutes from './src/routes/consulta.routes.js';
 import mesaRoutes from './src/routes/mesa.routes.js';
+import modeloChatRoutes from './src/routes/modelo-chat.routes.js';
 import { origenesPermitidos } from './src/config/origenes.js';
 import { LIMITES_CHAT } from './src/config/chat.js';
 
@@ -45,6 +46,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/metricas', metricaRoutes);
 app.use('/api/consultas', consultaRoutes);
 app.use('/api/mesas', mesaRoutes);
+app.use('/api/admin/modelos-chat', modeloChatRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {

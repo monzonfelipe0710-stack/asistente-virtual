@@ -45,15 +45,15 @@ describe('versión del catálogo', () => {
 
   it('vacía la caché local cuando otro proceso cambió la versión, pasada la ventana de chequeo', async () => {
     await asegurarCacheVigente(pasadaLaVentana());
-    cache.guardar('¿Cómo saco el pasaporte?', { respuesta: 'vieja' });
+    cache.guardar('¿Cómo saco el pasaporte?', 'gpt-4o-mini', { respuesta: 'vieja' });
     cache.guardarCatalogo({ texto: 'resumen viejo' });
 
     await prisma.$executeRaw`UPDATE catalogo_version SET version = version + 1 WHERE id = 1`;
     await asegurarCacheVigente();
-    assert.deepEqual(cache.obtener('¿Cómo saco el pasaporte?'), { respuesta: 'vieja' }, 'dentro de la ventana no se consulta la base');
+    assert.deepEqual(cache.obtener('¿Cómo saco el pasaporte?', 'gpt-4o-mini'), { respuesta: 'vieja' }, 'dentro de la ventana no se consulta la base');
 
     await asegurarCacheVigente(pasadaLaVentana());
-    assert.equal(cache.obtener('¿Cómo saco el pasaporte?'), null);
+    assert.equal(cache.obtener('¿Cómo saco el pasaporte?', 'gpt-4o-mini'), null);
     assert.equal(cache.obtenerCatalogo(), null);
   });
 

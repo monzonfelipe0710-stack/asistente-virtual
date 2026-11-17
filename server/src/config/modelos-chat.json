@@ -1,0 +1,86 @@
+{
+  "porDefecto": "gpt-4o-mini",
+  "perfilConsulta": {
+    "entrada": 5200,
+    "salida": 100,
+    "fuente": "scripts/sondear-modelos.js, 17-11-2026: mediana de 5170 tokens de entrada y de 66 a 100 de salida por consulta"
+  },
+  "modelos": [
+    {
+      "id": "gpt-4o-mini",
+      "proveedor": "openai",
+      "modeloApi": "gpt-4o-mini",
+      "nombre": "GPT-4o mini",
+      "parametros": { "temperature": 0.3, "maxTokens": 1500, "timeoutMs": 8000, "reintentos": 1 },
+      "precios": {
+        "entrada": 0.15,
+        "entradaNoCacheada": 0.15,
+        "entradaCacheada": 0.075,
+        "salida": 0.6,
+        "unidad": "USD por millón de tokens",
+        "fecha": "2026-11-17",
+        "fuente": "https://developers.openai.com/api/docs/pricing"
+      },
+      "habilitado": true,
+      "sondeado": "2026-11-17",
+      "notas": "Deprecado: OpenAI lo apaga el 14-01-2027 (aviso del 14-10-2026, reemplazo recomendado gpt-6-luna). No acepta reasoning_effort."
+    },
+    {
+      "id": "gpt-6-luna",
+      "proveedor": "openai",
+      "modeloApi": "gpt-6-luna",
+      "nombre": "GPT-6 Luna",
+      "parametros": { "temperature": 0.3, "reasoningEffort": "none", "maxTokens": 1500, "timeoutMs": 8000, "reintentos": 1 },
+      "precios": {
+        "entrada": 0.1,
+        "entradaNoCacheada": 0.125,
+        "entradaCacheada": 0.01,
+        "salida": 0.5,
+        "unidad": "USD por millón de tokens",
+        "fecha": "2026-11-17",
+        "fuente": "https://developers.openai.com/api/docs/models/gpt-6-luna"
+      },
+      "habilitado": false,
+      "sondeado": "2026-11-17",
+      "notas": "Modelo de razonamiento (medium por defecto): con reasoning_effort none responde como gpt-4o-mini y acepta temperature 0,3. La escritura del caché se cobra 0,125 (entradaNoCacheada, cota superior)."
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "proveedor": "anthropic",
+      "modeloApi": "claude-haiku-5-5",
+      "nombre": "Claude Haiku 5.5",
+      "parametros": { "thinking": "disabled", "effort": "low", "maxTokens": 1500, "timeoutMs": 8000, "reintentos": 1 },
+      "precios": {
+        "entrada": 0.1,
+        "entradaNoCacheada": 0.1,
+        "entradaCacheada": 0.01,
+        "salida": 0.5,
+        "unidad": "USD por millón de tokens, prompts de hasta 100.000 tokens",
+        "fecha": "2026-11-17",
+        "fuente": "https://platform.claude.com/docs/en/about-claude/pricing"
+      },
+      "habilitado": false,
+      "sondeado": null,
+      "notas": "Sin temperature, top_p ni top_k. Pensamiento adaptativo por defecto (effort medium): se manda thinking disabled y effort low. Retiro no antes del 07-10-2027."
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "proveedor": "google",
+      "modeloApi": "gemini-3.1-flash-lite",
+      "nombre": "Gemini 3.1 Flash-Lite",
+      "parametros": { "temperature": 0.3, "thinkingLevel": "minimal", "maxTokens": 1500, "timeoutMs": 8000, "reintentos": 1 },
+      "precios": {
+        "entrada": 0.25,
+        "entradaNoCacheada": 0.25,
+        "entradaCacheada": 0.025,
+        "salida": 1.5,
+        "unidad": "USD por millón de tokens (la salida incluye el pensamiento)",
+        "fecha": "2026-11-17",
+        "fuente": "https://aistudio.google.com/docs/pricing"
+      },
+      "habilitado": false,
+      "sondeado": null,
+      "notas": "El pensamiento no se apaga del todo (minimal) y se cobra como salida. generateContent figura como API heredada frente a la Interactions API."
+    }
+  ]
+}
