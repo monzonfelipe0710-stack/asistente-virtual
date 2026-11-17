@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../config/prisma.js';
 import { generarEmbedding } from './embedding.service.js';
-import { conSenal } from '../utils/plazo.js';
+import { conReintentoBase } from '../utils/reintento-base.js';
 import * as cache from './cache.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
@@ -31,7 +31,7 @@ export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, al
   const vectorSql = `[${embedding.join(',')}]`;
   const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery`;
 
-  const filas = await conSenal(prisma.$queryRaw`
+  const filas = await conReintentoBase(() => prisma.$queryRaw`
     WITH puntuados AS (
       SELECT
         id,
@@ -57,7 +57,7 @@ export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, al
     JOIN tramites t ON t.publicado = true AND ${clave(Prisma.sql`t.nombre`)} = g.clave
     LEFT JOIN puntuados p ON p.id = t.id
     ORDER BY g.mejor DESC, p.score DESC NULLS LAST, t.id
-  `, signal);
+  `, { signal, etiqueta: 'búsqueda' });
 
   const grupos = new Map();
   for (const f of filas) {

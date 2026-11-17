@@ -2,7 +2,8 @@ import { ia } from "../core/ai/index.js";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental, tipeoReescritura } from "../config/ia.js";
-import { combinarSenales, conSenal } from "../utils/plazo.js";
+import { conSenal, crearPlazoConVencimiento } from "../utils/plazo.js";
+import { codigoTransitorio, conReintentoBase } from "../utils/reintento-base.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { corregirConsulta, debeReescribir } from "./tipeo.service.js";
@@ -393,10 +394,10 @@ const formatearCandidato = (c, i, jurisdicciones, opciones) =>
 
 // Sin candidatos también se llama al modelo: un saludo o un "gracias" merecen respuesta. Devuelve
 // también el texto de cada candidato y la parte fija, que usa la verificación de atribución.
-const armarInstruccion = async (prompt, topeAlcanzado, candidatos, opciones = {}) => {
+const armarInstruccion = async (prompt, topeAlcanzado, candidatos, opciones = {}, signal) => {
   const system = topeAlcanzado ? `${prompt}\n${INSTRUCCION_TOPE}` : prompt;
-  const { texto: resumen } = await obtenerResumenCatalogo();
-  const jurisdicciones = candidatos.length > 0 ? await obtenerJurisdicciones() : null;
+  const { texto: resumen } = await obtenerResumenCatalogo({ signal });
+  const jurisdicciones = candidatos.length > 0 ? await obtenerJurisdicciones({ signal }) : null;
   const contexto = new Map(candidatos.map((c, i) => [c.id, formatearCandidato(c, i, jurisdicciones, opciones)]));
   const fijo = `${system}\n\nRESUMEN DEL CATÁLOGO:\n${resumen}`;
   const texto = contexto.size > 0 ? [...contexto.values()].join("\n\n") : "(ninguno)";
@@ -458,11 +459,11 @@ const cortesiaPara = (mensajes) =>
 const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, limpiar = limpiarCuerpo }) => {
   // Sin texto ("chau" con solo la META), una frase amable según el mensaje.
   if (!cuerpo.trim()) return cortesiaPara(mensajes)?.texto ?? MENSAJE_CONVERSACION_VACIA;
-  const { ejemplos } = await conSenal(obtenerResumenCatalogo(), signal);
+  const { ejemplos } = await conSenal(obtenerResumenCatalogo({ signal }), signal);
   if (!nombraCandidato(cuerpo, candidatos, ejemplos)) return limitarConversacion(cuerpo);
   alPedirConversacionDeNuevo?.();
 
-  const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, []), signal);
+  const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, false, [], {}, signal), signal);
   const salida = JSON.parse(
     await ia.generarRespuesta({
       instruccionSistema: `${instruccion}\n${INSTRUCCION_SIN_CANDIDATOS}`,
@@ -505,10 +506,11 @@ const FIN_CONVERSACIONAL = {
   ...SIN_REGISTRO,
 };
 
-// Si falla el registro la respuesta igual sale, con consultaId y calificarToken null.
-const registrar = async (datos) => {
+// Si falla el registro la respuesta igual sale, con consultaId y calificarToken null. Crear la
+// consulta no es idempotente: ante una caída de la base solo se reintenta si no llegó a conectarse.
+const registrar = async (datos, signal) => {
   try {
-    const consulta = await registrarConsulta(datos);
+    const consulta = await conReintentoBase(() => registrarConsulta(datos), { signal, escritura: true, etiqueta: "registro" });
     return { consultaId: consulta.id, calificarToken: consulta.calificarToken };
   } catch (err) {
     console.error("Error al registrar consulta:", err.message);
@@ -516,7 +518,7 @@ const registrar = async (datos) => {
   }
 };
 
-const registrarConsultaCacheada = (pregunta, cacheado, usuarioId) =>
+const registrarConsultaCacheada = (pregunta, cacheado, usuarioId, signal) =>
   registrar({
     textoConsulta: pregunta,
     tramiteId: cacheado.encontrado
@@ -525,7 +527,7 @@ const registrarConsultaCacheada = (pregunta, cacheado, usuarioId) =>
     encontrado: cacheado.encontrado,
     usuarioId,
     respuesta: cacheado.respuesta,
-  });
+  }, signal);
 
 const nombreParaSaludo = (usuario) => (usuario ? primerNombre(usuario.nombre) : null);
 
@@ -537,13 +539,13 @@ const conSaludo = (cuerpo, saludo, usuario) =>
   `${componerSaludo(saludo, nombreParaSaludo(usuario))}${cuerpo}`;
 
 // Las fuentes de una respuesta cacheada se buscan al servirla: siguen a la URL actual del trámite.
-const tramitesConFuente = async (tramitesEncontrados) => {
+const tramitesConFuente = async (tramitesEncontrados, signal) => {
   const ids = tramitesEncontrados.map((t) => t.id);
   if (ids.length === 0) return [];
-  const filas = await prisma.tramite.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, nombre: true, fuenteUrl: true },
-  });
+  const filas = await conReintentoBase(
+    () => prisma.tramite.findMany({ where: { id: { in: ids } }, select: { id: true, nombre: true, fuenteUrl: true } }),
+    { signal, etiqueta: "fuentes" },
+  );
   const porId = new Map(filas.map((t) => [t.id, t]));
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
@@ -586,7 +588,7 @@ const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Se
 // busca de nuevo con la ortografía corregida; un mensaje de cortesía no se corrige.
 const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { esCortesia = false, alReescribir } = {}) => {
   traza.etapa("busqueda");
-  const jurisdicciones = await conSenal(obtenerJurisdicciones(), signal);
+  const jurisdicciones = await conSenal(obtenerJurisdicciones({ signal }), signal);
   const localidades = localidadesConocidas(jurisdicciones);
   const textoDeBusqueda = quitarLocalidades(consultaBusqueda, localidades) || consultaBusqueda;
   const buscar = (texto, alPuntaje) => buscarTramites(texto, { signal, alEtapa: (nombre) => traza.etapa(nombre), alPuntaje, cachearEmbedding: esUnTurno });
@@ -603,7 +605,7 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { 
   const nombrado = loQueNombro(consultaBusqueda, localidades);
   const resueltos = resolverGrupos(encontrados, jurisdicciones, nombrado);
   const ids = resueltos.filter((c) => !c.sinResolver).map((c) => c.id);
-  const tramites = ids.length > 0 ? await conSenal(cargarDetalle(ids), signal) : [];
+  const tramites = ids.length > 0 ? await conReintentoBase(() => cargarDetalle(ids), { signal, etiqueta: "detalle" }) : [];
   const porId = new Map(tramites.map((t) => [t.id, t]));
   const lista = resueltos.map((c) => (c.sinResolver ? c : porId.get(c.id))).filter(Boolean);
 
@@ -637,7 +639,7 @@ const grupoElegido = (salida, candidatos) => {
   return opciones.length === 1 ? candidatos.grupos.get(opciones[0]) ?? null : null;
 };
 
-const crearPlazo = (signal) => combinarSenales(AbortSignal.timeout(TIEMPOS_IA.plazoChat), signal);
+const crearPlazo = (signal) => crearPlazoConVencimiento(TIEMPOS_IA.plazoChat, signal);
 
 export const MENSAJE_NO_DISPONIBLE =
   "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
@@ -689,8 +691,10 @@ const crearTraza = () => {
     },
     traducir(err) {
       const plazoAgotado = err?.name === "TimeoutError";
-      if (!(err instanceof ErrorProveedorIA) && !plazoAgotado) return err;
-      const causa = plazoAgotado ? "plazo agotado" : `${err.operacion ?? "-"}: ${err.causa}`;
+      const codigoBase = codigoTransitorio(err);
+      if (!(err instanceof ErrorProveedorIA) && !plazoAgotado && codigoBase === null) return err;
+      // De la base, solo el código: el mensaje de Prisma trae el host.
+      const causa = plazoAgotado ? "plazo agotado" : codigoBase !== null ? `base ${codigoBase}` : `${err.operacion ?? "-"}: ${err.causa}`;
       const ahora = Date.now();
       console.error(
         `Chat: asistente no disponible (etapa ${etapa}, ${causa}, ${ahora - desde} ms en la etapa, ${ahora - inicio} ms en total)`,
@@ -721,7 +725,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
-  await asegurarCacheVigente();
+  await asegurarCacheVigente({ signal });
 
   // Caché solo para un solo turno (las conversaciones dependen del contexto).
   if (esUnTurno) {
@@ -729,8 +733,8 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
     if (cacheado) {
       traza.cacheada();
       traza.etapa("registro");
-      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
-      const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados);
+      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId, signal);
+      const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados, signal);
       return {
         tipo: "respuesta",
         respuesta: conSaludo(conFuentes(cacheado.respuesta, fuentes), cacheado.saludo ?? "", usuario),
@@ -751,7 +755,7 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   const topeAlcanzado = alcanzoElTope(mensajes);
 
   traza.etapa("modelo");
-  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos), signal);
+  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos, signal), signal);
   const salidaRaw = await ia.generarRespuesta({
     instruccionSistema: instruccion,
     turnos: mensajes,
@@ -845,7 +849,7 @@ const resolverSalidaAnterior = async (salida, ctx) => {
     encontrado,
     usuarioId,
     respuesta: cuerpo,
-  });
+  }, signal);
 
   if (esUnTurno) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado });
   return {
@@ -967,7 +971,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   if (!esAclaracion && !encontrado) {
     if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: MENSAJE_SIN_RESPUESTA, saludo, tramitesEncontrados: [], encontrado: false });
     traza.etapa("registro");
-    const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta: MENSAJE_SIN_RESPUESTA });
+    const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta: MENSAJE_SIN_RESPUESTA }, signal);
     yield delta(prefijo + MENSAJE_SIN_RESPUESTA);
     yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: false, tramitesEncontrados: [], opciones: [], conversacional: false, ...registro };
     return;
@@ -996,7 +1000,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
   if (esUnTurno && valida) cache.guardar(preguntaActual, { respuesta: cuerpo, saludo, tramitesEncontrados, encontrado: true });
   traza.etapa("registro");
-  const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: idsUsados[0], encontrado: true, usuarioId, respuesta: cuerpo });
+  const registro = await registrar({ textoConsulta: preguntaActual, tramiteId: idsUsados[0], encontrado: true, usuarioId, respuesta: cuerpo }, signal);
   const fuentes = conFuentes(cuerpo, usados).slice(cuerpo.length);
   if (fuentes) yield delta(fuentes);
   yield { tipo: "fin", tipoRespuesta: "respuesta", encontrado: true, tramitesEncontrados, opciones: [], conversacional: false, ...registro };
@@ -1095,15 +1099,15 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   const esUnTurno = mensajes.length === 1;
   const preguntaActual = mensajes[mensajes.length - 1].texto;
 
-  await asegurarCacheVigente();
+  await asegurarCacheVigente({ signal });
 
   if (esUnTurno) {
     const cacheado = cache.obtener(preguntaActual);
     if (cacheado) {
       traza.cacheada();
       traza.etapa("registro");
-      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId);
-      const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados);
+      const registro = await registrarConsultaCacheada(preguntaActual, cacheado, usuarioId, signal);
+      const fuentes = await tramitesConFuente(cacheado.tramitesEncontrados, signal);
       const prefijo = componerSaludo(cacheado.saludo ?? "", nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };
       yield { tipo: "delta", texto: conFuentes(cacheado.respuesta, fuentes) };
@@ -1130,7 +1134,7 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   // Con el esquema, el prompt es el de la ruta sin streaming.
   const conEsquema = streamIncremental() && streamEsquema();
   const prompt = conEsquema ? SYSTEM_PROMPT_MULTIVUELTA : SYSTEM_PROMPT_STREAM_MULTIVUELTA;
-  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(prompt, topeAlcanzado, candidatos.lista, candidatos), signal);
+  const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(prompt, topeAlcanzado, candidatos.lista, candidatos, signal), signal);
   const deltas = ia.generarRespuestaStream({
     instruccionSistema: instruccion,
     turnos: mensajes,
@@ -1198,7 +1202,7 @@ const conMetaRevisada = async (deltas, ctx) => {
   const cortesia = cortesiaPara(ctx.mensajes);
   if (cortesia) return { cortesia };
   ctx.traza.etapa("reintento");
-  const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, ctx.topeAlcanzado, ctx.candidatos.lista, ctx.candidatos), ctx.signal);
+  const { instruccion } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, ctx.topeAlcanzado, ctx.candidatos.lista, ctx.candidatos, ctx.signal), ctx.signal);
   const { respuesta, ...datos } = JSON.parse(await ia.generarRespuesta({ instruccionSistema: instruccion, turnos: ctx.mensajes, esquema: ESQUEMA_SALIDA, signal: ctx.signal }));
   return { deltas: (async function* () { yield `${JSON.stringify(datos)}\n${respuesta ?? ""}`; })() };
 };
@@ -1373,7 +1377,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
       encontrado,
       usuarioId,
       respuesta,
-    });
+    }, signal);
     if (!encontrado) {
       const prefijo = componerSaludo(saludo, nombre);
       if (prefijo) yield { tipo: "delta", texto: prefijo };

@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import * as cache from './cache.service.js';
+import { conReintentoBase } from '../utils/reintento-base.js';
 
 // El catálogo cambia también desde otros procesos (el import, otra instancia del server). Cada
 // cambio incrementa una versión en la base; el server la lee como mucho cada CHEQUEO_MS antes de
@@ -31,11 +32,13 @@ export const marcarCatalogoCambiado = async () => {
   return fila ? String(fila.version) : null;
 };
 
-export const asegurarCacheVigente = async ({ ahora = Date.now() } = {}) => {
+// `signal` es el plazo del chat: el reintento ante una caída de la base lo respeta. El chequeo en
+// curso es uno solo para todos los pedidos y usa el plazo del primero.
+export const asegurarCacheVigente = async ({ ahora = Date.now(), signal } = {}) => {
   if (ahora - ultimoChequeo < CHEQUEO_MS) return;
   chequeoEnCurso ??= (async () => {
     try {
-      const version = await leerVersion();
+      const version = await conReintentoBase(leerVersion, { signal, etiqueta: 'versión del catálogo' });
       if (versionLocal !== null && version !== versionLocal) cache.limpiar({ propagar: false });
       versionLocal = version;
     } catch (err) {

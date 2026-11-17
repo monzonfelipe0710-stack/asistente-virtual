@@ -3,6 +3,7 @@ import * as cache from './cache.service.js';
 import { normalizarNombre } from '../utils/texto.js';
 import { asegurarCacheVigente } from './version-catalogo.service.js';
 import { obtenerJurisdicciones } from './jurisdiccion.service.js';
+import { conReintentoBase } from '../utils/reintento-base.js';
 
 export const TOPES_RESUMEN = {
   ejemplos: 8,
@@ -137,12 +138,15 @@ export const armarTexto = (r) => {
   ].join('\n');
 };
 
-export const obtenerResumenCatalogo = async () => {
-  await asegurarCacheVigente();
+export const obtenerResumenCatalogo = async ({ signal } = {}) => {
+  await asegurarCacheVigente({ signal });
   const cacheado = cache.obtenerCatalogo();
   if (cacheado) return cacheado;
 
-  const [publicados, jurisdicciones] = await Promise.all([leerPublicados(), obtenerJurisdicciones()]);
+  const [publicados, jurisdicciones] = await Promise.all([
+    conReintentoBase(leerPublicados, { signal, etiqueta: 'resumen del catálogo' }),
+    obtenerJurisdicciones({ signal }),
+  ]);
   const resumen = armarResumen(publicados, jurisdicciones);
   const valor = { ...resumen, texto: armarTexto(resumen) };
   cache.guardarCatalogo(valor);
