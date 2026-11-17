@@ -131,7 +131,8 @@ const sinConfiguracion = (err) => {
 const motivoNoSeleccionable = (m, activoId) => {
   if (!proveedorConocido(m.proveedor)) return 'El proveedor no está soportado.';
   if (!m.habilitado) {
-    if (m.estadoEval) return 'Deshabilitado: la evaluación no alcanza para habilitarlo.';
+    if (m.estadoEval?.criterio?.cumple) return 'Deshabilitado: la evaluación cumple el criterio, falta habilitarlo.';
+    if (m.estadoEval) return 'Deshabilitado: la evaluación no cumple el criterio.';
     return modeloDelCatalogo(m.id)?.sondeado ? 'Deshabilitado: falta la evaluación.' : 'Deshabilitado: sin sondear ni evaluar.';
   }
   if (!tieneClave(m.proveedor)) return 'Falta la clave de API del proveedor en el servidor.';

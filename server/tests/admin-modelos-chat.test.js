@@ -20,6 +20,9 @@ const DOMINIO = '@admin-modelos.test.invalid';
 const HABILITADO = `prueba-habilitado-${SUFIJO}`;
 const DESHABILITADO = `prueba-deshabilitado-${SUFIJO}`;
 const SIN_CLAVE = `prueba-sin-clave-${SUFIJO}`;
+const EVALUADO_OK = `prueba-evaluado-ok-${SUFIJO}`;
+const EVALUADO_NO = `prueba-evaluado-no-${SUFIJO}`;
+const PRUEBAS = [HABILITADO, DESHABILITADO, SIN_CLAVE, EVALUADO_OK, EVALUADO_NO];
 const MOTIVO = 'Prueba automática del selector';
 
 let servidor;
@@ -43,10 +46,11 @@ const sinClaves = (texto) => {
   for (const clave of [process.env.OPENAI_API_KEY, CLAVE_GEMINI]) assert.ok(!texto.includes(clave), 'muestra una clave');
 };
 
-const filaDePrueba = (id, { proveedor = 'openai', habilitado }) => {
+const filaDePrueba = (id, { proveedor = 'openai', habilitado, estadoEval }) => {
   const mini = modeloDelCatalogo('gpt-4o-mini');
-  return { id, proveedor, modeloApi: 'gpt-4o-mini', nombreVisible: id, parametros: mini.parametros, precios: mini.precios, habilitado };
+  return { id, proveedor, modeloApi: 'gpt-4o-mini', nombreVisible: id, parametros: mini.parametros, precios: mini.precios, habilitado, ...(estadoEval && { estadoEval }) };
 };
+const evaluacion = (cumple) => ({ fecha: '2026-11-17T00:00:00.000Z', modelo: 'x', criterio: { cumple, motivos: cumple ? [] : ['eval-chat normal: 50 casos 3/3 contra 62'] }, resumen: { evalChat: {} }, costoPor1000: 0.3 });
 
 describe('/api/admin/modelos-chat', () => {
   let logs = [];
@@ -60,6 +64,8 @@ describe('/api/admin/modelos-chat', () => {
         filaDePrueba(HABILITADO, { habilitado: true }),
         filaDePrueba(DESHABILITADO, { habilitado: false }),
         filaDePrueba(SIN_CLAVE, { proveedor: 'anthropic', habilitado: true }),
+        filaDePrueba(EVALUADO_OK, { habilitado: false, estadoEval: evaluacion(true) }),
+        filaDePrueba(EVALUADO_NO, { habilitado: false, estadoEval: evaluacion(false) }),
       ],
     });
     original = await prisma.configuracionChat.findUnique({ where: { id: 1 } });
@@ -71,7 +77,7 @@ describe('/api/admin/modelos-chat', () => {
     servidor.close();
     await prisma.configuracionChat.update({ where: { id: 1 }, data: { modeloActivoId: original.modeloActivoId, actualizadoPor: original.actualizadoPor, actualizadoEn: original.actualizadoEn } });
     await prisma.auditoriaModeloChat.deleteMany({ where: { usuarioId: { in: [superusuario.id, empleado.id] } } });
-    await prisma.modeloChat.deleteMany({ where: { id: { in: [HABILITADO, DESHABILITADO, SIN_CLAVE] } } });
+    await prisma.modeloChat.deleteMany({ where: { id: { in: PRUEBAS } } });
     await prisma.usuario.deleteMany({ where: { email: { endsWith: DOMINIO } } });
     await prisma.$disconnect();
     mock.restoreAll();
@@ -111,6 +117,12 @@ describe('/api/admin/modelos-chat', () => {
     assert.equal(porId.get('gemini-3.1-flash-lite').claveConfigurada, true);
     assert.equal(porId.get(HABILITADO).seleccionable, true);
     assert.equal(porId.get(SIN_CLAVE).motivoNoSeleccionable, 'Falta la clave de API del proveedor en el servidor.');
+    const ok = porId.get(EVALUADO_OK);
+    assert.equal(ok.motivoNoSeleccionable, 'Deshabilitado: la evaluación cumple el criterio, falta habilitarlo.');
+    assert.deepEqual([ok.eval.cumple, ok.costoPor1000.medido, ok.avisos], [true, 0.3, []]);
+    const no = porId.get(EVALUADO_NO);
+    assert.equal(no.motivoNoSeleccionable, 'Deshabilitado: la evaluación no cumple el criterio.');
+    assert.deepEqual(no.eval.motivos, ['eval-chat normal: 50 casos 3/3 contra 62']);
   });
 
   it('lista cerrada: rechaza un modelo inexistente, deshabilitado, sin clave o que ya está activo', async () => {

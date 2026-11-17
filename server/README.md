@@ -65,15 +65,19 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `JWT_EXPIRES_IN` | no | Vigencia del token. Default `2h` |
 | `CORS_ORIGIN` | no | Orígenes permitidos, separados por coma. Default `http://localhost:5173` |
 | `TRUST_PROXY` | no | Saltos de proxy a confiar. Vacío si el server se expone directo; `1` detrás de un reverse proxy |
-| `OPENAI_MODELO_CHAT` | no | Modelo de las respuestas. Default `gpt-4o-mini` |
-| `OPENAI_TEMPERATURA` | no | Default `0.3` |
+| `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | no | Claves de los otros proveedores de chat: sin la clave, sus modelos no se pueden elegir (ver [Modelo del chat](#modelo-del-chat)) |
+| `MODELO_CHAT_POR_DEFECTO` | no | Modelo del chat si no se puede leer la configuración de la base: un id de [`src/config/modelos-chat.json`](src/config/modelos-chat.json). Default `gpt-4o-mini`. Acepta también el nombre anterior, `OPENAI_MODELO_CHAT` |
+| `MODELO_CHAT_CACHE_MS` | no | Vigencia de la configuración del modelo en memoria. Default `30000` |
+| `CHAT_RESPALDO_MARGEN_MS` | no | Lo que tiene que quedar del plazo de la consulta para probar con el modelo por defecto si falla el activo. Default `4000` |
+| `MODELO_CHAT_FORZADO` | no | Solo para los scripts de evaluación: el modelo de todas las consultas, sin respaldo. Se ignora con `NODE_ENV=production` |
+| `IA_REGISTRO_USO` | no | Solo para scripts: archivo donde se anota, una línea por llamada, el uso de tokens. Se ignora con `NODE_ENV=production` |
 | `UMBRAL_DISTANCIA` | no | Distancia coseno máxima para que un trámite sea candidato. Default `0.5` |
 | `CACHE_TTL_MS` | no | Vigencia de la caché de respuestas. Default 1 hora |
 | `CACHE_MAX` | no | Entradas máximas de la caché. Default `500` |
 | `CACHE_CHEQUEO_MS` | no | Cada cuánto el server revisa la versión del catálogo en la base para vaciar su caché. Default `5000` |
 | `SERVIDOR_URL` | no | Solo para el script de import: dónde consultar `/api/health` para avisar si hay un server encendido. Default `http://localhost:$PORT` |
 | `OPENAI_TIMEOUT_EMBEDDING_MS`, `OPENAI_REINTENTOS_EMBEDDING` | no | Timeout por intento y reintentos del embedding. Default `4000` y `1` |
-| `OPENAI_TIMEOUT_CHAT_MS`, `OPENAI_REINTENTOS_CHAT` | no | Timeout por intento y reintentos del modelo, con y sin streaming. Default `8000` y `1` |
+| `OPENAI_TIMEOUT_CHAT_MS`, `OPENAI_REINTENTOS_CHAT` | no | Si están definidas, pisan el timeout por intento y los reintentos de todos los modelos de chat, con y sin streaming (cada modelo trae los suyos en el catálogo: `8000` y `1`) |
 | `OPENAI_ESPERA_MAXIMA_REINTENTO_MS` | no | Espera máxima antes de reintentar, aunque OpenAI pida más con `retry-after`. Default `2000` |
 | `CHAT_PLAZO_MS` | no | Plazo total de una consulta del chat. Default `18000` |
 | `CHAT_INACTIVIDAD_STREAM_MS` | no | En streaming, tiempo máximo sin recibir un pedazo del modelo. Default `10000` |
@@ -115,7 +119,9 @@ una variable ausente, vacía o que no sea un entero válido deja el default (con
 | `node scripts/medir-prompt.js [--pregunta "..."] [--corridas n] [--todas]` | Tamaño de la instrucción de sistema, latencia, tokens cacheados y correcciones de la verificación de salida de una pregunta. Llama a OpenAI; borra por id solo las consultas que registró |
 | `node scripts/medir-stream.js [--corridas 10] [--pregunta "..."] [--modos esquema,meta,anterior]` | Tiempo hasta el primer `delta` y hasta el fin, llamadas al modelo y tokens por consulta del streaming en cada modo, alternados: `esquema` (`STREAM_ESQUEMA=true`), `meta` (`STREAM_ESQUEMA=false`) y `anterior` (`STREAM_INCREMENTAL=false`). Por defecto, `esquema` y `meta`. Llama a OpenAI; borra por id las consultas que registra |
 | `node scripts/medir-busqueda.js [--tramite "..."] [--pregunta "..."]... [--grupos n]... [--impacto]` | Dónde queda un trámite en la búsqueda del chat: por pregunta, el puesto de su grupo, su puntaje, el del primero y si llega a los candidatos con 3 grupos (y con los que se pidan con `--grupos`). Con `--impacto`, las preguntas de los evals cuyos candidatos cambian con otra cantidad de grupos. Por defecto, #273 (partidas) con las consultas de partida, acta y certificado. Solo lee la base; llama a OpenAI para los embeddings |
-| `node scripts/sondear-modelos.js [--corridas 5] [--modelo id]... [--pregunta "..."]... [--estimar] [--sin-errores] [--parametros '{...}']` | Sondeo de modelos de chat candidatos (`scripts/lib/modelos-candidatos.json`, con precios, fecha y fuente) con los prompts y el esquema reales: ruta normal, stream con el lector incremental, parámetros que acepta, latencia, tokens, costo por 1000 consultas, calidad básica y forma de los errores. Solo los modelos con su clave en el entorno (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`). Tope de gasto `SONDEO_TOPE_USD` (default 1): estima antes de correr y corta al pasarlo o sin crédito. No escribe en la base (ver [docs/estado-actual-backend.md](docs/estado-actual-backend.md), "Modelos candidatos") |
+| `node scripts/evaluar-modelo.js <modelo> [--registrar] [--base <archivo>] [--prueba]` | Evalúa un modelo de chat con `MODELO_CHAT_FORZADO`: `eval-chat` completo (normal y stream) y `medir-tipeo` contra la base del `.env`, y `eval-seguridad` completo (normal y stream) contra la base temporal. Mide el gasto real (tope `EVAL_TOPE_USD`, default 2) y compara con la evaluación del modelo por defecto. Con `--registrar` escribe el resultado en `modelo_chat.estado_eval`; no habilita nada |
+| `node scripts/habilitar-modelo.js <modelo> [--deshabilitar]` | Habilita un modelo para el selector: exige una evaluación registrada que cumpla el criterio y confirmar escribiendo el id en una terminal |
+| `node scripts/sondear-modelos.js [--corridas 5] [--modelo id]... [--pregunta "..."]... [--estimar] [--sin-errores] [--parametros '{...}']` | Sondeo de modelos de chat candidatos (el catálogo [`src/config/modelos-chat.json`](src/config/modelos-chat.json), con precios, fecha y fuente) con los prompts y el esquema reales: ruta normal, stream con el lector incremental, parámetros que acepta, latencia, tokens, costo por 1000 consultas, calidad básica y forma de los errores. Solo los modelos con su clave en el entorno (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`). Tope de gasto `SONDEO_TOPE_USD` (default 1): estima antes de correr y corta al pasarlo o sin crédito. No escribe en la base (ver [docs/estado-actual-backend.md](docs/estado-actual-backend.md), "Modelos candidatos") |
 | `node scripts/medir-tipeo.js [--corridas 1] [--pregunta "..."]` | Sobre las preguntas de `eval-chat` y las legítimas de `eval-seguridad`: cuáles disparan la corrección de tipeo, qué devuelve el modelo, si cambian los candidatos de la búsqueda (en las bien escritas tiene que ser 0) y cuánto tarda. Hace la búsqueda y la corrección, sin el modelo de la respuesta ni el registro. Llama a OpenAI |
 | `node scripts/comparar-evals.js [a.json b.json]` | Compara dos corridas de `eval-chat` (por defecto, las dos últimas de `server/eval-resultados/`) e imprime los casos que cambiaron y cuántas corridas de cada una terminaron en error de API. No compara una corrida marcada como inválida |
 
@@ -363,8 +369,11 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | `MesaEntrada` (`mesas_entrada`) | Lugares de presentación, con horario. Generales o de un sector |
 | `TramiteMesa` (`tramite_mesa`) | Relación N a N trámite ↔ mesa |
 | `Documento` (`documentos`) | Formularios descargables: la key de un archivo en R2 (`archivo`) o un enlace externo http(s) (`urlExterna`), exactamente uno de los dos (`CHECK` en la base) |
+| `ModeloChat` (`modelo_chat`) | La lista cerrada de modelos del chat: proveedor, `modelo_api`, `nombre_visible`, `parametros` y `precios` (JSON), `habilitado`, `estado_eval` (la última evaluación) y `es_por_defecto` (uno solo, índice único parcial) |
+| `ConfiguracionChat` (`configuracion_chat`) | Una sola fila (`CHECK id = 1`): el modelo activo, quién lo cambió y cuándo |
+| `AuditoriaModeloChat` (`auditoria_modelo_chat`) | Cada cambio del modelo activo: usuario, modelo anterior y nuevo, motivo y fecha |
 | `CatalogoVersion` (`catalogo_version`) | Una sola fila con un contador que se incrementa cada vez que cambia el catálogo; el server la usa para vaciar su caché |
-| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo ni las fuentes oficiales), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico` y un `calificarToken` único |
+| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo ni las fuentes oficiales), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico`, un `calificarToken` único y el `modelo` que respondió |
 
 La columna `tramites.search_vector` es generada (`GENERATED ALWAYS AS ... STORED`, full-text
 en español sobre nombre y descripción). En el schema figura como `Unsupported("tsvector")`,
@@ -389,7 +398,7 @@ borrar un sector ni una mesa que tengan trámites (409).
 
 | Rol | Puede |
 |---|---|
-| `SUPERUSUARIO` | Gestionar usuarios, sectores y mesas; crear empleados; publicar y despublicar trámites; ver métricas. No crea ni edita trámites |
+| `SUPERUSUARIO` | Gestionar usuarios, sectores y mesas; crear empleados; publicar y despublicar trámites; ver métricas; elegir el modelo del chat. No crea ni edita trámites |
 | `ADMINISTRADOR` | Crear y gestionar trámites y documentos de los sectores que tiene asignados; ver sectores, mesas y métricas |
 | `CIUDADANO` | Usar el chat logueado y ver su historial |
 
@@ -1049,6 +1058,93 @@ sectores, nada); un SU ve todas. Query, todo opcional:
 - Nunca devuelve `usuarioId` ni `calificarToken`.
 - Filtros inválidos → 400 con el mensaje del primer error.
 
+### Modelo del chat (superusuario)
+
+Solo `SUPERUSUARIO`: sin sesión, 401; con otro rol, 403. Las tres rutas comparten un límite de 30
+pedidos por minuto por IP (429). Si falta aplicar la migración del selector, responden 503
+`{ "error": "La configuración de modelos del chat no está disponible: falta aplicar la migración." }`.
+Ninguna respuesta trae claves: `claveConfigurada` dice solo si el servidor tiene la del proveedor.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/admin/modelos-chat` | La lista cerrada de modelos, cuál está activo y cuál responde |
+| PUT | `/api/admin/modelos-chat/activo` | Cambia el modelo activo. Body `{ "modeloId", "motivo" }` (motivo de 5 a 500 caracteres). Responde la lista actualizada |
+| GET | `/api/admin/modelos-chat/auditoria?limite=50` | Los últimos cambios, del más nuevo al más viejo (`limite` de 1 a 200, default 50) |
+
+`GET /api/admin/modelos-chat`:
+
+```json
+{
+  "activo": "gpt-4o-mini",
+  "enUso": "gpt-4o-mini",
+  "origen": "base",
+  "actualizadoPor": { "id": 1, "nombre": "Super Usuario" },
+  "actualizadoEn": "2026-11-17T19:08:34.603Z",
+  "modelos": [
+    {
+      "id": "gpt-6-luna",
+      "proveedor": "openai",
+      "nombre": "GPT-6 Luna",
+      "modeloApi": "gpt-6-luna",
+      "habilitado": false,
+      "esPorDefecto": false,
+      "activo": false,
+      "claveConfigurada": true,
+      "seleccionable": false,
+      "motivoNoSeleccionable": "Deshabilitado: la evaluación cumple el criterio, falta habilitarlo.",
+      "avisos": [],
+      "precios": { "entrada": 0.1, "entradaNoCacheada": 0.125, "entradaCacheada": 0.01, "salida": 0.5, "unidad": "USD por millón de tokens", "fecha": "2026-11-17", "fuente": "https://developers.openai.com/api/docs/models/gpt-6-luna" },
+      "costoPor1000": { "estimado": 0.7, "medido": 0.34 },
+      "eval": { "fecha": "2026-11-17T19:39:35.145Z", "cumple": true, "motivos": [], "resumen": { "evalChat": { "normal": { "ok": 63, "total": 72, "aciertos": 194, "erroresDeApi": 0, "sinSalidaValida": 0 } } } }
+    }
+  ]
+}
+```
+
+- `activo` es el que eligió el superusuario; `enUso`, el que responde de verdad: si el activo no se
+  puede usar (deshabilitado, sin clave) responde el por defecto. `origen`: `base` (la configuración
+  de la base), `entorno` (no se pudo leer la base: modelo de `MODELO_CHAT_POR_DEFECTO`) o `forzado`
+  (`MODELO_CHAT_FORZADO`, solo fuera de producción).
+- Por modelo: `seleccionable` y, si no, `motivoNoSeleccionable`, que el front puede mostrar tal
+  cual: `"Deshabilitado: sin sondear ni evaluar."`, `"Deshabilitado: falta la evaluación."`,
+  `"Deshabilitado: la evaluación no cumple el criterio."`, `"Deshabilitado: la evaluación cumple el
+  criterio, falta habilitarlo."`, `"Falta la clave de API del proveedor en el servidor."` o `"Ya es el
+  modelo activo."`. `avisos`: `"sin sondear"` (nunca se probó con su API) y `"sin evaluar"`.
+- `costoPor1000.estimado`: USD por 1000 consultas con toda la entrada sin caché (cota superior, con
+  el perfil medido de 5200 tokens de entrada y 100 de salida). `medido`: el de la última evaluación,
+  con el caché real del proveedor (`null` si no hay). `eval`: la última evaluación (`null` si no hay).
+
+`PUT /api/admin/modelos-chat/activo` con `{ "modeloId": "gpt-6-luna", "motivo": "Reemplazo de gpt-4o-mini antes de su retiro" }`
+responde 200 con la misma lista ya cambiada, o:
+
+| Código | `error` | Cuándo |
+|---|---|---|
+| 400 | `Falta el modelo.` / `El motivo tiene que tener al menos 5 caracteres.` | Body inválido |
+| 404 | `El modelo no existe.` | El id no está en la lista |
+| 409 | El `motivoNoSeleccionable` del modelo | Deshabilitado, sin clave o ya activo |
+
+El cambio queda en la auditoría y rige en el server que lo recibió en el momento; en otras
+instancias, en hasta 30 s (`MODELO_CHAT_CACHE_MS`).
+
+`GET /api/admin/modelos-chat/auditoria`:
+
+```json
+{
+  "cambios": [
+    {
+      "id": 3,
+      "fecha": "2026-11-18T13:02:11.120Z",
+      "usuario": { "id": 1, "nombre": "Super Usuario", "email": "su@ejemplo.gob.ar" },
+      "modeloAnterior": "gpt-4o-mini",
+      "modeloNuevo": "gpt-6-luna",
+      "motivo": "Reemplazo de gpt-4o-mini antes de su retiro"
+    }
+  ]
+}
+```
+
+`usuario` es `null` si la cuenta se borró.
+
 ### Otros
 
 `GET /api/health` responde `{ "status": "ok", "servicio": "ChatAP API" }`. Cualquier ruta no
@@ -1074,6 +1170,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **Panel de calificaciones:** nuevo `GET /api/consultas/calificaciones` para SU y ADM.
 - **503 en el chat:** si OpenAI falla o se agota el plazo, `POST /api/chat` responde 503 (antes 500 `Error del servidor.`) con `"El asistente no está disponible en este momento. Probá de nuevo en unos segundos."`, y el evento `error` de `/api/chat/stream` trae ese mismo mensaje.
 - **Documentos como enlace:** `POST /api/tramites/:id/documentos` acepta también JSON `{ nombre, urlExterna }`; nuevo `PATCH /api/tramites/:id/documentos/:docId`; el listado trae `urlExterna` (`null` en un archivo) y `descargar` devuelve `{ url, externa }`. Un enlace tiene `tipo` `null`.
+- **Modelo del chat:** nuevos `GET /api/admin/modelos-chat`, `PUT /api/admin/modelos-chat/activo` y `GET /api/admin/modelos-chat/auditoria`, solo para el superusuario (ver [Modelo del chat](#modelo-del-chat-superusuario)). El chat no cambia de contrato.
 - **Aclaración por jurisdicción o localidad:** con trámites del mismo nombre en distintos organismos, `POST /api/chat` y el evento `fin` pueden traer `tipo`/`tipoRespuesta` `aclaracion` con `opciones: [{ id, nombre, jurisdiccion, localidad }]`. Conviene que el front muestre las opciones y mande su `nombre` (o el historial en `mensajes`): con solo "Clorinda" como `pregunta`, sin historial, no se sabe de qué trámite se habla.
 
 ## Cómo funciona el chat
@@ -1159,6 +1256,47 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 6. **Registro** en `consultas` (salvo aclaraciones y conversaciones), atribuido al primer
    trámite usado, con el texto que se mostró sin el saludo compuesto (en streaming, sin la
    línea del JSON) y un `calificarToken` nuevo.
+
+### Modelo del chat
+
+El superusuario elige el modelo del chat entre una lista cerrada ([`src/config/modelos-chat.json`](src/config/modelos-chat.json)
+y la tabla `modelo_chat`), con los endpoints de [Modelo del chat](#modelo-del-chat-superusuario).
+Los embeddings no cambian nunca: son siempre `text-embedding-3-small` de OpenAI.
+
+- **Dos puertos:** `ia` ([`src/core/ai/index.js`](src/core/ai/index.js)) junta los embeddings (fijos,
+  OpenAI) y el chat, que va al adaptador del proveedor del modelo: OpenAI
+  ([`openai.adapter.js`](src/core/ai/openai.adapter.js)), Anthropic ([`anthropic.adapter.js`](src/core/ai/anthropic.adapter.js),
+  `@anthropic-ai/sdk`) o Google ([`google.adapter.js`](src/core/ai/google.adapter.js), `@google/genai`).
+  Los de Anthropic y Google se cargan recién cuando un modelo de ese proveedor responde.
+- **Parámetros por modelo** (no por proveedor), en el catálogo y en `modelo_chat.parametros`:
+  `temperature`, `reasoningEffort`, `effort`, `thinking`, `thinkingLevel`, `maxTokens`, `timeoutMs`
+  y `reintentos`. `gpt-4o-mini` no recibe `reasoning_effort` (da 400); `gpt-6-luna` lo recibe con
+  `"none"`; Claude no recibe `temperature`.
+- **Un modelo por consulta:** se resuelve una vez al empezar ([`modelo-chat.service.js`](src/services/modelo-chat.service.js))
+  y lo usan la corrección de tipeo, la respuesta (normal o stream) y las llamadas internas (la
+  conversación pedida de nuevo, la META inválida). La configuración se cachea 30 s y se invalida al
+  cambiarla. `consultas.modelo` guarda qué modelo respondió.
+- **La caché de respuestas** lleva el modelo en la clave: nunca se sirve una respuesta de otro modelo.
+- **Si la configuración no se puede leer** (migración sin aplicar, base caída) responde el modelo
+  por defecto del entorno (`MODELO_CHAT_POR_DEFECTO`, `gpt-4o-mini`) y queda un aviso en el log. Si el
+  activo no se puede usar (deshabilitado, sin clave), responde el por defecto de la base.
+- **Respaldo:** si el activo no es el por defecto y falla por una causa transitoria (5xx, 429,
+  conexión), de cuota o por timeout, la llamada se repite una vez con el modelo por defecto si
+  quedan al menos 4 s del plazo de 18 s (`CHAT_RESPALDO_MARGEN_MS`). Nunca por contenido (refusal,
+  salida cortada, JSON inválido), por un pedido inválido (400) ni por una clave rechazada (401). El
+  activo no reintenta: el reintento es el modelo por defecto. En streaming, solo si todavía no salió
+  texto. El log dice `Chat: el modelo gpt-6-luna falló (chat: InternalServerError 500); responde el
+  modelo por defecto gpt-4o-mini`, y el registro y la caché quedan con el que respondió. Si el activo
+  es el por defecto, rige lo de siempre: un reintento del SDK y 503.
+- **Errores al 503:** cada adaptador traduce las fallas de su proveedor (estado, tipo y código, sin el
+  mensaje) a un `ErrorProveedorIA` con un tipo (`transitorio`, `cuota`, `timeout`, `contenido`,
+  `solicitud`, `configuracion`), y el chat responde el 503 de siempre.
+- **`MODELO_CHAT_FORZADO`:** solo para los scripts de evaluación; fija el modelo de todas las
+  consultas, aunque esté deshabilitado, y sin respaldo. Con `NODE_ENV=production` se ignora.
+
+**Habilitar un modelo** requiere evidencia: `node scripts/evaluar-modelo.js <modelo> --registrar` y
+después `node scripts/habilitar-modelo.js <modelo>`, con confirmación (ver [docs/estado-actual-backend.md](docs/estado-actual-backend.md),
+"Selector del modelo de chat").
 
 ### Timeouts y fallas de OpenAI
 
@@ -1247,6 +1385,8 @@ la del `.env`, si falta) no es local (`localhost`, `127.0.0.1`, `::1`), salvo qu
 `TESTS_BASE_NO_LOCAL=<host de esa base>`; `npm run test:real` lo pone después de la confirmación.
 Un `DATABASE_URL_TEST` remoto (por ejemplo, una rama de Neon) también necesita esa variable. Un
 archivo de tests nuevo tiene que empezar con ese import (lo controla `tests/base-de-prueba.test.js`).
+Ese import también fija `MODELO_CHAT_FORZADO=gpt-4o-mini`: los archivos corren en paralelo contra la
+misma base y uno de ellos cambia el modelo activo; los tests de la resolución del modelo lo sacan.
 Antes del guardia, el 14-11-2026, `node --test` directo tomó la base real tres veces con
 `chat-anterior.test.js` y `fallas-openai-anterior.test.js`, que importan `chat.test.js` y
 `fallas-openai.test.js` (crean y borran sus datos; no quedó nada).
@@ -1539,5 +1679,6 @@ Del pentest manual por el chat (14-11-2026; detalle en `docs/estado-actual-backe
 - Alinear las migraciones con las de otras ramas (los 9 registros de las ramas de Felipe, ver arriba).
 - Migrar `package.json#prisma` a `prisma.config.ts` antes de Prisma 7.
 - Un trámite que `--despublicar-faltantes` bajó no se vuelve a publicar solo si reaparece en el JSON.
+- **Reemplazar `gpt-4o-mini` antes del 14-01-2027**, cuando OpenAI lo apaga: hoy es el modelo por defecto y el respaldo. `gpt-6-luna` cumple el criterio en el límite y tiene cambios de comportamiento por revisar; el plan, con fechas, está en [`docs/estado-actual-backend.md`](docs/estado-actual-backend.md), "Selector del modelo de chat".
 
 Más detalle en [`docs/estado-actual-backend.md`](docs/estado-actual-backend.md).

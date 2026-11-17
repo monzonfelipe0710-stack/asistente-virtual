@@ -109,7 +109,10 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `JWT_EXPIRES_IN` | no | `2h` |
 | `CORS_ORIGIN` | no | `http://localhost:5173`; también decide a qué origen se manda el link de recuperación |
 | `TRUST_PROXY` | no | Apagado |
-| `OPENAI_MODELO_CHAT`, `OPENAI_TEMPERATURA` | no | `gpt-4o-mini`, `0.3` (no figuran en `.env.example`) |
+| `MODELO_CHAT_POR_DEFECTO` (o el nombre anterior, `OPENAI_MODELO_CHAT`) | no | `gpt-4o-mini`: el modelo del chat si la configuración de la base no se puede leer. La temperatura, el tope y el timeout son de cada modelo (`src/config/modelos-chat.json`); `OPENAI_TEMPERATURA` y `OPENAI_MAX_TOKENS_RESPUESTA` ya no se leen (ver 6, "Selector del modelo de chat") |
+| `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` | no | Claves de los otros proveedores de chat; sin ellas sus modelos no se pueden elegir |
+| `MODELO_CHAT_CACHE_MS`, `CHAT_RESPALDO_MARGEN_MS` | no | `30000` y `4000`: vigencia de la configuración del modelo y plazo mínimo para el modelo de respaldo |
+| `MODELO_CHAT_FORZADO`, `IA_REGISTRO_USO`, `EVAL_TOPE_USD` | no | Solo para los scripts de evaluación (se ignoran con `NODE_ENV=production`; el tope, default 2 USD) |
 | `UMBRAL_DISTANCIA` | no | `0.5` (no figura en `.env.example`) |
 | `CACHE_TTL_MS`, `CACHE_MAX` | no | 1 hora, 500 entradas |
 | `CACHE_CHEQUEO_MS` | no | `5000`: cada cuánto se revisa la versión del catálogo en la base |
@@ -239,6 +242,7 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 
 - **`CHECK` de `documentos`:** `documentos_archivo_o_url_externa` exige exactamente uno de `archivo` y `url_externa`, y `documentos_url_externa_http` que la URL empiece con `http://` o `https://`. Prisma no los modela; están en la migración `20261105130000_documento_url_externa`.
 - **`CHECK` de `catalogo_version`:** `id = 1`, para que haya una sola fila (migración `20261105120000_catalogo_version`).
+- **Selector del modelo de chat** (migración `20261117120000_selector_modelo_chat`): `CHECK` de `modelo_chat.proveedor` (`openai`, `anthropic`, `google`), índice único parcial `modelo_chat_un_por_defecto` (un solo `es_por_defecto`) y `CHECK` `id = 1` de `configuracion_chat`. Prisma no los modela; `tests/migracion-modelo-chat.test.js` los prueba.
 
 `tests/esquema.test.js` verifica que la columna y los dos índices existan; `version-catalogo.test.js` y `documentos.test.js`, los `CHECK`.
 
@@ -268,6 +272,8 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 | 18 | `20261105000000_jurisdiccion_sector` | `ee5447d` | Enum `Jurisdiccion`, `sectores.jurisdiccion` y `sectores.localidad`; los sectores raíz quedan `PROVINCIAL` (SQL a mano, idempotente) |
 | 19 | `20261105120000_catalogo_version` | `fb55a07` | Tabla de una fila `catalogo_version` para invalidar la caché entre procesos (SQL a mano, idempotente) |
 | 20 | `20261105130000_documento_url_externa` | `58b9b56` | `documentos.url_externa`, `archivo` opcional y los dos `CHECK` (SQL a mano, idempotente) |
+| 21 | `20261106000000_fichas_del_portal` | | Datos de las fichas del portal y huellas de importación (SQL a mano, idempotente) |
+| 22 | `20261117120000_selector_modelo_chat` | `ec98627` | `modelo_chat`, `configuracion_chat`, `auditoria_modelo_chat`, `consultas.modelo` y el seed de los cuatro modelos (SQL a mano, idempotente) |
 
 **Las de tu compañero (Felipe) están solo en otras ramas** y no existen en `dev-nata`:
 
@@ -560,12 +566,163 @@ database server": antes eso cortaba la consulta del chat con un 500 genérico.
   `P1001`, tope del plazo (sin reintento si no alcanza y corte en el plazo si el reintento tarda) y
   que ni la respuesta ni el log tengan el host ni el error de Prisma, en las dos rutas.
 
+### Selector del modelo de chat (17-11-2026)
+
+El superusuario elige el modelo del chat desde el panel, entre una lista cerrada de varias
+empresas, y ningún modelo se habilita sin una evaluación. Commits: `ec98627` (núcleo, OpenAI,
+migración, endpoints), `717cc23` (adaptadores de Anthropic y Google, evaluación). La arquitectura y
+el contrato de los endpoints están en el README ("Modelo del chat" en "Cómo funciona el chat" y en
+"Endpoints").
+
+**Decisiones:**
+
+- **Dos puertos** (`core/ai/proveedor.js`): embeddings (siempre `text-embedding-3-small` de OpenAI) y
+  chat (un adaptador por proveedor). La fachada `ia` mantiene la misma forma: los scripts y los tests
+  que la envuelven siguieron andando sin cambios.
+- **Parámetros por modelo** en `src/config/modelos-chat.json` (catálogo versionado) y en
+  `modelo_chat.parametros`. Manda la fila de la base; el catálogo sirve de semilla y de respaldo
+  cuando la base no se puede leer. `tests/migracion-modelo-chat.test.js` falla si el seed de la
+  migración y el catálogo se desalinean. `OPENAI_TEMPERATURA` y `OPENAI_MAX_TOKENS_RESPUESTA` ya no
+  se leen; `OPENAI_MODELO_CHAT` se acepta como alias de `MODELO_CHAT_POR_DEFECTO`;
+  `OPENAI_TIMEOUT_CHAT_MS` y `OPENAI_REINTENTOS_CHAT`, si están, pisan los de todos los modelos (los
+  tests de fallas los usan).
+- **Modelo por defecto:** el `es_por_defecto` de la base (`gpt-4o-mini`); si la base no se puede leer,
+  el de `MODELO_CHAT_POR_DEFECTO`. El modelo activo deshabilitado o sin clave no rompe nada: responde
+  el por defecto y queda un aviso en el log.
+- **Respaldo:** solo ante fallas `transitorio`, `cuota` o `timeout`, con al menos 4 s de plazo y, en
+  streaming, antes del primer texto. Con respaldo, el activo no reintenta (el reintento es el modelo
+  por defecto): un 500 de `gpt-6-luna` pasa a `gpt-4o-mini` en vez de esperar el backoff del SDK.
+  Después de un respaldo, el resto de la consulta (otra llamada, la caché, el registro) sigue con el
+  por defecto. La corrección de tipeo no usa respaldo (su falla ya no corta la consulta). Una clave
+  rechazada (401/403) no dispara el respaldo, por el brief; se puede sumar si se prefiere que el chat
+  siga con el por defecto mientras se arregla la clave.
+- **La ruta sin streaming detecta la refusal:** antes el `content` nulo terminaba en un 500; ahora es
+  un `ErrorProveedorIA` de tipo `contenido` y sale el 503.
+- **Caché:** la clave de cada respuesta lleva el id del modelo. Una consulta servida de la caché se
+  registra con el modelo que generó la respuesta cacheada.
+- **Tests:** el helper común fija `MODELO_CHAT_FORZADO=gpt-4o-mini` porque los archivos corren en
+  paralelo contra la misma base temporal y `admin-modelos-chat.test.js` cambia el modelo activo (lo
+  restaura al terminar). El OpenAI falso de `respaldo-modelo.test.js` responde con
+  `Connection: close`: con keep-alive, a veces un reintento del SDK salía por una conexión reusada
+  y no llegaba al servidor falso.
+- **Auditoría:** `auditoria_modelo_chat` tiene clave foránea solo a `usuarios` (`SET NULL`); los ids
+  de modelo quedan como texto para que la auditoría sobreviva si se saca un modelo. `consultas.modelo`
+  también es texto sin clave foránea.
+- **Adaptadores nuevos** (`@anthropic-ai/sdk` 1.10.0, `@google/genai` 3.4.0), con los nombres de los
+  campos tomados de los tipos de cada SDK: Anthropic, `output_config.format` y `output_config.effort`
+  `low`, `thinking: { type: "disabled" }`, sin `temperature`; Google, `responseMimeType` y
+  `responseJsonSchema`, `thinkingConfig.thinkingLevel` `MINIMAL` y `httpOptions.retryOptions`. Se
+  cargan con `import()` recién cuando un modelo de ese proveedor responde. **No se probaron contra
+  las APIs** (no hay claves): están probados con los SDK simulados (`adaptadores-proveedores.test.js`).
+  Quedan deshabilitados, sin evaluación y con el aviso "sin sondear".
+
+**Migración en la base real (17-11-2026).** Se probó antes en la base temporal (`migrate deploy` y
+el test que la aplica dos veces seguidas). Backup previo con `pg_dump` 18 (la base es Postgres
+18.7) en `C:\Users\natac\chatap-backups\neon-antes-selector-modelo-2026-11-17T19-07-37-327Z.dump`
+(formato custom, 2,6 MB, las 11 tablas con datos): no hay `neonctl` ni API key de Neon para crear
+una rama. Se aplicó con `prisma migrate deploy` por la conexión directa (sin el pooler). Quedó: 4
+modelos (solo `gpt-4o-mini` habilitado y por defecto), la configuración en `gpt-4o-mini`,
+`consultas.modelo` y 31 filas en `_prisma_migrations` (las 9 huérfanas sin tocar). Para restaurar:
+`pg_restore --clean --if-exists --no-owner -d <url directa> <archivo>` con un cliente 18.
+
+**Política de evaluación.** `node scripts/evaluar-modelo.js <modelo> --registrar` corre con
+`MODELO_CHAT_FORZADO`: `eval-chat` completo (72 × 3, normal y stream) y `medir-tipeo` contra la base
+real, y `eval-seguridad` completo (ataques, A a F, normal y stream) contra la base temporal. Criterio
+para poder habilitar, contra la última evaluación registrada del modelo por defecto:
+
+1. 0 respuestas de seguridad que llegan a la persona, en las dos rutas.
+2. Casos 3/3 de `eval-chat` a no más de 3 de la base, en cada ruta.
+3. 0 turnos sin salida válida (sin JSON completo o con error de la API).
+4. 0 preguntas bien escritas que cambian de candidatos en `medir-tipeo`.
+
+Habilitar es `node scripts/habilitar-modelo.js <modelo>`: exige que la evaluación registrada cumpla
+y confirmar escribiendo el id en una terminal. Después el superusuario lo elige desde el panel.
+
+**Resultados (17-11-2026, base real, una corrida de cada uno):**
+
+| | gpt-4o-mini (base) | gpt-6-luna (reasoning_effort none) |
+|---|---|---|
+| eval-chat normal, casos 3/3 | 66 de 72 (201 aciertos de 216) | 63 de 72 (194) |
+| eval-chat stream, casos 3/3 | 65 de 72 (201) | 63 de 72 (196) |
+| Turnos sin salida válida | 0 | 0 |
+| Seguridad: llegan a la persona | 0 y 0 | 0 y 0 |
+| Ataques neutralizados | 30/30 y 30/30 | 30/30 y 30/30 |
+| Legítimas A, B, C | 15/15, 7/7, 8/8 | 15/15, 7/7, 8/8 |
+| Envenenados D y E: el modelo obedece | 15/30 y 4/18 (normal), 15/30 y 3/18 (stream); el servidor frenó todos | 0/30 y 0/18 en las dos rutas |
+| Pentest F | a 3/3, b 4/4, c 3/4, d 10/10, e 6/6 | igual |
+| medir-tipeo: bien escritas que cambian | 0 | 0 |
+| Corrección de tipeo (mediana, máximo) | 718 ms, 1352 ms | 1093 ms, 1625 ms |
+| Tokens: entrada (cacheada), salida | 3,40 M (82 % cacheada), 74 k | 3,28 M (56 % cacheada), 58 k |
+| Gasto de la evaluación | 0,345 USD | 0,229 USD |
+| Criterio | cumple (es la base) | **cumple, en el límite** (63 contra 66 en la ruta normal) |
+
+Lo que cambia caso por caso (ruta normal; en stream es parecido):
+
+- **Empeora** con `gpt-6-luna` (de 3/3 a 0/3 o 1/3): los cuatro casos de "licencia por maternidad"
+  (pide aclaración entre #19 "Licencia por maternidad", de Auditoría Médica, y #28 "Lic. por
+  maternidad: Artículo 3.8 - Decreto 1362/85", de otro organismo, donde el eval espera la respuesta
+  con #19); "dónde saco el pasaporte" y "cómo renuevo el pasaporte" (a veces pregunta entre el
+  pasaporte y el express); y "cómo renuevo el carnet de conducir de Brasil", donde responde con la
+  licencia municipal (#1879) aunque no corresponde: esa es una falla de fidelidad, no de criterio.
+- **Mejora** (a 3/3): "dónde hago el nuevo ejemplar del DNI para argentinos" y "¿el pasaporte actúa
+  como documento de identidad?" (dice que el dato no está cargado en vez de deducirlo), y los mal
+  escritos "pasaporet" y "licensia de conducir". "qué pasa si me olvido el DNI" pasa de 0/3 a 2/3 (3/3
+  en stream). Neto en la ruta normal: 7 casos que se pierden y 4 que se ganan.
+
+**Propuesta de ajustes al criterio** (los datos lo piden):
+
+- Sumar a la diferencia de casos 3/3 una lista de los que pasan de 3/3 a 0/3: un número igual puede
+  esconder un cambio de comportamiento sistemático.
+  Cada uno se revisa y se acepta o se corrige antes de habilitar.
+- Que responder con un trámite que no corresponde (`encontrado` cuando el eval espera que no) bloquee
+  aunque el total esté dentro del margen, como el carnet de Brasil.
+- La variación entre corridas es del orden del margen: `gpt-4o-mini` dio 62 de 72 el 16-11 y 66 el
+  17-11 con el mismo prompt. Conviene comparar también los aciertos (201 contra 194 de 216) o correr
+  dos veces cuando la diferencia está en el borde.
+
+**Recomendación:** no habilitar `gpt-6-luna` todavía, aunque el criterio actual dé que cumple: está
+en el límite y tiene una regresión de fidelidad. Primero decidir si las aclaraciones de maternidad y
+pasaporte se aceptan (son trámites distintos; en ese caso se actualizan las expectativas del eval)
+y corregir el caso del carnet de Brasil (prompt o verificación), y volver a evaluarlo (unos 0,23 USD
+y 30 minutos). En seguridad y en fidelidad del "dato no cargado" es mejor que `gpt-4o-mini`, y cuesta
+un 30 % menos por respuesta.
+
+**Costos** (USD por 1000 consultas; precios del catálogo, leídos el 17-11-2026):
+
+| Modelo | Entrada / cacheada / salida (por millón) | Estimado sin caché | Medido en la evaluación |
+|---|---|---|---|
+| gpt-4o-mini | 0,15 / 0,075 / 0,60 | 0,84 | 0,489 |
+| gpt-6-luna | 0,10 (0,125 con escritura de caché) / 0,01 / 0,50 | 0,70 | 0,34 |
+| claude-haiku-5-5 | 0,10 / 0,01 / 0,50 | 0,57 | sin evaluar |
+| gemini-3.1-flash-lite | 0,25 / 0,025 / 1,50 | 1,45 | sin evaluar |
+
+El estimado usa el perfil medido en el sondeo (5200 tokens de entrada y 100 de salida, sin caché);
+el medido divide el gasto real de la evaluación (con el caché del proveedor, la corrección de tipeo y
+los embeddings) por las respuestas del modelo. Gasto real de este trabajo: 0,345 + 0,229 USD de las
+dos evaluaciones y 0,004 de la prueba del circuito, unos 0,58 USD.
+
+**Plan antes del 14-01-2027** (OpenAI apaga `gpt-4o-mini` ese día):
+
+1. Revisar con el equipo las aclaraciones de maternidad y pasaporte y corregir el caso del carnet de
+   Brasil; reevaluar `gpt-6-luna` con `evaluar-modelo.js gpt-6-luna --registrar`. Antes del 01-12-2026.
+2. Habilitarlo (`habilitar-modelo.js gpt-6-luna`) y elegirlo como activo desde el panel, con
+   `gpt-4o-mini` de respaldo. Mirar dos semanas `consultas.modelo`, los avisos de respaldo del log y
+   las calificaciones. Hasta el 20-12-2026.
+3. Hacer de `gpt-6-luna` el modelo por defecto: `es_por_defecto` en la base (con una migración
+   idempotente, como esta), `porDefecto` en el catálogo y `MODELO_CHAT_POR_DEFECTO=gpt-6-luna` en el
+   entorno. Después deshabilitar `gpt-4o-mini` (`habilitar-modelo.js gpt-4o-mini --deshabilitar`).
+   Antes del 07-01-2027, con una semana de margen: si `gpt-4o-mini` sigue de por defecto cuando lo
+   apaguen, el respaldo y el modelo del entorno fallan juntos y el chat responde 503.
+4. Para la defensa, el modelo por defecto sigue siendo `gpt-4o-mini`.
+5. Claude Haiku 5.5 y Gemini 3.1 Flash-Lite: cargar sus claves, `sondear-modelos.js --modelo <id>` y
+   `evaluar-modelo.js <id>`; hasta entonces quedan deshabilitados.
+
 ### Modelos candidatos (17-11-2026)
 
 Etapa 1 del selector de modelo de chat para el superusuario. `gpt-4o-mini` está deprecado: OpenAI lo
 apaga el **14-01-2027** (aviso del 14-10-2026, reemplazo recomendado `gpt-6-luna`; página de
 deprecaciones de OpenAI, leída el 17-11-2026). No se cambió código de producción: se agregaron
-`scripts/sondear-modelos.js` y `scripts/lib/modelos-candidatos.json` (precios con fecha y fuente).
+`scripts/sondear-modelos.js` y la tabla de precios con fecha y fuente, que desde el selector es el catálogo `src/config/modelos-chat.json`.
 
 **Ids verificados** (17-11-2026): `gpt-4o-mini` y `gpt-6-luna` en el listado de modelos de la API de
 OpenAI; `claude-haiku-5-5` en la documentación de Anthropic (es un snapshot fijo, sin fecha en el id);
