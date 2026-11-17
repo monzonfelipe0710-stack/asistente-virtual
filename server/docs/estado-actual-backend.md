@@ -560,6 +560,138 @@ database server": antes eso cortaba la consulta del chat con un 500 genérico.
   `P1001`, tope del plazo (sin reintento si no alcanza y corte en el plazo si el reintento tarda) y
   que ni la respuesta ni el log tengan el host ni el error de Prisma, en las dos rutas.
 
+### Modelos candidatos (17-11-2026)
+
+Etapa 1 del selector de modelo de chat para el superusuario. `gpt-4o-mini` está deprecado: OpenAI lo
+apaga el **14-01-2027** (aviso del 14-10-2026, reemplazo recomendado `gpt-6-luna`; página de
+deprecaciones de OpenAI, leída el 17-11-2026). No se cambió código de producción: se agregaron
+`scripts/sondear-modelos.js` y `scripts/lib/modelos-candidatos.json` (precios con fecha y fuente).
+
+**Ids verificados** (17-11-2026): `gpt-4o-mini` y `gpt-6-luna` en el listado de modelos de la API de
+OpenAI; `claude-haiku-5-5` en la documentación de Anthropic (es un snapshot fijo, sin fecha en el id);
+`gemini-3.1-flash-lite` (estable) en la de Google (`gemini-3.1-flash-lite-preview` ya está apagado).
+En el entorno solo está `OPENAI_API_KEY`: **Claude Haiku 5.5 y Gemini 3.1 Flash-Lite no se sondearon**.
+El script ya los soporta (por HTTP, según la documentación), pero ese código no se probó en vivo:
+hay que correrlo con `--modelo claude-haiku-5-5` o `--modelo gemini-3.1-flash-lite` cuando haya clave.
+
+#### Llamadas a OpenAI hoy (`core/ai/openai.adapter.js`)
+
+| Llamada | Modelo | Parámetros | Timeout y reintentos |
+|---|---|---|---|
+| Chat sin streaming (`generarRespuesta`) | `OPENAI_MODELO_CHAT` (`gpt-4o-mini`) | `temperature` 0,3 (`OPENAI_TEMPERATURA`), `max_completion_tokens` 1500, `response_format` `json_schema` estricto (`ESQUEMA_SALIDA`); falla si `finish_reason` no es `stop` | 8 s por intento, 1 reintento (`OPENAI_TIMEOUT_CHAT_MS`, `OPENAI_REINTENTOS_CHAT`); `retry-after` recortado a 2 s |
+| Chat con streaming (`generarRespuestaStream`) | el mismo | los mismos, `stream: true` y `ESQUEMA_SALIDA_STREAM` (`respuesta` al final); falla con `delta.refusal`, sin `stop` o con 10 s sin pedazos | los mismos; el timeout del SDK cubre solo hasta las cabeceras |
+| Corrección de tipeo (`corregirTexto`) | el mismo | `temperature` 0, `max_completion_tokens` mitad del texto + 20, sin esquema; falla con `refusal` o sin `stop` | 3 s (`TIPEO_TIMEOUT_MS`), sin reintentos |
+| Embeddings (`generarEmbedding(s)`) | `text-embedding-3-small`, 1536 dimensiones, fijo en el código | — | 4 s, 1 reintento (lote: 20 s) |
+
+Todo pasa por el puerto `ProveedorIA` (`core/ai/proveedor.js`), y el plazo de 18 s y la desconexión
+llegan como `signal`. Una falla se envuelve en `ErrorProveedorIA` y el chat la muestra como 503;
+`esSinCredito` (`core/ai/errores.js`) reconoce `insufficient_quota` y `credit_balance_exhausted` de OpenAI.
+
+**Lo que tiene que traducir un adaptador por proveedor:**
+
+| Aspecto | OpenAI (Chat Completions) | Anthropic (Messages) | Google (generateContent) |
+|---|---|---|---|
+| Instrucción y turnos | mensaje `system`; `user`/`assistant` | campo `system`; `user`/`assistant`, el último tiene que ser `user` (sin prefill) | `systemInstruction`; `user`/`model` |
+| Esquema estricto | `response_format: {type: "json_schema", json_schema: {name, strict, schema}}` | `output_config.format: {type: "json_schema", schema}`; `additionalProperties: false` obligatorio; los tipos unión (`["integer","null"]`) cuentan para un límite de 16 | `generationConfig.responseFormat.text: {mimeType: "APPLICATION_JSON", schema}` según la doc de REST; los SDK usan `responseMimeType`/`responseJsonSchema` |
+| Orden de las claves | el del esquema (medido) | el del esquema, con las `required` primero (las nuestras son todas `required`) | el del esquema |
+| Stream | SSE con `choices[0].delta.content`; uso con `stream_options.include_usage` | eventos `content_block_delta` (`text_delta`), `message_delta` (`stop_reason` y uso), `event: error` a mitad del stream | `streamGenerateContent?alt=sse`, `candidates[0].content.parts[].text` |
+| Tope de salida | `max_completion_tokens` (incluye razonamiento) | `max_tokens`, obligatorio (incluye el pensamiento) | `maxOutputTokens` |
+| Temperatura | 0,3; en `gpt-6-luna` solo con `reasoning_effort: "none"` | no se manda (la doc de Haiku 5.5 pide omitir `temperature`, `top_p` y `top_k`) | `temperature` (sin probar) |
+| Razonamiento | `reasoning_effort` (`gpt-4o-mini` lo rechaza con 400) | pensamiento adaptativo activo con `effort` medium: `thinking: {type: "disabled"}` y `output_config.effort: "low"` | `thinkingConfig.thinkingLevel` (`minimal` por defecto en Flash-Lite, no se apaga del todo; se cobra como salida) |
+| Fin correcto / cortado | `finish_reason` `stop` / `length` | `stop_reason` `end_turn` / `max_tokens` | `finishReason` `STOP` / `MAX_TOKENS` |
+| Refusal | `message.refusal`, `delta.refusal` | `stop_reason: "refusal"` con 200: la salida puede no respetar el esquema y se cobra | `finishReason: "SAFETY"` (u otro bloqueo) o `promptFeedback.blockReason` |
+| Sin crédito | 429 `insufficient_quota` | 402 `billing_error`; 400 si se llega a un límite de gasto propio; 429 sin `retry-after` si se llega al tope del tier | 402 `RESOURCE_EXHAUSTED` (prepago agotado); 400 `FAILED_PRECONDITION` (facturación) |
+| Sobrecarga y timeout | 5xx; timeout del SDK (`APIConnectionTimeoutError`) | 529 `overloaded_error`; `timeout_error` (504, o 500) | 503 `UNAVAILABLE`; 504 `DEADLINE_EXCEEDED`; 429 `RESOURCE_EXHAUSTED` por límites |
+| Tokens usados | `usage.prompt_tokens`, `prompt_tokens_details.cached_tokens`, `completion_tokens`, `completion_tokens_details.reasoning_tokens` | `usage.input_tokens` + `cache_read_input_tokens` + `cache_creation_input_tokens`, `output_tokens` | `usageMetadata.promptTokenCount`, `cachedContentTokenCount`, `candidatesTokenCount`, `thoughtsTokenCount` |
+| Caché del prompt | automático (prefijo fijo) | explícito con `cache_control` (mínimo 512 tokens en Haiku 5.5) | implícito |
+
+Un timeout propio (el `signal` del plazo) se ve igual en las tres: el `fetch` se aborta. Medido en
+OpenAI con 5 ms: `Error: Request was aborted.` (`APIUserAbortError` del SDK). Una clave inválida en
+OpenAI da 401 `invalid_api_key`.
+
+**Embeddings:** quedan en OpenAI con cualquier modelo de chat (el modelo de embeddings no se
+cambia). El puerto `ProveedorIA` junta embeddings y chat en un solo objeto: el selector tiene que
+separar el proveedor del chat (y de la corrección de tipeo) del de los embeddings.
+`text-embedding-3-small` **no tiene fecha de retiro**: en la página de deprecaciones de OpenAI
+(leída el 17-11-2026) solo aparece como reemplazo de modelos ya retirados.
+
+#### Resultados (`sondear-modelos.js`, 17-11-2026, base real, solo OpenAI)
+
+5 preguntas de `eval-chat` (respuesta: "certificado de buena conducta", "cómo renuevo el pasaporte";
+aclaración: "necesito un certificado", "cómo saco la licencia de pesca"; conversación: "¿qué podés
+hacer?"), 5 corridas por pregunta y ruta, prompts reales de unos 5170 tokens de entrada. Medianas.
+
+| Modelo y parámetros | Ruta | Esquema ok | Fallan validación | Tipo esperado | Tuteo | Primer texto | Total | Salida (tokens) | Razonamiento | USD / 1000 con caché | USD / 1000 sin caché |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `gpt-4o-mini`, temperature 0,3 | normal | 25/25 | 0 | 25/25 | 0 | 1646 ms | 1646 ms | 98 | — | 0,50 | 0,84 |
+| | stream | 25/25 | 0 | 25/25 | 1 | 907 ms | 1640 ms | 100 | — | 0,48 | 0,84 |
+| `gpt-6-luna`, reasoning_effort none, temperature 0,3 | normal | 25/25 | 0 | 25/25 | 0 | 1971 ms | 1971 ms | 75 | 0 | 0,22 | 0,55 a 0,68 |
+| | stream | 25/25 | 0 | 24/25 | 0 | 1315 ms | 1629 ms | 66 | 0 | 0,22 | 0,55 a 0,68 |
+| `gpt-6-luna`, reasoning_effort low (1 corrida) | normal | 5/5 | 0 | 5/5 | 0 | 2842 ms | 2842 ms | 129 | 0 | 0,71 (sin caché) | |
+| | stream | 5/5 | 0 | 5/5 | 0 | 1415 ms | 2054 ms | 112 | 29 | 0,71 (sin caché) | |
+| `gpt-6-luna`, reasoning_effort por defecto (medium, 1 corrida) | normal | 5/5 | 0 | 5/5 | 0 | 4151 ms | 4151 ms | 262 | 198 | 0,78 (sin caché) | |
+| | stream | 5/5 | 0 | 5/5 | 0 | 4450 ms | 4718 ms | 298 | 133 | 0,77 (sin caché) | |
+| `claude-haiku-5-5` | — | sin clave, no se sondeó | | | | | | | | | |
+| `gemini-3.1-flash-lite` | — | sin clave, no se sondeó | | | | | | | | | |
+
+- **Stream:** en los dos modelos el JSON llega en el orden del esquema (50/50) y el lector
+  incremental del chat lo lee entero (50/50). `gpt-4o-mini` manda el texto en unos 71 pedazos y
+  `gpt-6-luna` en unos 29 (más grandes): con `gpt-6-luna` el primer texto llega unos 400 ms más
+  tarde (primer token 1057 ms contra 566 ms), y el total queda igual.
+- **Parámetros:** `gpt-4o-mini` rechaza `reasoning_effort` (400 "Unrecognized request argument").
+  `gpt-6-luna` rechaza `temperature: 0.3` si no se baja el razonamiento (400 "Only the default (1)
+  value is supported") y lo acepta con `reasoning_effort: "none"`. Por defecto razona (`medium`):
+  sobre los prompts reales suma 130 a 200 tokens de razonamiento y lleva la respuesta a 4,2 a 4,7 s.
+  Hay que mandar `reasoning_effort: "none"`. El tope con `max_completion_tokens` funciona en los dos
+  (`finish_reason: "length"`).
+- **Calidad:** ninguna salida falló el esquema ni dio un `tramiteId` u `opciones` fuera del
+  contexto. `gpt-4o-mini` tuteó una vez ("necesitas", que el servidor corrige); `gpt-6-luna` no tuteó.
+  La corrida de `gpt-6-luna` fuera del tipo esperado fue "cómo renuevo el pasaporte" respondida con
+  aclaración entre los dos pasaportes del contexto (el común y el express, #143 y #142), una decisión válida para el chat.
+  Es calidad básica: falta `eval-chat` completo con cada modelo antes de cambiar.
+- **Costo:** la entrada es el 98 % de los tokens y casi toda sale del caché de OpenAI en llamadas
+  seguidas (unos 4750 de 5170 tokens). `gpt-6-luna` cobra la entrada cacheada a 0,01 (`gpt-4o-mini`,
+  0,075): con caché cuesta menos de la mitad. Sin caché, la tabla usa 0,125 por la entrada de
+  `gpt-6-luna` (lo que cobra la escritura del caché, cota superior; a precio de lista, 0,10, da 0,55).
+  Al cambiar `reasoning_effort` se perdió el caché (0 tokens cacheados en esas corridas).
+- **Gasto real del sondeo:** 0,0503 USD (0,0354 de la corrida completa, 0,0071 y 0,0078 de las de
+  `low` y `medium`), más los embeddings de la búsqueda. Estimación previa de la corrida completa:
+  0,1175 USD con tope de 1.
+
+#### Limitaciones por modelo
+
+- **gpt-4o-mini:** se apaga el 14-01-2027. Sin razonamiento. Es el que usa hoy el chat.
+- **gpt-6-luna:** modelo de razonamiento; exige `reasoning_effort: "none"` para la latencia de
+  `gpt-4o-mini` y para aceptar `temperature` 0,3. Primer texto del stream unos 400 ms más tarde. La
+  escritura del caché se cobra (0,125) por encima de la entrada (0,10).
+- **claude-haiku-5-5 (sin sondear):** sin `temperature`; pensamiento adaptativo activo por defecto
+  (hay que mandar `thinking: {type: "disabled"}` o bajar `effort`); `max_tokens` obligatorio; caché
+  del prompt solo con `cache_control` explícito; la refusal llega con 200 y sin respetar el esquema;
+  precios más altos en prompts de más de 100.000 tokens (el nuestro tiene unos 5000); el tokenizer
+  cuenta un 30 % más de tokens que Haiku 4.5. Retiro no antes del 07-10-2027.
+- **gemini-3.1-flash-lite (sin sondear):** el pensamiento no se apaga del todo (`minimal`) y se cobra
+  como salida; la salida es la más cara de los cuatro (1,50); Google marca `generateContent` como API
+  heredada frente a la Interactions API, y el nombre de los campos de salida estructurada cambió
+  entre la documentación de REST y los SDK.
+
+#### Librería por proveedor (recomendación)
+
+- **OpenAI:** el SDK oficial (`openai`), el que ya se usa: errores tipados, reintentos con
+  `retry-after` (que ya recortamos con un `fetch` propio) y streaming.
+- **Anthropic:** el SDK oficial (`@anthropic-ai/sdk`, sería una dependencia nueva): parsea los
+  eventos SSE, incluido el `event: error` a mitad del stream, da errores tipados con el `type`
+  (`billing_error`, `overloaded_error`) para mapearlos al 503 y a `CorridaSinCredito`, y reintenta
+  con `retry-after`. Con HTTP directo (como en el script) todo eso queda de nuestro lado.
+- **Google:** el SDK oficial (`@google/genai`, también nueva): la superficie de REST se está
+  moviendo (`generateContent` heredada, nombres de campos de salida estructurada que cambian), y el
+  SDK absorbe esos cambios. Antes de elegir entre `generateContent` y la Interactions API hay que
+  sondearlo con clave.
+
+**Recomendación:** habilitar `gpt-6-luna` (con `reasoning_effort: "none"` y temperature 0,3) como
+reemplazo de `gpt-4o-mini` antes del 14-01-2027, después de un `eval-chat` completo y
+`eval-seguridad` con ese modelo. Mantener `gpt-4o-mini` en la lista hasta esa fecha para comparar.
+Claude Haiku 5.5 y Gemini 3.1 Flash-Lite, recién después de sondearlos con sus claves.
+
 ### Partida de nacimiento sin migración: bono por frase y un grupo más (17-11-2026)
 
 Se probaron dos cambios en la búsqueda, sin tocar la base, para que #273 "Solicitud Partida de
