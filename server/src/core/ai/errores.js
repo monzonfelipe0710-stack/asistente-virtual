@@ -1,14 +1,16 @@
 // Falla del proveedor de IA (o una respuesta que no se puede usar). `causa` va al log: no lleva
 // datos de la persona ni el mensaje del proveedor. `tipo`: transitorio, cuota, timeout, contenido,
-// solicitud, configuracion u otro; solo los tres primeros habilitan el modelo de respaldo.
+// solicitud, configuracion u otro. Habilitan el modelo de respaldo los tres primeros y una clave
+// rechazada (401/403, `claveRechazada`), que es de configuración.
 export class ErrorProveedorIA extends Error {
-  constructor(causa, { operacion, original, tipo = 'otro', sinCredito = false } = {}) {
+  constructor(causa, { operacion, original, tipo = 'otro', sinCredito = false, claveRechazada = false } = {}) {
     super(`Falla del proveedor de IA: ${causa}`, original ? { cause: original } : undefined);
     this.name = 'ErrorProveedorIA';
     this.causa = causa;
     this.operacion = operacion;
     this.tipo = tipo;
     this.sinCredito = sinCredito;
+    this.claveRechazada = claveRechazada;
   }
 }
 

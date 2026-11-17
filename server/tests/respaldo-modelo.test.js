@@ -54,6 +54,7 @@ const CONTESTA = {
   largo: (rs, body) => json(rs, 200, completion(body, { contenido: '{"tipo": "resp', finish: 'length' })),
   invalida: (rs) => json(rs, 400, { error: { message: 'Unsupported value', type: 'invalid_request_error' } }),
   clave: (rs) => json(rs, 401, { error: { message: `Incorrect API key provided: ${CLAVE}.`, type: 'invalid_request_error', code: 'invalid_api_key' } }),
+  prohibido: (rs) => json(rs, 403, { error: { message: `Project does not have access, key ${CLAVE}`, type: 'invalid_request_error', code: 'model_not_found' } }),
   cortaDespuesDeTexto: (rs, body) => {
     rs.writeHead(200, { 'Content-Type': 'text/event-stream' });
     rs.write(pedazo(body, { content: jsonDeSalida(META, 'Hola, empiezo a contestar y') }));
@@ -182,7 +183,28 @@ describe('respaldo con el modelo por defecto', () => {
     });
   }
 
-  for (const [caso, nombre, tipo] of [['refusal', 'negativa', 'contenido'], ['salida cortada por el tope', 'largo', 'contenido'], ['pedido inválido (400)', 'invalida', 'solicitud'], ['clave inválida (401)', 'clave', 'configuracion']]) {
+  for (const [caso, nombre] of [['clave rechazada (401)', 'clave'], ['clave sin permiso (403)', 'prohibido']]) {
+    it(`${caso}: responde el modelo por defecto y avisa en el log que la clave del activo fue rechazada`, async () => {
+      comportamiento['gpt-6-luna'] = { chat: nombre, stream: nombre };
+      const respondio = [];
+      assert.deepEqual(JSON.parse(await ia.generarRespuesta(pedido({ modelo: LUNA, alResponder: (m) => respondio.push(m.id) }))), SALIDA);
+      assert.equal(JSON.parse(await juntar(ia.generarRespuestaStream(pedido({ modelo: LUNA, alResponder: (m) => respondio.push(m.id) })))).respuesta, 'Hola.');
+      assert.deepEqual(respondio, ['gpt-4o-mini', 'gpt-4o-mini']);
+      assert.equal(deLuna().length, 2, 'sin reintentar el activo');
+      const avisos = logs.filter((l) => l.includes('ATENCIÓN, la clave de openai del modelo activo gpt-6-luna fue rechazada'));
+      assert.equal(avisos.length, 2, logs.join(' | '));
+      for (const l of logs) assert.ok(!l.includes(CLAVE), l);
+    });
+  }
+
+  it('clave rechazada del modelo por defecto (sin respaldo): falla como siempre, de configuración', async () => {
+    comportamiento['gpt-4o-mini'] = { chat: 'clave' };
+    await assert.rejects(ia.generarRespuesta(pedido({ modelo: MINI })), (err) => err instanceof ErrorProveedorIA && err.tipo === 'configuracion' && err.claveRechazada);
+    assert.equal(deMini().length, 1, 'un 401 no se reintenta');
+    assert.equal(logs.some((l) => l.includes('fue rechazada')), false);
+  });
+
+  for (const [caso, nombre, tipo] of [['refusal', 'negativa', 'contenido'], ['salida cortada por el tope', 'largo', 'contenido'], ['pedido inválido (400)', 'invalida', 'solicitud']]) {
     it(`${caso}: no usa el respaldo`, async () => {
       comportamiento['gpt-6-luna'] = { chat: nombre };
       await assert.rejects(ia.generarRespuesta(pedido({ modelo: LUNA })), (err) => err instanceof ErrorProveedorIA && err.tipo === tipo);

@@ -35,7 +35,8 @@ const clasificar = (err) => {
   if (!(err instanceof APIError)) return { tipo: 'otro' };
   if ([err.code, err.type, err.error?.code, err.error?.type].some((c) => SIN_CREDITO.has(c))) return { tipo: 'cuota', sinCredito: true };
   if (err.status === 429 || err.status === 408 || err.status === 409 || err.status >= 500) return { tipo: 'transitorio' };
-  if (err.status === 401 || err.status === 403 || err.status === 404) return { tipo: 'configuracion' };
+  if (err.status === 401 || err.status === 403) return { tipo: 'configuracion', claveRechazada: true };
+  if (err.status === 404) return { tipo: 'configuracion' };
   return { tipo: 'solicitud' };
 };
 

@@ -25,7 +25,8 @@ const clasificar = (err) => {
   if (tipo === 'timeout_error' || err.status === 504) return { tipo: 'timeout' };
   if (['overloaded_error', 'api_error', 'rate_limit_error'].includes(tipo)) return { tipo: 'transitorio' };
   if ([408, 409, 429, 529].includes(err.status) || err.status >= 500) return { tipo: 'transitorio' };
-  if ([401, 403, 404].includes(err.status)) return { tipo: 'configuracion' };
+  if ([401, 403].includes(err.status)) return { tipo: 'configuracion', claveRechazada: true };
+  if (err.status === 404) return { tipo: 'configuracion' };
   return { tipo: 'solicitud' };
 };
 

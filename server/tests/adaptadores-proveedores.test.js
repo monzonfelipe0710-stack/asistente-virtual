@@ -267,6 +267,32 @@ describe('Google', () => {
 });
 
 describe('respaldo entre proveedores', () => {
+  it('clave de Anthropic rechazada (401): responde el por defecto y queda el aviso en el log', async () => {
+    contestaAnthropic = () => {
+      throw new APIError(401, { type: 'error', error: { type: 'authentication_error', message: `invalid x-api-key ${CLAVE_ANTHROPIC}` } }, `401 ${CLAVE_ANTHROPIC}`);
+    };
+    const errores = [];
+    mock.method(console, 'warn', () => {});
+    mock.method(console, 'error', (m) => errores.push(String(m)));
+    try {
+      const respondio = [];
+      await ia.generarRespuesta(pedido({ ...CLAUDE, respaldo: GEMINI }, { alResponder: (m) => respondio.push(m.id) }));
+      assert.deepEqual(respondio, ['gemini-3.1-flash-lite']);
+      assert.equal(errores.length, 1);
+      assert.match(errores[0], /la clave de anthropic del modelo activo claude-haiku-5-5 fue rechazada \(AuthenticationError 401|la clave de anthropic del modelo activo claude-haiku-5-5 fue rechazada/);
+      assert.ok(!errores[0].includes(CLAVE_ANTHROPIC));
+    } finally {
+      mock.restoreAll();
+    }
+  });
+
+  it('clave de Google sin permiso (403) del modelo por defecto: falla sin respaldo', async () => {
+    contestaGoogle = () => {
+      throw new ApiError({ status: 403, message: JSON.stringify({ error: { code: 403, message: CLAVE_GEMINI, status: 'PERMISSION_DENIED' } }) });
+    };
+    await assert.rejects(ia.generarRespuesta(pedido(GEMINI)), (err) => err.tipo === 'configuracion' && err.claveRechazada && !err.causa.includes(CLAVE_GEMINI));
+  });
+
   it('Claude sobrecargado: responde el modelo por defecto aunque sea de otro proveedor', async () => {
     contestaAnthropic = () => {
       throw new APIError(529, { type: 'error', error: { type: 'overloaded_error', message: 'x' } });

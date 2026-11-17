@@ -30,9 +30,15 @@ const registrarUso = (uso) => {
   if (archivo && uso) appendFileSync(archivo, `${JSON.stringify(uso)}\n`);
 };
 
+// Una clave rechazada no se arregla sola: el aviso es un error, para que se vea en el log.
+const avisarClaveRechazada = (modelo, err) =>
+  console.error(`Chat: ATENCIÓN, la clave de ${modelo.proveedor} del modelo activo ${modelo.id} fue rechazada (${err.causa}): revisá la clave o elegí otro modelo.`);
+
 const respaldoPara = (modelo, err, signal, operacion) => {
   const respaldo = modelo.respaldo;
-  if (!respaldo || !(err instanceof ErrorProveedorIA) || !TIPOS_CON_RESPALDO.has(err.tipo) || signal?.aborted) return null;
+  const clave = err instanceof ErrorProveedorIA && err.claveRechazada;
+  if (!respaldo || !(err instanceof ErrorProveedorIA) || !(TIPOS_CON_RESPALDO.has(err.tipo) || clave) || signal?.aborted) return null;
+  if (clave) avisarClaveRechazada(modelo, err);
   const restante = msRestantes(signal);
   if (restante !== null && restante < MARGEN_RESPALDO_MS) {
     console.warn(`Chat: el modelo ${modelo.id} falló (${operacion}: ${err.causa}) y no queda plazo para el de respaldo (${restante} ms)`);

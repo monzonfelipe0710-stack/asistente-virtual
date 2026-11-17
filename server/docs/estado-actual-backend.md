@@ -593,9 +593,12 @@ el contrato de los endpoints están en el README ("Modelo del chat" en "Cómo fu
   streaming, antes del primer texto. Con respaldo, el activo no reintenta (el reintento es el modelo
   por defecto): un 500 de `gpt-6-luna` pasa a `gpt-4o-mini` en vez de esperar el backoff del SDK.
   Después de un respaldo, el resto de la consulta (otra llamada, la caché, el registro) sigue con el
-  por defecto. La corrección de tipeo no usa respaldo (su falla ya no corta la consulta). Una clave
-  rechazada (401/403) no dispara el respaldo, por el brief; se puede sumar si se prefiere que el chat
-  siga con el por defecto mientras se arregla la clave.
+  por defecto. La corrección de tipeo no usa respaldo (su falla ya no corta la consulta).
+- **Clave rechazada** (401/403 del proveedor del activo): es de configuración (`claveRechazada`), no
+  de contenido. Si el activo no es el por defecto, responde el respaldo y queda un `console.error`
+  con `ATENCIÓN, la clave de <proveedor> del modelo activo <id> fue rechazada`, sin la clave ni el
+  mensaje del proveedor. Si el activo es el por defecto, 503 como siempre (un 401 no se reintenta).
+  Un 404 (modelo inexistente) sigue sin respaldo.
 - **La ruta sin streaming detecta la refusal:** antes el `content` nulo terminaba en un 500; ahora es
   un `ErrorProveedorIA` de tipo `contenido` y sale el 503.
 - **Caché:** la clave de cada respuesta lleva el id del modelo. Una consulta servida de la caché se

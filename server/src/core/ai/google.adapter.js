@@ -23,7 +23,8 @@ const clasificar = (err) => {
   if (err.status === 402 || estado === 'FAILED_PRECONDITION') return { tipo: 'cuota', sinCredito: true };
   if (err.status === 504 || estado === 'DEADLINE_EXCEEDED') return { tipo: 'timeout' };
   if (REINTENTABLES.includes(err.status)) return { tipo: 'transitorio' };
-  if ([401, 403, 404].includes(err.status)) return { tipo: 'configuracion' };
+  if ([401, 403].includes(err.status)) return { tipo: 'configuracion', claveRechazada: true };
+  if (err.status === 404) return { tipo: 'configuracion' };
   return { tipo: 'solicitud' };
 };
 
