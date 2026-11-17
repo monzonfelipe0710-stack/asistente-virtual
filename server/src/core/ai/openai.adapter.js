@@ -1,12 +1,10 @@
 import { APIError, APIConnectionError, APIConnectionTimeoutError } from 'openai';
 import { openai } from '../../config/openai.js';
 import { TIEMPOS_IA } from '../../config/ia.js';
-import { combinarSenales } from '../../utils/plazo.js';
 import { ErrorProveedorIA } from './errores.js';
+import { crearInactividad, maxTokensDe, maxTokensDeTipeo, negativa, tiemposDe } from './comun.js';
 
-// Red de seguridad, no un recorte: la respuesta más larga medida queda muy por debajo. Una salida
-// cortada por el tope (finish_reason "length") es una falla: no se cachea ni se registra.
-export const MAX_TOKENS_RESPUESTA = 1500;
+export { MAX_TOKENS_RESPUESTA } from './comun.js';
 
 // El modelo de embeddings queda fijo: cambiarlo invalida los vectores ya guardados
 // (otro espacio vectorial) y rompe la búsqueda sin dar error. Se cambia solo con una
@@ -51,8 +49,6 @@ const comoFalla = (err, signal, operacion) => {
 const incompleta = (finishReason, operacion) =>
   new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion, tipo: finishReason ? 'contenido' : 'transitorio' });
 
-const negativa = (operacion) => new ErrorProveedorIA('el modelo se negó a responder (refusal)', { operacion, tipo: 'contenido' });
-
 const usoDe = (modelo, operacion, u) =>
   u && {
     modelo,
@@ -69,17 +65,13 @@ const cuerpoDe = (modelo, { temperatura, maxTokens } = {}) => {
   const p = modelo.parametros ?? {};
   return {
     model: modelo.modeloApi,
-    max_completion_tokens: maxTokens ?? p.maxTokens ?? MAX_TOKENS_RESPUESTA,
+    max_completion_tokens: maxTokens ?? maxTokensDe(modelo),
     ...(p.temperature != null && { temperature: temperatura ?? p.temperature }),
     ...(p.reasoningEffort && { reasoning_effort: p.reasoningEffort }),
   };
 };
 
-const opcionesDe = (modelo, { signal, sinReintentos }) => ({
-  timeout: TIEMPOS_IA.chatDelEntorno.timeout ?? modelo.parametros?.timeoutMs ?? TIEMPOS_IA.chat.timeout,
-  maxRetries: sinReintentos ? 0 : TIEMPOS_IA.chatDelEntorno.maxRetries ?? modelo.parametros?.reintentos ?? TIEMPOS_IA.chat.maxRetries,
-  signal,
-});
+const opcionesDe = (modelo, { signal, sinReintentos }) => ({ ...tiemposDe(modelo, { sinReintentos }), signal });
 
 export const embeddingsOpenai = {
   async generarEmbedding(texto, { signal, alUsar } = {}) {
@@ -142,7 +134,7 @@ export const chatOpenai = {
     try {
       completion = await openai.chat.completions.create(
         {
-          ...cuerpoDe(modelo, { temperatura: 0, maxTokens: Math.min(modelo.parametros?.maxTokens ?? MAX_TOKENS_RESPUESTA, Math.ceil(texto.length / 2) + 20) }),
+          ...cuerpoDe(modelo, { temperatura: 0, maxTokens: maxTokensDeTipeo(modelo, texto) }),
           messages: [{ role: 'system', content: instruccionSistema }, { role: 'user', content: texto }],
         },
         { timeout, maxRetries: 0, signal },
@@ -161,16 +153,7 @@ export const chatOpenai = {
   // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
   // Con `esquema`, una negativa del modelo (refusal) también es una falla.
   async *generarRespuestaStream(modelo, { instruccionSistema, turnos, esquema, signal, sinReintentos, alUsar }) {
-    const inactividad = new AbortController();
-    const senal = combinarSenales(signal, inactividad.signal);
-    let temporizador;
-    const rearmar = () => {
-      clearTimeout(temporizador);
-      temporizador = setTimeout(
-        () => inactividad.abort(new ErrorProveedorIA('stream inactivo', { operacion: 'chat_stream', tipo: 'timeout' })),
-        TIEMPOS_IA.inactividadStream,
-      );
-    };
+    const { senal, rearmar, limpiar } = crearInactividad(signal, 'chat_stream');
 
     let finishReason = null;
     let uso = null;
@@ -198,7 +181,7 @@ export const chatOpenai = {
     } catch (err) {
       throw comoFalla(err, senal, 'chat_stream');
     } finally {
-      clearTimeout(temporizador);
+      limpiar();
     }
 
     alUsar?.(usoDe(modelo.id, 'chat_stream', uso));

@@ -27,10 +27,12 @@
 //                                              ruta sin streaming
 //   --corridas N                               corridas por caso: 1 para ataques y legítimas y 3
 //                                              para D y E si no se indica
+//   --json <archivo>                           además, el resumen en ese archivo (lo usa evaluar-modelo.js)
 //
 // Como el eval del chat, llama al servicio directo (no pasa por el rate limit HTTP de 10/min).
 // Las consultas que registra se borran por id al terminar.
 import 'dotenv/config';
+import { writeFileSync } from 'node:fs';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { ia } from '../src/core/ai/index.js';
@@ -651,6 +653,43 @@ for (const grupo of ['D', 'E'].filter((g) => GRUPOS.has(g))) {
 
 const { count: borradas } = await prisma.consulta.deleteMany({ where: { id: { in: consultasCreadas } } });
 console.log(`\nConsultas de la evaluación borradas: ${borradas}`);
+
+const archivoJson = argumento('--json')[0];
+if (archivoJson) {
+  const okDe = (tipo) => {
+    const del = filas.filter((f) => f.tipo === tipo);
+    return { ok: del.filter((f) => f.estado === 'ok').length, total: del.length };
+  };
+  const llegan = (grupo) => envenenados.filter((x) => x.e.grupo === grupo && x.estado.startsWith('OBEDECE (llega')).length;
+  const resumenEnvenenados = Object.fromEntries(['D', 'E'].filter((g) => GRUPOS.has(g)).map((g) => {
+    const del = envenenados.filter((x) => x.e.grupo === g);
+    return [g, {
+      total: del.length,
+      obedece: del.filter((x) => x.estado.startsWith('OBEDECE')).length,
+      llega: llegan(g),
+      noResponde: del.filter((x) => x.estado.startsWith('NO RESPONDE')).length,
+      errores: del.filter((x) => x.estado.startsWith('ERROR')).length,
+    }];
+  }));
+  const pentestFiltrados = filas.filter((f) => f.tipo.startsWith('pentest') && f.estado === 'FILTRADO').length;
+  writeFileSync(archivoJson, JSON.stringify({
+    fecha: new Date().toISOString(),
+    stream: STREAM,
+    grupos: [...GRUPOS],
+    ataques: {
+      total: filas.filter((f) => f.tipo === 'ataque').length,
+      bloqueados: contar('ataque', 'bloqueado'),
+      neutralizados: contar('ataque', 'neutralizado'),
+      filtrados: filtrados.length,
+    },
+    legitimas: Object.fromEntries(['A', 'B', 'C'].filter((g) => GRUPOS.has(g)).map((g) => [g, okDe(`legítima ${g}`)])),
+    falsosPositivos: falsosPositivos.length,
+    pentest: Object.fromEntries(['a', 'b', 'c', 'd', 'e'].map((x) => [x, okDe(`pentest F${x}`)]).filter(([, v]) => v.total > 0)),
+    envenenados: resumenEnvenenados,
+    errores: filas.filter((f) => f.estado === 'ERROR').length + envenenados.filter((x) => x.estado.startsWith('ERROR')).length,
+    llegaALaPersona: filtrados.length + pentestFiltrados + Object.values(resumenEnvenenados).reduce((n, g) => n + g.llega, 0),
+  }, null, 1));
+}
 
 if (filtrados.length + fallasLegitimas + fallasEnvenenados + fallasPentest > 0) process.exitCode = 1;
 await prisma.$disconnect();

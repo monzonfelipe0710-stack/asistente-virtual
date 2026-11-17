@@ -15,6 +15,8 @@
 //                                         solo los casos de la Municipalidad de la Ciudad de Formosa
 //                                         (base-temporal.js --municipal). También solo en la temporal.
 //
+//   node scripts/eval-chat.js --json <archivo>
+//                                         el resultado en ese archivo (por defecto, en eval-resultados/)
 //   node scripts/eval-chat.js --stream    las respuestas por el streaming; además, la misma salida
 //                                         del modelo se pasa por la ruta sin streaming y se compara
 //                                         el texto final (tiene que ser idéntico)
@@ -776,7 +778,7 @@ console.log(`Consultas de la evaluación borradas: ${borradas}`);
 
 const CARPETA = fileURLToPath(new URL('../eval-resultados/', import.meta.url));
 mkdirSync(CARPETA, { recursive: true });
-const archivo = join(CARPETA, `eval-chat-${inicio.toISOString().replace(/[:.]/g, '-')}${MODO ? `-${MODO}` : ''}.json`);
+const archivo = argumento('--json')[0] ?? join(CARPETA, `eval-chat-${inicio.toISOString().replace(/[:.]/g, '-')}${MODO ? `-${MODO}` : ''}.json`);
 writeFileSync(archivo, JSON.stringify({
   fecha: inicio.toISOString(),
   terminada: new Date().toISOString(),

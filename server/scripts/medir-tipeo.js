@@ -3,12 +3,12 @@
 // candidatos de la búsqueda y cuánto tarda. Hace solo la búsqueda y la corrección, como el chat antes
 // de llamar al modelo de la respuesta; no registra nada. Llama a OpenAI (embeddings y la corrección).
 //
-//   node scripts/medir-tipeo.js [--corridas 1] [--pregunta "..."]...
+//   node scripts/medir-tipeo.js [--corridas 1] [--pregunta "..."]... [--json <archivo>]
 //
 // Las preguntas se leen de los scripts de los evals; con --pregunta, solo esas. Las de eval-chat
 // marcadas `tipeo: true` cuentan como mal escritas (salvo los controles, que van aparte).
 import 'dotenv/config';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import prisma from '../src/config/prisma.js';
 import { buscarTramites } from '../src/services/busqueda.service.js';
@@ -110,6 +110,18 @@ try {
   }
   const bienEscritasQueCambian = filas.filter((f) => f.tipo === 'bien escrita' && f.cambia);
   if (bienEscritasQueCambian.length > 0) process.exitCode = 1;
+  const archivoJson = argumento('--json')[0];
+  if (archivoJson) {
+    writeFileSync(archivoJson, JSON.stringify({
+      fecha: new Date().toISOString(),
+      umbral: UMBRAL_REESCRITURA,
+      corridas: CORRIDAS,
+      resumen,
+      bienEscritasQueCambian: bienEscritasQueCambian.length,
+      cambianEn: bienEscritasQueCambian.map((f) => f.turnos.join(' → ')),
+      correccionMs: disparadas.length > 0 ? { mediana: Math.round(mediana(disparadas.map((f) => f.ms))), maximo: Math.round(Math.max(...disparadas.map((f) => f.ms))) } : null,
+    }, null, 1));
+  }
 } catch (err) {
   if (!esSinCredito(err)) throw err;
   console.error(`\n${MENSAJE_SIN_CREDITO}`);

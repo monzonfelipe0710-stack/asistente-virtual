@@ -7,8 +7,11 @@ import { resolverModeloChat } from '../../services/modelo-chat.service.js';
 
 export const MARGEN_RESPALDO_MS = enteroDeEntorno('CHAT_RESPALDO_MARGEN_MS', 4000, 0);
 
+// Los SDK de Anthropic y Google se cargan recién cuando un modelo de ese proveedor responde.
 const ADAPTADORES = {
   openai: async () => chatOpenai,
+  anthropic: async () => (await import('./anthropic.adapter.js')).chatAnthropic,
+  google: async () => (await import('./google.adapter.js')).chatGoogle,
 };
 
 const adaptadorDe = async (modelo) => {
