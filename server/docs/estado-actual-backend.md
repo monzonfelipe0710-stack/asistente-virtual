@@ -427,6 +427,79 @@ de pasaporte no cambió (20 453 caracteres); el de habilitaciones pasó de 27 32
 chat contestaba la fila de 25 a 50 m² (la última que veía); ahora, 3 de 3 corridas dan 14 módulos,
 $70.514,64 (más de 300 hasta 500 m²), sin correcciones de la verificación de salida.
 
+### Latencia de demo: base en frío y en caliente (18-11-2026)
+
+Sin cambios de lógica del chat ni de la base. Mediciones desde una PC por Wi-Fi doméstico, server
+local, base en Neon sa-east-1 (plan Free), `gpt-4o-mini`.
+
+**Índices (EXPLAIN ANALYZE, solo lectura).** La base real tiene `tramites_embedding_idx` (HNSW,
+`vector_cosine_ops`) y `tramites_search_idx` (GIN sobre `search_vector`). El planificador no usa
+ninguno: con 347 filas (320 publicadas, 8 MB) hace Seq Scan en la búsqueda del chat y también en un
+`ORDER BY embedding <=> v LIMIT 20`. La consulta de `buscarTramites` tarda 3,2 a 3,4 ms en la base
+(planificación 0,6 ms) para pasaporte, buena conducta y habilitación comercial, lo mismo que con los
+índices desactivados a la fuerza; `cargarDetalle` usa los índices por `tramite_id` y tarda 3,4 ms.
+Además, la condición `distancia < umbral OR texto` no puede usar HNSW (solo sirve para
+`ORDER BY ... LIMIT`). No se creó ni cambió ningún índice: la búsqueda no es el cuello de botella.
+
+**De punta a punta** (`CHAT_LOG_LATENCIA=true`, ms del log del server; "frío" es la primera consulta
+después de 10 minutos sin ninguna actividad, "caliente" la mediana de las 3 siguientes, con
+preguntas distintas para no pegarle a la caché):
+
+| Etapa | Normal frío | Normal caliente | Stream frío | Stream caliente |
+|---|---|---|---|---|
+| `inicio` (versión del catálogo: primera consulta a la base) | 1709 | 46 | 1270 | 0 |
+| `busqueda` | 489 | 54 | 390 | 61 |
+| `embedding` (OpenAI) | 715 | 588 | 879 | 528 |
+| `detalle` | 162 | 57 | 123 | 102 |
+| `modelo` (OpenAI) | 3689 | 1405 | 2912 | 2033 |
+| `registro` | 128 | 47 | 107 | 50 |
+| **total** | **6892** | **2192** | **5681** | **3086** |
+| primer texto (stream) | | | 5322 | 2377 |
+
+El cliente midió entre 30 y 210 ms más que el total del server. `modelo` y `embedding` varían por
+OpenAI y por el tipo de salida (las aclaraciones son más cortas y no se registran), no por la base.
+
+**Comportamiento esperado.** En frío, la primera consulta paga unos **2,3 s de base** en la ruta
+normal y **1,7 s** en el stream (la suma de lo que `inicio`, `busqueda`, `detalle` y `registro` tardan
+de más): Neon reactiva el cómputo, que se suspende tras 5 minutos sin actividad en el plan Free y no
+se puede desactivar, y el pool de Prisma vuelve a abrir sus conexiones. Desde la segunda consulta las
+etapas de base vuelven a 50-100 ms cada una y el tiempo queda dominado por OpenAI (2 a 3,5 s en total).
+
+**`scripts/calentar.js`.** Para dejar corriendo durante la demo, con el server levantado:
+
+```
+node scripts/calentar.js [--cada 4] [--duracion 120] [--url http://localhost:3000]
+```
+
+Cada `--cada` minutos (default 4: tiene que ser menos que los 5 de la suspensión) hace un `SELECT 1`
+a la base del `.env`, un GET a `/api/health` y un GET a `/api/tramites/publicados` (público), e
+imprime una línea con los ms o la falla de cada uno. Corta solo a los `--duracion` minutos (default
+120) o con Ctrl+C. El GET a `/publicados` está porque el `SELECT 1` sale de otro proceso: mantiene
+despierta a Neon pero no las conexiones del pool del server. Medido, la primera consulta normal
+después de 10 minutos sin chat:
+
+| Con el script | `inicio` | `busqueda` | `detalle` | `registro` | Base de más |
+|---|---|---|---|---|---|
+| sin script | 1709 | 489 | 162 | 128 | ~2,3 s |
+| `--cada 4`, solo `SELECT 1` y `/api/health` | 483 | 307 | 172 | 94 | ~0,85 s |
+| `--cada 4`, con `/publicados` | 147 | 309 | 167 | 161 | ~0,6 s |
+| `--cada 1`, con `/publicados` | 195 | 859 | 214 | 109 | ~1,2 s |
+
+Con el script la base no se suspende y el salto grande de `inicio` desaparece, pero la primera
+consulta del chat igual tarda entre 0,6 y 1,2 s de más en las etapas de base. Pinguear cada minuto
+no lo mejoró, y los pings mismos tienen picos de 750-900 ms aunque pase 1 minuto (el #6 de esa
+corrida), así que lo que queda no es la suspensión; con una muestra por caso no se puede atribuir
+(conexiones nuevas del pool de Prisma, red). Queda `--cada 4` por defecto. Para la demo: dejar
+`calentar.js` corriendo y hacer una o dos consultas de prueba en el chat justo antes de empezar.
+
+**Consumo de Neon.** El plan Free da 100 CU-horas por mes por proyecto; un cómputo suspendido no
+consume, y al agotarlas el cómputo queda suspendido hasta el mes siguiente. Mientras el script
+corre la base no se suspende: consume el tamaño del cómputo por las horas despierta, más los 5
+minutos hasta la suspensión al cortar. Con el mínimo de 0,25 CU, la corrida por defecto (2 horas)
+son unas 0,5 CU-horas (el 0,5 % del mes); si el autoscaling subiera hasta el máximo de 2 CU del Free
+serían 4 CU-horas como tope (los pings no generan carga para escalar). El tamaño mínimo y máximo de
+este proyecto se ve en la consola de Neon (no se puede leer desde la base).
+
 ### Corrección de tipeo y "partida de nacimiento" (16-11-2026)
 
 **"partida de nacimiento" bien escrita (0/3 en las dos rutas): no es tipeo ni falta de datos.** El
