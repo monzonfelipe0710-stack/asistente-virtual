@@ -6,6 +6,7 @@ import * as SystemUI from "expo-system-ui";
 import { useEffect, type ReactNode } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { AreasSegurasDelMarco } from "@/compartido/ui/AreasSegurasDelMarco";
 import { AvisoNoDisponibleProvider } from "@/compartido/ui/AvisoNoDisponible";
 import { ToastProvider } from "@/compartido/ui/Toast";
 import { ArchivosDeFuentes, useColors, useColorScheme } from "@/compartido/constantes/theme";
@@ -39,11 +40,13 @@ function usePrepararApp() {
 function Proveedores({ children }: { children: ReactNode }) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <ToastProvider>
-          <AvisoNoDisponibleProvider>{children}</AvisoNoDisponibleProvider>
-        </ToastProvider>
-      </AuthProvider>
+      <AreasSegurasDelMarco>
+        <AuthProvider>
+          <ToastProvider>
+            <AvisoNoDisponibleProvider>{children}</AvisoNoDisponibleProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </AreasSegurasDelMarco>
     </GestureHandlerRootView>
   );
 }
