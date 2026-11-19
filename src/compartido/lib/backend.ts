@@ -1,12 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-const SIN_BACKEND = "Esta función todavía no está disponible. Probá de nuevo más adelante.";
-
-async function faltaBackend(): Promise<never> {
-  throw new Error(SIN_BACKEND);
-}
-
 const host = Constants.expoConfig?.hostUri?.split(":")[0] ?? "localhost";
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? `http://${host}:3000/api`;
 
@@ -166,19 +160,29 @@ export function cambiarPassword(passwordActual: string, passwordNueva: string) {
   });
 }
 
-export function enviarSolicitudDeAcceso(nombre: string, email: string, password: string) {
-  return faltaBackend() as Promise<{ mensaje: string }>;
+export type GeneroApi = "M" | "F" | "X";
+
+export interface RegistroCiudadanoDatos {
+  dni: string;
+  genero: GeneroApi;
+  email: string;
+  password: string;
+  nombre?: string;
+  apellido?: string;
+}
+
+export function registrarCiudadano(datos: RegistroCiudadanoDatos) {
+  return pedir<{ mensaje: string; usuario: UsuarioApi }>("/usuarios/registro-ciudadano", {
+    metodo: "POST",
+    cuerpo: datos,
+  });
 }
 
 export function pedirUsuarios() {
   return pedir<UsuarioApi[]>("/usuarios");
 }
 
-export function cambiarEstadoDeUsuario(
-  id: string,
-  accion: "aprobar" | "rechazar" | "suspender" | "reactivar"
-) {
-  if (accion === "aprobar" || accion === "rechazar") return faltaBackend() as Promise<{ mensaje: string }>;
+export function cambiarEstadoDeUsuario(id: string, accion: "suspender" | "reactivar") {
   return pedir<{ mensaje: string }>(`/usuarios/${id}/${accion}`, { metodo: "PATCH" });
 }
 

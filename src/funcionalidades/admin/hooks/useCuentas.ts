@@ -10,7 +10,7 @@ import {
   type EmpleadoDatos,
 } from "@/compartido/lib/backend";
 
-type AccionDeCuenta = "aprobar" | "rechazar" | "suspender" | "reactivar";
+type AccionDeCuenta = "suspender" | "reactivar";
 
 export function useCuentas() {
   const { userRole } = useAuth();

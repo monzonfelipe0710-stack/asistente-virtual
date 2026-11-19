@@ -11,12 +11,14 @@ import {
 import {
   alVencerSesion,
   cambiarPassword as cambiarPasswordApi,
-  enviarSolicitudDeAcceso,
   fijarToken,
   iniciarSesion,
   pedirMisConsultas,
+  registrarCiudadano,
   restablecerPassword,
   solicitarRecuperacion,
+  type GeneroApi,
+  type RegistroCiudadanoDatos,
   type UsuarioApi,
 } from "@/compartido/lib/backend";
 import { readJSON, writeJSON } from "@/compartido/lib/storage";
@@ -29,7 +31,10 @@ interface SesionGuardada {
 }
 
 interface RegisterInput {
-  name: string;
+  dni: string;
+  genero: GeneroApi | "";
+  nombre: string;
+  apellido: string;
   email: string;
   password: string;
 }
@@ -56,13 +61,33 @@ export function useAuth(): AuthValue {
   return ctx;
 }
 
+const EXPRESION_DNI = /^\d{7,8}$/;
+
 async function register(input: RegisterInput): Promise<string> {
-  const name = (input.name || "").trim();
+  const dni = (input.dni || "").trim();
   const email = normalizeEmail(input.email);
-  if (!name) throw new Error("Ingresá tu nombre.");
+  if (!EXPRESION_DNI.test(dni)) throw new Error("El DNI debe tener 7 u 8 dígitos.");
+  if (!input.genero) throw new Error("Elegí el género que figura en tu DNI.");
+
+  const datos: RegistroCiudadanoDatos = {
+    dni,
+    genero: input.genero,
+    email,
+    password: input.password,
+  };
+
+  if (input.genero === "X") {
+    const nombre = (input.nombre || "").trim();
+    const apellido = (input.apellido || "").trim();
+    if (!nombre) throw new Error("Ingresá tu nombre.");
+    if (!apellido) throw new Error("Ingresá tu apellido.");
+    datos.nombre = nombre;
+    datos.apellido = apellido;
+  }
+
   if (!isValidEmail(email)) throw new Error("Ingresá un correo electrónico válido.");
   assertValidPassword(input.password);
-  const { mensaje } = await enviarSolicitudDeAcceso(name, email, input.password);
+  const { mensaje } = await registrarCiudadano(datos);
   return mensaje;
 }
 
