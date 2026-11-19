@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Text } from "./Text";
 
-import { BottomSheet } from "./BottomSheet";
+import { BottomSheet, useArrastreDeLaHoja } from "./BottomSheet";
 import { Icon } from "./Icon";
 import { ScrollConTeclado } from "./Screen";
 import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
@@ -26,48 +26,67 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
 }) {
-  const C = useColors();
-  const actions = Children.toArray(footer);
-
   return (
     <BottomSheet open={open} onClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.flexShrink}
-      >
-        <View style={styles.titulo}>
-          <Text style={[Type.sheetTitle, styles.tituloTexto, { color: C.ink }]} accessibilityRole="header">
-            {title}
-          </Text>
-          <Pressable
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar"
-            style={({ pressed }) => [styles.cerrar, pressed && { backgroundColor: C.surface2 }]}
-          >
-            <Icon name="close" size={24} color={C.ink} />
-          </Pressable>
-        </View>
-
-        <ScrollConTeclado
-          conEspacio={false}
-          style={styles.flexShrink}
-          contentContainerStyle={styles.body}
-        >
-          {children}
-        </ScrollConTeclado>
-
-        {actions.length > 0 && (
-          <View style={styles.footer}>
-            {actions.map((a, i) => (
-              <View key={i} style={styles.action}>
-                {a}
-              </View>
-            ))}
-          </View>
-        )}
-      </KeyboardAvoidingView>
+      <Contenido title={title} onClose={onClose} footer={footer}>
+        {children}
+      </Contenido>
     </BottomSheet>
+  );
+}
+
+function Contenido({
+  title,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  const C = useColors();
+  const actions = Children.toArray(footer);
+  const arrastre = useArrastreDeLaHoja();
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={styles.flexShrink}
+    >
+      <View style={styles.titulo} {...arrastre}>
+        <Text style={[Type.sheetTitle, styles.tituloTexto, { color: C.ink }]} accessibilityRole="header">
+          {title}
+        </Text>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar"
+          style={({ pressed }) => [styles.cerrar, pressed && { backgroundColor: C.surface2 }]}
+        >
+          <Icon name="close" size={24} color={C.ink} />
+        </Pressable>
+      </View>
+
+      <ScrollConTeclado
+        conEspacio={false}
+        style={styles.flexShrink}
+        contentContainerStyle={styles.body}
+      >
+        {children}
+      </ScrollConTeclado>
+
+      {actions.length > 0 && (
+        <View style={styles.footer}>
+          {actions.map((a, i) => (
+            <View key={i} style={styles.action}>
+              {a}
+            </View>
+          ))}
+        </View>
+      )}
+    </KeyboardAvoidingView>
   );
 }
 
