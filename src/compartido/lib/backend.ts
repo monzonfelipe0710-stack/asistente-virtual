@@ -301,6 +301,18 @@ export function pedirTramitesPublicados() {
   return pedir<TramitePublicadoApi[]>("/tramites/publicados");
 }
 
+interface ConsultaPropiaApi {
+  id: number;
+  textoConsulta: string;
+  encontrado: boolean;
+  fecha: string;
+  tramite: { id: number; nombre: string } | null;
+}
+
+export function pedirMisConsultas() {
+  return pedir<ConsultaPropiaApi[]>("/consultas/mias");
+}
+
 export function pedirConsultasPorTramite(soloPropias = false) {
   let ruta = "/metricas/por-tramite";
   if (soloPropias) {
