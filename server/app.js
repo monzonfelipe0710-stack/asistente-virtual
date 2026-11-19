@@ -12,6 +12,7 @@ import metricaRoutes from './src/routes/metrica.routes.js';
 import consultaRoutes from './src/routes/consulta.routes.js';
 import mesaRoutes from './src/routes/mesa.routes.js';
 import { origenesPermitidos } from './src/config/origenes.js';
+import { LIMITES_CHAT } from './src/config/chat.js';
 
 const app = express();
 
@@ -28,6 +29,8 @@ if (process.env.TRUST_PROXY) {
 app.use(helmet());
 app.use(cors({ origin: origenesPermitidos }));
 app.use(morgan('dev'));
+// El chat tiene su propio tope de cuerpo, más chico que el general (100 kb).
+app.use('/api/chat', express.json({ limit: `${LIMITES_CHAT.cuerpoKb}kb` }));
 app.use(express.json());
 
 app.get('/api/health', (req, res) =>{

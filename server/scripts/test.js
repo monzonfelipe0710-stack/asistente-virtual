@@ -65,7 +65,9 @@ console.log(`Tests contra ${hostDe(url)}${REAL ? ' (REAL)' : ''}`);
 const r = spawnSync(
   process.execPath,
   ['--test', '--experimental-test-module-mocks', ...(archivos.length > 0 ? archivos : ['tests/**/*.test.js'])],
-  { cwd: SERVIDOR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: url } },
+  // Los tests se niegan a correr contra una base no local (tests/helpers/base-de-prueba.js) salvo
+  // que se nombre su host: test:real lo nombra después de la confirmación.
+  { cwd: SERVIDOR, stdio: 'inherit', env: { ...process.env, DATABASE_URL: url, ...(REAL ? { TESTS_BASE_NO_LOCAL: new URL(url).hostname } : {}) } },
 );
 
 // Los del scraper (ingestion/, Python, sin red ni base) van con la corrida completa.

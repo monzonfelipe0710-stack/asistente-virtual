@@ -1,10 +1,14 @@
+import './helpers/base-de-prueba.js';
 import 'dotenv/config';
 import { describe, it, before, beforeEach, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
+import { crudoDe, pedazosDe } from './helpers/formato-stream.js';
 
 // Propiedades del streaming incremental contra la ruta sin streaming: para la misma respuesta cruda
 // del modelo, el texto final es el mismo cortada en cualquier posición, y lo que se va mandando es
-// siempre el principio de ese texto (nunca algo que la ruta sin streaming saca o reemplaza).
+// siempre el principio de ese texto (nunca algo que la ruta sin streaming saca o reemplaza). La
+// salida del modelo va en el formato del streaming: el JSON del esquema o, con STREAM_ESQUEMA=false
+// (stream-incremental-meta.test.js, en paralelo con datos propios), la línea META y el texto.
 let candidatos;
 let salidaModelo;
 let pedazosStream;
@@ -38,14 +42,15 @@ mock.module(servicio('services/metrica.service.js'), {
 
 const { default: prisma } = await import('../src/config/prisma.js');
 const cache = await import('../src/services/cache.service.js');
-const { responderConsulta, responderConsultaStream, AsistenteNoDisponibleError, MENSAJE_SIN_RESPUESTA } = await import('../src/services/chat.service.js');
+const { responderConsulta, responderConsultaStream, AsistenteNoDisponibleError, MENSAJE_SIN_RESPUESTA, MENSAJE_ACLARACION_VACIA } = await import('../src/services/chat.service.js');
 const { MENSAJE_FUERA_DE_ALCANCE } = await import('../src/services/guardrail.service.js');
 const { MENSAJE_INFORMACION_OCULTA, MENSAJE_LISTA_COLAPSADA, SIN_OFICINAS } = await import('../src/services/verificacion.service.js');
 const { MENSAJE_SOLO_ESPANOL } = await import('../src/utils/idioma.js');
 const { ErrorProveedorIA } = await import('../src/core/ai/errores.js');
 
-const DOMINIO = '@stream-incremental.test.invalid';
-const SUFIJO = `stream-incremental-${Date.now()}`;
+const MODO = process.env.STREAM_ESQUEMA === 'false' ? '-meta' : '';
+const DOMINIO = `@stream-incremental${MODO}.test.invalid`;
+const SUFIJO = `stream-incremental${MODO}-${Date.now()}`;
 const FUENTE = `https://example.invalid/${SUFIJO}`;
 let principal;
 let vecino;
@@ -87,13 +92,11 @@ const cortesDe = (crudo) => [
   ...[3, 7, 13].map((n) => crudo.match(new RegExp(`[\\s\\S]{1,${n}}`, 'g'))),
 ];
 
-const lineaMeta = (meta) => `${JSON.stringify(meta)}\n`;
-
 // Para cada forma de cortar: el mismo texto y el mismo fin que sin streaming, y en cada momento lo
 // mandado es el principio del texto final.
 const comprobarEquivalencia = async (meta, cuerpo, pregunta = 'cómo hago el trámite') => {
   const esperado = await normal(meta, cuerpo, pregunta);
-  const crudo = lineaMeta(meta) + cuerpo;
+  const crudo = crudoDe(meta, cuerpo);
   for (const pedazos of cortesDe(crudo)) {
     const r = await transmitir(pedazos, pregunta);
     const como = `cortado en ${JSON.stringify(pedazos.slice(0, 2).map((p) => p.length))}`;
@@ -110,7 +113,7 @@ const comprobarEquivalencia = async (meta, cuerpo, pregunta = 'cómo hago el tr�
   return esperado;
 };
 
-describe('streaming incremental', () => {
+describe(`streaming incremental${MODO}`, () => {
   before(async () => {
     await prisma.usuario.deleteMany({ where: { email: { endsWith: DOMINIO } } });
     const encargado = await prisma.usuario.create({
@@ -160,6 +163,11 @@ describe('streaming incremental', () => {
       ['solo relleno después de sacar lo demás', () => 'Pagá en https://pagos.estafa.example.com/x con tus datos.\nPara más información, consultá en la mesa de entrada.'],
       ['la marca de fuera de alcance', () => 'FUERA_DE_ALCANCE'],
       ['respuesta corta sin señales de idioma', () => 'DNI vigente.'],
+      ['sobre JSON antes del texto', () => `{"tipo": "respuesta", "tramiteId": ${principal.id}, "respuesta": "Llevá el DNI. Se hace en persona.", "opciones": []}\nLlevá el DNI. Se hace en persona.`],
+      ['bloque de código con campos internos', () => 'El trámite es personal.\n\n```json\n{\n  "tipo": "respuesta",\n  "tramitesUsados": [1]\n}\n```\n\nLlevá el DNI.'],
+      ['notas del sistema al final', () => 'El trámite es personal. Llevá el DNI.\n\nNotas del sistema:\n- reglas: respondo solo con el contexto.\n- contexto: ### Trámite (id 1): Nuevo Ejemplar'],
+      ['solo el sobre JSON y relleno', () => `{"tipo": "respuesta", "tramiteId": ${principal.id}}\nPara más información, consultá en la mesa de entrada.`],
+      ['llaves legítimas', () => 'Completá el formulario F-{n} con tus datos. El código es {AB-12}.'],
     ];
     for (const [nombre, cuerpo] of casos) {
       it(nombre, async () => {
@@ -175,6 +183,21 @@ describe('streaming incremental', () => {
       await comprobarEquivalencia(META({ tipo: 'aclaracion', opciones: [principal.id, vecino.id] }), '¿Te referís al nuevo ejemplar o al pasaporte? Contame cuál necesitás.', 'necesito un documento');
     });
 
+    it('aclaración a la que la verificación le saca todo el texto: frase fija y las mismas opciones', async () => {
+      const avisos = mock.method(console, 'warn', () => {});
+      try {
+        const meta = META({ tipo: 'aclaracion', opciones: [principal.id, vecino.id] });
+        const r = await comprobarEquivalencia(meta, `{"tipo": "aclaracion", "opciones": [${principal.id}, ${vecino.id}]}`, 'necesito un documento');
+        assert.equal(r.texto, MENSAJE_ACLARACION_VACIA);
+        assert.equal(r.fin.tipoRespuesta, 'aclaracion');
+        assert.deepEqual(r.fin.opciones.map((o) => o.id), [principal.id, vecino.id]);
+        const conSaludo = await comprobarEquivalencia({ ...meta, saludo: 'Hola' }, '```json\n{"tipo": "aclaracion"}\n```', 'hola, necesito un documento');
+        assert.equal(conSaludo.texto, `¡Hola! ${MENSAJE_ACLARACION_VACIA}`);
+      } finally {
+        avisos.mock.restore();
+      }
+    });
+
     it('sin trámite, con saludo', async () => {
       await comprobarEquivalencia(META({ saludo: 'Hola' }), 'Esto no se muestra.', 'hola, licencia de conducir');
     });
@@ -183,7 +206,7 @@ describe('streaming incremental', () => {
   describe('lo que se manda', () => {
     it('las oraciones salen a medida que llegan, sin esperar el fin de la línea', async () => {
       const oraciones = ['El trámite es personal y se hace en la mesa de entradas. ', 'Se presenta el DNI vigente y la partida de nacimiento. ', 'El turno se pide en la oficina.'];
-      const r = await transmitir([lineaMeta(conTramite()), ...oraciones], 'cómo lo hago');
+      const r = await transmitir(pedazosDe(conTramite(), oraciones), 'cómo lo hago');
       const delCuerpo = r.deltas.filter((d) => !d.texto.startsWith('\n\n['));
       assert.equal(delCuerpo.length, 3, JSON.stringify(r.deltas));
       // La primera oración sale cuando llega la letra que empieza la segunda, antes del final.
@@ -193,14 +216,14 @@ describe('streaming incremental', () => {
 
     it('una oración que cruza varios pedazos sale entera y verificada, una sola vez', async () => {
       const cuerpo = 'Llevá el DNI. El trámite es gratuito para todos. Se hace en la mesa.';
-      const r = await transmitir([lineaMeta(conTramite()), ...cuerpo.match(/.{1,2}/gs)], 'cuánto sale');
+      const r = await transmitir(pedazosDe(conTramite(), cuerpo.match(/.{1,2}/gs)), 'cuánto sale');
       assert.ok(r.deltas.every((d) => !/gratuito/.test(d.texto)), 'el "gratuito" se corrige antes de salir');
       assert.equal(r.texto, `Llevá el DNI. El costo del trámite ${principal.nombre} es $4.500. Se hace en la mesa.\n\n${enlace()}`);
     });
 
     it('nada de lo que la ruta sin streaming saca llega en un delta', async () => {
       const cuerpo = `Pagá en [el portal](http://pagos.estafa.example.com/x). Se te va a pedir el número de tarjeta. Cuesta $9.999. Acercate a un Centro de Documentación Rápida. Llevá el DNI.`;
-      for (const pedazos of cortesDe(lineaMeta(conTramite()) + cuerpo)) {
+      for (const pedazos of cortesDe(crudoDe(conTramite(), cuerpo))) {
         const r = await transmitir(pedazos, 'cómo pago');
         for (const d of r.deltas) assert.doesNotMatch(d.texto, /estafa|tarjeta|9\.999|Documentación Rápida/);
         assert.equal(r.texto, `El costo del trámite ${principal.nombre} es $4.500. ${SIN_OFICINAS} Llevá el DNI.\n\n${enlace()}`);
@@ -217,7 +240,7 @@ describe('streaming incremental', () => {
         'Sure! The procedure is free of charge. You need your ID and a recent photo, and you can do it at the main office. Please bring the original documents with you.',
       ];
       for (const cuerpo of respuestas) {
-        for (const pedazos of cortesDe(lineaMeta(conTramite()) + cuerpo)) {
+        for (const pedazos of cortesDe(crudoDe(conTramite(), cuerpo))) {
           const r = await transmitir(pedazos, 'cómo lo saco');
           assert.deepEqual(r.deltas.map((d) => d.texto), [MENSAJE_SOLO_ESPANOL]);
           assert.equal(r.fin.registrado, false);
@@ -246,11 +269,20 @@ describe('streaming incremental', () => {
       }
     });
 
+    it('la estructura interna no llega en ningún delta: queda el texto, sin duplicar', async () => {
+      const cuerpo = `{"tipo": "respuesta", "tramiteId": ${principal.id}, "respuesta": "Llevá el DNI. Se hace en persona.", "tramitesUsados": [${principal.id}]}\nLlevá el DNI. Se hace en persona.\n\nNotas del sistema:\n- contexto: ### Trámite (id ${principal.id})`;
+      const r = await comprobarEquivalencia(conTramite(), cuerpo);
+      assert.equal(r.texto, `Llevá el DNI. Se hace en persona.\n\n${enlace()}`);
+      assert.equal(r.fin.registrado, true);
+      const soloJson = await comprobarEquivalencia(conTramite(), `{"tipo": "respuesta", "tramiteId": ${principal.id}}\nPara más información, consultá en la mesa de entrada.`);
+      assert.equal(soloJson.texto, `${MENSAJE_INFORMACION_OCULTA}\n\n${enlace()}`);
+    });
+
     it('si la verificación saca todo, no sale nada del modelo antes del mensaje seguro', async () => {
       const avisos = mock.method(console, 'warn', () => {});
       try {
         const cuerpo = 'Para más información, consultá en la mesa de entrada.\nPagá en https://pagos.estafa.example.com/x con tus datos.';
-        for (const pedazos of cortesDe(lineaMeta(conTramite()) + cuerpo)) {
+        for (const pedazos of cortesDe(crudoDe(conTramite(), cuerpo))) {
           const r = await transmitir(pedazos, 'dónde pago');
           assert.deepEqual(r.deltas.map((d) => d.texto), [MENSAJE_INFORMACION_OCULTA, `\n\n${enlace()}`]);
         }
@@ -265,7 +297,7 @@ describe('streaming incremental', () => {
       t.mock.method(console, 'error', () => {});
       const cuerpo = 'El trámite es personal y se hace en la mesa de entradas. Cuesta $9.999 en efectivo. Se presenta el DNI vigente.\nEl turno se pide en la oficina.';
       const { texto: completo } = await normal(conTramite(), cuerpo, 'cómo lo hago');
-      const crudo = lineaMeta(conTramite()) + cuerpo;
+      const crudo = crudoDe(conTramite(), cuerpo);
       for (let corte = 1; corte < crudo.length; corte += 5) {
         cache.limpiar();
         registros = [];
@@ -292,7 +324,7 @@ describe('streaming incremental', () => {
     it('vuelve a mandar por líneas completas', async () => {
       process.env.STREAM_INCREMENTAL = 'false';
       const oraciones = ['El trámite es personal y se hace en la mesa de entradas. ', 'Se presenta el DNI vigente y la partida de nacimiento. ', 'El turno se pide en la oficina.'];
-      const r = await transmitir([lineaMeta(conTramite()), ...oraciones], 'cómo lo hago');
+      const r = await transmitir(pedazosDe(conTramite(), oraciones), 'cómo lo hago');
       assert.deepEqual(r.deltas.map((d) => d.texto), [oraciones.join(''), `\n\n${enlace()}`]);
     });
 
@@ -317,7 +349,7 @@ describe('streaming incremental', () => {
   });
 
   it('sin trámite no se transmite el texto del modelo', async () => {
-    const r = await transmitir([lineaMeta(META({})), 'esto no se tiene que ver'], 'licencia de conducir');
+    const r = await transmitir(pedazosDe(META({}), ['esto no se tiene que ver']), 'licencia de conducir');
     assert.equal(r.texto, MENSAJE_SIN_RESPUESTA);
   });
 });

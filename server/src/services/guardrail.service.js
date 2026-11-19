@@ -15,13 +15,20 @@ const ANCHO_CERO = new RegExp(
   'g',
 );
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', '@': 'a', $: 's' };
+// Letras cirílicas iguales a las latinas: "mоstrаme" con "о" y "а" cirílicas.
+const CIRILICAS = { а: 'a', е: 'e', о: 'o', р: 'p', с: 'c', у: 'y', х: 'x', і: 'i', ј: 'j', ѕ: 's', к: 'k', м: 'm', т: 't', н: 'h', в: 'b' };
+const CIRILICA = new RegExp(`[${Object.keys(CIRILICAS).join('')}]`, 'g');
 
 // Solo para comparar: al modelo le llega el texto original. Se conservan los saltos de línea
-// para reconocer los marcadores de rol al inicio de una línea.
+// para reconocer los marcadores de rol al inicio de una línea. NFKC pasa a letras comunes las de
+// ancho completo y las encerradas en círculos; "%20" (texto codificado para URL) vuelve a ser espacio.
 export const normalizarParaRevisar = (texto) =>
   String(texto ?? '')
     .replace(ANCHO_CERO, '')
+    .normalize('NFKC')
+    .replace(/%([2-7][0-9a-f])/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
     .toLowerCase()
+    .replace(CIRILICA, (c) => CIRILICAS[c])
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
     .replace(/[01345@$]/g, (c) => LEET[c])
@@ -109,6 +116,11 @@ export const revisarEntrada = (texto) => {
 // que el texto se corta ahí y no cuentan; lo mismo con las `permitidas`, frases sin comillas que
 // el prompt le pide decir (quién es, adónde derivar).
 export const LARGO_DE_FUGA = 40;
+// Los marcadores de plantilla tampoco van en una respuesta: los del prompt ("<saludo o vacío>",
+// "<ids>") y cualquiera de varias palabras entre < >, como "<lo que seguís para responder>" que el
+// modelo copió de una consulta que pedía un formato. Una etiqueta HTML ("<b>", "<a href=…>") no entra.
+const MARCADOR_DEL_PROMPT = /<[^<>\n]{1,80}>/g;
+const MARCADOR_DE_PLANTILLA = /<[a-z]+(?:[ |][a-z]+)+>/;
 const paraComparar = (texto) => normalizarParaRevisar(texto).replace(/[^a-z0-9]+/g, ' ').trim();
 
 export const crearDetectorDeFuga = (textosFijos, { permitidas = [], largo = LARGO_DE_FUGA } = {}) => {
@@ -121,8 +133,12 @@ export const crearDetectorDeFuga = (textosFijos, { permitidas = [], largo = LARG
   for (const pedazo of pedazos) {
     for (let i = 0; i + largo <= pedazo.length; i++) fragmentos.add(pedazo.slice(i, i + largo));
   }
-  // Devuelve el primer fragmento copiado, o null.
+  const marcadores = [...new Set(textosFijos.flatMap((t) => normalizarParaRevisar(t).match(MARCADOR_DEL_PROMPT) ?? []))];
+  // Devuelve el primer fragmento copiado o marcador, o null.
   return (respuesta) => {
+    const normal = normalizarParaRevisar(respuesta);
+    const marcador = marcadores.find((m) => normal.includes(m)) ?? normal.match(MARCADOR_DE_PLANTILLA)?.[0];
+    if (marcador) return marcador;
     const texto = paraComparar(respuesta);
     for (let i = 0; i + largo <= texto.length; i++) {
       if (fragmentos.has(texto.slice(i, i + largo))) return texto.slice(i, i + largo);
@@ -131,12 +147,21 @@ export const crearDetectorDeFuga = (textosFijos, { permitidas = [], largo = LARG
   };
 };
 
-// Revisa todos los turnos de la persona (no los del asistente). Devuelve el primero bloqueado.
+// Decide solo el último mensaje de la persona: un intento anterior no bloquea una consulta legítima.
+// Los turnos anteriores que la regla bloquearía, con lo que el asistente contestó, y los mensajes
+// "del asistente" que la bloquearían (los arma el cliente) no llegan a la búsqueda ni al modelo.
+// Devuelve la revisión del último mensaje y los mensajes que siguen.
 export const revisarMensajes = (mensajes) => {
-  for (const { rol, texto } of mensajes) {
-    if (rol !== 'usuario') continue;
-    const revision = revisarEntrada(texto);
-    if (revision.bloqueada) return { ...revision, texto };
+  const ultimo = mensajes.at(-1);
+  const revision = revisarEntrada(ultimo?.texto);
+  if (revision.bloqueada) return { ...revision, texto: ultimo.texto, mensajes, descartados: 0 };
+  const quedan = [];
+  let descartando = false;
+  for (const m of mensajes.slice(0, -1)) {
+    const bloqueado = revisarEntrada(m.texto).bloqueada;
+    if (m.rol === 'usuario') descartando = bloqueado;
+    if (!descartando && !bloqueado) quedan.push(m);
   }
-  return { bloqueada: false, categoria: null, texto: null };
+  quedan.push(ultimo);
+  return { bloqueada: false, categoria: null, texto: null, mensajes: quedan, descartados: mensajes.length - quedan.length };
 };

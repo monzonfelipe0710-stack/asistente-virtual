@@ -1,11 +1,14 @@
 import { APIError } from 'openai';
 import { openai } from '../../config/openai.js';
-import { TIEMPOS_IA } from '../../config/ia.js';
+import { TIEMPOS_IA, enteroDeEntorno } from '../../config/ia.js';
 import { combinarSenales } from '../../utils/plazo.js';
 import { ErrorProveedorIA } from './errores.js';
 
 const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
 const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
+// Red de seguridad, no un recorte: la respuesta más larga medida queda muy por debajo. Una salida
+// cortada por el tope (finish_reason "length") es una falla: no se cachea ni se registra.
+export const MAX_TOKENS_RESPUESTA = enteroDeEntorno('OPENAI_MAX_TOKENS_RESPUESTA', 1500, 1);
 
 // El modelo de embeddings queda fijo: cambiarlo invalida los vectores ya guardados
 // (otro espacio vectorial) y rompe la búsqueda sin dar error. Se cambia solo con una
@@ -73,6 +76,7 @@ export const openaiAdapter = {
         {
           model: MODELO_CHAT,
           temperature: TEMPERATURA,
+          max_completion_tokens: MAX_TOKENS_RESPUESTA,
           messages: construirMensajes(instruccionSistema, turnos),
           ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
         },
@@ -88,9 +92,33 @@ export const openaiAdapter = {
     return message.content;
   },
 
+  // Una llamada corta, sin reintentos y con su propio timeout: devuelve el texto tal cual.
+  async corregirTexto({ instruccionSistema, texto, signal, timeout }) {
+    let completion;
+    try {
+      completion = await openai.chat.completions.create(
+        {
+          model: MODELO_CHAT,
+          temperature: 0,
+          max_completion_tokens: Math.min(MAX_TOKENS_RESPUESTA, Math.ceil(texto.length / 2) + 20),
+          messages: [{ role: 'system', content: instruccionSistema }, { role: 'user', content: texto }],
+        },
+        { timeout, maxRetries: 0, signal },
+      );
+    } catch (err) {
+      throw comoFalla(err, signal, 'tipeo');
+    }
+    const { finish_reason: finishReason, message } = completion.choices[0];
+    if (finishReason !== 'stop' || message.refusal) {
+      throw new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion: 'tipeo' });
+    }
+    return message.content;
+  },
+
   // El SDK termina el stream sin error si se corta sin [DONE] o si se lo aborta: por eso un abort
   // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
-  async *generarRespuestaStream({ instruccionSistema, turnos, signal }) {
+  // Con `esquema`, una negativa del modelo (refusal) también es una falla.
+  async *generarRespuestaStream({ instruccionSistema, turnos, esquema, signal }) {
     const inactividad = new AbortController();
     const senal = combinarSenales(signal, inactividad.signal);
     let temporizador;
@@ -108,8 +136,10 @@ export const openaiAdapter = {
         {
           model: MODELO_CHAT,
           temperature: TEMPERATURA,
+          max_completion_tokens: MAX_TOKENS_RESPUESTA,
           stream: true,
           messages: construirMensajes(instruccionSistema, turnos),
+          ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
         },
         { ...TIEMPOS_IA.chat, signal: senal },
       );
@@ -118,6 +148,7 @@ export const openaiAdapter = {
         rearmar();
         const opcion = chunk.choices[0];
         finishReason = opcion?.finish_reason ?? finishReason;
+        if (opcion?.delta?.refusal) throw new ErrorProveedorIA('el modelo se negó a responder (refusal)', { operacion: 'chat_stream' });
         const delta = opcion?.delta?.content ?? '';
         if (delta) yield delta;
       }

@@ -20,6 +20,46 @@ export const registroLimiter = rateLimit({
 
 export const recuperarLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 3,
-  message: { error: 'Demasiados pedidos de recuperacion. Esperá unos minutos e intentá de nuevo.' },
+  limit: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados pedidos de recuperación. Esperá unos minutos e intentá de nuevo.' },
 });
+
+// Rutas públicas de solo lectura: frena el scraping sin molestar a un uso normal.
+export const publicoLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Esperá un momento e intentá de nuevo.' },
+});
+
+// Protege el restablecimiento contra la prueba masiva de tokens.
+// Contador propio: no comparte intentos con el login.
+export const restablecerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de restablecimiento. Probá de nuevo en unos minutos.' },
+});
+
+// Chat público: cada consulta llama a OpenAI. Un limitador por minuto y otro por hora, por IP; las
+// mismas instancias van en /api/chat y /api/chat/stream, así que el contador es compartido.
+export const crearLimitadoresChat = ({ porMinuto, porHora }) => [
+  rateLimit({
+    windowMs: 60 * 1000,
+    limit: porMinuto,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas consultas. Esperá un momento e intentá de nuevo.' },
+  }),
+  rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: porHora,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Llegaste al máximo de consultas por hora. Probá de nuevo más tarde.' },
+  }),
+];

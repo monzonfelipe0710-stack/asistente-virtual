@@ -69,6 +69,7 @@ export const crearLimpiadorPorOraciones = ({ saludo = '', alCorregirTuteo, verif
       colapsada = true;
       return emitir(MENSAJE_LISTA_COLAPSADA, blancos);
     }
+    if (lineas.length === 0) return '';
     const cabecera = anuncio ? emitirAnuncio(anuncio) : '';
     return cabecera + lineas.map((l) => emitir(l.texto, l.blancos)).join('');
   };
@@ -88,8 +89,10 @@ export const crearLimpiadorPorOraciones = ({ saludo = '', alCorregirTuteo, verif
       encabezado = null;
       if (lista.encabezado) enBlanco = 0;
     }
-    if (!limpia.trim() || itemVacio(limpia)) lista.perdido = true;
-    else lista.lineas.push({ texto: limpia, blancos: enBlanco });
+    // Un ítem que era estructura interna se omite: no es un ítem perdido.
+    const interno = !limpia.trim() && verificar?.sacadaPorEstructura?.();
+    if (!interno && (!limpia.trim() || itemVacio(limpia))) lista.perdido = true;
+    else if (!interno) lista.lineas.push({ texto: limpia, blancos: enBlanco });
     enBlanco = 0;
   };
 

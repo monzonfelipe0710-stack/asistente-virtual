@@ -1,8 +1,10 @@
+import './helpers/base-de-prueba.js';
 import 'dotenv/config';
 import { describe, it, before, beforeEach, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 import prisma from '../src/config/prisma.js';
+import { enElFormato } from './helpers/formato-stream.js';
 
 // Trámites con el mismo nombre en dos municipios. El modelo, la búsqueda y el registro se
 // simulan; los sectores y trámites de prueba (borradores) se crean en la base y se borran al final.
@@ -23,7 +25,7 @@ mock.module(servicio('core/ai/index.js'), {
       },
       async *generarRespuestaStream(args) {
         llamadasModelo.push(args);
-        for (const p of pedazosStream) yield p;
+        for (const p of enElFormato(pedazosStream)) yield p;
       },
     },
   },

@@ -1,3 +1,4 @@
+import './helpers/base-de-prueba.js';
 import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -5,9 +6,11 @@ import assert from 'node:assert/strict';
 let filas;
 const servicio = (ruta) => new URL(`../src/${ruta}`, import.meta.url).href;
 mock.module(servicio('config/prisma.js'), { defaultExport: { $queryRaw: async () => filas } });
-mock.module(servicio('services/embedding.service.js'), { namedExports: { generarEmbedding: async () => [0.1, 0.2] } });
+let pedidosDeEmbedding = 0;
+mock.module(servicio('services/embedding.service.js'), { namedExports: { generarEmbedding: async () => { pedidosDeEmbedding++; return [0.1, 0.2]; } } });
 
 const { PROPORCION_DEL_PRIMERO, buscarTramites, soloLosCercanos } = await import('../src/services/busqueda.service.js');
+const cache = await import('../src/services/cache.service.js');
 
 const grupo = (id, mejor) => ({ id, mejor });
 
@@ -49,5 +52,58 @@ describe('buscarTramites', () => {
     filas = [fila(10, 'pasaporte', 0.40, 0.40), fila(20, 'pasaporte express', 0.39, 0.39), fila(21, 'pasaporte express', 0.39, 0.10)];
     const grupos = await buscarTramites('pasaporte');
     assert.deepEqual(grupos.map((g) => g.variantes.map((v) => v.id)), [[10], [20, 21]]);
+  });
+});
+
+describe('caché de embeddings de la búsqueda', () => {
+  const buscar = (pregunta, cachearEmbedding) => {
+    filas = [];
+    return buscarTramites(pregunta, { cachearEmbedding });
+  };
+
+  it('con cachearEmbedding, la misma pregunta (salvo mayúsculas y espacios) pide el embedding una vez', async () => {
+    cache.limpiarEmbeddings();
+    pedidosDeEmbedding = 0;
+    await buscar('cómo saco el pasaporte', true);
+    await buscar('  Cómo  saco el PASAPORTE ', true);
+    assert.equal(pedidosDeEmbedding, 1);
+    await buscar('cómo saco el pasaporte?', true);
+    assert.equal(pedidosDeEmbedding, 2);
+  });
+
+  it('sin cachearEmbedding (varios turnos) no se lee ni se guarda', async () => {
+    cache.limpiarEmbeddings();
+    pedidosDeEmbedding = 0;
+    await buscar('cómo renuevo el pasaporte ¿y cuánto cuesta?', false);
+    await buscar('cómo renuevo el pasaporte ¿y cuánto cuesta?', false);
+    assert.equal(pedidosDeEmbedding, 2);
+    assert.equal(cache.cantidadDeEmbeddings(), 0);
+  });
+
+  it('cache.limpiar() (cambio del catálogo) no vacía los embeddings', async () => {
+    cache.limpiarEmbeddings();
+    cache.guardarEmbedding('pasaporte', [0.5, 0.25]);
+    cache.limpiar({ propagar: false });
+    assert.deepEqual(cache.obtenerEmbedding('pasaporte'), [0.5, 0.25]);
+  });
+
+  it('tiene un límite de tamaño: sale la menos usada', () => {
+    cache.limpiarEmbeddings();
+    for (let i = 0; i < 200; i++) cache.guardarEmbedding(`pregunta ${i}`, [i]);
+    cache.obtenerEmbedding('pregunta 0');
+    cache.guardarEmbedding('una más', [1]);
+    assert.equal(cache.cantidadDeEmbeddings(), 200);
+    assert.notEqual(cache.obtenerEmbedding('pregunta 0'), null);
+    assert.equal(cache.obtenerEmbedding('pregunta 1'), null);
+  });
+
+  it('vence', (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: 0 });
+    cache.limpiarEmbeddings();
+    cache.guardarEmbedding('pasaporte', [1]);
+    t.mock.timers.tick(60 * 60 * 1000);
+    assert.deepEqual(cache.obtenerEmbedding('pasaporte'), [1]);
+    t.mock.timers.tick(60 * 60 * 1000 + 1);
+    assert.equal(cache.obtenerEmbedding('pasaporte'), null);
   });
 });

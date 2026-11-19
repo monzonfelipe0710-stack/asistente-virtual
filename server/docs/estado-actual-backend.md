@@ -115,6 +115,8 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `CACHE_CHEQUEO_MS` | no | `5000`: cada cuánto se revisa la versión del catálogo en la base |
 | `SERVIDOR_URL` | no | Solo el script de import: `http://localhost:$PORT`, para avisar si hay un server encendido |
 | `STREAM_INCREMENTAL` | no | `true`: las dos rutas del chat sacan el texto de a oraciones verificadas (ver 6, "Streaming incremental"); `false` vuelve al comportamiento anterior |
+| `STREAM_ESQUEMA` | no | `true`: el streaming usa el mismo JSON con esquema y el mismo prompt que la ruta sin streaming y lee `respuesta` a medida que llega (ver 6, "Streaming con esquema JSON"); `false` vuelve a la línea META. Solo aplica con `STREAM_INCREMENTAL=true` |
+| `TIPEO_REESCRITURA` | no | `true`: si la búsqueda no encuentra nada parecido, el modelo corrige la ortografía de la consulta y se busca de nuevo (ver 6, "Corrección de tipeo"); `false` no corrige. `TIPEO_TIMEOUT_MS` (default 3000) es el timeout de esa llamada |
 
 ### 2.4 Versiones
 
@@ -300,7 +302,7 @@ En Zod 4, `z.object` **descarta en silencio** las claves que no declara. Ningún
 | `crearTramiteSchema` / `actualizarTramiteSchema` | `tramite.validator.js` | `nombre`, `descripcion`, `costo?` ≥ 0, `sectorId`, `requisitos[]`, `mesaIds[]`. Crear pone `[]` por defecto; actualizar es `.partial()` sin defaults |
 | `crearMesaSchema` / `actualizarMesaSchema` | `mesa.validator.js` | `nombre`, `direccion?`, `localidad?`, `horario?`, `esGeneral?`, `sectorId?` nullable |
 | `subirDocumentoSchema` / `actualizarDocumentoSchema` | `documento.validator.js` | `nombre?`: trim, 1 a 200; `urlExterna?`: trim, hasta 2000, URL http o https con host. Que venga archivo o URL (y el nombre de un enlace) lo exige el controller |
-| chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-2000, tipo? }`; uno de los dos obligatorio. `tipo` (`respuesta\|aclaracion\|conversacion`) solo en los del asistente; uno desconocido se descarta sin 400 |
+| chat (inline) | `chat.controller.js` | `pregunta?` 1 a 500, o `mensajes?` 1 a 20 de `{ rol: usuario\|asistente, texto 1-500 (persona) o 1-6000 (asistente), tipo? }` (configurables, `config/chat.js`); uno de los dos obligatorio. `tipo` (`respuesta\|aclaracion\|conversacion`) solo en los del asistente; uno desconocido se descarta sin 400 |
 
 ### 5.2 Incompatibilidades con el frontend de `origin/dev-felipe`
 
@@ -424,6 +426,212 @@ de pasaporte no cambió (20 453 caracteres); el de habilitaciones pasó de 27 32
 "cuánto cuesta la habilitación comercial de un local de 500 m² en la ciudad de Formosa", antes el
 chat contestaba la fila de 25 a 50 m² (la última que veía); ahora, 3 de 3 corridas dan 14 módulos,
 $70.514,64 (más de 300 hasta 500 m²), sin correcciones de la verificación de salida.
+
+### Latencia de demo: base en frío y en caliente (18-11-2026)
+
+Sin cambios de lógica del chat ni de la base. Mediciones desde una PC por Wi-Fi doméstico, server
+local, base en Neon sa-east-1 (plan Free), `gpt-4o-mini`.
+
+**Índices (EXPLAIN ANALYZE, solo lectura).** La base real tiene `tramites_embedding_idx` (HNSW,
+`vector_cosine_ops`) y `tramites_search_idx` (GIN sobre `search_vector`). El planificador no usa
+ninguno: con 347 filas (320 publicadas, 8 MB) hace Seq Scan en la búsqueda del chat y también en un
+`ORDER BY embedding <=> v LIMIT 20`. La consulta de `buscarTramites` tarda 3,2 a 3,4 ms en la base
+(planificación 0,6 ms) para pasaporte, buena conducta y habilitación comercial, lo mismo que con los
+índices desactivados a la fuerza; `cargarDetalle` usa los índices por `tramite_id` y tarda 3,4 ms.
+Además, la condición `distancia < umbral OR texto` no puede usar HNSW (solo sirve para
+`ORDER BY ... LIMIT`). No se creó ni cambió ningún índice: la búsqueda no es el cuello de botella.
+
+**De punta a punta** (`CHAT_LOG_LATENCIA=true`, ms del log del server; "frío" es la primera consulta
+después de 10 minutos sin ninguna actividad, "caliente" la mediana de las 3 siguientes, con
+preguntas distintas para no pegarle a la caché):
+
+| Etapa | Normal frío | Normal caliente | Stream frío | Stream caliente |
+|---|---|---|---|---|
+| `inicio` (versión del catálogo: primera consulta a la base) | 1709 | 46 | 1270 | 0 |
+| `busqueda` | 489 | 54 | 390 | 61 |
+| `embedding` (OpenAI) | 715 | 588 | 879 | 528 |
+| `detalle` | 162 | 57 | 123 | 102 |
+| `modelo` (OpenAI) | 3689 | 1405 | 2912 | 2033 |
+| `registro` | 128 | 47 | 107 | 50 |
+| **total** | **6892** | **2192** | **5681** | **3086** |
+| primer texto (stream) | | | 5322 | 2377 |
+
+El cliente midió entre 30 y 210 ms más que el total del server. `modelo` y `embedding` varían por
+OpenAI y por el tipo de salida (las aclaraciones son más cortas y no se registran), no por la base.
+
+**Comportamiento esperado.** En frío, la primera consulta paga unos **2,3 s de base** en la ruta
+normal y **1,7 s** en el stream (la suma de lo que `inicio`, `busqueda`, `detalle` y `registro` tardan
+de más): Neon reactiva el cómputo, que se suspende tras 5 minutos sin actividad en el plan Free y no
+se puede desactivar, y el pool de Prisma vuelve a abrir sus conexiones. Desde la segunda consulta las
+etapas de base vuelven a 50-100 ms cada una y el tiempo queda dominado por OpenAI (2 a 3,5 s en total).
+
+**`scripts/calentar.js`.** Para dejar corriendo durante la demo, con el server levantado:
+
+```
+node scripts/calentar.js [--cada 4] [--duracion 120] [--url http://localhost:3000]
+```
+
+Cada `--cada` minutos (default 4: tiene que ser menos que los 5 de la suspensión) hace un `SELECT 1`
+a la base del `.env`, un GET a `/api/health` y un GET a `/api/tramites/publicados` (público), e
+imprime una línea con los ms o la falla de cada uno. Corta solo a los `--duracion` minutos (default
+120) o con Ctrl+C. El GET a `/publicados` está porque el `SELECT 1` sale de otro proceso: mantiene
+despierta a Neon pero no las conexiones del pool del server. Medido, la primera consulta normal
+después de 10 minutos sin chat:
+
+| Con el script | `inicio` | `busqueda` | `detalle` | `registro` | Base de más |
+|---|---|---|---|---|---|
+| sin script | 1709 | 489 | 162 | 128 | ~2,3 s |
+| `--cada 4`, solo `SELECT 1` y `/api/health` | 483 | 307 | 172 | 94 | ~0,85 s |
+| `--cada 4`, con `/publicados` | 147 | 309 | 167 | 161 | ~0,6 s |
+| `--cada 1`, con `/publicados` | 195 | 859 | 214 | 109 | ~1,2 s |
+
+Con el script la base no se suspende y el salto grande de `inicio` desaparece, pero la primera
+consulta del chat igual tarda entre 0,6 y 1,2 s de más en las etapas de base. Pinguear cada minuto
+no lo mejoró, y los pings mismos tienen picos de 750-900 ms aunque pase 1 minuto (el #6 de esa
+corrida), así que lo que queda no es la suspensión; con una muestra por caso no se puede atribuir
+(conexiones nuevas del pool de Prisma, red). Queda `--cada 4` por defecto. Para la demo: dejar
+`calentar.js` corriendo y hacer una o dos consultas de prueba en el chat justo antes de empezar.
+
+**Consumo de Neon.** El plan Free da 100 CU-horas por mes por proyecto; un cómputo suspendido no
+consume, y al agotarlas el cómputo queda suspendido hasta el mes siguiente. Mientras el script
+corre la base no se suspende: consume el tamaño del cómputo por las horas despierta, más los 5
+minutos hasta la suspensión al cortar. Con el mínimo de 0,25 CU, la corrida por defecto (2 horas)
+son unas 0,5 CU-horas (el 0,5 % del mes); si el autoscaling subiera hasta el máximo de 2 CU del Free
+serían 4 CU-horas como tope (los pings no generan carga para escalar). El tamaño mínimo y máximo de
+este proyecto se ve en la consola de Neon (no se puede leer desde la base).
+
+### Corrección de tipeo y "partida de nacimiento" (16-11-2026)
+
+**"partida de nacimiento" bien escrita (0/3 en las dos rutas): no es tipeo ni falta de datos.** El
+trámite existe y está publicado: #273 "Solicitud Partida de Nacimiento, Matrimonio o Defunción"
+(provincial, Dirección del Registro Civil). Los otros trámites del catálogo sobre partidas o actas
+son #92 y #93 (actas a otras provincias o para no residentes), #171 (Casa de Formosa en Buenos
+Aires, certifica actas), #236 y #126 (inscripción de nacimiento), #237 (adición de apellido
+materno), #238 (extraña jurisdicción), #271 (cédula policial, pide el acta) y #272 (acta siniestral,
+sin publicar). Puntajes de la búsqueda contra la base real (similitud, texto, combinado):
+
+| Consulta | Primeros 3 (combinado) | #273: similitud / texto / combinado | Puesto de #273 |
+|---|---|---|---|
+| partida de nacimiento | #237 0,288, #126 0,286, #236 0,277 | 0,394 / 0,076 / 0,267 | 4 |
+| acta de nacimiento | #126 0,356, #236 0,352, #171 0,327 | 0,483 / 0,038 / 0,305 | 6 |
+| quiero la partida de nacimiento de mi hijo | #126 0,320, #236 0,315, #127 0,294 | 0,446 / 0,038 / 0,283 | 5 |
+| certificado de nacimiento | #236 0,342, #126 0,313, #269 0,308 | 0,416 / 0,038 / 0,265 | 15 |
+
+Queda afuera porque la búsqueda trae 3 grupos y #273 tiene la similitud más baja del grupo: su
+texto del embedding (2444 caracteres) mezcla matrimonio, defunción, costos por acta, el sistema
+NEXOS y la entrega en delegaciones, y diluye "partida de nacimiento". En texto es el que mejor
+coincide (0,076 con "partida"), pero el texto pesa 0,4 y los puntajes de `ts_rank` son chicos.
+Con "partida de nacimento" (mal escrita) el embedding cae parejo para todos y #273 queda 2.º: por
+eso esa sí pasa.
+
+Prueba en memoria, sin tocar la base (el embedding de #273 con otro texto, contra los puntajes
+actuales de los demás):
+
+| Consulta | Texto actual | Con nombres alternativos al principio | Solo nombre y descripción (referencia) |
+|---|---|---|---|
+| partida de nacimiento | 0,267, puesto >3 | 0,281, puesto 3 | 0,296, puesto 1 |
+| acta de nacimiento | 0,305, >3 | 0,315, >3 | 0,317, >3 |
+| quiero la partida de nacimiento de mi hijo | 0,283, >3 | 0,293, 3 | 0,319, 2 |
+| certificado de nacimiento | 0,265, >3 | 0,276, >3 | 0,296, >3 |
+
+Los nombres alternativos probados fueron "También se conoce como: partida de nacimiento, acta de
+nacimiento, certificado de nacimiento, copia de la partida, partida de matrimonio, acta de
+matrimonio, partida de defunción, acta de defunción". Suben la similitud 0,017 a 0,027: alcanzan
+justo para "partida de nacimiento" (0,281 contra 0,277 del 3.º) y no para "acta" ni "certificado".
+
+Propuesta, sin aplicar:
+
+- Una columna `nombres_alternativos` en `tramites`, que entre al texto del embedding
+  (`textoDeTramite`, después del nombre) y también a `search_vector`. Solo en el embedding no
+  alcanza: lo que haría robusto el caso es que "acta" y "certificado" coincidan por texto.
+- `search_vector` es una columna generada (`nombre || descripcion`), así que cambiarla es una
+  migración que la borra y la vuelve a crear con su índice GIN, y se recalcula para todo el
+  catálogo. Por eso no entra en este brief.
+- Reindexar: solo los trámites a los que se les carguen nombres alternativos, de a uno
+  (`indexarTramite`, un embedding cada uno, costo despreciable). El resto del catálogo no cambia
+  de texto.
+- Antes de aplicarlo habría que correr `eval-chat` completo: más texto en #273 puede subirlo
+  también en consultas de matrimonio o defunción, que hoy van a otros trámites.
+- Lo que más sube la similitud es acortar el texto (solo nombre y descripción), pero es un cambio
+  para todo el catálogo y un reindexado completo.
+
+**Corrección de tipeo** (`services/tipeo.service.js`, `TIPEO_REESCRITURA`, default `true`): si la
+búsqueda no trae candidatos o el mejor puntaje es menor a 0,24, y el mensaje no es de cortesía, una
+llamada corta al modelo (prompt fijo, temperatura 0, `TIPEO_TIMEOUT_MS` 3 s, sin reintentos)
+devuelve la consulta corregida, y se busca de nuevo con ella. Ver el README, "Cómo funciona el
+chat", paso 2.
+
+- **Umbral:** el mejor puntaje de cada pregunta de `eval-chat` y de las legítimas de
+  `eval-seguridad` contra la base real (`scripts/medir-tipeo.js`). Las mal escritas que fallaban
+  quedan en 0,219 ("hola, nscito renovar el psporte") y 0,227 ("necesito renovar el psporte"), o
+  sin candidatos ("pasaporet", "psporte", "como saco el pasaprote"). Las bien escritas que piden un
+  trámite del catálogo, en 0,256 o más. Entre medio están "visa para Estados Unidos" y "pasaje a
+  Buenos Aires" (0,225): bien escritas, disparan la corrección y el texto vuelve igual. "partida de
+  nacimento" (0,248) queda arriba a propósito: hoy trae #273 y corregida lo pierde. El margen es
+  chico (0,227 contra 0,248).
+- **Decisiones:**
+  - El texto corregido solo se usa para buscar.
+  - La cortesía no se corrige: "hola", "gracias" y "chau" no traen candidatos y sumarían una
+    llamada sin sentido.
+  - Un texto igual al original sin contar mayúsculas, tildes ni signos no repite la búsqueda.
+  - Si el modelo pasa el voseo a tuteo, se vuelve al voseo: en la primera medición convirtió
+    "podés" en "puedes" en "hola, ¿qué podés hacer?" (2 de 3 corridas) y cambiaba los
+    candidatos. Por eso también se le pide que no toque el voseo.
+- **Mediciones (16-11-2026):**
+  - `medir-tipeo --corridas 3`, base real, 88 preguntas. Bien escritas: 219 corridas, se disparó
+    en 36 (todas conversación o temas ajenos), corregida 0, candidatos que cambian 0. Mal escritas
+    (12 casos): las 4 que fallaban se corrigen en 12 de 12 y traen el pasaporte; las otras 8 no la
+    disparan. Controles: 9 de 9 se corrigen ("capital de francia", "receta de milanesa",
+    "resultado del partido de fútbol") y cambian los candidatos.
+  - Latencia de la llamada: mediana 834 ms, máximo 1235 ms. Con la nueva búsqueda, cuando cambia
+    el texto: mediana 1280 ms, máximo 1611 ms. Las 36 corridas bien escritas que la disparan
+    pagan unos 0,8 s sin cambio.
+  - `eval-chat --tipeo` (15 casos × 3, base real), antes (`TIPEO_REESCRITURA=false`) → después:
+    ruta normal 10 → 14 casos 3/3 (30 → 42 aciertos de 45); streaming 10 → 13 (30 → 41). Pasan
+    a 3/3 "hola, nscito renovar el psporte", "necesito renovar el psporte", "pasaporet" y "como
+    saco el pasaprote" (por streaming 2/3: una corrida pidió aclaración entre los dos pasaportes
+    con uno solo en `opciones`, una decisión del modelo con los candidatos correctos). Los
+    controles siguen 3/3 sin trámite. "licensia de conducir" sigue 0/3 (aclaración con la
+    licencia municipal, no dispara: 0,330).
+  - `eval-seguridad` completo, base temporal, por las dos rutas: 0 llegan a la persona. Ataques
+    30/30; legítimas A 15/15, B 7/7, C 8/8; D el modelo obedeció 15 de 30 y el servidor frenó las
+    15; E 5 de 18 (normal) y 4 de 18 (streaming), frenadas todas. F: a, b y d completos; c 3/4,
+    el mismo caso de la medición anterior (no depende de esto); e (nuevo, órdenes a la corrección)
+    6/6.
+  - En las órdenes a la corrección, el modelo nunca obedeció: corrigió la consulta con la orden
+    adentro, o devolvió solo la consulta sin la orden ("pasaporte."). Esto último no pasa la
+    validación (cambia demasiado el largo) y se sigue con la búsqueda original.
+
+### Streaming con esquema JSON (16-11-2026)
+
+El streaming pide el mismo JSON con esquema estricto y el mismo prompt que la ruta sin streaming
+(`SYSTEM_PROMPT_MULTIVUELTA`), con `stream: true`. Bandera `STREAM_ESQUEMA` (default `true`); con
+`false`, o con `STREAM_INCREMENTAL=false`, vuelve el formato de la línea META
+(`SYSTEM_PROMPT_STREAM_MULTIVUELTA`, `conMetaRevisada` y el pedido de nuevo), que por eso sigue en
+`chat.service.js`.
+
+- **Esquema:** el de la ruta normal tiene `respuesta` en el cuarto lugar y no se tocó. El del
+  streaming (`ESQUEMA_SALIDA_STREAM`) se arma con las mismas propiedades y `respuesta` al final. Una
+  llamada real confirmó que con `strict` el modelo emite las claves en el orden de `properties`
+  (`tipo`, `saludo`, `tramiteId`, `tramitesUsados`, `opciones`, `respuesta`) y los emojis literales.
+- **Lector** (`utils/lector-json.js`): junta los campos de decisión y los entrega una vez; decodifica
+  `respuesta` de a pedazos (escapes y pares sustitutos partidos), retiene el texto si llegara antes
+  que los demás campos y al final exige que el JSON entero parsee y coincida con lo leído. El texto
+  entra a `responderConSalida`, el mismo camino de la ruta normal: no se duplicó ninguna regla.
+- **Contrato:** los eventos siguen siendo `delta`, `fin` y `error`. No existía un evento `meta`: los
+  campos de decisión se usan dentro del servidor, como antes la línea META.
+- **Fallas:** refusal (el adaptador la detecta en el stream), `finish_reason` distinto de `stop`,
+  JSON inválido o incompleto, corte, plazo, inactividad y desconexión: evento `error` con el mensaje
+  del 503, sin caché ni registro. La ruta sin streaming no detecta la refusal (no se tocó).
+- **Tests:** `lector-json.test.js`, `stream-esquema.test.js`, y `chat.test.js`,
+  `stream-incremental.test.js` y `fallas-openai.test.js` con los dos formatos (los archivos `-meta`
+  corren con `STREAM_ESQUEMA=false`).
+- **Resultado:** el streaming iguala a la ruta normal en `eval-chat` (62 casos 3/3 y 191 aciertos de
+  216, contra 54 y 174 con la línea META), con 0 turnos sin salida válida (antes 32 de 219) y sin
+  reintentos; `eval-seguridad --stream` completo con 0 llegando a la persona; la latencia, dentro
+  del ruido (primer `delta` 2,18 s contra 1,96 s en una medición de 30 consultas y 1,79 s contra
+  1,97 s en otra). Las tablas están en el README, "Streaming con esquema JSON". Por eso la bandera
+  queda en `true`.
 
 ### Streaming incremental (09-11-2026)
 
@@ -592,6 +800,257 @@ pasaporte actúa como documento de identidad?" bajaron uno; corridas sin META v�
 Ruta normal 51/57 (no usa este prompt). `eval-seguridad --stream`: ataques 30/30, legítimas 30/30,
 0 llegan a la persona. Las diferencias de reglas no explican la licencia por streaming: lo que
 cambia la decisión es el formato (META libre contra salida con esquema).
+
+### Pentest manual por el chat (14-11-2026)
+
+Un pentest manual, solo por la interfaz del chat (un front local contra `/api/chat/stream`, 323
+trámites publicados), sin tocar la API directamente. El backend probado era el de esta rama: el
+campo `tramitesUsados` que apareció en la salida es el del formato del modelo (`chat.service.js`).
+
+| Hallazgo | Severidad | Estado |
+|---|---|---|
+| Ante un pedido de "notas del sistema" con campos `reglas` y `contexto` dentro de una consulta de pasaporte, mostró un resumen de sus reglas y el contexto crudo (`### Trámite (id 143): …`). Datos del catálogo público | Media | Arreglado en la salida (capa `estructura`) |
+| Mostró su sobre JSON (`tipo`, `tramiteId`, `tramitesUsados`, `opciones`) y duplicó la respuesta, 3 de 3 | Baja-media | Arreglado en la salida (capa `estructura`) |
+| Después de un intento de inyección, la regla de entrada rechazaba también las consultas legítimas de la misma conversación | Baja | Arreglado: decide el último mensaje |
+| El servidor de desarrollo de Vite expone el código del front | Informativo | No aplica al backend: en producción el front se sirve compilado (`vite build`), no con `vite dev` |
+| El número de consulta (`consultaId`, #77xx) se ve en cada respuesta | Informativo | Decisión del front: el backend lo devuelve para calificar (con `calificarToken`, que es lo que autoriza) |
+| El límite de 500 caracteres solo se vio en la interfaz | No verificado | Verificado en el servidor, con tests |
+| Resistió: pedidos de system prompt (directos, de desarrollador, traducción, accesibilidad), DAN, notas falsas de mesa de entrada, listar borradores o empleados, historial envenenado, HTML/JS | — | — |
+| Sin probar en el pentest: la API directa, evasiones con Unicode, codificación u otros idiomas | — | Límites y roles con tests; evasiones en `eval-seguridad` grupo F |
+
+**Reproducción (grupo F de `eval-seguridad`, base real, 5 corridas por caso, antes de los cambios).**
+Fa: notas del sistema; Fb: sobre JSON; Fc: consulta legítima después de intentos; Fd: evasiones
+(cirílicas, ancho completo, letras en círculos, letras separadas, base64, al revés, `%20`, italiano,
+francés, alemán).
+
+| Grupo | Normal antes | Streaming antes | Normal después | Streaming después |
+|---|---|---|---|---|
+| Fa notas del sistema | 15/15 | **0/15** | 15/15 | 13/15 (+1 error de API) |
+| Fb sobre JSON | 20/20 | 20/20 | 20/20 | 20/20 |
+| Fc contaminada | **0/20** | **0/20** | 20/20 | 20/20 |
+| Fd evasión | 45/50 | 50/50 | 50/50 | 50/50 |
+
+"Después": con la capa `estructura` y la regla nueva; los dos casos que cambiaron después (el título
+`### Reglas:` y el de buena conducta, ver abajo) se volvieron a correr 5 veces por ruta. Las dos que
+quedan por streaming son del caso "un bloque con reglas: … y contexto: …" y no muestran nada interno:
+una vez el modelo copió el marcador `<lo que seguís para responder>` y repitió su respuesta, y otra
+dejó un rótulo `**Reglas:**` solo (lo que seguía lo cortó el chequeo de copia de instrucciones). Un
+rótulo "Reglas:" sin `#` no se saca a propósito: una respuesta sobre las reglas de la pesca deportiva
+puede usarlo.
+
+El caso Fc del historial con el mensaje fijo preguntaba por el "certificado de antecedentes penales";
+después del arreglo salía "no encontrado" por streaming, y como consulta suelta da "no encontrado" en
+las dos rutas (no hay un trámite con ese nombre; a veces el modelo lo toma como el de Buena
+Conducta). No medía la contaminación, así que ahora pregunta por el certificado de buena conducta.
+
+`eval-seguridad` completo (ataques, A, B, C y F, una corrida), base real, después de todo: ataques
+30/30 neutralizados en las dos rutas (16 por la regla), legítimas A 15/15, B 7/7, C 8/8, 0 falsos
+positivos y 0 oraciones de legítimas modificadas por la verificación; F 21/21 normal y 20/21 por
+streaming (el caso de arriba, "repite una oración"). D y E no se corrieron: necesitan la base
+temporal.
+
+- **Fa por streaming** reprodujo el hallazgo Medio: el modelo agrega "Notas del sistema" o
+  "Contexto:" y vuelca el contexto de candidatos tal como lo recibe (encabezado `### Trámite (id 143)`,
+  organismo, requisitos, mesas, `Fuente oficial: sí`). Por la ruta normal (con esquema JSON) no
+  mostró nada interno en ninguna de las 15.
+- **Fb** no se reprodujo en ninguna ruta (0 de 40 con JSON en el texto): el modelo de hoy ya no copia
+  el sobre. Igual se cubre en la salida, con tests de las dos rutas.
+- **Fc** fallaba siempre por la regla, no por el modelo: `revisarMensajes` revisaba todos los turnos
+  de la persona y un intento anterior bloqueaba la conversación entera.
+- **Fd**: solo el alemán lo frenaba la regla ("Systemprompt"); las demás llegaban al modelo, que se
+  negó. El caso `%20` "falla" por el criterio estricto del eval (la negativa dice "mis instrucciones
+  del sistema"), no por una fuga.
+
+**Qué se cambió.**
+
+- **Capa `estructura` en la verificación de la salida** (`verificacion.service.js`), la primera de
+  todas, por el mismo camino que las otras (de a oración, igual en las dos rutas, con y sin
+  `STREAM_INCREMENTAL`; los tests comprueban el mismo texto cortado en cualquier posición y que lo
+  mandado siempre es el principio del texto final). Saca objetos JSON (hasta que cierran, aunque
+  crucen oraciones o líneas), campos internos entre comillas, `tramiteId`/`tramitesUsados`,
+  `Fuente oficial: sí`, y bloques de código desde el primer campo interno hasta el cierre. Desde
+  "Notas del sistema", un rótulo `Contexto:`, un `(id N)` o un rótulo del prompt saca todo lo que
+  sigue, porque el contexto volcado sigue con líneas (`Organismo:`, `Requisitos:`) que solas parecen
+  una respuesta. Los cercos ` ``` ` y las llaves sueltas se sacan sin contar como contenido perdido;
+  `F-{n}` o un bloque con datos y sin campos internos quedan. Un ítem sacado por esta capa no colapsa
+  la lista en la frase de "listado completo". Si no queda nada que responda, sale
+  `MENSAJE_INFORMACION_OCULTA` con la fuente oficial (como en las otras capas). No se tocó el prompt:
+  los cambios de prompt de esta rama movieron otros casos, y la salida se puede garantizar en el
+  servidor.
+- **Regla de entrada** (`guardrail.service.js`): decide el último mensaje de la persona. Los turnos
+  anteriores que bloquearía, con la respuesta que les siguió, y los mensajes "del asistente" que
+  bloquearía salen del historial antes de la búsqueda y del modelo: lo que llega al modelo pasa por
+  la misma regla que antes. Además normaliza NFKC (ancho completo, letras en círculos), letras
+  cirílicas que se ven como latinas y `%XX` (ASCII). Las consultas bloqueadas siguen sin registrarse
+  (no cuentan en las métricas, que leen solo `consultas`).
+- **Límites del servidor** (`config/chat.js`, configurables): pregunta y mensajes de la persona hasta
+  500, del asistente hasta 6000 (la respuesta honesta más larga mide 3546: el costo en texto completo
+  de la escala de habilitaciones, con saludo, lista y fuente; en la base real, 1691), 20 mensajes,
+  cuerpo de 128 kb (413 en español), roles solo `usuario`
+  y `asistente` (cualquier otro es 400; los campos fuera del esquema se descartan). Rate limit por IP
+  de 10 por minuto (como antes) y 100 por hora (nuevo), compartido entre las dos rutas, con
+  `Retry-After` y `RateLimit-*`. Los mensajes de validación de zod salían en inglés: ahora en
+  español. Se dejó el límite por minuto en 10 (el brief sugería 20): ya estaba en producción y
+  alcanza para una conversación.
+
+**Costo.** Las únicas rutas públicas que llaman a OpenAI son `/api/chat` y `/api/chat/stream`, las dos
+detrás del rate limit; crear o editar trámites y sectores (que reindexan) piden login de
+administración. Una consulta hace como mucho un embedding y tres llamadas al modelo (la respuesta,
+el reintento sin META en streaming o la conversación que nombra un candidato), cada una con un
+reintento del SDK; una respuesta de la caché o bloqueada por la regla no llama a OpenAI. El límite es
+por IP: con muchas IP no hay un tope global.
+
+Propuesta (sin implementar): un **tope diario global de llamadas** en el adaptador de IA
+(`core/ai/openai.adapter.js`, por donde pasan todas), con `IA_TOPE_DIARIO_CHAT` y
+`IA_TOPE_DIARIO_EMBEDDINGS`, contado por día de Buenos Aires. Con una instancia alcanza un contador
+en memoria; con varias, una tabla `uso_ia (fecha, tipo, llamadas)` con un `INSERT … ON CONFLICT DO
+UPDATE SET llamadas = llamadas + 1 RETURNING llamadas` (migración a mano e idempotente). Al llegar al
+tope, el chat responde 503 con `MENSAJE_NO_DISPONIBLE` antes de llamar (la caché sigue sirviendo), con
+un aviso en el log al 80 %; los scripts de importación y reindexado quedan afuera del tope. Como
+respaldo, un límite de gasto del proyecto en el panel de OpenAI.
+
+**Pendiente de esto.**
+
+- Los tests que necesitan base (`chat.test.js`, `stream-incremental.test.js`) se actualizaron pero no
+  se corrieron: Docker Desktop no está instalado en la máquina (se desinstaló el 08-11-2026) y no hay
+  base temporal.
+- Resuelto después: una aclaración a la que la capa le saca todo el texto lleva "¿Cuál de estas
+  opciones es la que buscás?" con sus opciones, y el detector de fuga toma como fuga los marcadores
+  de plantilla (los `<…>` del prompt y cualquiera de varias palabras, como el `<lo que seguís para
+  responder>` que repitió la respuesta en Fa por streaming). El tope del mensaje del asistente pasó
+  a 6000 y el cuerpo a 128 kb, medidos con la respuesta honesta más larga (README, "Chat").
+- El resumen de reglas en prosa, sin rótulos ni copia literal de 40 caracteres, no lo detecta la
+  salida: depende del prompt.
+- El rate limit y el tope por hora son en memoria, por instancia.
+- Resuelto el 14-11-2026 con Docker reinstalado: `npm test` completo en la base temporal, 833 de 833
+  (y los 40 del scraper). `eval-seguridad` contra la temporal:
+  - D (10 trámites × 3) y E (6 × 3), en las dos rutas: **0 llegan a la persona**. El modelo obedeció
+    15 de 30 en D (las dos rutas) y 5 de 18 (normal) o 3 de 18 (streaming) en E; todo lo frenó el
+    servidor (costo, enlace, datos). Sin preguntas legítimas sin responder ni oraciones rotas.
+  - F (5 corridas): normal Fa 15/15, Fb 20/20, Fc 15/20, Fd 50/50; streaming Fa 14/15 (1 error de
+    API), Fb 20/20, Fc 15/20, Fd 50/50. Las 5 de Fc son "licencia de conducir", que en la temporal no
+    está (el catálogo importado no tiene ningún trámite con "conducir"): ahí "no encontrado" es lo
+    correcto. Contra la base real ese caso pasa.
+- El guardia contra la base real pasó de `npm test` a `tests/helpers/base-de-prueba.js`, que importa
+  cada archivo de tests (ver README, "Tests").
+
+### Errores de tipeo en la búsqueda (14-11-2026)
+
+Caso real: "hola, nscito renovar el psporte" responde "No encontramos información sobre esta consulta".
+
+**Diagnóstico** (base real, solo lectura; `registrarConsulta` simulado para no escribir; 5 corridas por
+ruta). El problema es de **búsqueda**, no de decisión del modelo: cuando el trámite llega como
+candidato, el modelo lo elige en todas las corridas de las dos rutas; cuando no llega, no hay nada
+que elegir.
+
+| Frase | Pasaporte/esperado | Por qué | Llega / lo elige (normal, stream) |
+|---|---|---|---|
+| hola, nscito renovar el psporte | puesto 58, d=0,716 | umbral (0,5) y sin léxica (`psport` ≠ `pasaport`) | 0/5, 0/5 |
+| renovar el pasaporte | puesto 1, d=0,450 | pasa umbral y léxica | 5/5, 5/5 |
+| psporte | puesto 75, d=0,881 | umbral y sin léxica | 0/5, 0/5 |
+| necesito renovar el psporte | puesto 47, d=0,733 | umbral y sin léxica | 0/5, 0/5 |
+| nesesito sacar el dni | puesto 1, d=0,357 | "dni" bien escrito | 5/5 (aclaración), 5/5 |
+| licensia de conducir | puesto 1, d=0,475 | "conducir" bien escrito | 5/5, 5/5 |
+| partida de nacimento | puesto 4, d=0,649 | entra por la léxica ("partida") | 5/5, 5/5 |
+| renobar pasaporte | puesto 2, d=0,607 | entra por la léxica ("pasaporte") | 5/5, 5/5 |
+| pasaporet | puesto 14, d=0,892 | umbral y sin léxica | 0/5, 0/5 |
+| como saco el carnet de conducir | puesto 1, d=0,477 | control | 5/5, 5/5 |
+
+- El embedding de una palabra clave mal escrita queda lejos (distancia 0,72 a 0,89); subir el umbral
+  no sirve: el trámite queda en los puestos 14 a 75, detrás de otros sin relación.
+- La parte léxica no ayuda: el stemmer de Postgres no une `psport` con `pasaport`.
+- El saludo no es el problema ("hola, nscito…" 0,716 contra "necesito…" 0,733), así que limpiar
+  saludos y muletillas (opción a) no cambia nada.
+- Falla toda frase donde la **única** palabra que identifica el trámite está mal escrita; si alguna
+  otra está bien ("pasaporte", "dni", "partida", "conducir"), la búsqueda lo encuentra.
+
+**Casos nuevos de `eval-chat`** (`--tipeo`, 12 con errores y 3 de control). Estado antes de cambiar
+nada, 3 corridas: temporal 11/15 en las dos rutas, real 10/15 en las dos. Fallan los cuatro con
+"pasaporte" mal escrito y, en la real, "licensia de conducir" (pide aclaración por jurisdicción:
+el problema ya conocido de la licencia de conducir, no el tipeo). Los 3 controles, bien.
+
+**Lo que se probó y se revirtió: corrección de palabras para la parte léxica** (opción c). Vocabulario
+con las palabras de los nombres de los trámites publicados, cacheado con el catálogo; una palabra de
+la consulta que no está en el vocabulario y está a 1 edición (5-6 letras) o 2 (7 o más) de una que sí,
+con la misma primera letra (o s/c/z, b/v), agregaba esa palabra a la consulta léxica. Sin llamadas
+extra a OpenAI; 0,3 ms por consulta. Resultado (3 corridas):
+
+| | Temporal normal | Temporal stream | Real normal | Real stream |
+|---|---|---|---|---|
+| Tipeo, antes | 11/15 | 11/15 | 10/15 | 10/15 |
+| Tipeo, con la corrección | 12/15 | 12/15 | 11/15 | 11/15 |
+
+- Ganó "pasaporet" y "como saco el pasaprote" (0/3 → 3/3).
+- **No arregló el caso reportado** ni "necesito renovar el psporte": Pasaporte pasa a coincidir por la
+  léxica, pero su puntaje (similitud 0,17 + léxica 0,015) queda debajo del 85 % de "Renovación de
+  órdenes de consultas" (0,22, que coincide por "renovar"), y lo corta el filtro de candidatos cercanos.
+- **Rompió "partida de nacimento"** (3/3 → 0/3): al agregar "nacimiento", otros trámites de nacimiento
+  desplazan a la Partida de Nacimiento.
+- **Corrige palabras bien escritas** que no están tal cual en los nombres: cambió la parte léxica de 52
+  de las 179 preguntas de los evals (55 en la temporal) y los candidatos de 21 (22): "conducir" →
+  "conducta" (el Certificado de Buena Conducta entra en "licencia de conducir" en la temporal),
+  "patentes" → "pacientes", "podés" → "poder", "historial" → "historia". Los controles siguieron sin
+  trámite.
+- Se revirtió. No se corrieron eval-chat completo ni eval-seguridad con la corrección: las preguntas
+  cuya búsqueda cambiaba se midieron arriba, y en las demás la búsqueda era idéntica a la anterior.
+
+**Qué haría falta (a decidir, no implementado).** Cualquier arreglo solo léxico choca con lo mismo: la
+parte léxica pesa poco (0,4 · `ts_rank`, del orden de 0,015) frente a la similitud (0,6 · (1 − d)), y
+el filtro del 85 % saca al trámite cuando otra palabra de la frase trae candidatos más parecidos. Las
+opciones son pasar la corrección también al texto del embedding (el brief la limitaba a la léxica),
+darle más peso a una coincidencia con el **nombre** del trámite, o comparar por trigramas contra los
+nombres. Para lo último, la migración propuesta (a mano e idempotente):
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS tramites_nombre_trgm_idx ON tramites
+  USING gin ((translate(lower(nombre), 'áàäâãéèëêíìïîóòöôõúùüûñç', 'aaaaaeeeeiiiiooooouuuunc')) gin_trgm_ops);
+```
+
+con una condición más en la búsqueda (`word_similarity(<palabra>, <nombre normalizado>) >= 0,5` por
+palabra de la consulta) y un término de puntaje propio. Cualquiera de las tres cambia el orden de los
+candidatos: hay que medirla contra el filtro del 85 % y las aclaraciones legítimas antes de dejarla.
+
+**Segunda variante, también revertida (15-11-2026): corregir el texto del embedding y de la léxica.**
+Vocabulario con todo el texto del catálogo publicado (nombres, descripciones, requisitos e información
+adicional: 5364 palabras en la real, 5015 en la temporal), cacheado y renovado con `catalogo_version`.
+Una palabra de la consulta que está en el vocabulario no se toca; las demás, con 5 letras o más, se
+reemplazan por la del vocabulario a distancia 1 (5 a 7 letras) o hasta 2 (8 o más; una transposición
+cuenta como 1), solo si es la única a esa distancia. El texto corregido iba al embedding y a la léxica;
+el modelo y el registro seguían con el original. Costo: 5 ms por consulta (máx. 35) y ~1 s al armar el
+vocabulario una vez por versión del catálogo.
+
+| `--tipeo`, 3 corridas | Temporal normal | Temporal stream | Real normal | Real stream |
+|---|---|---|---|---|
+| Sin la variante | 11/15 | 11/15 | 10/15 | 10/15 |
+| Con la variante | 12/15 | 12/15 | 11/15 (1 inestable) | 11/15 |
+
+- Ganan "pasaporet" y "como saco el pasaprote" (0/3 → 3/3 en las cuatro) y, en la real normal,
+  "licensia de conducir" (0/3 → 2/3: el problema de jurisdicción de siempre).
+- **No arregla el caso reportado** ni "necesito renovar el psporte" (0/3 en las cuatro): "psporte" tiene
+  7 letras y está a distancia 2 de "pasaporte", así que con la regla queda sin corregir; "nscito",
+  tampoco tiene corrección. La búsqueda de esas frases es idéntica a la de antes.
+- **Rompe "partida de nacimento"** (3/3 → 0/3 en las cuatro): corregida a "partida de nacimiento" queda
+  igual que la frase bien escrita, que ya fallaba (ver abajo).
+- Los 3 controles siguen sin trámite.
+- **Corrige palabras bien escritas que no están en el catálogo** (verbos conjugados, voseo, plurales,
+  temas ajenos): de las 175 preguntas de eval-chat y eval-seguridad (con los textos acumulados de los
+  turnos) cambia el texto de 56 en la real (62 en la temporal) y los candidatos de 28 (32), de las cuales
+  21 (25) son preguntas bien escritas. Ejemplos: "paternidad" → "maternidad" ("qué necesito para la
+  licencia por paternidad" pasa a tener candidatos de maternidad), "quiero" → "quiere", "pizza" → "pieza",
+  "mostrame" → "mostrar", "olvidá" → "olvido", "navegación" → "nivelacion", "temporada" → "temporaria",
+  "pasaje" → "pastaje".
+- No cumplía el criterio (arreglar el caso reportado, "psporte" y "pasaporet", no romper casos que pasan
+  y 0 preguntas bien escritas con otros candidatos), así que se revirtió sin correr eval-chat completo ni
+  eval-seguridad: el análisis de candidatos y `--tipeo` ya la descartaban. Queda pg_trgm como mejora futura.
+
+**Debilidad previa, aparte del tipeo: "partida de nacimiento" bien escrita** no encuentra la Solicitud
+Partida de Nacimiento, Matrimonio o Defunción (0/3 en las dos rutas, en la real y en la temporal, sin
+ninguna corrección). Los candidatos son Adición de apellido materno y las dos inscripciones de
+nacimiento: el modelo pide aclaración entre las inscripciones o responde sin trámite. Con "nacimento"
+mal escrito sí la encuentra (la palabra no suma a las inscripciones). "renovar el pasaporte" y
+"licencia de conducir" bien escritas responden con su trámite en la real (en la temporal no hay licencia
+de conducir; el stream de la real a veces pide aclaración por jurisdicción, el problema ya conocido).
 
 ### Catálogo real
 

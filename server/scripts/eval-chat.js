@@ -6,6 +6,7 @@
 //   node scripts/eval-chat.js --detalle   además, el texto de cada corrida
 //   node scripts/eval-chat.js --corridas 5 --solo "cómo renuevo el pasaporte" --solo "..."
 //                                         otra cantidad de corridas, o solo esos casos
+//   node scripts/eval-chat.js --tipeo     solo los casos con errores de tipeo y sus controles
 //   DATABASE_URL=<base temporal> node scripts/eval-chat.js --catalogo sintetico
 //                                         solo los casos de trámites repetidos en distintos
 //                                         municipios (catálogo de scripts/generar-catalogo-sintetico.js)
@@ -28,6 +29,7 @@ import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';
 import { responderConsulta, responderConsultaStream, MENSAJE_SIN_RESPUESTA, cargarDetalle } from '../src/services/chat.service.js';
 import { ia } from '../src/core/ai/index.js';
+import { streamEsquema, streamIncremental } from '../src/config/ia.js';
 import { CorridaSinCredito, SALIDA_SIN_CREDITO, cortarSiSinCredito } from './lib/sin-credito.js';
 import { MENSAJE_LISTA_COLAPSADA, montosEn } from '../src/services/verificacion.service.js';
 import { costoDelPortal } from '../src/utils/huella.js';
@@ -40,6 +42,7 @@ const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [pr
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 3);
 const DETALLE = process.argv.includes('--detalle');
 const SOLO = argumento('--solo');
+const TIPEO = process.argv.includes('--tipeo');
 const MODO = argumento('--catalogo')[0] ?? null;
 const SINTETICO = MODO === 'sintetico';
 if (MODO && !['sintetico', 'municipal'].includes(MODO)) throw new Error(`--catalogo ${MODO}: los catálogos son sintetico y municipal.`);
@@ -70,6 +73,7 @@ const NOMBRES = {
   pasaporte: 'Pasaporte',
   pesca: 'Licencia para Pesca Deportiva / Recreativa',
   buenaConducta: 'Solicitud de Certificado de Buena Conducta',
+  partida: 'Solicitud Partida de Nacimiento, Matrimonio o Defunción',
 };
 const ID = {};
 for (const [clave, nombre] of Object.entries(NOMBRES)) {
@@ -213,6 +217,25 @@ const casos = [
     pregunta: 'dónde hago el cambio de titularidad del auto en la municipalidad',
     esperado: { contesta: true, jurisdiccion: 'MUNICIPAL', ...DOMINIO, segunBase: { nombre: 'Cambio de Titularidad', dato: 'mesas' } },
   },
+
+  // Errores de tipeo (14-11-2026): letras que faltan, intercambiadas, sin tildes, mal escritas o con
+  // saludo. Cada uno tiene que llegar al trámite, respondido u ofrecido en una aclaración.
+  { tipeo: true, pregunta: 'hola, nscito renovar el psporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'necesito renovar el psporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'pasaporet', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'como saco el pasaprote', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'renobar pasaporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'cuanto sale el pasaporte', esperado: { contesta: true, incluye: [ID.pasaporte] } },
+  { tipeo: true, pregunta: 'nesesito sacar el dni', esperado: { tipo: 'aclaracion', incluye: [ID.nuevoEjemplar] } },
+  { tipeo: true, pregunta: 'licensia de conducir', esperado: { segunCatalogo: 'Licencia de conducir', oTramite: LICENCIA_MUNICIPAL, siNoHay: { conversacional: false } } },
+  { tipeo: true, pregunta: 'partida de nacimento', esperado: { contesta: true, incluye: [ID.partida] } },
+  { tipeo: true, pregunta: 'buenas, sertificado de buena condcta', esperado: { contesta: true, incluye: [ID.buenaConducta] } },
+  { tipeo: true, pregunta: 'lisencia por maternida', esperado: { contesta: true, incluye: [ID.maternidad] } },
+  { tipeo: true, pregunta: 'pesca deprotiva', esperado: { contesta: true, incluye: [ID.pesca] } },
+  // Control: mal escritos y fuera del catálogo, tienen que seguir sin trámite.
+  { tipeo: true, pregunta: 'capital de fransia', esperado: { tipo: 'respuesta', encontrado: false, noContiene: ['aumento de capital'] } },
+  { tipeo: true, pregunta: 'reseta de milanesa', esperado: { tipo: 'respuesta', encontrado: false } },
+  { tipeo: true, pregunta: 'resultado del partido de fubol', esperado: { tipo: 'respuesta', encontrado: false } },
 ];
 
 // Los ejemplos del resumen se eligen por consultas y las de la evaluación se borran recién al final,
@@ -498,12 +521,27 @@ const consultasCreadas = [];
 const STREAM = process.argv.includes('--stream');
 let grabadas = null;
 let aRepetir = null;
+// Llamadas al modelo por la ruta sin streaming mientras se responde por streaming: el reintento por
+// una línea META inválida o la conversación pedida de nuevo.
+let segundasLlamadas = 0;
 const generarOriginal = ia.generarRespuesta.bind(ia);
 ia.generarRespuesta = async (args) => {
   if (aRepetir) return aRepetir.shift();
+  if (grabadas) segundasLlamadas++;
   const salida = await generarOriginal(args);
   grabadas?.push(salida);
   return salida;
+};
+// La salida del streaming como la de la ruta sin streaming: con el esquema, el JSON tal cual; con la
+// línea META, la META con el texto en "respuesta". Sin una salida válida no se compara.
+const salidaDelStream = (crudo) => {
+  try {
+    if (streamIncremental() && streamEsquema()) return JSON.stringify(JSON.parse(crudo));
+    const nl = crudo.indexOf('\n');
+    return nl === -1 ? null : JSON.stringify({ ...JSON.parse(crudo.slice(0, nl)), respuesta: crudo.slice(nl + 1) });
+  } catch {
+    return null;
+  }
 };
 const transmitirOriginal = ia.generarRespuestaStream.bind(ia);
 ia.generarRespuestaStream = async function* (args) {
@@ -512,15 +550,7 @@ ia.generarRespuestaStream = async function* (args) {
     crudo += delta;
     yield delta;
   }
-  // Como la ruta sin streaming: la META con el texto en "respuesta". Sin META válida no se compara.
-  const nl = crudo.indexOf('\n');
-  let meta = null;
-  try {
-    meta = nl === -1 ? null : JSON.parse(crudo.slice(0, nl));
-  } catch {
-    meta = null;
-  }
-  grabadas?.push(meta ? JSON.stringify({ ...meta, respuesta: crudo.slice(nl + 1) }) : null);
+  grabadas?.push(salidaDelStream(crudo));
 };
 
 const comparaciones = [];
@@ -572,10 +602,12 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
     const alCorregirTuteo = (formas) => tuteo.push(...formas);
     const correcciones = [];
     const alCorregirSalida = (c) => correcciones.push(c);
+    let conversacionDeNuevo = 0;
+    const alPedirConversacionDeNuevo = () => conversacionDeNuevo++;
     let r;
     for (const texto of turnos ?? [pregunta]) {
       mensajes.push({ rol: 'usuario', texto });
-      r = await consultar(mensajes, { alCorregirTuteo, alCorregirSalida }, texto);
+      r = await consultar(mensajes, { alCorregirTuteo, alCorregirSalida, alPedirConversacionDeNuevo }, texto);
       if (r.consultaId) consultasCreadas.push(r.consultaId);
       transversales.push(...fallasTransversales(r, mensajes.filter((m) => m.rol === 'usuario').map((m) => m.texto).join(' ')));
       mensajes.push({ rol: 'asistente', texto: r.respuesta });
@@ -586,10 +618,11 @@ const correr = async ({ pregunta, turnos, esperado: crudo }) => {
       texto: r.respuesta,
       tuteo,
       correcciones,
+      conversacionDeNuevo,
     };
   } catch (err) {
     cortarSiSinCredito(err);
-    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [], correcciones: [] };
+    return { obtenido: `ERROR: ${err.message}`, motivo: ['error'], texto: '', tuteo: [], correcciones: [], conversacionDeNuevo: 0 };
   }
 };
 
@@ -622,7 +655,7 @@ const delModo = casos.filter((c) => {
   if (MODO === 'municipal') return c.catalogo === 'municipal';
   return SINTETICO ? c.catalogo === 'sintetico' || c.esperado.segunCatalogo : !c.catalogo;
 });
-const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunta)) : delModo;
+const elegidos = SOLO.length > 0 ? delModo.filter((c) => SOLO.includes(c.pregunta)) : TIPEO ? delModo.filter((c) => c.tipeo) : delModo;
 const desconocidos = SOLO.filter((p) => !delModo.some((c) => c.pregunta === p));
 if (desconocidos.length > 0) throw new Error(`Casos que no existen: ${desconocidos.join(' | ')}`);
 
@@ -663,6 +696,8 @@ for (const caso of elegidos) {
     obtenido: resumirCorridas(corridas),
     // Corridas que terminaron en un error (de OpenAI, de la base): no dicen nada del chat.
     erroresDeApi: corridas.filter((c) => c.motivo.includes('error')).length,
+    // Veces que la conversación se pidió de nuevo sin candidatos (nombraba uno que no está en el resumen).
+    conversacionDeNuevo: corridas.reduce((n, c) => n + c.conversacionDeNuevo, 0),
     ...(aciertos < CORRIDAS && { fallados: corridas.filter((c) => c.motivo.length > 0).map((c) => ({ motivo: c.motivo, respuesta: c.texto })) }),
   });
   tuteoPorCaso.push({
@@ -710,12 +745,22 @@ for (const c of correccionesDeSalida) {
   console.log(`  - [${c.capa}] "${c.pregunta}": "${c.original}"${c.corregida ? ` → "${c.corregida}"` : ' → (se sacó)'}`);
 }
 
+const conversacionDeNuevo = resultados.filter((c) => c.conversacionDeNuevo > 0);
+console.log(`
+Conversación pedida de nuevo sin candidatos: ${conversacionDeNuevo.reduce((n, c) => n + c.conversacionDeNuevo, 0)} veces en ${elegidos.length * CORRIDAS} corridas`);
+for (const c of conversacionDeNuevo) console.log(`  - "${c.pregunta}": ${c.conversacionDeNuevo}`);
+
+// Corridas del streaming sin una salida válida: sin línea META (se respondió con cortesía o se pidió de
+// nuevo sin streaming) o, con el esquema, sin el JSON completo (la corrida terminó en error).
+const sinMetaValida = comparaciones.filter((c) => c.igual === null);
+
 if (STREAM) {
   const comparadas = comparaciones.filter((c) => c.igual !== null);
   const distintas = comparadas.filter((c) => !c.igual);
   console.log(`\nStreaming contra la ruta sin streaming, con la misma salida del modelo: ${comparadas.length - distintas.length} iguales de ${comparadas.length}` +
     `${comparaciones.length > comparadas.length ? ` (${comparaciones.length - comparadas.length} sin META válida, no comparadas)` : ''}`);
   for (const c of distintas) console.log(`  - "${c.pregunta}":\n    stream: ${c.stream.replace(/\n/g, ' / ')}\n    normal: ${c.normal.replace(/\n/g, ' / ')}`);
+  console.log(`Llamadas al modelo por la ruta sin streaming durante el streaming: ${segundasLlamadas} (${resultados.reduce((n, c) => n + c.conversacionDeNuevo, 0)} por la conversación pedida de nuevo)`);
   if (distintas.length > 0) process.exitCode = 1;
 }
 
@@ -743,6 +788,9 @@ writeFileSync(archivo, JSON.stringify({
   valida: sinCredito === null,
   ...(sinCredito && { invalida: 'sin crédito en OpenAI: la corrida se cortó' }),
   erroresDeApi: resultados.reduce((n, c) => n + c.erroresDeApi, 0),
+  conversacionDeNuevo: resultados.reduce((n, c) => n + c.conversacionDeNuevo, 0),
+  ...(STREAM && { formato: streamIncremental() && streamEsquema() ? 'esquema' : 'meta', sinMetaValida: sinMetaValida.length, sinMetaValidaEn: sinMetaValida.map((c) => c.pregunta), segundasLlamadas }),
+  aciertos: resultados.reduce((n, c) => n + c.aciertos, 0),
   total: elegidos.length,
   ok: conEstado('OK').length,
   casos: resultados,

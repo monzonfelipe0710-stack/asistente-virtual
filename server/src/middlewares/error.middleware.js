@@ -1,4 +1,12 @@
 export const errorHandler = (err, req, res, next) => {
+  // Lo lanza express.json() y trae statusCode 400, pero con el mensaje del parser en inglés.
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'El cuerpo de la solicitud no es un JSON válido.' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'La solicitud es demasiado grande.' });
+  }
+
   if (err.name === 'ZodError') {
     return res.status(400).json({ error: err.issues[0].message });
   }

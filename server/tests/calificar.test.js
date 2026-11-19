@@ -1,3 +1,4 @@
+import './helpers/base-de-prueba.js';
 import 'dotenv/config';
 import crypto from 'node:crypto';
 import { describe, it, before, after } from 'node:test';
