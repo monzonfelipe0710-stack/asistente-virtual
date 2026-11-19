@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>ChatAP en iPhone</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #1f2023;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .telefono {
+    position: relative;
+    width: 393px;
+    height: 852px;
+    padding: 14px;
+    border-radius: 68px;
+    background: #0b0b0c;
+    box-shadow: 0 0 0 2px #3a3b3f, 0 30px 80px rgba(0, 0, 0, 0.6);
+    transform-origin: center;
+  }
+  .pantalla {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 54px;
+    overflow: hidden;
+    background: #f9fafd;
+  }
+  .barra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 54px;
+    z-index: 1;
+    pointer-events: none;
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    /* Blanco con difference: se ve oscuro sobre fondo claro y claro sobre fondo oscuro. */
+    color: #fff;
+    mix-blend-mode: difference;
+  }
+  .hora {
+    position: absolute;
+    top: 18px;
+    left: 40px;
+  }
+  iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+  .inicio {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 34px;
+    z-index: 1;
+    pointer-events: none;
+    mix-blend-mode: difference;
+  }
+  .inicio div {
+    position: absolute;
+    bottom: 9px;
+    left: 50%;
+    width: 134px;
+    height: 5px;
+    margin-left: -67px;
+    border-radius: 3px;
+    background: #fff;
+  }
+  .isla {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    top: 11px;
+    left: 50%;
+    width: 124px;
+    height: 36px;
+    margin-left: -62px;
+    border-radius: 20px;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+<div class="telefono" id="telefono">
+  <div class="pantalla">
+    <div class="barra">
+      <span class="hora" id="hora"></span>
+    </div>
+    <div class="isla"></div>
+    <iframe name="marco-iphone" src="http://localhost:5173"></iframe>
+    <div class="inicio"><div></div></div>
+  </div>
+</div>
+<script>
+  function ajustar() {
+    var telefono = document.getElementById("telefono");
+    var escala = Math.min(1, (window.innerHeight - 40) / 880, (window.innerWidth - 40) / 421);
+    telefono.style.transform = "scale(" + escala + ")";
+  }
+  function mostrarHora() {
+    var ahora = new Date();
+    var minutos = ahora.getMinutes();
+    if (minutos < 10) {
+      minutos = "0" + minutos;
+    }
+    document.getElementById("hora").textContent = ahora.getHours() + ":" + minutos;
+  }
+  window.addEventListener("resize", ajustar);
+  ajustar();
+  mostrarHora();
+  setInterval(mostrarHora, 10000);
+</script>
+</body>
+</html>
