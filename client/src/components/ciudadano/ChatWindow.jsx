@@ -6,7 +6,7 @@ import ChatHistoryPanel from "./ChatHistoryPanel";
 import Navbar from "../common/Navbar";
 import { BotReactionController } from "./BotReactionController";
 import { wizards } from "../../data/wizard";
-import { obtenerChecklist, preguntar } from "../../services/chat";
+import { obtenerChecklist, preguntar, preguntarStream } from "../../services/chat";
 import { eliminarConsulta } from "../../services/consultas";
 import { useChat } from "../../context/ChatContext";
 import { useAuth } from "../../context/AuthContext";
@@ -18,8 +18,6 @@ import {
   rememberMessage,
   rememberAnswer,
   HISTORY_LIMIT,
-  loadMemory,
-  buildReminder,
   detectTopic,
   removeMemoryMessage,
   clearMemoryMessages,
@@ -169,6 +167,8 @@ function consultaRepresentadaPorHilo(consulta, thread) {
 }
 
 const MAX_PREGUNTA = 500;
+const MAX_MENSAJE_ASISTENTE = 6000;
+const MAX_BODY_CHAT_BYTES = 128 * 1024;
 const MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp"];
 
@@ -221,11 +221,26 @@ export default function ChatWindow({ initialQuery = null }) {
   const typeTimerRef = useRef(0);
   const controllerRef = useRef(null);
   const typingTimerRef = useRef(null);
+  const requestAbortRef = useRef(null);
+  const streamStateRef = useRef(null);
   // Evita solicitudes simultáneas y envíos durante la animación de respuesta.
   const requestInFlightRef = useRef(false);
-  const greetedRef = useRef(false);
+  const cancelActiveResponse = useCallback(() => {
+    requestAbortRef.current?.abort();
+    requestAbortRef.current = null;
+    const streamState = streamStateRef.current;
+    if (streamState?.timer) clearInterval(streamState.timer);
+    streamState?.resolveDrain?.();
+    streamStateRef.current = null;
+    clearInterval(typeTimerRef.current);
+    requestInFlightRef.current = false;
+    speakingRef.current = false;
+    speakingIdRef.current = null;
+    setSpeakingId(null);
+    setTypedText("");
+    setIsTyping(false);
+  }, []);
   const wizardRef = useRef(null);
-  const [welcomeMem, setWelcomeMem] = useState(null);
   const [promoReady, setPromoReady] = useState(false);
   const [promoDismissed, setPromoDismissed] = useState(false);
   const [promoLeaving, setPromoLeaving] = useState(false);
@@ -239,7 +254,7 @@ export default function ChatWindow({ initialQuery = null }) {
   const historyCloseButtonRef = useRef(null);
   const historyTriggerRef = useRef(null);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
-  const [historyVersion, setHistoryVersion] = useState(0);
+  const [, setHistoryVersion] = useState(0);
   const [pendingDeleteKeys, setPendingDeleteKeys] = useState(() => new Set());
   const [clearingHistory, setClearingHistory] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState(() => crearIdConversacion());
@@ -475,6 +490,14 @@ export default function ChatWindow({ initialQuery = null }) {
     };
   }, []);
 
+  useEffect(() => () => {
+    requestAbortRef.current?.abort();
+    if (streamStateRef.current?.timer) {
+      clearInterval(streamStateRef.current.timer);
+    }
+    streamStateRef.current?.resolveDrain?.();
+  }, []);
+
   // Si el usuario autenticado vuelve con historial guardado,
   // entramos directamente al chat en lugar del saludo inicial.
   useEffect(() => {
@@ -484,11 +507,11 @@ export default function ChatWindow({ initialQuery = null }) {
     }
   }, [messages.length]);
 
-  // Al cambiar de usuario (login/logout) reiniciamos el saludo personalizado.
+  // No dejamos una respuesta de una sesión anterior activa al cambiar de usuario.
   const userId = user?.id ?? null;
   useEffect(() => {
-    greetedRef.current = false;
-  }, [userId]);
+    if (requestAbortRef.current) cancelActiveResponse();
+  }, [userId, cancelActiveResponse]);
 
   // Cada conversación se guarda por separado en el navegador para poder retomarla
   // aunque se inicie otro chat o se recargue la página.
@@ -521,34 +544,6 @@ export default function ChatWindow({ initialQuery = null }) {
       return next;
     });
   }, [activeThreadId, messages, userId, isAuthenticated]);
-
-  // Memoria: cargamos el contexto del usuario para personalizar la bienvenida.
-  useEffect(() => {
-    const effectiveId = userId || "ciudadano_anonimo";
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setWelcomeMem(
-      token && consultas.length > 0
-        ? {
-            count: consultas.length,
-            lastTopic: consultas[0]?.topico === "haberes"
-              ? "recibos"
-              : consultas[0]?.topico === "requisitos"
-                ? "tramites"
-                : consultas[0]?.topico,
-            topics: consultas.reduce((counts, consulta) => {
-              const topic = consulta.topico === "haberes"
-                ? "recibos"
-                : consulta.topico === "requisitos"
-                  ? "tramites"
-                  : consulta.topico;
-              if (topic) counts[topic] = (counts[topic] || 0) + 1;
-              return counts;
-            }, {}),
-            preferredOffice: null,
-          }
-        : loadMemory(effectiveId)
-    );
-  }, [userId, token, consultas, historyVersion]);
 
   // El historial prioriza hilos completos guardados en este navegador y agrega
   // consultas persistidas por la API que todavía no estén incluidas en esos hilos.
@@ -737,6 +732,8 @@ export default function ChatWindow({ initialQuery = null }) {
     if (requestInFlightRef.current) return;
     requestInFlightRef.current = true;
     const responseThreadId = activeThreadIdRef.current;
+    const abortController = new AbortController();
+    requestAbortRef.current = abortController;
     setIsTyping(true);
     controllerRef.current?.onEvent("botThinking");
 
@@ -744,6 +741,61 @@ export default function ChatWindow({ initialQuery = null }) {
     let finalActions = null;
     let consultationData = null;
     let error = false;
+    let streamState = null;
+
+    function startStreamTimer(state) {
+      if (state.timer) return;
+      state.timer = window.setInterval(() => {
+        if (streamStateRef.current !== state || abortController.signal.aborted) {
+          clearInterval(state.timer);
+          state.timer = null;
+          return;
+        }
+
+        const nextWord = state.queue.match(/^\s*\S+\s*/);
+        const text = nextWord
+          ? nextWord[0]
+          : state.finished
+            ? state.queue
+            : "";
+        if (text) {
+          state.queue = state.queue.slice(text.length);
+          state.visibleText += text;
+          if (!state.messageId) {
+            state.messageId = addMessage("bot", state.visibleText);
+            setIsTyping(false);
+            speakingRef.current = true;
+            speakingIdRef.current = state.messageId;
+            setSpeakingId(state.messageId);
+            controllerRef.current?.onEvent("botResponding", {
+              text: state.visibleText,
+            });
+          } else {
+            updateMessage(state.messageId, { text: state.visibleText });
+          }
+        }
+
+        if (state.finished && !state.queue) {
+          clearInterval(state.timer);
+          state.timer = null;
+          state.resolveDrain?.();
+          state.resolveDrain = null;
+        }
+      }, 40);
+    }
+
+    function finishStreamQueue(state) {
+      state.finished = true;
+      if (!state.queue) {
+        if (state.timer) clearInterval(state.timer);
+        state.timer = null;
+        return Promise.resolve();
+      }
+      startStreamTimer(state);
+      return new Promise((resolve) => {
+        state.resolveDrain = resolve;
+      });
+    }
 
     try {
       // Enviamos el contexto reciente del hilo activo. El último mensaje se
@@ -757,9 +809,12 @@ export default function ChatWindow({ initialQuery = null }) {
         .map((message) => ({
           id: message.id,
           rol: message.type === "user" ? "usuario" : "asistente",
-          texto: String(message.text || "").trim(),
+          texto: String(message.text || "").trim().slice(
+            0,
+            message.type === "user" ? MAX_PREGUNTA : MAX_MENSAJE_ASISTENTE
+          ),
           tipo: message.type === "bot"
-            ? message.tipo || (message.conversacional ? "conversacion" : undefined)
+            ? message.tipo || (message.conversacional ? "conversacion" : "respuesta")
             : undefined,
         }))
         .filter((message) => message.text)
@@ -781,19 +836,89 @@ export default function ChatWindow({ initialQuery = null }) {
         texto,
         ...(rol === "asistente" && tipo ? { tipo } : {}),
       }));
-      const data = await preguntar(
-        userText.slice(0, MAX_PREGUNTA),
-        image,
-        image ? null : mensajes
-      );
-      consultationData = data;
-      finalText =
-        String(data?.respuesta || "").trim() ||
-        "No pude generar una respuesta. Probá reformulando la consulta.";
+      while (
+        mensajes.length > 1 &&
+        new TextEncoder().encode(JSON.stringify({ mensajes })).length > MAX_BODY_CHAT_BYTES
+      ) {
+        mensajes.shift();
+      }
 
-      if (data?.tipo === "aclaracion") {
-        const opciones = Array.isArray(data?.opciones)
-          ? data.opciones.filter((opcion) => opcion?.nombre)
+      if (image) {
+        consultationData = await preguntar(
+          userText.slice(0, MAX_PREGUNTA),
+          image,
+          null,
+          abortController.signal
+        );
+        finalText =
+          String(consultationData?.respuesta || "").trim() ||
+          "No pude generar una respuesta. Probá reformulando la consulta.";
+      } else {
+        const payload = mensajes.length
+          ? { mensajes }
+          : { pregunta: userText.slice(0, MAX_PREGUNTA) };
+        streamState = {
+          queue: "",
+          fullText: "",
+          visibleText: "",
+          messageId: null,
+          timer: null,
+          finished: false,
+          resolveDrain: null,
+          receivedDelta: false,
+        };
+        streamStateRef.current = streamState;
+
+        try {
+          const fin = await preguntarStream(payload, {
+            signal: abortController.signal,
+            onDelta: (texto) => {
+              streamState.receivedDelta = true;
+              if (typeof texto !== "string" || !texto) return;
+              streamState.fullText += texto;
+              streamState.queue += texto;
+              startStreamTimer(streamState);
+            },
+          });
+          consultationData = {
+            ...fin,
+            tipo: fin.tipoRespuesta || fin.tipo,
+            respuesta: streamState.fullText,
+          };
+          await finishStreamQueue(streamState);
+          finalText = streamState.fullText;
+        } catch (streamError) {
+          if (abortController.signal.aborted) throw streamError;
+          if (
+            !streamState.receivedDelta &&
+            !streamError.streamEventError &&
+            !streamError.response
+          ) {
+            streamStateRef.current = null;
+            consultationData = await preguntar(
+              userText.slice(0, MAX_PREGUNTA),
+              null,
+              mensajes,
+              abortController.signal
+            );
+            finalText =
+              String(consultationData?.respuesta || "").trim() ||
+              "No pude generar una respuesta. Probá reformulando la consulta.";
+          } else {
+            if (streamState.receivedDelta) await finishStreamQueue(streamState);
+            throw streamError;
+          }
+        }
+      }
+
+      if (abortController.signal.aborted) throw new Error("La solicitud fue cancelada.");
+      if (!String(finalText || "").trim()) {
+        finalText = "No pude generar una respuesta. Probá reformulando la consulta.";
+      }
+
+      if (consultationData?.tipo === "aclaracion") {
+        const opciones = Array.isArray(consultationData?.opciones)
+          ? consultationData.opciones.filter((opcion) => opcion?.nombre)
           : [];
         if (opciones.length) {
           finalActions = [{
@@ -814,8 +939,8 @@ export default function ChatWindow({ initialQuery = null }) {
           }];
         }
       } else {
-        const tramites = Array.isArray(data?.tramitesEncontrados)
-          ? data.tramitesEncontrados.filter((t) => t?.nombre && Number.isInteger(t?.id))
+        const tramites = Array.isArray(consultationData?.tramitesEncontrados)
+          ? consultationData.tramitesEncontrados.filter((t) => t?.nombre && Number.isInteger(t?.id))
           : [];
         if (tramites.length) {
           finalActions = [
@@ -834,38 +959,32 @@ export default function ChatWindow({ initialQuery = null }) {
         }
       }
     } catch (err) {
+      if (abortController.signal.aborted) {
+        if (immediateConsultaId) removeConsulta(immediateConsultaId);
+        requestInFlightRef.current = false;
+        return;
+      }
       error = true;
       const status = err?.response?.status;
-      if (status === 429) {
-        finalText =
-          "Estás consultando muy seguido. Esperá unos segundos y volvé a intentar.";
-      } else if (status === 413) {
-        finalText = "La imagen es demasiado grande. Elegí una imagen de hasta 8 MB.";
-      } else if (status === 415) {
-        finalText = "El formato de imagen no es compatible. Usá JPEG, PNG o WebP.";
-      } else if (status === 400) {
-        finalText =
-          "No pude procesar la consulta. Revisá el texto e intentá de nuevo.";
-      } else if (status === 503) {
-        finalText =
-          "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
-      } else {
-        finalText =
-          "El asistente no está disponible en este momento. Reintentá en unos instantes.";
+      if (streamState?.receivedDelta) {
+        await finishStreamQueue(streamState);
+        finalText = streamState.fullText;
+        if (finalText) finalText += "\n\n";
       }
-    }
-
-    // Primer mensaje de la sesión: el bot reconoce al usuario por su nombre
-    // y/o le recuerda lo que venía consultando.
-    if (!error && !consultationData?.conversacional && isAuthenticated && user?.name && !greetedRef.current) {
-      greetedRef.current = true;
-      const mem = userId ? (token ? welcomeMem : loadMemory(userId)) : null;
-      const firstName = user.name.split(" ")[0];
-      const reminder = mem && mem.count > 0 ? buildReminder(mem, user.name) : null;
-      if (reminder) {
-        finalText = reminder + " " + finalText.charAt(0).toLowerCase() + finalText.slice(1);
-      } else if (!/^(hola|buenas|buen)/i.test(finalText)) {
-        finalText = `Claro, ${firstName}. ` + finalText.charAt(0).toLowerCase() + finalText.slice(1);
+      if (typeof err?.response?.data?.error === "string") {
+        finalText = (finalText || "") + err.response.data.error;
+      } else if (status === 413) {
+        finalText = (finalText || "") + (
+          image
+            ? "La imagen es demasiado grande. Elegí una imagen de hasta 8 MB."
+            : "La consulta supera el tamaño permitido. Acortá el historial e intentá de nuevo."
+        );
+      } else if (status === 415) {
+        finalText = (finalText || "") + "El formato de imagen no es compatible. Usá JPEG, PNG o WebP.";
+      } else if (status === 400) {
+        finalText = (finalText || "") + "No pude procesar la consulta. Revisá el texto e intentá de nuevo.";
+      } else {
+        finalText = (finalText || "") + "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
       }
     }
 
@@ -874,15 +993,17 @@ export default function ChatWindow({ initialQuery = null }) {
       consultationData?.consultaId !== null &&
       consultationData?.consultaId !== undefined;
     const isConversational = consultationData?.conversacional === true;
-    if (!isConversational) {
+    if (!error && !isConversational) {
       rememberAnswer(effectiveId, {
         label: userText,
         topic: detectTopic(userText),
-        kind: error ? "error" : "chat",
+        kind: "chat",
       });
     }
 
-    if (isConversational && immediateConsultaId) {
+    if (error && immediateConsultaId) {
+      removeConsulta(immediateConsultaId);
+    } else if (isConversational && immediateConsultaId) {
       removeConsulta(immediateConsultaId);
     } else if (hasConsultaId && token) {
       if (userMessageId) {
@@ -972,10 +1093,30 @@ export default function ChatWindow({ initialQuery = null }) {
         guardarConversaciones(userId || "ciudadano_anonimo", next);
         return next;
       });
+      requestAbortRef.current = null;
+      streamStateRef.current = null;
       return;
     }
 
-    presentBotMessage(finalText, finalActions, responseMetadata);
+    if (streamState?.messageId) {
+      updateMessage(streamState.messageId, {
+        text: finalText,
+        action: finalActions || undefined,
+        ...responseMetadata,
+      }, { persist: true });
+      setAnnounce(finalText);
+      setIsTyping(false);
+      speakingRef.current = false;
+      speakingIdRef.current = null;
+      setSpeakingId(null);
+      requestInFlightRef.current = false;
+      controllerRef.current?.onEvent(error ? "botError" : "botSuccess");
+      window.setTimeout(() => setPromoReady(true), 900);
+    } else {
+      presentBotMessage(finalText, finalActions, responseMetadata);
+    }
+    requestAbortRef.current = null;
+    streamStateRef.current = null;
   }
 
   function sendText(text, image = null, preview = "") {
@@ -1325,6 +1466,7 @@ export default function ChatWindow({ initialQuery = null }) {
   }
 
   function resetConversation() {
+    cancelActiveResponse();
     clearInterval(typeTimerRef.current);
     clearTimeout(typingTimerRef.current);
     clearHistory();
@@ -1343,7 +1485,6 @@ export default function ChatWindow({ initialQuery = null }) {
     setPhase("welcome");
     if (messagesRef.current) messagesRef.current.scrollTop = 0;
     startedRef.current = false;
-    greetedRef.current = false;
     wizardRef.current = null;
     nearBottomRef.current = true;
     const nextThreadId = crearIdConversacion();
@@ -1395,6 +1536,7 @@ export default function ChatWindow({ initialQuery = null }) {
 
   // Abrir un hilo completo o una consulta antigua sin volver a enviarla al asistente.
   function handleHistorySelect(query) {
+    cancelActiveResponse();
     setHistoryOpen(false);
     if (query.threadId) {
       activeThreadIdRef.current = query.threadId;
@@ -1883,7 +2025,7 @@ export default function ChatWindow({ initialQuery = null }) {
               <div className="flex items-start gap-3 py-1" role="status" aria-live="polite">
                 <ChatBotAvatar reaction="thinking" size={36} speaking static={false} />
                 <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-line bg-paper px-4 py-3 shadow-sm">
-                  <p className="m-0 text-sm text-muted">Estoy buscando información del trámite…</p>
+                  <p className="m-0 text-sm text-muted">Escribiendo…</p>
                   <div className="mt-2 flex items-center gap-1.5" aria-hidden="true">
                     <span className="h-1.5 w-1.5 rounded-full bg-brand/70 animate-bounce [animation-delay:-0.24s]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-brand/70 animate-bounce [animation-delay:-0.12s]" />

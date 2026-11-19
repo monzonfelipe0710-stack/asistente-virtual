@@ -24,6 +24,10 @@ export function setAuthTokenGetter(fn) {
   getToken = typeof fn === "function" ? fn : () => null;
 }
 
+export function getAuthToken() {
+  return getToken();
+}
+
 export function setUnauthorizedHandler(fn) {
   unauthorizedHandler = typeof fn === "function" ? fn : null;
 }

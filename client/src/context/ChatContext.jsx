@@ -120,13 +120,19 @@ export function ChatProvider({ children }) {
     [ownerId, token]
   );
 
-  const updateMessage = useCallback((messageId, updates) => {
+  const updateMessage = useCallback((messageId, updates, { persist = false } = {}) => {
     setMessages((prev) =>
       prev.map((message) =>
         message.id === messageId ? { ...message, ...updates } : message
       )
     );
-  }, []);
+    if (persist && ownerRef.current && !token) {
+      localHistoryRef.current = localHistoryRef.current.map((message) =>
+        message.id === messageId ? { ...message, ...updates } : message
+      );
+      saveHistory(ownerRef.current, localHistoryRef.current);
+    }
+  }, [token]);
 
   const recordConsulta = useCallback((consulta) => {
     if (!consulta?.id) return;
