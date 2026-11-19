@@ -11,15 +11,12 @@ export const ROLES = ["SUPERUSUARIO", "ADMINISTRADOR", "CIUDADANO"];
 export const PERMISSION_LABELS = {
   dashboard: { label: "Ver panel general", desc: "Resumen de la actividad del sistema." },
   tramites: { label: "Gestionar trámites", desc: "Crear, editar, publicar y despublicar tus trámites, y cargar sus documentos." },
-  solicitudes: { label: "Gestionar solicitudes", desc: "Aprobar, rechazar, suspender y reactivar cuentas." },
   usuarios: { label: "Gestionar usuarios", desc: "Listar, suspender y reactivar empleados." },
   sectores: { label: "Gestionar sectores", desc: "Crear y editar el organigrama (ministerios, subsecretarías, departamentos)." },
   reportes: { label: "Métricas y reportes", desc: "Consultas por trámite y consultas sin respuesta." },
   calificaciones: { label: "Ver calificaciones", desc: "Consultar las valoraciones de las respuestas dentro del alcance de tus sectores." },
   mesa_entrada: { label: "Mesa de Entradas", desc: "Ingreso y seguimiento de trámites y expedientes." },
   conocimiento: { label: "Gestionar conocimiento", desc: "Editar la base de respuestas del chatbot." },
-  siged: { label: "Integración SIGED", desc: "Consultar y sincronizar expedientes." },
-  configuracion: { label: "Configuración del sistema", desc: "Ajustes del chatbot y del panel." },
 };
 
 // Permisos según el contrato real del backend:
@@ -28,15 +25,12 @@ export const PERMISSION_LABELS = {
 const PERMISSIONS = {
   SUPERUSUARIO: [
     "dashboard",
-    "solicitudes",
     "usuarios",
     "sectores",
     "reportes",
     "calificaciones",
     "mesa_entrada",
     "conocimiento",
-    "siged",
-    "configuracion",
   ],
   ADMINISTRADOR: ["dashboard", "tramites", "mesa_entrada", "calificaciones"],
   CIUDADANO: [],

@@ -889,10 +889,13 @@ export default function ChatWindow({ initialQuery = null }) {
           finalText = streamState.fullText;
         } catch (streamError) {
           if (abortController.signal.aborted) throw streamError;
+          const httpStatus = streamError?.response?.status;
+          const isNonRetryableHttpError =
+            httpStatus === 400 || httpStatus === 413 || httpStatus === 429 || httpStatus === 503;
           if (
             !streamState.receivedDelta &&
             !streamError.streamEventError &&
-            !streamError.response
+            !isNonRetryableHttpError
           ) {
             streamStateRef.current = null;
             consultationData = await preguntar(
@@ -983,6 +986,8 @@ export default function ChatWindow({ initialQuery = null }) {
         finalText = (finalText || "") + "El formato de imagen no es compatible. Usá JPEG, PNG o WebP.";
       } else if (status === 400) {
         finalText = (finalText || "") + "No pude procesar la consulta. Revisá el texto e intentá de nuevo.";
+      } else if (err?.streamEventError && err.message) {
+        finalText = (finalText || "") + err.message;
       } else {
         finalText = (finalText || "") + "El asistente no está disponible en este momento. Probá de nuevo en unos segundos.";
       }
@@ -2113,6 +2118,12 @@ export default function ChatWindow({ initialQuery = null }) {
             type="text"
             value={input}
             onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && (isTyping || speakingId)) {
+                e.preventDefault();
+                cancelActiveResponse();
+              }
+            }}
             maxLength={MAX_PREGUNTA}
             placeholder={listening ? "Escuchando tu voz…" : "Escribí tu consulta aquí…"}
             aria-label="Consulta para ChatAP"
@@ -2163,22 +2174,36 @@ export default function ChatWindow({ initialQuery = null }) {
             </button>
           )}
 
-          {/* Botón Enviar */}
-          <button
-            type="submit"
-            disabled={!input.trim() || (!!imageFile && !imagePreview) || isTyping || !!speakingId}
-            className={`ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all ${
-              input.trim()
-                ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
-                : "bg-transparent text-muted/30 cursor-not-allowed hover:bg-transparent hover:text-muted/30"
-            }`}
-            aria-label="Enviar consulta"
-            aria-disabled={!input.trim() || (!!imageFile && !imagePreview) || isTyping || !!speakingId}
-          >
-            <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12l7-7l7 7m-7 7V5" />
-            </svg>
-          </button>
+          {/* Botón Enviar o Cancelar */}
+          {isTyping || speakingId ? (
+            <button
+              type="button"
+              onClick={cancelActiveResponse}
+              className="ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all bg-bad/10 text-bad hover:bg-bad/20 cursor-pointer shadow-xs"
+              aria-label="Detener respuesta"
+              title="Detener respuesta"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim() || (!!imageFile && !imagePreview)}
+              className={`ml-1 min-w-11 min-h-11 p-2 rounded-xl flex items-center justify-center transition-all ${
+                input.trim()
+                  ? "bg-brand text-white hover:bg-brand-deep cursor-pointer shadow-xs"
+                  : "bg-transparent text-muted/30 cursor-not-allowed hover:bg-transparent hover:text-muted/30"
+              }`}
+              aria-label="Enviar consulta"
+              aria-disabled={!input.trim() || (!!imageFile && !imagePreview)}
+            >
+              <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="m5 12l7-7l7 7m-7 7V5" />
+              </svg>
+            </button>
+          )}
         </form>
       </div>
       </div>

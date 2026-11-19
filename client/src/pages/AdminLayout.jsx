@@ -7,13 +7,10 @@ import { roleLabel } from "../lib/roles";
 const SECTION_TITLES = {
   "/admin": "Resumen",
   "/admin/mesa-de-entrada": "Mesa de Entradas",
-  "/admin/solicitudes": "Solicitudes",
   "/admin/usuarios": "Usuarios",
   "/admin/sectores": "Sectores",
   "/admin/conocimiento": "Conocimiento",
-  "/admin/tramites": "Trámites",
-  "/admin/siged": "Integración SIGED",
-  "/admin/configuracion": "Configuración",
+  "/admin/tramites": "Solicitud",
   "/admin/reportes": "Reportes",
   "/admin/calificacion": "Calificación",
 };
