@@ -557,7 +557,10 @@ const tramitesConFuente = async (tramitesEncontrados, signal) => {
   const ids = tramitesEncontrados.map((t) => t.id);
   if (ids.length === 0) return [];
   const filas = await conReintentoBase(
-    () => prisma.tramite.findMany({ where: { id: { in: ids } }, select: { id: true, nombre: true, fuenteUrl: true } }),
+    () => prisma.tramite.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, nombre: true, fuenteUrl: true, documentos: { select: { nombre: true, urlExterna: true } } },
+    }),
     { signal, etiqueta: "fuentes" },
   );
   const porId = new Map(filas.map((t) => [t.id, t]));

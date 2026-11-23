@@ -930,6 +930,29 @@ describe('chat', () => {
       assert.equal(texto, `¡Hola! Así se hace.\n\n${enlace()}`);
     });
 
+    it('el enlace de descarga de un documento con URL externa se agrega después de la fuente, en vivo y desde la caché, en las dos rutas', async () => {
+      const urlFormulario = `https://example.invalid/${SUFIJO}/formulario.pdf`;
+      const documento = await prisma.documento.create({
+        data: { nombre: 'Formulario', urlExterna: urlFormulario, tramiteId: tramite.id },
+      });
+      try {
+        const enlaceFormulario = `[Formulario: Formulario](${urlFormulario})`;
+        salidaModelo = salida({ tipo: 'respuesta', respuesta: 'Así se hace.', tramiteId: tramite.id });
+        const r = await responderConsulta(turno('cómo hago el trámite con el documento'));
+        assert.equal(r.respuesta, `Así se hace.\n\n${enlace()}\n${enlaceFormulario}`);
+
+        // Desde la caché: se recalcula al servir, con la misma pregunta (ver tramitesConFuente).
+        const cacheada = await responderConsulta(turno('cómo hago el trámite con el documento'));
+        assert.equal(llamadasModelo.length, 1);
+        assert.equal(cacheada.respuesta, `Así se hace.\n\n${enlace()}\n${enlaceFormulario}`);
+
+        const { texto } = await consumir(responderConsultaStream(turno('cómo hago el trámite con el documento')));
+        assert.equal(texto, `Así se hace.\n\n${enlace()}\n${enlaceFormulario}`);
+      } finally {
+        await prisma.documento.delete({ where: { id: documento.id } });
+      }
+    });
+
     it('no agrega enlaces en aclaraciones, conversaciones ni en el mensaje fijo', async () => {
       const otro = await prisma.tramite.create({
         data: { nombre: `Otro ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },

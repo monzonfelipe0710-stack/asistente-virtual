@@ -2,7 +2,7 @@ import './helpers/base-de-prueba.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { componerFuentes, conFuentes, esUrlHttp, quitarEnlaces } from '../src/utils/enlaces.js';
+import { componerDocumentos, componerFuentes, conFuentes, esUrlHttp, quitarEnlaces } from '../src/utils/enlaces.js';
 
 describe('quitarEnlaces', () => {
   it('saca los enlaces en Markdown con su texto y el ":" que los anunciaba', () => {
@@ -55,5 +55,33 @@ describe('componerFuentes y conFuentes', () => {
     assert.equal(conFuentes('Así se hace.', [pasaporte]), `Así se hace.\n\n[Fuente oficial: Pasaporte](${pasaporte.fuenteUrl})`);
     assert.equal(conFuentes('Así se hace.', [{ nombre: 'X', fuenteUrl: null }]), 'Así se hace.');
     assert.equal(conFuentes('', [pasaporte]), `[Fuente oficial: Pasaporte](${pasaporte.fuenteUrl})`);
+  });
+
+  it('arma una línea por documento con enlace externo http(s) y descarta los que no tienen uno', () => {
+    const conDocumentos = {
+      ...pasaporte,
+      documentos: [
+        { nombre: 'Formulario [A]', urlExterna: 'https://docs.formosa.gob.ar/a(1).pdf' },
+        { nombre: 'Sin enlace (archivo en R2)', urlExterna: null },
+        { nombre: 'Peligroso', urlExterna: 'javascript:alert(1)' },
+      ],
+    };
+    assert.equal(
+      componerDocumentos([conDocumentos]),
+      '[Formulario: Formulario \\[A\\]](https://docs.formosa.gob.ar/a%281%29.pdf)',
+    );
+    assert.equal(componerDocumentos([{ ...pasaporte, documentos: [] }]), '');
+    assert.equal(componerDocumentos([{ ...pasaporte }]), '', 'sin el campo documentos');
+  });
+
+  it('conFuentes agrega el enlace de la fuente y, después, el de cada documento con enlace', () => {
+    const conDocumentos = { ...pasaporte, documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] };
+    assert.equal(
+      conFuentes('Así se hace.', [conDocumentos]),
+      `Así se hace.\n\n[Fuente oficial: Pasaporte](${pasaporte.fuenteUrl})\n[Formulario: Formulario](https://docs.formosa.gob.ar/f.pdf)`,
+    );
+    // Un documento con enlace de un trámite sin fuente oficial: el formulario sale igual.
+    const sinFuenteConDocumento = { nombre: 'X', fuenteUrl: null, documentos: [{ nombre: 'Formulario', urlExterna: 'https://docs.formosa.gob.ar/f.pdf' }] };
+    assert.equal(conFuentes('Así se hace.', [sinFuenteConDocumento]), 'Así se hace.\n\n[Formulario: Formulario](https://docs.formosa.gob.ar/f.pdf)');
   });
 });
