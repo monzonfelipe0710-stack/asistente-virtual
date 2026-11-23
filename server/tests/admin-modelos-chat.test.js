@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
 // auditoría y que ninguna respuesta ni log muestre una clave. El modelo activo se restaura al final.
 delete process.env.MODELO_CHAT_FORZADO;
 delete process.env.ANTHROPIC_API_KEY;
-const CLAVE_GEMINI = 'AIza-clave-secreta-de-prueba-0123456789';
+const CLAVE_GEMINI = 'clave-gemini-falsa-de-prueba';
 process.env.GEMINI_API_KEY = CLAVE_GEMINI;
 
 const { default: prisma } = await import('../src/config/prisma.js');
