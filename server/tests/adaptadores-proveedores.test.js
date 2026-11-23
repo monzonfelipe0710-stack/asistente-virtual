@@ -9,7 +9,7 @@ import { join } from 'node:path';
 // el uso de tokens, cómo mapean cada falla (para el respaldo y el 503) y que se carguen solo cuando
 // un modelo de ese proveedor responde.
 const CLAVE_ANTHROPIC = 'sk-ant-secreta-de-prueba-0123456789';
-const CLAVE_GEMINI = 'AIza-secreta-de-prueba-0123456789';
+const CLAVE_GEMINI = 'clave-gemini-falsa-de-prueba-2';
 process.env.ANTHROPIC_API_KEY = CLAVE_ANTHROPIC;
 process.env.GEMINI_API_KEY = CLAVE_GEMINI;
 process.env.OPENAI_API_KEY ||= 'sk-prueba';
