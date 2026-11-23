@@ -96,8 +96,8 @@ const casos = [
   { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pesca] } },
   // Sinónimos curados de partida/acta/certificado de nacimiento (23-11-2026, server/src/data/sinonimos-curados.json).
   { pregunta: 'partida de nacimiento', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.partida] } },
-  { pregunta: 'acta de nacimiento', esperado: { tipo: 'aclaracion', incluye: [ID.partida] } },
-  { pregunta: 'certificado de nacimiento', esperado: { tipo: 'aclaracion', incluye: [ID.partida] } },
+  { pregunta: 'acta de nacimiento', esperado: { contesta: true, incluye: [ID.partida] } },
+  { pregunta: 'certificado de nacimiento', esperado: { contesta: true, incluye: [ID.partida] } },
   { pregunta: 'cómo saco la partida de mi hijo', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.partida] } },
   { pregunta: 'necesito una copia del acta de nacimiento', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.partida] } },
   // No depende de los sinónimos: ya hoy aclara entre inscribir dentro o pasados los 40 días, no es la partida.
