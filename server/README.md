@@ -1387,6 +1387,24 @@ DATABASE_URL=postgresql://usuario:contrasena@ep-ejemplo-123456.us-east-2.aws.neo
 Con 15 s, un primer intento que agote ese tiempo deja poco plazo y el chat no reintenta: responde
 el 503 dentro del tope de 18 s. El caso que el reintento cubre es el corte breve, que falla rápido.
 
+### Mantener la base despierta durante una demo
+
+Neon suspende el cómputo tras 5 minutos sin actividad en el plan Free, y la primera consulta
+después de eso paga el tiempo de reactivación. `scripts/calentar.js` evita eso: con el server
+levantado,
+
+```
+node scripts/calentar.js [--cada 4] [--duracion 120] [--url http://localhost:3000]
+```
+
+Cada `--cada` minutos (default 4: tiene que ser menos que los 5 de la suspensión) hace un
+`SELECT 1` a la base del `.env`, un GET a `/api/health` y un GET a `/api/tramites/publicados`
+(público), e imprime una línea con los ms o la falla de cada uno. Corta solo a los `--duracion`
+minutos (default 120) o con Ctrl+C.
+
+Usarlo solo durante la demo, no 24/7: mientras corre, la base no se suspende y consume horas de
+cómputo de Neon todo ese tiempo.
+
 ## Tests
 
 ```bash
