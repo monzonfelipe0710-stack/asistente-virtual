@@ -643,14 +643,24 @@ const opcionesDeLaAclaracion = (ids, candidatos) =>
 
 const TOPE_OPCIONES_RECUPERADAS = 4;
 
-// No se guardaron los ids de la aclaración anterior (el historial solo trae rol, texto y tipo): se
-// repiten con los candidatos de la búsqueda de este turno, en su orden (puntuarGrupos), hasta un
-// máximo razonable. Con menos de 2 opciones distintas, null: que siga el flujo normal con el modelo.
-const aclaracionRepetida = (candidatos) => {
-  const ids = candidatos.lista.slice(0, TOPE_OPCIONES_RECUPERADAS).map((c) => c.id);
-  const opciones = opcionesDeLaAclaracion(ids, candidatos);
+// Si el modelo pidió aclaración con menos de 2 opciones válidas, se completa con los candidatos de
+// la búsqueda de este turno (en su orden, puntuarGrupos), sin repetir ids, hasta el máximo
+// razonable. Devuelve null si, aun completando, quedan menos de 2 opciones distintas: ahí no
+// corresponde una aclaración (nunca de una sola opción); el llamador degrada a respuesta normal o
+// "no encontrado" con la misma salida, según tramiteId/tramitesUsados.
+const completarOpciones = (idsDelModelo, candidatos) => {
+  const validos = (idsDelModelo ?? []).filter((id) => candidatos.ids.has(id));
+  const vistos = new Set(validos);
+  const faltan = Math.max(0, TOPE_OPCIONES_RECUPERADAS - validos.length);
+  const extra = candidatos.lista.filter((c) => !vistos.has(c.id)).slice(0, faltan).map((c) => c.id);
+  const opciones = opcionesDeLaAclaracion([...validos, ...extra], candidatos);
   return opciones.length >= 2 ? opciones : null;
 };
+
+// No se guardaron los ids de la aclaración anterior (el historial solo trae rol, texto y tipo): se
+// repiten con los candidatos de la búsqueda de este turno. Con menos de 2 opciones distintas, null:
+// que siga el flujo normal con el modelo.
+const aclaracionRepetida = (candidatos) => completarOpciones([], candidatos);
 
 // La persona pidió un trámite que existe con el mismo nombre en distintos organismos y no dijo
 // cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones), no la cachea
@@ -859,14 +869,14 @@ const resolverSalidaAnterior = async (salida, ctx) => {
     };
   }
 
-  // ACLARACIÓN (solo si no llegamos al tope).
-  if (salida.tipo === "aclaracion" && !topeAlcanzado) {
-    const opciones = opcionesDeLaAclaracion(salida.opciones, candidatos);
+  // ACLARACIÓN (solo si no llegamos al tope y quedan 2 opciones o más, completando con la búsqueda).
+  const opcionesAclaracion = salida.tipo === "aclaracion" && !topeAlcanzado ? completarOpciones(salida.opciones, candidatos) : null;
+  if (opcionesAclaracion) {
     // No registramos consulta: una aclaración no es una consulta resuelta.
     return {
       tipo: "aclaracion",
       respuesta: conSaludo(cuerpoModelo.trim() ? cuerpoModelo : MENSAJE_ACLARACION_VACIA, saludo, usuario),
-      opciones,
+      opciones: opcionesAclaracion,
       encontrado: false,
       tramitesEncontrados: [],
       conversacional: false,
@@ -974,7 +984,8 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
 
   const idsUsados = idsUsadosDe(salida, idsResueltos);
   const esConversacion = salida?.tipo === "conversacion";
-  const esAclaracion = salida?.tipo === "aclaracion" && !topeAlcanzado;
+  const opcionesAclaracion = salida?.tipo === "aclaracion" && !topeAlcanzado ? completarOpciones(salida.opciones, candidatos) : null;
+  const esAclaracion = opcionesAclaracion !== null;
   const encontrado = !esConversacion && !esAclaracion && idsUsados.length > 0;
   const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
   const verificar = verificadorPara(tramites, idsUsados, alCorregirSalida, { contexto, fijo, pregunta: textoDeLaPersona(mensajes) });
@@ -1046,7 +1057,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
 
   if (esAclaracion) {
     // Una aclaración no es una consulta resuelta: no se registra.
-    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones: opcionesDeLaAclaracion(salida?.opciones, candidatos), conversacional: false, ...SIN_REGISTRO };
+    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones: opcionesAclaracion, conversacional: false, ...SIN_REGISTRO };
     return;
   }
 
@@ -1338,8 +1349,9 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
       }
 
       const idsUsados = idsUsadosDe(parsed, idsResueltos);
-      const esAclaracion = parsed?.tipo === "aclaracion" && !topeAlcanzado;
-      const opciones = esAclaracion ? opcionesDeLaAclaracion(parsed?.opciones, candidatos) : [];
+      const opcionesAclaracion = parsed?.tipo === "aclaracion" && !topeAlcanzado ? completarOpciones(parsed?.opciones, candidatos) : null;
+      const esAclaracion = opcionesAclaracion !== null;
+      const opciones = opcionesAclaracion ?? [];
 
       const esConversacion = parsed?.tipo === "conversacion";
       saludo = saludoPara(preguntaActual, parsed?.saludo);
