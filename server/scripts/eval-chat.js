@@ -334,8 +334,14 @@ const repiteNombres = (opciones) =>
 const TUTEO = /(?<![\p{L}\p{N}_])(tienes|puedes|debes|necesitas|quieres|sabes|vienes|haces|eres|recuerda|asegúrate|acércate|fíjate|ten\s+en\s+cuenta)(?![\p{L}\p{N}_])/iu;
 const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
-const publicados = await prisma.tramite.findMany({ where: { publicado: true }, select: { id: true, nombre: true, fuenteUrl: true, sectorId: true } });
+const publicados = await prisma.tramite.findMany({
+  where: { publicado: true },
+  select: { id: true, nombre: true, fuenteUrl: true, sectorId: true, documentos: { select: { urlExterna: true } } },
+});
 const fuentePorId = new Map(publicados.filter((t) => t.fuenteUrl).map((t) => [t.id, t.fuenteUrl]));
+// El servidor también agrega el enlace de cada documento con URL externa (ver utils/enlaces.js,
+// componerDocumentos): sin esto, ese enlace real se marcaría como "enlace inventado".
+const documentosPorId = new Map(publicados.map((t) => [t.id, t.documentos.map((d) => d.urlExterna).filter(Boolean)]));
 
 // Esperado determinista según la base: sin trámites publicados con ese nombre, "no encontrado";
 // con un solo par (jurisdicción, localidad), la respuesta con ese trámite; con más de uno, la
@@ -426,7 +432,7 @@ const nombradosSinUsar = (r) => {
   for (const t of nombresComparables) if (usados.has(t.id)) texto = texto.replaceAll(t.clave, ' ');
   return nombresComparables.filter((t) => !usados.has(t.id) && texto.includes(t.clave)).map((t) => t.nombre);
 };
-const fuentesConocidas = new Set(fuentePorId.values());
+const fuentesConocidas = new Set([...fuentePorId.values(), ...[...documentosPorId.values()].flat()]);
 // Las URL sueltas y el destino de cada enlace Markdown, sea o no http.
 const enlacesDe = (texto) => [
   ...new Set([
@@ -467,7 +473,7 @@ const jurisdiccionDe = (id) => jurisdicciones.get(sectorPorId.get(id))?.jurisdic
 // Chequeos que valen para cualquier respuesta, también los turnos intermedios.
 const fallasTransversales = (r, textoDeLaPersona) => {
   const enlaces = enlacesDe(r.respuesta);
-  const fuentesDeLaRespuesta = r.tramitesEncontrados.map((t) => fuentePorId.get(t.id)).filter(Boolean);
+  const fuentesDeLaRespuesta = r.tramitesEncontrados.flatMap((t) => [fuentePorId.get(t.id), ...(documentosPorId.get(t.id) ?? [])]).filter(Boolean);
   return [
     TUTEO.test(r.respuesta) && 'tuteo',
     /^\s*respuesta\b/i.test(sinSaludoCompuesto(r.respuesta)) && '"respuesta" al inicio',
