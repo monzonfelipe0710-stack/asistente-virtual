@@ -14,16 +14,21 @@ const normalizar = (palabra) => sinAcentos(palabra).toLowerCase();
 
 const palabrasDe = (texto) => (texto.match(/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]+/g) ?? []).map(normalizar);
 
-// Si alguna palabra completa de `texto` coincide (sin importar mayúsculas ni tildes) con un
-// término de un grupo, agrega al final los demás términos del grupo que no estén ya presentes.
-// Sin ninguna coincidencia, devuelve `texto` sin cambios.
+// Un grupo se activa cuando aparece (como palabra completa, sin importar mayúsculas ni tildes)
+// alguno de sus `terminos` y, si tiene `requiere`, también alguna de esas palabras de contexto.
+// Al activarse agrega al final los `terminos` que no estén ya presentes. El `requiere` evita
+// contaminar consultas ajenas: "partida"/"acta"/"certificado" solo cruzan entre sí cuando el
+// mensaje habla de "nacimiento", nunca en "certificado de antecedentes" ni "acta de matrimonio".
+// Sin ninguna activación, devuelve `texto` sin cambios.
 export const expandirConSinonimos = (texto) => {
   const palabras = new Set(palabrasDe(texto));
   const extras = [];
   for (const grupo of GRUPOS_SINONIMOS) {
     const normalizados = grupo.terminos.map(normalizar);
-    const disparado = normalizados.some((t) => palabras.has(t));
-    if (!disparado) continue;
+    const requiere = (grupo.requiere ?? []).map(normalizar);
+    const hayTermino = normalizados.some((t) => palabras.has(t));
+    const hayContexto = requiere.length === 0 || requiere.some((t) => palabras.has(t));
+    if (!hayTermino || !hayContexto) continue;
     for (const [i, t] of normalizados.entries()) {
       if (!palabras.has(t) && !extras.includes(grupo.terminos[i])) extras.push(grupo.terminos[i]);
     }

@@ -2,6 +2,7 @@
   "grupos": [
     {
       "id": "partida_acta_certificado_nacimiento",
+      "requiere": ["nacimiento"],
       "terminos": ["partida", "acta", "certificado"]
     }
   ]

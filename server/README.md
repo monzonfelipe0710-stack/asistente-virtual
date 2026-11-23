@@ -1232,15 +1232,18 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    **Sinónimos curados** ([`sinonimos.service.js`](src/services/sinonimos.service.js),
    [`data/sinonimos-curados.json`](src/data/sinonimos-curados.json)): antes de pedir el embedding
    y de armar la búsqueda full-text, `buscarTramites` expande la consulta con los sinónimos
-   cargados a mano. Cada grupo es una lista de términos equivalentes; si alguna palabra completa
-   de la consulta (sin importar mayúsculas ni tildes) coincide con un término del grupo, se agregan
-   al final los demás términos que todavía no estén. Por ejemplo, "certificado de nacimiento" se
-   busca como "certificado de nacimiento partida acta", porque el trámite del Registro Civil se
-   llama "Solicitud Partida de Nacimiento, Matrimonio o Defunción" y antes no aparecía entre los
-   candidatos. La expansión es solo para buscar: el modelo, la caché, el registro y la persona
+   cargados a mano. Cada grupo tiene `terminos` (equivalentes que se cruzan entre sí) y, opcional,
+   `requiere` (palabras de contexto). El grupo se activa cuando aparece, como palabra completa y
+   sin importar mayúsculas ni tildes, alguno de sus `terminos` y —si tiene `requiere`— también
+   alguna palabra de contexto; al activarse agrega al final los `terminos` que falten. Por ejemplo,
+   "certificado de nacimiento" se busca como "certificado de nacimiento partida acta", porque el
+   trámite del Registro Civil se llama "Solicitud Partida de Nacimiento, Matrimonio o Defunción" y
+   antes no aparecía entre los candidatos. El `requiere: ["nacimiento"]` evita contaminar consultas
+   ajenas: "certificado de antecedentes" o "acta de matrimonio" no se tocan, porque no hablan de
+   nacimiento. La expansión es solo para buscar: el modelo, la caché, el registro y la persona
    siempre ven la consulta original, nunca la expandida. Para sumar un grupo nuevo, agregar un
-   objeto `{ "id": "...", "terminos": [...] }` a `sinonimos-curados.json`; no hace falta ninguna
-   migración ni tocar la base.
+   objeto `{ "id": "...", "requiere": [...], "terminos": [...] }` (sin `requiere` si el cruce no
+   necesita contexto) a `sinonimos-curados.json`; no hace falta ninguna migración ni tocar la base.
    **Variantes** ([`variantes.service.js`](src/services/variantes.service.js)): cada variante tiene
    un par (jurisdicción, localidad) efectivo. Un grupo con un solo par se resuelve con la mejor
    variante, como antes (por ejemplo, las copias de "Licencias médicas de corto tratamiento").
