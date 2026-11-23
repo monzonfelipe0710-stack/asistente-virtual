@@ -1,3 +1,5 @@
+import { sanitizarError } from '../utils/sanitizar-error.js';
+
 export const errorHandler = (err, req, res, next) => {
   // Lo lanza express.json() y trae statusCode 400, pero con el mensaje del parser en inglés.
   if (err.type === 'entity.parse.failed') {
@@ -54,6 +56,6 @@ export const errorHandler = (err, req, res, next) => {
     return res.status(409).json({ error: 'No se puede eliminar: tiene registros asociados.' });
   }
 
-  console.error('Error inesperado:', err);
+  console.error('Error inesperado:', sanitizarError(err));
   res.status(500).json({ error: 'Error del servidor.'});
 };

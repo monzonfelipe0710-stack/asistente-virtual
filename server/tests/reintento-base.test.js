@@ -13,6 +13,11 @@ process.env.OPENAI_API_KEY ||= 'sk-prueba';
 
 const HOST = 'ep-falso-123456.us-east-2.aws.neon.tech';
 const VERSION_PRISMA = '6.19.3';
+// config/prisma.js está reemplazado por la base simulada: no se conecta a ninguna base, así que
+// pisar esto no corre contra nada real. Hace que sanitizarError (chat.controller.js,
+// error.middleware.js y chat.service.js) reconozca el host simulado, igual que en producción
+// reconocería el de la DATABASE_URL real.
+process.env.DATABASE_URL = `postgresql://usuario_falso:clave_falsa@${HOST}:5432/postgres`;
 const caida = (code = 'P1001') =>
   new Prisma.PrismaClientKnownRequestError(`Can't reach database server at \`${HOST}:5432\``, { code, clientVersion: VERSION_PRISMA });
 const caidaAlConectar = () =>
@@ -308,6 +313,19 @@ describe('reintento ante caídas de la base', () => {
         assert.equal(cuantas('busqueda'), 1);
         assert.equal(cuantas('registro'), 0);
         sinDetallesInternos(r.cuerpo);
+        // Este error no lo traduce chat.service.js: llega al manejador global de errores, que
+        // loguea el error entero (sanitizado) en vez de solo un código.
+        for (const l of logs) assert.ok(!l.includes(HOST), l);
+      });
+
+      it('el registro falla dos veces (se agota el reintento): el log no lleva el host', async () => {
+        fallas.registro = [caida('P1001'), caida('P1001')];
+        const r = await pedir();
+        assert.ok(r.ok, r.cuerpo);
+        assert.equal(cuantas('registro'), 2);
+        assert.ok(r.cuerpo.includes('"consultaId":null') || r.fin?.consultaId === null, r.cuerpo);
+        assert.ok(logs.some((l) => l.includes('Error al registrar consulta')), logs.join('\n'));
+        for (const l of logs) assert.ok(!l.includes(HOST), l);
       });
 
       it('no se pasa del tope: si la primera falla llega tarde, no reintenta y responde directo', async () => {

@@ -4,6 +4,7 @@ import prisma from "../config/prisma.js";
 import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental, tipeoReescritura } from "../config/ia.js";
 import { conSenal, crearPlazoConVencimiento } from "../utils/plazo.js";
 import { codigoTransitorio, conReintentoBase } from "../utils/reintento-base.js";
+import { sanitizarError } from "../utils/sanitizar-error.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { corregirConsulta, debeReescribir } from "./tipeo.service.js";
@@ -527,7 +528,7 @@ const registrar = async (datos, signal, modelo) => {
     const consulta = await conReintentoBase(() => registrarConsulta({ ...datos, modelo }), { signal, escritura: true, etiqueta: "registro" });
     return { consultaId: consulta.id, calificarToken: consulta.calificarToken };
   } catch (err) {
-    console.error("Error al registrar consulta:", err.message);
+    console.error("Error al registrar consulta:", sanitizarError(err).message);
     return SIN_REGISTRO;
   }
 };

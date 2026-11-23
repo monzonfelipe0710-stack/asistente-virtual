@@ -2,6 +2,7 @@ import * as chatService from '../services/chat.service.js';
 import { ClienteDesconectadoError } from '../utils/plazo.js';
 import { z } from 'zod';
 import { LIMITES_CHAT } from '../config/chat.js';
+import { sanitizarError } from '../utils/sanitizar-error.js';
 
 // `tipo` es el que devolvió cada respuesta del asistente ("tipo" de POST /api/chat, "tipoRespuesta"
 // del evento `fin`): una pista del cliente, no un dato confiable. Uno desconocido, o en un mensaje
@@ -72,7 +73,7 @@ export const consultarStream = async (req, res) => {
     if (cancelacion.signal.aborted) return;
     // La causa de una falla del modelo ya quedó en el log del servicio.
     const noDisponible = err instanceof chatService.AsistenteNoDisponibleError;
-    if (!noDisponible) console.error('Error en streaming del chat:', err);
+    if (!noDisponible) console.error('Error en streaming del chat:', sanitizarError(err));
     const mensaje = noDisponible ? err.message : 'Ocurrió un error procesando la consulta.';
     res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje })}\n\n`);
   } finally {
