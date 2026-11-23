@@ -3,6 +3,7 @@ import prisma from '../config/prisma.js';
 import { generarEmbedding } from './embedding.service.js';
 import { conReintentoBase } from '../utils/reintento-base.js';
 import * as cache from './cache.service.js';
+import { expandirConSinonimos } from './sinonimos.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
 
@@ -25,10 +26,11 @@ const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${colu
 // pregunta se reusa (cache.service.js): el chat lo pide solo para las consultas de un turno.
 // `alPuntaje` recibe el puntaje del mejor grupo, o null si no hubo ninguno.
 export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, alPuntaje, cachearEmbedding = false } = {}) => {
+  const textoBusqueda = expandirConSinonimos(pregunta);
   alEtapa?.('embedding');
-  const embedding = await embeddingDe(pregunta, { signal, cachear: cachearEmbedding });
+  const embedding = await embeddingDe(textoBusqueda, { signal, cachear: cachearEmbedding });
   alEtapa?.('busqueda');
-  const ordenados = await puntuarGrupos(pregunta, embedding, { limite, signal });
+  const ordenados = await puntuarGrupos(textoBusqueda, embedding, { limite, signal });
   alPuntaje?.(ordenados[0]?.mejor ?? null);
   return soloLosCercanos(ordenados).map(({ mejor, ...grupo }) => grupo);
 };

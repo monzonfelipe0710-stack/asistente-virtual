@@ -1229,6 +1229,18 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
    candidatos. El texto corregido solo se usa para buscar: el modelo de la respuesta, la caché, el
    registro y la persona ven el original. Funciona igual en las dos rutas (es antes de llamar al
    modelo de la respuesta). En el log de latencia es la etapa `tipeo`.
+   **Sinónimos curados** ([`sinonimos.service.js`](src/services/sinonimos.service.js),
+   [`data/sinonimos-curados.json`](src/data/sinonimos-curados.json)): antes de pedir el embedding
+   y de armar la búsqueda full-text, `buscarTramites` expande la consulta con los sinónimos
+   cargados a mano. Cada grupo es una lista de términos equivalentes; si alguna palabra completa
+   de la consulta (sin importar mayúsculas ni tildes) coincide con un término del grupo, se agregan
+   al final los demás términos que todavía no estén. Por ejemplo, "certificado de nacimiento" se
+   busca como "certificado de nacimiento partida acta", porque el trámite del Registro Civil se
+   llama "Solicitud Partida de Nacimiento, Matrimonio o Defunción" y antes no aparecía entre los
+   candidatos. La expansión es solo para buscar: el modelo, la caché, el registro y la persona
+   siempre ven la consulta original, nunca la expandida. Para sumar un grupo nuevo, agregar un
+   objeto `{ "id": "...", "terminos": [...] }` a `sinonimos-curados.json`; no hace falta ninguna
+   migración ni tocar la base.
    **Variantes** ([`variantes.service.js`](src/services/variantes.service.js)): cada variante tiene
    un par (jurisdicción, localidad) efectivo. Un grupo con un solo par se resuelve con la mejor
    variante, como antes (por ejemplo, las copias de "Licencias médicas de corto tratamiento").

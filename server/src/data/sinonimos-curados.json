@@ -1,0 +1,8 @@
+{
+  "grupos": [
+    {
+      "id": "partida_acta_certificado_nacimiento",
+      "terminos": ["partida", "acta", "certificado"]
+    }
+  ]
+}

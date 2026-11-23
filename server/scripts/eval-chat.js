@@ -94,6 +94,15 @@ const casos = [
   { pregunta: 'licencia', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'licencia por enfermedad', esperado: { tipo: 'aclaracion', incluye: [ID.largoTratamiento] } },
   { pregunta: 'pesca deportiva', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.pesca] } },
+  // Sinónimos curados de partida/acta/certificado de nacimiento (23-11-2026, server/src/data/sinonimos-curados.json).
+  { pregunta: 'partida de nacimiento', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.partida] } },
+  { pregunta: 'acta de nacimiento', esperado: { tipo: 'aclaracion', incluye: [ID.partida] } },
+  { pregunta: 'certificado de nacimiento', esperado: { tipo: 'aclaracion', incluye: [ID.partida] } },
+  { pregunta: 'cómo saco la partida de mi hijo', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.partida] } },
+  { pregunta: 'necesito una copia del acta de nacimiento', esperado: { tipo: 'respuesta', encontrado: true, incluye: [ID.partida] } },
+  // No depende de los sinónimos: ya hoy aclara entre inscribir dentro o pasados los 40 días, no es la partida.
+  { pregunta: 'inscribir un nacimiento', esperado: { tipo: 'aclaracion' } },
+  { pregunta: 'registrar a mi bebé', esperado: { tipo: 'aclaracion' } },
   { pregunta: 'hola', esperado: CONVERSACION },
   // "Aumento de Capital Social" es un candidato que comparte una palabra: no sirve de ejemplo.
   { pregunta: 'capital de francia', esperado: { tipo: 'respuesta', encontrado: false, sinSaludo: true, ejemplosDelCatalogo: 2, noContiene: ['aumento de capital', MENSAJE_FIJO_INICIO] } },

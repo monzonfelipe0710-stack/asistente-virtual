@@ -7,7 +7,10 @@ let filas;
 const servicio = (ruta) => new URL(`../src/${ruta}`, import.meta.url).href;
 mock.module(servicio('config/prisma.js'), { defaultExport: { $queryRaw: async () => filas } });
 let pedidosDeEmbedding = 0;
-mock.module(servicio('services/embedding.service.js'), { namedExports: { generarEmbedding: async () => { pedidosDeEmbedding++; return [0.1, 0.2]; } } });
+let ultimoTextoEmbedding;
+mock.module(servicio('services/embedding.service.js'), {
+  namedExports: { generarEmbedding: async (texto) => { pedidosDeEmbedding++; ultimoTextoEmbedding = texto; return [0.1, 0.2]; } },
+});
 
 const { PROPORCION_DEL_PRIMERO, buscarTramites, soloLosCercanos } = await import('../src/services/busqueda.service.js');
 const cache = await import('../src/services/cache.service.js');
@@ -52,6 +55,18 @@ describe('buscarTramites', () => {
     filas = [fila(10, 'pasaporte', 0.40, 0.40), fila(20, 'pasaporte express', 0.39, 0.39), fila(21, 'pasaporte express', 0.39, 0.10)];
     const grupos = await buscarTramites('pasaporte');
     assert.deepEqual(grupos.map((g) => g.variantes.map((v) => v.id)), [[10], [20, 21]]);
+  });
+
+  it('expande la pregunta con los sinónimos curados antes de pedir el embedding', async () => {
+    filas = [];
+    await buscarTramites('certificado de nacimiento');
+    assert.equal(ultimoTextoEmbedding, 'certificado de nacimiento partida acta');
+  });
+
+  it('sin ningún sinónimo, pide el embedding con la pregunta sin cambios', async () => {
+    filas = [];
+    await buscarTramites('cómo saco el pasaporte');
+    assert.equal(ultimoTextoEmbedding, 'cómo saco el pasaporte');
   });
 });
 
