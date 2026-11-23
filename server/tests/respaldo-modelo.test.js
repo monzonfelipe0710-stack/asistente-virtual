@@ -159,6 +159,25 @@ describe('parámetros por modelo', () => {
     assert.deepEqual(pedidos[1].body.stream_options, { include_usage: true });
   });
 
+  it('el perfil de gpt-6-luna agrega su instrucción al final, en las dos rutas; gpt-4o-mini y el tipeo no la reciben', async () => {
+    await ia.generarRespuesta(pedido({ modelo: { ...LUNA, respaldo: null } }));
+    await juntar(ia.generarRespuestaStream(pedido({ modelo: { ...LUNA, respaldo: null } })));
+    await ia.generarRespuesta(pedido({ modelo: MINI }));
+    await ia.corregirTexto({ instruccionSistema: 'Corregí.', texto: 'pasaporet', timeout: 1000, modelo: LUNA });
+    const sistema = (p) => p.body.messages[0].content;
+    for (const p of deLuna().filter((x) => x.tipo !== 'tipeo')) {
+      assert.match(sistema(p), /^Sos un asistente\.\n\nCriterio para elegir entre responder y pedir aclaración/);
+    }
+    assert.equal(sistema(deMini()[0]), 'Sos un asistente.');
+    assert.equal(sistema(pedidos.find((p) => p.tipo === 'tipeo')), 'Corregí.');
+  });
+
+  it('si gpt-6-luna falla, el respaldo gpt-4o-mini recibe la instrucción común sin el perfil de luna', async () => {
+    comportamiento['gpt-6-luna'] = { chat: 'error500' };
+    await ia.generarRespuesta(pedido({ modelo: LUNA }));
+    assert.equal(deMini()[0].body.messages[0].content, 'Sos un asistente.');
+  });
+
   it('la corrección de tipeo usa el modelo de la consulta con temperature 0 y un tope corto', async () => {
     await ia.corregirTexto({ instruccionSistema: 'Corregí.', texto: 'pasaporet', timeout: 1000, modelo: LUNA });
     await ia.corregirTexto({ instruccionSistema: 'Corregí.', texto: 'pasaporet', timeout: 1000, modelo: MINI });

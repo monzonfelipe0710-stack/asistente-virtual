@@ -13,6 +13,21 @@ const MODELO_EMBEDDING = 'text-embedding-3-small';
 const DIMENSIONES_EMBEDDING = 1536;
 const SIN_CREDITO = new Set(['insufficient_quota', 'credit_balance_exhausted']);
 
+// Lo que un modelo de esta API necesita además de la instrucción común, por su nombre en la API.
+// Va al final (después del contexto), así el prefijo común sigue aprovechando el caché del proveedor.
+const PERFILES = {
+  'gpt-6-luna': {
+    instruccionAdicional: `Criterio para elegir entre responder y pedir aclaración (aplicalo antes de decidir el tipo):
+- Si un candidato ES lo que la persona nombró (su nombre coincide con el pedido) y los demás son ese mismo trámite en otra modalidad o servicio (como el Pasaporte "Express"), restringido a un organismo, una norma o un artículo (como un nombre que agrega "Artículo …" o "Decreto …"), o un trámite general que lo incluye, respondé con el que lo nombra sin esas restricciones: tipo "respuesta" y su ID en "tramiteId". En ese caso no pidas aclaración, aunque la pregunta sea sobre requisitos, reglas, plazos o días.
+- Pedí aclaración solo si los candidatos sirven para situaciones distintas de la persona (por ejemplo, licencia médica de corto o de largo tratamiento) y el pedido no alcanza para elegir.`,
+  },
+};
+
+const instruccionPara = (modelo, instruccionSistema) => {
+  const adicional = PERFILES[modelo.modeloApi]?.instruccionAdicional;
+  return adicional ? `${instruccionSistema}\n\n${adicional}` : instruccionSistema;
+};
+
 const construirMensajes = (instruccionSistema, turnos) => [
   { role: 'system', content: instruccionSistema },
   ...turnos.map((t) => ({
@@ -114,7 +129,7 @@ export const chatOpenai = {
       completion = await openai.chat.completions.create(
         {
           ...cuerpoDe(modelo),
-          messages: construirMensajes(instruccionSistema, turnos),
+          messages: construirMensajes(instruccionPara(modelo, instruccionSistema), turnos),
           ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
         },
         opcionesDe(modelo, { signal, sinReintentos }),
@@ -164,7 +179,7 @@ export const chatOpenai = {
           ...cuerpoDe(modelo),
           stream: true,
           stream_options: { include_usage: true },
-          messages: construirMensajes(instruccionSistema, turnos),
+          messages: construirMensajes(instruccionPara(modelo, instruccionSistema), turnos),
           ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
         },
         opcionesDe(modelo, { signal: senal, sinReintentos }),
