@@ -129,7 +129,7 @@ Formato de salida (OBLIGATORIO):
 - A partir de la SEGUNDA línea, escribí (sin JSON ni marcadores, sin saludo ni nombre) el texto para el ciudadano: la respuesta, la pregunta aclaratoria o lo que contestás si tipo=conversacion.
 - Si la persona pide un trámite y ningún candidato responde, poné {"tipo": "respuesta", "saludo": "<saludo o vacío>", "tramiteId": null, "tramitesUsados": [], "opciones": []} y no escribas nada más.`;
 
-const ESQUEMA_SALIDA = {
+export const ESQUEMA_SALIDA = {
   name: "respuesta_chat",
   strict: true,
   schema: {
@@ -150,7 +150,7 @@ const ESQUEMA_SALIDA = {
 // El mismo esquema para el streaming, con "respuesta" al final: el modelo emite las claves en el
 // orden del esquema, así los campos de decisión llegan antes que el texto.
 const { respuesta: CAMPO_RESPUESTA, ...CAMPOS_DE_DECISION } = ESQUEMA_SALIDA.schema.properties;
-const ESQUEMA_SALIDA_STREAM = {
+export const ESQUEMA_SALIDA_STREAM = {
   ...ESQUEMA_SALIDA,
   schema: { ...ESQUEMA_SALIDA.schema, properties: { ...CAMPOS_DE_DECISION, respuesta: CAMPO_RESPUESTA } },
 };
