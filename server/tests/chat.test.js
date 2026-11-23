@@ -961,6 +961,49 @@ describe('chat', () => {
       }
     });
 
+    it('después de una aclaración, "ok" repite las opciones pendientes sin llamar al modelo, en las dos rutas', async () => {
+      const otro = await prisma.tramite.create({
+        data: { nombre: `Otro ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },
+      });
+      try {
+        candidatos = [{ id: tramite.id }, { id: otro.id }];
+        const historial = [
+          { rol: 'usuario', texto: 'licencia' },
+          { rol: 'asistente', texto: '¿Cuál licencia necesitás?', tipo: 'aclaracion' },
+          { rol: 'usuario', texto: 'ok' },
+        ];
+
+        const r = await responderConsulta(historial);
+        assert.equal(r.tipo, 'aclaracion');
+        assert.equal(r.respuesta, MENSAJE_ACLARACION_VACIA);
+        assert.deepEqual(r.opciones.map((o) => o.id).sort(), [tramite.id, otro.id].sort());
+        assert.deepEqual(r.consultaId, null);
+        assert.equal(llamadasModelo.length, 0, 'no debería llamar al modelo');
+        assert.deepEqual(registros, []);
+
+        const { texto, fin } = await consumir(responderConsultaStream(historial));
+        assert.equal(texto, MENSAJE_ACLARACION_VACIA);
+        assert.equal(fin.tipoRespuesta, 'aclaracion');
+        assert.deepEqual(fin.opciones.map((o) => o.id).sort(), [tramite.id, otro.id].sort());
+        assert.equal(llamadasModelo.length, 0, 'no debería llamar al modelo');
+      } finally {
+        await prisma.tramite.delete({ where: { id: otro.id } });
+      }
+    });
+
+    it('con una sola opción recuperable, "ok" después de una aclaración sí llama al modelo', async () => {
+      candidatos = [{ id: tramite.id }];
+      const historial = [
+        { rol: 'usuario', texto: 'licencia' },
+        { rol: 'asistente', texto: '¿Cuál licencia necesitás?', tipo: 'aclaracion' },
+        { rol: 'usuario', texto: 'dale' },
+      ];
+      salidaModelo = salida({ tipo: 'respuesta', tramiteId: tramite.id, respuesta: 'Así se hace.' });
+      const r = await responderConsulta(historial);
+      assert.equal(llamadasModelo.length, 1);
+      assert.ok(r.respuesta.startsWith('Así se hace.'));
+    });
+
     it('en streaming limpia cada línea completa y manda la fuente como último delta', async () => {
       pedazosStream = [
         meta({ tipo: 'respuesta', tramiteId: tramite.id }),

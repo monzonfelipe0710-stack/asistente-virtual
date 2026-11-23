@@ -457,6 +457,18 @@ const alcanzoElTope = (mensajes) =>
 const cortesiaPara = (mensajes) =>
   mensajes.findLast((m) => m.rol === "asistente")?.tipo === "aclaracion" ? null : respuestaDeCortesia(mensajes.at(-1).texto);
 
+// Tras una aclaración, una respuesta sin contenido ("ok", "dale", "sí", "bueno") no elige ninguna
+// opción: a diferencia de la cortesía general, estas sí cuentan acá (ver respuestaDeCortesia).
+const PALABRAS_SIN_ELEGIR = new Set([
+  "ok", "okey", "oka", "okay", "dale", "si", "bueno", "buena", "perfecto", "listo",
+  "genial", "buenisimo", "joya", "barbaro", "entendido", "claro", "obvio",
+]);
+const siguioSinElegir = (mensajes) => {
+  if (mensajes.findLast((m) => m.rol === "asistente")?.tipo !== "aclaracion") return false;
+  const palabras = normalizarNombre(mensajes.at(-1).texto).match(/\p{L}+/gu) ?? [];
+  return palabras.length > 0 && palabras.length <= 4 && palabras.every((p) => PALABRAS_SIN_ELEGIR.has(p));
+};
+
 const textoDeConversacion = async (cuerpo, { candidatos, mensajes, saludo, alCorregirTuteo, alPedirConversacionDeNuevo, verificar, signal, sel, limpiar = limpiarCuerpo }) => {
   // Sin texto ("chau" con solo la META), una frase amable según el mensaje.
   if (!cuerpo.trim()) return cortesiaPara(mensajes)?.texto ?? MENSAJE_CONVERSACION_VACIA;
@@ -629,6 +641,17 @@ const opcionesDeLaAclaracion = (ids, candidatos) =>
     candidatos.jurisdicciones,
   );
 
+const TOPE_OPCIONES_RECUPERADAS = 4;
+
+// No se guardaron los ids de la aclaración anterior (el historial solo trae rol, texto y tipo): se
+// repiten con los candidatos de la búsqueda de este turno, en su orden (puntuarGrupos), hasta un
+// máximo razonable. Con menos de 2 opciones distintas, null: que siga el flujo normal con el modelo.
+const aclaracionRepetida = (candidatos) => {
+  const ids = candidatos.lista.slice(0, TOPE_OPCIONES_RECUPERADAS).map((c) => c.id);
+  const opciones = opcionesDeLaAclaracion(ids, candidatos);
+  return opciones.length >= 2 ? opciones : null;
+};
+
 // La persona pidió un trámite que existe con el mismo nombre en distintos organismos y no dijo
 // cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones), no la cachea
 // ni la registra.
@@ -767,6 +790,22 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
   const topeAlcanzado = alcanzoElTope(mensajes);
+
+  // "ok" después de una aclaración no elige ninguna opción: se repiten, sin llamar al modelo.
+  if (!topeAlcanzado && siguioSinElegir(mensajes)) {
+    const opciones = aclaracionRepetida(candidatos);
+    if (opciones) {
+      return {
+        tipo: "aclaracion",
+        respuesta: MENSAJE_ACLARACION_VACIA,
+        opciones,
+        encontrado: false,
+        tramitesEncontrados: [],
+        conversacional: false,
+        ...SIN_REGISTRO,
+      };
+    }
+  }
 
   traza.etapa("modelo");
   const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(SYSTEM_PROMPT_MULTIVUELTA, topeAlcanzado, candidatos.lista, candidatos, signal), signal);
@@ -1145,6 +1184,16 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   const idsResueltos = new Set(tramites.map((t) => t.id));
 
   const topeAlcanzado = alcanzoElTope(mensajes);
+
+  // "ok" después de una aclaración no elige ninguna opción: se repiten, sin llamar al modelo.
+  if (!topeAlcanzado && siguioSinElegir(mensajes)) {
+    const opciones = aclaracionRepetida(candidatos);
+    if (opciones) {
+      yield { tipo: "delta", texto: MENSAJE_ACLARACION_VACIA };
+      yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones, conversacional: false, ...SIN_REGISTRO };
+      return;
+    }
+  }
 
   traza.etapa("modelo");
   // Con el esquema, el prompt es el de la ruta sin streaming.
