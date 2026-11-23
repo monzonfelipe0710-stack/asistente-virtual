@@ -19,6 +19,7 @@ const PERFILES = {
   'gpt-6-luna': {
     instruccionAdicional: `Criterio para elegir entre responder y pedir aclaración (aplicalo antes de decidir el tipo):
 - Si un candidato ES lo que la persona nombró (su nombre coincide con el pedido) y los demás son ese mismo trámite en otra modalidad o servicio (como el Pasaporte "Express"), restringido a un organismo, una norma o un artículo (como un nombre que agrega "Artículo …" o "Decreto …"), o un trámite general que lo incluye, respondé con el que lo nombra sin esas restricciones: tipo "respuesta" y su ID en "tramiteId". En ese caso no pidas aclaración, aunque la pregunta sea sobre requisitos, reglas, plazos o días.
+- Que el nombre coincida no alcanza si la persona agregó algo que lo convierte en otro trámite que el candidato no cubre, como un documento de otro país (renovar una licencia de conducir extranjera no es el trámite de la licencia nacional): ese candidato no es lo que pidió, así que el tipo es "respuesta" con "tramiteId" null.
 - Pedí aclaración solo si los candidatos sirven para situaciones distintas de la persona (por ejemplo, licencia médica de corto o de largo tratamiento) y el pedido no alcanza para elegir.`,
   },
 };
