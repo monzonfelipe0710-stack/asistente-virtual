@@ -10,7 +10,6 @@ import { TramiteDetalle, formatearCosto } from "@/funcionalidades/admin/componen
 import { BloqueError } from "@/funcionalidades/admin/componentes/BloqueError";
 import { filtrarPorBusqueda, ordenarPorActualizacion } from "@/funcionalidades/admin/tramites";
 import { Badge } from "@/compartido/ui/Badge";
-import { Btn } from "@/compartido/ui/Btn";
 import { EmptyState } from "@/compartido/ui/EmptyState";
 import { Icon } from "@/compartido/ui/Icon";
 import { PageHeader } from "@/compartido/ui/PageHeader";
@@ -38,19 +37,8 @@ function textoVacio(busqueda: string, filtro: Filtro) {
   return "Todavía no hay trámites propuestos por los empleados.";
 }
 
-function FilaSolicitud({
-  tramite,
-  trabajando,
-  onPress,
-  onRechazar,
-  onAceptar,
-}: {
-  tramite: TramiteApi;
-  trabajando: boolean;
-  onPress: () => void;
-  onRechazar: () => void;
-  onAceptar: () => void;
-}) {
+// Aceptar y rechazar están en el detalle: la fila solo abre el trámite para revisarlo antes.
+function FilaSolicitud({ tramite, onPress }: { tramite: TramiteApi; onPress: () => void }) {
   const C = useColors();
   const detalle = [tramite.sector.nombre, tramite.encargado.nombre, formatearCosto(tramite.costo)].join(" · ");
 
@@ -79,16 +67,6 @@ function FilaSolicitud({
         </View>
         <Icon name="chevronRight" size={20} color={C.ink2} />
       </Pressable>
-      <View style={styles.etiquetas}>
-        <Btn
-          label="Rechazar"
-          variant="danger"
-          size="md"
-          onPress={onRechazar}
-          disabled={trabajando || !tramite.publicado}
-        />
-        <Btn label="Aceptar" size="md" onPress={onAceptar} disabled={trabajando || tramite.publicado} />
-      </View>
     </Row>
   );
 }
@@ -170,14 +148,7 @@ export default function Solicitudes() {
 
         {!cargando &&
           paginatedItems.map((t: TramiteApi) => (
-            <FilaSolicitud
-              key={t.id}
-              tramite={t}
-              trabajando={trabajando}
-              onPress={() => setVerId(t.id)}
-              onRechazar={() => revisar(t, false)}
-              onAceptar={() => revisar(t, true)}
-            />
+            <FilaSolicitud key={t.id} tramite={t} onPress={() => setVerId(t.id)} />
           ))}
 
         {!cargando && !error && filtrados.length === 0 && (
