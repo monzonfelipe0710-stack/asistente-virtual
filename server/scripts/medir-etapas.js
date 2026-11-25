@@ -1,8 +1,10 @@
 // Mide el chat por etapas (ruta de stream, en serie, con la caché de respuestas y de embeddings
-// vacía en cada consulta) leyendo la línea "Chat latencia:" de CHAT_LOG_LATENCIA, y los tokens
+// vacía en cada consulta; el catálogo y las jurisdicciones quedan cacheados, como en el server) leyendo la línea "Chat latencia:" de CHAT_LOG_LATENCIA, y los tokens
 // cacheados del proveedor. Llama a OpenAI de verdad; las consultas que registra se borran por id.
 //
-//   node scripts/medir-etapas.js [--modelo gpt-6-luna] [--corridas 1] [--salida archivo.json]
+//   node scripts/medir-etapas.js [--modelo gpt-6-luna] [--corridas 1] [--pausa ms] [--salida archivo.json]
+//
+// --pausa: espera entre consultas, como el tiempo que tarda una persona en escribir la siguiente.
 import 'dotenv/config';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,6 +14,8 @@ const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [pr
 const MODELO = argumento('--modelo') ?? 'gpt-6-luna';
 const CORRIDAS = Number(argumento('--corridas') ?? 1);
 const SALIDA = argumento('--salida');
+const PAUSA = Number(argumento('--pausa') ?? 0);
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const CARPETA = mkdtempSync(join(tmpdir(), 'medir-etapas-'));
 const ARCHIVO_USO = join(CARPETA, 'uso.jsonl');
 process.env.CHAT_LOG_LATENCIA = 'true';
@@ -44,7 +48,7 @@ console.info = (...a) => {
 
 const creadas = [];
 const consultar = async (texto) => {
-  cache.limpiar({ propagar: false });
+  cache.limpiarRespuestas();
   cache.limpiarEmbeddings();
   const antes = lineas.length;
   let fin = null;
@@ -68,6 +72,7 @@ try {
   for (let i = 0; i < CORRIDAS; i++) {
     for (const [grupo, preguntas] of Object.entries(GRUPOS)) {
       for (const q of preguntas) {
+        if (PAUSA > 0) await esperar(PAUSA);
         const r = await consultar(q);
         if (!r.linea) continue;
         medidas.push({ grupo, tipo: r.tipo, ...r.linea });
@@ -97,8 +102,8 @@ try {
   }
   for (const o of Object.values(porOperacion)) o.pctCacheada = o.entrada ? Math.round((o.cacheada / o.entrada) * 1000) / 10 : 0;
   console.table(porOperacion);
-  console.log(`Consultas medidas: ${medidas.length} con modelo ${MODELO}.`);
-  if (SALIDA) writeFileSync(SALIDA, JSON.stringify({ modelo: MODELO, fecha: new Date().toISOString(), tabla, porOperacion, medidas }, null, 1));
+  console.log(`Consultas medidas: ${medidas.length} con modelo ${MODELO}${PAUSA > 0 ? `, ${PAUSA} ms entre consultas` : ''}.`);
+  if (SALIDA) writeFileSync(SALIDA, JSON.stringify({ modelo: MODELO, pausa: PAUSA, fecha: new Date().toISOString(), tabla, porOperacion, medidas }, null, 1));
 } finally {
   if (creadas.length > 0) await prisma.consulta.deleteMany({ where: { id: { in: creadas } } });
   rmSync(CARPETA, { recursive: true, force: true });

@@ -92,6 +92,9 @@ export const alLimpiar = (fn) => {
   alInvalidar = fn;
 };
 
+// Solo las respuestas, sin el catálogo ni las jurisdicciones: para medir sin pegarle a la caché.
+export const limpiarRespuestas = () => cache.clear();
+
 export const limpiar = (opciones) => {
   cache.clear();
   catalogo = null;
