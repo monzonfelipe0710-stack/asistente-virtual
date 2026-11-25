@@ -420,11 +420,58 @@ borrar un sector ni una mesa que tengan trámites (409).
 | Rol | Puede |
 |---|---|
 | `SUPERUSUARIO` | Gestionar usuarios, sectores y mesas; crear empleados; publicar y despublicar trámites; ver métricas; elegir el modelo del chat. No crea ni edita trámites |
-| `ADMINISTRADOR` | Crear y gestionar trámites y documentos de los sectores que tiene asignados; ver sectores, mesas y métricas |
+| `ADMINISTRADOR` | Crear y gestionar trámites y documentos de los sectores que tiene asignados; ver sectores y mesas; ver las métricas de sus sectores |
 | `CIUDADANO` | Usar el chat logueado y ver su historial |
 
 Solo inician sesión las cuentas `APROBADO`. El token se revalida contra la base en cada
 request: una suspensión, un cambio de rol o un cambio de contraseña tienen efecto inmediato.
+
+### Matriz de permisos
+
+En el código el empleado de un organismo o sector es `ADMINISTRADOR` y el administrador general
+es `SUPERUSUARIO`. "Empleado" acá es un ADM del sector A; "ajeno" es un objeto del sector B.
+Cada celda es el status con que responde; ✔ es la respuesta normal (200, 201 o 204). Está
+probado por HTTP en `tests/permisos-sector.test.js`.
+
+| Ruta | Sin sesión | Ciudadano | Empleado | Superusuario |
+|---|---|---|---|---|
+| `POST /api/auth/login`, `/recuperar`, `/restablecer` | ✔ | ✔ | ✔ | ✔ |
+| `POST /api/auth/cambiar-password` | 401 | ✔ (la propia) | ✔ (la propia) | ✔ (la propia) |
+| `POST /api/usuarios/registro-ciudadano` | ✔ | ✔ | ✔ | ✔ |
+| `GET/POST /api/usuarios`, `GET/PUT /api/usuarios/:id/sectores`, `PATCH /api/usuarios/:id/suspender` y `/reactivar` | 401 | 403 | 403 | ✔ |
+| `GET /api/usuarios/me/sectores` | 401 | 403 | ✔ | ✔ (`[]`) |
+| `GET /api/sectores`, `GET /api/sectores/:id` | 401 | 403 | ✔ (todos) | ✔ |
+| `POST/PATCH/DELETE /api/sectores…` | 401 | 403 | 403 | ✔ |
+| `GET /api/mesas`, `GET /api/mesas/:id` | 401 | 403 | ✔ (todas) | ✔ |
+| `POST/PATCH/DELETE /api/mesas…` | 401 | 403 | 403 | ✔ |
+| `GET /api/tramites/publicados` | ✔ | ✔ | ✔ | ✔ |
+| `GET /api/tramites` | 401 | 403 | ✔ publicados de todos + borradores propios | ✔ todos |
+| `GET /api/tramites/:id` | 401 | 403 | ✔ propio o publicado; borrador ajeno 404 | ✔ |
+| `POST /api/tramites` | 401 | 403 | ✔ en su sector; `sectorId` ajeno 403 | 403 |
+| `PATCH /api/tramites/:id` | 401 | 403 | ✔ propio; ajeno 404; mover a un sector ajeno 403 | 403 |
+| `DELETE /api/tramites/:id` | 401 | 403 | ✔ propio; ajeno 404 | 403 |
+| `PATCH /api/tramites/:id/publicar`, `/despublicar` | 401 | 403 | 403 | ✔ |
+| `POST /api/tramites/:id/documentos`, `PATCH`/`DELETE …/documentos/:docId` | 401 | 403 | ✔ propio; trámite ajeno o documento de otro trámite 404 | 403 |
+| `GET /api/tramites/:id/documentos`, `…/:docId/descargar` | publicado ✔, borrador 404 | publicado ✔, borrador 404 | ✔ propio o publicado; borrador ajeno 404 | ✔ |
+| `GET /api/documentos/:id/descargar` | publicado ✔ (o 302), borrador 404 | ídem | ídem | ídem |
+| `POST /api/chat`, `/api/chat/stream` | ✔ | ✔ | ✔ | ✔ |
+| `GET /api/consultas/mias`, `DELETE /api/consultas/:id` | 401 | ✔ (las suyas; ajena 404) | ídem | ídem |
+| `PATCH /api/consultas/:id/calificar` | ✔ con el token; sin él 404 | ✔ la suya o con el token | ídem | ídem |
+| `GET /api/consultas/calificaciones` | 401 | 403 | ✔ sus sectores; `sectorId` ajeno 404 | ✔ todo o `?sectorId=` |
+| `GET /api/metricas/*` | 401 | 403 | ✔ sus sectores; `sectorId` ajeno 404 | ✔ todo o `?sectorId=` |
+| `/api/admin/modelos-chat` (las tres) | 401 | 403 | 403 | ✔ |
+
+- **404 y no 403 ante un objeto ajeno** (trámite, documento, consulta, sector pedido en una
+  métrica): no revela qué ids existen. Es el mismo criterio que ya usaban los borradores, los
+  documentos y las calificaciones.
+- **403 cuando no hay nada que esconder:** rol sin permiso, o un `sectorId` ajeno en el cuerpo al
+  crear o mover un trámite (la lista de sectores la ve cualquier empleado).
+- **Campos que un empleado no puede escribir:** `publicado`, `encargadoId`, `fuenteUrl` y
+  cualquier campo fuera del esquema se descartan en silencio; el encargado de un trámite nuevo es
+  siempre quien lo crea. No hay ninguna ruta para cambiar el propio rol ni los sectores propios.
+- **El superusuario no crea ni edita trámites ni documentos** (decisión previa): los lee y los
+  publica o despublica.
+- Los importadores del catálogo son scripts de consola (`npm run …`), no rutas de la API.
 
 ## Errores
 
@@ -445,8 +492,8 @@ uno solo:
 |---|---|
 | 400 | Validación (primer mensaje de Zod), JSON mal formado, body ausente, archivo inválido, referencia inexistente |
 | 401 | Sin token, token inválido o vencido, cuenta no activa, sesión invalidada por cambio de contraseña, credenciales inválidas |
-| 403 | Rol sin permiso, sector no asignado, cuenta no aprobada en el login, cambio de contraseña pendiente |
-| 404 | Recurso inexistente, id que no es entero positivo, borrador que el usuario no puede ver, ruta no registrada |
+| 403 | Rol sin permiso, crear o mover un trámite a un sector no asignado, cuenta no aprobada en el login, cambio de contraseña pendiente |
+| 404 | Recurso inexistente, id que no es entero positivo, borrador que el usuario no puede ver, trámite de otro sector al editarlo o borrarlo, sector ajeno en una métrica, ruta no registrada |
 | 409 | Duplicado (email, DNI, nombre de sector), borrado con registros asociados, ciclo de sectores, cambio de estado inválido, consulta ya calificada |
 | 413 | Archivo de más de 10 MB |
 | 422 | El padrón no confirma la identidad en el registro |
@@ -596,11 +643,11 @@ Una mesa con `esGeneral: true` sirve para cualquier trámite; si no, solo para l
 | Método | Ruta | Acceso | Notas |
 |---|---|---|---|
 | GET | `/api/tramites/publicados` | público, 60 / min | `[{ id, nombre }]` |
-| GET | `/api/tramites` | SU, ADM | Todos, publicados y borradores, con sector y encargado |
+| GET | `/api/tramites` | SU, ADM | Con sector y encargado. SU: todos. ADM: los publicados de cualquier sector y los borradores de sus sectores |
 | GET | `/api/tramites/:id` | SU, ADM | Con requisitos, mesas, sector y encargado |
 | POST | `/api/tramites` | ADM con el sector del body | → 201. El usuario queda como encargado |
-| PATCH | `/api/tramites/:id` | ADM del sector | Parcial. `requisitos` o `mesaIds` presentes (aunque sea `[]`) reemplazan a los actuales |
-| DELETE | `/api/tramites/:id` | ADM del sector | 204. Borra también los archivos en R2 |
+| PATCH | `/api/tramites/:id` | ADM del sector (otro sector: 404) | Parcial. `requisitos` o `mesaIds` presentes (aunque sea `[]`) reemplazan a los actuales |
+| DELETE | `/api/tramites/:id` | ADM del sector (otro sector: 404) | 204. Borra también los archivos en R2 |
 | PATCH | `/api/tramites/:id/publicar` | SU | `{ mensaje, tramite }` |
 | PATCH | `/api/tramites/:id/despublicar` | SU | `{ mensaje, tramite }` |
 
@@ -1006,29 +1053,96 @@ unos 75 tokens de entrada menos por llamada; la salida es parecida.
 
 | Método | Ruta | Acceso | Respuesta |
 |---|---|---|---|
-| GET | `/api/metricas/por-tramite` | SU, ADM | Ver abajo |
-| GET | `/api/metricas/sin-respuesta` | SU, ADM | Ver abajo |
+| GET | `/api/metricas/por-tramite` | SU, ADM (sus sectores) | Ver abajo |
+| GET | `/api/metricas/sin-respuesta` | SU, ADM (sus sectores) | Ver abajo |
+| GET | `/api/metricas/calificaciones` | SU, ADM (sus sectores) | Ver abajo |
+| GET | `/api/metricas/resumen` | SU, ADM (sus sectores) | Ver abajo |
 | GET | `/api/consultas/mias` | cualquier autenticado (incluido `CIUDADANO`) | Ver abajo |
 | DELETE | `/api/consultas/:id` | autenticado, solo el dueño | 204. Ver abajo |
 | PATCH | `/api/consultas/:id/calificar` | público, 60 / min, token opcional | Ver abajo |
-| GET | `/api/consultas/calificaciones` | SU, ADM | Ver abajo |
+| GET | `/api/consultas/calificaciones` | SU, ADM (sus sectores) | Ver abajo |
 
-**`GET /api/metricas/por-tramite`**: cantidad de consultas respondidas por trámite, de mayor
-a menor. Sin `alcance`, de todo el sistema. Con `?alcance=propias`, un ADM ve solo los
-trámites de sus sectores (si no tiene sectores asignados, `[]`); un SU ve todo, igual que sin
-`alcance`.
+**Alcance.** Todas las de `/api/metricas` y `/api/consultas/calificaciones` son de solo lectura y
+pasan por el mismo middleware (`alcanceSectores`):
+
+- Un ADM ve **solo los trámites de sus sectores**, siempre (con o sin `?alcance=propias`, que
+  se sigue aceptando y no cambia nada). Sin sectores asignados, todo vacío.
+- `?sectorId=N` acota a un sector. Un ADM solo puede pedir uno de los suyos: uno ajeno o
+  inexistente responde 404 `{ "error": "Sector no encontrado." }`. El SU puede pedir cualquiera.
+- Sin `sectorId`, el SU ve todo el sistema.
+- `desde` y `hasta` (opcionales, en todas las de `/api/metricas`): fecha ISO (`2026-11-04`) o
+  fecha y hora con zona, con el mismo criterio que en las calificaciones (una fecha sola es un
+  día de Argentina; extremos inclusivos). `tramiteId` (opcional) acota a un trámite en
+  `por-tramite` y `calificaciones`.
+- Filtros inválidos → 400 con el mensaje del primer error (`El sectorId debe ser un entero positivo.`, `Las fechas deben estar en formato ISO…`).
+- Ninguna devuelve quién preguntó: ni `usuarioId`, ni nombre, correo, DNI o CUIL, ni el `calificarToken`.
+- Todas cuentan solo las consultas de tipo `respuesta`; las aclaraciones del chat van aparte, en
+  `resumen`.
+
+**`GET /api/metricas/por-tramite`**: cantidad de consultas respondidas por trámite, de mayor a
+menor. Ej.: `?desde=2026-11-01&hasta=2026-11-30`.
 
 ```json
 [{ "tramiteId": 19, "nombre": "Licencia por maternidad", "sector": { "id": 3, "nombre": "Departamento de Licencias" }, "cantidad": 12 }]
 ```
 
-**`GET /api/metricas/sin-respuesta`**: las últimas 50 consultas que no encontraron trámite, de
-todo el sistema, de la más nueva a la más vieja. No incluye quién preguntó. `encontrado` es
-siempre `false` y `tramiteId` siempre `null`.
+**`GET /api/metricas/sin-respuesta`**: las últimas 50 consultas que no encontraron trámite, de la
+más nueva a la más vieja, con el texto de la pregunta y sin quién preguntó. `encontrado` es
+siempre `false`.
 
 ```json
 [{ "id": 512, "textoConsulta": "licencia por paternidad", "encontrado": false, "fecha": "2026-10-30T14:02:11.000Z", "tramiteId": null }]
 ```
+
+El chat no guarda a qué trámite o sector apuntaba una consulta que no encontró respuesta
+(`tramiteId` es `null`), así que **no se pueden atribuir a un sector**: con alcance de sector (un
+ADM, o un SU con `sectorId`) la lista sale `[]`. Antes un ADM veía las de todo el sistema. En el
+panel del empleado conviene no mostrar esta tarjeta, o mostrarla como "solo para el supervisor".
+
+**`GET /api/metricas/calificaciones`**: solo agregados de las respuestas calificadas, sin textos.
+`promedio` es la proporción de útiles (0 a 1, tres decimales; la calificación es 0 o 1) y
+`satisfaccion` lo mismo en porcentaje con un decimal; los dos `null` sin calificaciones.
+`porMotivo`, `sinMotivo` y `porTopico` siguen las mismas reglas que en
+`/api/consultas/calificaciones`. `porTramite` va de más a menos calificaciones.
+
+```json
+{
+  "total": 6,
+  "utiles": 2,
+  "noUtiles": 4,
+  "satisfaccion": 33.3,
+  "porMotivo": [
+    { "motivo": "No respondió mi pregunta", "cantidad": 1 },
+    { "motivo": "La información no es correcta", "cantidad": 0 },
+    { "motivo": "La respuesta fue confusa", "cantidad": 0 },
+    { "motivo": "No era lo que buscaba", "cantidad": 1 },
+    { "motivo": "Otro motivo", "cantidad": 1 }
+  ],
+  "sinMotivo": 1,
+  "porTopico": [{ "topico": "licencias", "cantidad": 2 }],
+  "promedio": 0.333,
+  "porTramite": [
+    { "tramiteId": 19, "nombre": "Licencia por maternidad", "utiles": 2, "noUtiles": 4, "total": 6, "satisfaccion": 33.3 }
+  ]
+}
+```
+
+**`GET /api/metricas/resumen`**: totales del rango, con las aclaraciones separadas de las
+respuestas (columna `consultas.tipo`). Para el SU sin `sectorId`:
+
+```json
+{ "respuestas": { "total": 140, "encontradas": 121, "sinRespuesta": 19 }, "aclaraciones": 23 }
+```
+
+Con alcance de sector (un ADM, o el SU con `sectorId`):
+
+```json
+{ "respuestas": { "total": 37, "encontradas": 37, "sinRespuesta": null }, "aclaraciones": null }
+```
+
+Las aclaraciones y las sin respuesta no tienen trámite (ver arriba), así que con alcance de sector
+van `null` ("no se puede atribuir"), no `0`. Con alcance de sector, `respuestas.total` son las
+respuestas que encontraron un trámite del sector.
 
 **`GET /api/consultas/mias`**: las últimas 50 consultas del usuario del token, de la más nueva a
 la más vieja. `tramite` es `null` si no se encontró trámite o si el trámite se borró.
@@ -1074,13 +1188,14 @@ El endpoint acepta cualquier texto como motivo; la lista solo se usa para agrupa
 `porMotivo`.
 
 **`GET /api/consultas/calificaciones`**: consultas calificadas, de la más nueva a la más vieja.
-Un ADM ve solo las de trámites de sus sectores (mismo criterio que `alcance=propias`; sin
-sectores, nada); un SU ve todas. Query, todo opcional:
+Un ADM ve solo las de trámites de sus sectores (sin sectores, nada); un SU ve todas. Mismo
+alcance y mismo `?sectorId=` que las métricas. Query, todo opcional:
 
 | Parámetro | Valor |
 |---|---|
 | `desde`, `hasta` | Fecha ISO (`2026-11-04`) o fecha y hora con zona (`2026-11-04T10:00:00Z`). Una fecha sola es un día de Argentina (UTC-3): `desde` arranca a las 00:00:00 -03:00 y `hasta` termina a las 23:59:59.999 -03:00 de ese día. Con hora y zona se respeta tal cual. Los dos extremos son inclusivos |
 | `tramiteId` | Entero positivo |
+| `sectorId` | Entero positivo. Un ADM, solo uno de sus sectores (si no, 404) |
 | `calificacion` | `0` o `1` |
 | `page` | Entero ≥ 1, por defecto `1` |
 | `limit` | Entero de 1 a 50, por defecto `20` |
@@ -1231,6 +1346,7 @@ Cambios visibles para el front desde la auditoría del 30-10-2026 (commit `89b8b
 - **503 en el chat:** si OpenAI falla o se agota el plazo, `POST /api/chat` responde 503 (antes 500 `Error del servidor.`) con `"El asistente no está disponible en este momento. Probá de nuevo en unos segundos."`, y el evento `error` de `/api/chat/stream` trae ese mismo mensaje.
 - **Documentos como enlace:** `POST /api/tramites/:id/documentos` acepta también JSON `{ nombre, urlExterna }`; nuevo `PATCH /api/tramites/:id/documentos/:docId`; el listado trae `urlExterna` (`null` en un archivo) y `descargar` devuelve `{ url, externa }`. Un enlace tiene `tipo` `null`.
 - **Modelo del chat:** nuevos `GET /api/admin/modelos-chat`, `PUT /api/admin/modelos-chat/activo` y `GET /api/admin/modelos-chat/auditoria`, solo para el superusuario (ver [Modelo del chat](#modelo-del-chat-superusuario)). El chat no cambia de contrato.
+- **Permisos por sector (25-11-2026):** editar, borrar o gestionar documentos de un trámite de otro sector responde 404 `Trámite no encontrado.` (antes 403 `No tenés asignado el sector de este trámite.`). Las métricas de un ADM quedan siempre en sus sectores: `por-tramite` sin `alcance` ya no trae los de otros sectores y `sin-respuesta` sale `[]` (ver [Métricas](#métricas-historial-y-calificaciones)). Nuevos `GET /api/metricas/calificaciones` y `GET /api/metricas/resumen`; `desde`, `hasta` y `sectorId` en las métricas y `sectorId` en `/api/consultas/calificaciones`. Para el SU sin filtros no cambia nada.
 - **Aclaración por jurisdicción o localidad:** con trámites del mismo nombre en distintos organismos, `POST /api/chat` y el evento `fin` pueden traer `tipo`/`tipoRespuesta` `aclaracion` con `opciones: [{ id, nombre, jurisdiccion, localidad }]`. Conviene que el front muestre las opciones y mande su `nombre` (o el historial en `mensajes`): con solo "Clorinda" como `pregunta`, sin historial, no se sabe de qué trámite se habla.
 
 ## Cómo funciona el chat

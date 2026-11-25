@@ -151,7 +151,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 
 **Globales (`app.js`), en orden:** `trust proxy` (si hay `TRUST_PROXY`) → `helmet()` → `cors({ origin: origenesPermitidos })` → `morgan('dev')` → `express.json()` → rutas → 404 JSON → `errorHandler`.
 
-**Abreviaturas:** `auth` = `autenticar` · `auth?` = `autenticarOpcional` · `authPwd` = `autenticarCambioPassword` · `rol(SU)` / `rol(ADM)` / `rol(SU,ADM)` = `autorizar(...)` · `sector` = `puedeGestionarTramite` (el ADM tiene asignado el sector del trámite). Todos los controllers y `sector` van envueltos en `asyncHandler`. Los routers con `:id` / `:docId` tienen `router.param(..., validarId(...))`: un id que no es entero positivo de rango `Int` responde 404 antes de llegar a Prisma.
+**Abreviaturas:** `auth` = `autenticar` · `auth?` = `autenticarOpcional` · `authPwd` = `autenticarCambioPassword` · `rol(SU)` / `rol(ADM)` / `rol(SU,ADM)` = `autorizar(...)` · `sector` = `puedeGestionarTramite` (el ADM tiene asignado el sector del trámite; si no, 404 como si no existiera) · `alcance` = `alcanceSectores` (fija `req.sectorIds`: el ADM, siempre sus sectores; el SU, todo o el `?sectorId=` que pida; un ADM que pide un sector ajeno, 404). Todos los controllers y `sector` van envueltos en `asyncHandler`. Los routers con `:id` / `:docId` tienen `router.param(..., validarId(...))`: un id que no es entero positivo de rango `Int` responde 404 antes de llegar a Prisma.
 
 **Rate limits:** `loginLimiter` 10 / 15 min · `recuperarLimiter` 3 / 15 min · `restablecerLimiter` 10 / 15 min · `registroLimiter` 5 / hora · `publicoLimiter` 60 / min · `chatLimiter` 10 / min (definido en `chat.routes.js`). Todos en memoria y por IP.
 
@@ -181,7 +181,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | PATCH | `/api/mesas/:id` | `auth`, `rol(SU)` | `mesa.actualizar` | |
 | DELETE | `/api/mesas/:id` | `auth`, `rol(SU)` | `mesa.eliminar` | 409 si tiene trámites |
 | GET | `/api/tramites/publicados` | `publicoLimiter` | `tramite.listarPublicados` | Solo `id` y `nombre`. Declarada antes de `/:id` |
-| GET | `/api/tramites` | `auth`, `rol(SU,ADM)` | `tramite.listar` | Todos los sectores, publicados y borradores |
+| GET | `/api/tramites` | `auth`, `rol(SU,ADM)` | `tramite.listar` | SU: todos. ADM: publicados de todos los sectores y borradores de los suyos |
 | GET | `/api/tramites/:id` | `auth`, `rol(SU,ADM)` | `tramite.obtener` | |
 | POST | `/api/tramites` | `auth`, `rol(ADM)` | `tramite.crear` | El controller exige el sector del body y valida las mesas |
 | PATCH | `/api/tramites/:id` | `auth`, `rol(ADM)`, `sector` | `tramite.actualizar` | `requisitos`/`mesaIds` presentes reemplazan |
@@ -196,8 +196,11 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | GET | `/api/documentos/:id/descargar` | `publicoLimiter` | `documento.descargarPublico` | Descarga estable (ver 6, "Descarga estable de documentos"): el archivo en streaming o 302 al enlace externo |
 | POST | `/api/chat` | `chatLimiter`, `auth?` | `chat.consultar` | `{ tipo, respuesta, encontrado, tramitesEncontrados, opciones }` |
 | POST | `/api/chat/stream` | `chatLimiter`, `auth?` | `chat.consultarStream` | SSE: eventos `delta`, `fin`, `error` |
-| GET | `/api/metricas/por-tramite` | `auth`, `rol(SU,ADM)` | `metrica.porTramite` | `?alcance=propias` |
-| GET | `/api/metricas/sin-respuesta` | `auth`, `rol(SU,ADM)` | `metrica.sinRespuesta` | Últimas 50, de todo el sistema |
+| GET | `/api/metricas/por-tramite` | `auth`, `rol(SU,ADM)`, `alcance` | `metrica.porTramite` | `?desde&hasta&tramiteId&sectorId`; `alcance=propias` se acepta y no cambia nada |
+| GET | `/api/metricas/sin-respuesta` | `auth`, `rol(SU,ADM)`, `alcance` | `metrica.sinRespuesta` | Últimas 50. Con alcance de sector, `[]` (no se pueden atribuir) |
+| GET | `/api/metricas/calificaciones` | `auth`, `rol(SU,ADM)`, `alcance` | `metrica.calificaciones` | Solo agregados, con `promedio` y `porTramite` |
+| GET | `/api/metricas/resumen` | `auth`, `rol(SU,ADM)`, `alcance` | `metrica.resumen` | Respuestas y aclaraciones por separado |
+| GET | `/api/consultas/calificaciones` | `auth`, `rol(SU,ADM)`, `alcance` | `consulta.calificaciones` | Listado paginado con resumen |
 | GET | `/api/consultas/mias` | `auth` | `consulta.misConsultas` | Últimas 50 del usuario (cualquier rol) |
 
 Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `codigo: 'PASSWORD_CHANGE_REQUIRED'` en el error si el usuario tiene que cambiar la contraseña. Ojo: el `errorHandler` solo devuelve `{ error }`, así que ese `codigo` no llega al cliente (ver 7.18).
@@ -334,7 +337,7 @@ Esto sale de comparar lo que manda `client/src/services/auth.js` y `usuarios.js`
 | Rol | Puede |
 |---|---|
 | `SUPERUSUARIO` | Gestionar usuarios, sectores y mesas; crear empleados; publicar y despublicar trámites; ver métricas. **No** crea ni edita trámites (se revirtió en `2f93513`) |
-| `ADMINISTRADOR` | Crear y gestionar trámites y documentos de los sectores que tiene asignados; ver sectores, mesas y métricas |
+| `ADMINISTRADOR` | Crear y gestionar trámites y documentos de los sectores que tiene asignados; ver sectores y mesas; ver las métricas de sus sectores |
 | `CIUDADANO` | Usar el chat logueado y ver su historial (`/api/consultas/mias`) |
 
 `autenticar` relee el usuario de la base en cada request: una suspensión o un cambio de rol tienen efecto inmediato. El JWT lleva un claim `pwd` con la fecha del último cambio de contraseña; si no coincide con la base, el token se rechaza.
@@ -342,6 +345,66 @@ Esto sale de comparar lo que manda `client/src/services/auth.js` y `usuarios.js`
 ### Capa de IA (puerto + adaptador)
 
 `core/ai/proveedor.js` define el contrato `ProveedorIA` (`generarEmbedding`, `generarRespuesta`, `generarRespuestaStream`, `infoEmbedding`) y `openai.adapter.js` lo implementa. Los services solo importan `ia` desde `core/ai/index.js`. El modelo de chat se puede cambiar por variable de entorno. El de embeddings (`text-embedding-3-small`, 1536 dimensiones) está fijo en el código, porque cambiarlo invalida los vectores guardados.
+
+### Permisos por sector y métricas del empleado (25-11-2026)
+
+En el código el empleado de un organismo o sector es `ADMINISTRADOR` (ADM) y el administrador
+general es `SUPERUSUARIO` (SU). La matriz final de cada ruta en los cuatro estados (sin sesión,
+ciudadano, empleado, superusuario) está en el README, "Matriz de permisos", y la prueba
+`tests/permisos-sector.test.js` por HTTP contra la base de prueba, con los middlewares reales
+(solo se simula el embedding).
+
+**Auditoría.** Se recorrieron todas las rutas de `app.js`. A nivel de función no había huecos:
+cada ruta de superusuario (usuarios, roles y sectores de usuarios, sectores, mesas, publicar,
+selector de modelo y auditoría) ya respondía 401 sin sesión y 403 a ciudadano y empleado, y los
+importadores son scripts, no rutas. Lo que cambió, comparado con la misma prueba corrida contra el
+código anterior:
+
+| Ruta | Empleado del sector A, antes | Después |
+|---|---|---|
+| `PATCH`/`DELETE /api/tramites/:id` de un trámite de B | 403 `No tenés asignado el sector de este trámite.` | 404 `Trámite no encontrado.` |
+| `POST /api/tramites/:id/documentos`, `PATCH`/`DELETE …/documentos/:docId` en un trámite de B | 403 | 404 |
+| `GET /api/metricas/por-tramite` (sin `alcance`, como lo llama el front) | todos los sectores | solo A |
+| `GET /api/metricas/sin-respuesta` | las 50 últimas de todo el sistema, con el texto | `[]` |
+| `GET /api/metricas/*?sectorId=B`, `GET /api/consultas/calificaciones?sectorId=B` | se ignoraba | 404 `Sector no encontrado.` |
+| `GET /api/metricas/calificaciones`, `GET /api/metricas/resumen` | no existían | solo A |
+
+Para el SU y para un empleado sobre su propio sector, las rutas que ya existían devuelven lo
+mismo que antes.
+
+**Huecos encontrados:**
+
+| # | Severidad | Hueco | Corrección |
+|---|---|---|---|
+| 1 | Media | `GET /api/metricas/sin-respuesta`: cualquier empleado leía el texto libre de las últimas 50 consultas sin respuesta de todo el sistema. Es texto que escribe el ciudadano y puede traer datos personales (DNI, nombre, situación) | Con alcance de sector solo salen las atribuibles al sector, que hoy son ninguna (ver abajo) |
+| 2 | Media | `GET /api/metricas/por-tramite` sin `?alcance=propias` (como lo llama el front) le daba al empleado las cantidades de todos los sectores, con el nombre de trámites ajenos que después se despublicaron | El alcance lo fija el middleware, no el query: el ADM queda siempre en sus sectores |
+| 3 | Baja | Editar o borrar un trámite de otro sector (o sus documentos) respondía 403 y uno inexistente 404: se podía saber qué ids de borradores ajenos existen, mientras `GET /api/tramites/:id` ya respondía 404 | `puedeGestionarTramite` responde 404 en los dos casos |
+| 4 | Baja (informativo) | `GET /api/tramites` y `GET /api/tramites/:id` de un trámite publicado ajeno traen `encargado: { id, nombre }` de un empleado de otro sector | Sin cambio: no es correo, DNI ni CUIL, el front lo usa y el trámite es público |
+
+Sin hallazgos en: alta y edición de trámites (`publicado`, `encargadoId` y `fuenteUrl` se
+descartan porque el esquema de Zod no los tiene; un `sectorId` ajeno en el cuerpo responde 403,
+que no revela nada porque el empleado ve la lista de sectores); documentos de otro trámite con
+el trámite propio en la URL (404 desde `fc84321`); cambio del propio rol o sectores (no hay ruta);
+consultas y calificaciones ajenas (404); respuestas con datos personales (`usuarioId`, correo,
+DNI, CUIL y `calificarToken` no salen en métricas ni calificaciones; el correo de los usuarios
+solo sale en rutas del SU).
+
+**Por qué "sin respuesta" y aclaraciones no se pueden acotar a un sector.** El chat registra
+esas filas con `tramiteId: null`: cuando no encontró o repreguntó todavía no hay trámite, y no se
+guarda a qué candidatos apuntaba. Atribuirlas haría falta guardar en `consultas` el sector del
+primer candidato (una columna nueva y un cambio en el registro del chat), y el pedido era no
+tocar el chat ni migrar si se podía evitar. Por eso, con alcance de sector, `sin-respuesta` sale
+`[]` y `resumen` devuelve `sinRespuesta` y `aclaraciones` en `null` (no `0`: no es que no haya,
+es que no se sabe de quién son). El SU sin `sectorId` las ve todas.
+
+**Asunciones.**
+- Ante la duda de privacidad se eligió lo más restrictivo: el empleado deja de ver los textos sin
+  respuesta del resto del sistema, aunque el front actual se los mostraba.
+- Para el empleado, `calificaciones` agrega sin textos; el listado que ya existía
+  (`/api/consultas/calificaciones`) sigue mostrando la pregunta y la respuesta, sin usuario.
+- `promedio` es la proporción de útiles (la calificación es 0 o 1).
+- El SU sigue sin editar trámites ni documentos (decisión de `2f93513`); la prueba lo fija.
+- Un SU que filtra por un sector inexistente recibe vacío, no 404: no tiene nada que esconderle.
 
 ### Aclaraciones registradas en `consultas` (25-11-2026)
 
@@ -1708,7 +1771,7 @@ Los sectores se buscan y se crean por `(nombre, padre)`: el JSON puede traer `pa
 7. **El superusuario del seed tiene una contraseña fija** (`admin@chatap.gob.ar` / `cambiar123`) y `debeCambiarPassword: false`. Debería crearse con `true`.
 8. **`TURNOS_URL` no se valida al arrancar.** Si falta, el registro de ciudadanos responde 503 "el padrón no está disponible", que confunde.
 9. **El email no se normaliza** (`trim` + minúsculas) en login, registro ni alta (ver 5.2).
-10. **`/api/metricas/sin-respuesta` no tiene alcance:** cualquier administrador ve las consultas sin respuesta de todo el sistema, con el `usuarioId` de quien preguntó. Además, `?alcance=propias` con un superusuario (que no tiene sectores) devuelve siempre `[]`.
+10. ✅ *Resuelto el 25-11-2026 (ver 6, "Permisos por sector y métricas del empleado").* **`/api/metricas/sin-respuesta` no tiene alcance:** cualquier administrador ve las consultas sin respuesta de todo el sistema, con el `usuarioId` de quien preguntó. Además, `?alcance=propias` con un superusuario (que no tiene sectores) devuelve siempre `[]`.
 11. **Documentos:** el tipo es el `mimetype` que declara el cliente y la extensión sale del nombre original, así que se puede subir cualquier archivo declarado como PDF. Si el `PUT` a R2 sale bien y el `create` falla, el archivo queda huérfano.
 12. **Chat sin streaming:** un `refusal` del modelo deja `content` en `null` → `salida.tipo` revienta → 500 genérico.
 13. **Chat con streaming:** si el cliente corta la conexión, no se registra la consulta.
