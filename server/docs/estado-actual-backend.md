@@ -880,6 +880,43 @@ tocar el `.env`; `gpt-4o-mini` no se deshabilitó):
   en el entorno de desarrollo (se ignora en producción).
 - `gpt-4o-mini` se apaga el 14-01-2027: la vuelta atrás vale solo hasta esa fecha.
 
+#### Latencia del chat por etapas (25-11-2026)
+
+`scripts/medir-etapas.js` (stream, en serie, `gpt-6-luna`, caché de respuestas y de embeddings vacía en
+cada consulta, 30 consultas: 12 de trámites, 6 con aclaración, 6 fuera de tema, 6 con tipeo) lee la
+línea de `CHAT_LOG_LATENCIA`, que ahora trae también `primerToken` (primer delta crudo del modelo) y
+`verificacion` (ms de la verificación, dentro de `modelo`).
+
+| Etapa (ms) | Mediana | p95 |
+|---|---|---|
+| total | 2518 | 3810 |
+| primer token del modelo (desde el inicio) | 1721 | 3014 |
+| primer texto a la persona | 2181 | 3465 |
+| embedding | 347 | 745 |
+| búsqueda | 133 | 197 |
+| detalle | 108 | 184 |
+| modelo (incluye la verificación) | 1618 | 2214 |
+| verificación | 0 | 1 |
+| tipeo (8 de 30 consultas) | 956 | 1278 |
+| registro | 56 | 127 |
+
+- **Orden del prompt:** ya estaba bien (instrucciones y resumen del catálogo, después los candidatos,
+  después el historial). No se cambió. Con `gpt-6-luna` no sirve: solo cachea prompts completos
+  idénticos, no prefijos compartidos (3 llamadas con el mismo prefijo de 3650 tokens y cola distinta:
+  0 cacheados, con y sin `prompt_cache_key`; con el prompt idéntico, 3642 de 3645). `gpt-4o-mini` sí
+  cachea el prefijo (3584 de 3649). En las 30 consultas, 9 % de la entrada salió del caché; repitiendo
+  las mismas consultas, 58 %.
+- **Caché de correcciones de tipeo** (`tipeo.service.js`): texto normalizado y modelo → texto
+  corregido, 500 entradas y 1 h (`TIPEO_CACHE_MAX`, `TIPEO_CACHE_MS`; con `TIPEO_CACHE_MAX=0` se apaga).
+  No guarda fallas, timeouts ni salidas inválidas. Los scripts de eval y de medición la apagan. En una
+  segunda pasada, la etapa de tipeo pasó de unos 970 ms a 0 y el total de esas consultas de 3450 a 2500 ms.
+- **Llamada de tipeo:** ya usaba temperatura 0, tope de salida bajo y `reasoning_effort: none`. Un
+  prompt de 94 tokens en vez de 160 no mejoró (mediana 762 contra 799 ms, 40 llamadas intercaladas):
+  el tiempo es casi todo latencia fija. No se cambió.
+- **Modelo solo para el tipeo (no implementado):** 50 llamadas intercaladas, todas válidas:
+  `gpt-4o-mini` mediana 617 ms, p95 924; `gpt-6-luna` mediana 805, p95 1036. Costo parecido (0,029 y
+  0,026 USD por 1000 correcciones). `gpt-4o-mini` se apaga el 14-01-2027.
+
 ### Modelos candidatos (17-11-2026)
 
 Etapa 1 del selector de modelo de chat para el superusuario. `gpt-4o-mini` está deprecado: OpenAI lo
