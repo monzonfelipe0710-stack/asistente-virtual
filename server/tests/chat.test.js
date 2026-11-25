@@ -1020,6 +1020,57 @@ describe('chat', () => {
       }
     });
 
+    it('una aclaración mantiene su contrato y no se cachea, y el turno siguiente se registra con el trámite elegido, en las dos rutas', async () => {
+      const otro = await prisma.tramite.create({
+        data: { nombre: `Otro ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },
+      });
+      try {
+        candidatos = [{ id: tramite.id }, { id: otro.id }];
+        const opcion = (t) => ({ id: t.id, nombre: t.nombre });
+        salidaModelo = salida({ tipo: 'aclaracion', opciones: [tramite.id, otro.id], respuesta: '¿Cuál de los dos?' });
+        for (let i = 0; i < 2; i++) {
+          const r = await responderConsulta(turno('necesito un trámite'));
+          assert.deepStrictEqual(
+            r,
+            {
+              tipo: 'aclaracion', respuesta: '¿Cuál de los dos?', opciones: [opcion(tramite), opcion(otro)],
+              encontrado: false, tramitesEncontrados: [], conversacional: false, consultaId: null, calificarToken: null,
+            },
+          );
+        }
+        assert.equal(llamadasModelo.length, 2, 'una aclaración no se sirve de la caché');
+
+        pedazosStream = [meta({ tipo: 'aclaracion', opciones: [tramite.id, otro.id] }), '¿Cuál de los dos?'];
+        const { texto, fin } = await consumir(responderConsultaStream(turno('necesito un trámite')));
+        assert.equal(texto, '¿Cuál de los dos?');
+        assert.deepStrictEqual(
+          fin,
+          {
+            tipo: 'fin', tipoRespuesta: 'aclaracion', encontrado: false, tramitesEncontrados: [], opciones: [opcion(tramite), opcion(otro)],
+            conversacional: false, consultaId: null, calificarToken: null,
+          },
+        );
+
+        const historial = [
+          { rol: 'usuario', texto: 'necesito un trámite' },
+          { rol: 'asistente', texto: '¿Cuál de los dos?', tipo: 'aclaracion' },
+          { rol: 'usuario', texto: 'el otro' },
+        ];
+        registros = [];
+        salidaModelo = salida({ tipo: 'respuesta', tramiteId: otro.id, respuesta: 'Así se hace.' });
+        const final = await responderConsulta(historial);
+        pedazosStream = [meta({ tipo: 'respuesta', tramiteId: otro.id }), 'Así se hace.'];
+        const finStream = (await consumir(responderConsultaStream(historial))).fin;
+        assert.deepEqual([final.consultaId, finStream.consultaId], [1, 2]);
+        assert.deepEqual(
+          registros.map(({ textoConsulta, tramiteId, encontrado }) => ({ textoConsulta, tramiteId, encontrado })),
+          [{ textoConsulta: 'el otro', tramiteId: otro.id, encontrado: true }, { textoConsulta: 'el otro', tramiteId: otro.id, encontrado: true }],
+        );
+      } finally {
+        await prisma.tramite.delete({ where: { id: otro.id } });
+      }
+    });
+
     it('una aclaración que no llega a 2 opciones ni completando con la búsqueda degrada a respuesta o no encontrado, en las dos rutas', async () => {
       candidatos = [{ id: tramite.id }];
 
