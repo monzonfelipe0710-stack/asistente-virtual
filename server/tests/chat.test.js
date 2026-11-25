@@ -53,6 +53,20 @@ mock.module(servicio('services/metrica.service.js'), {
   },
 });
 
+// La caché de estos tests es solo de este proceso: los archivos que corren en paralelo suben la versión
+// del catálogo en la base compartida y la vaciarían a mitad de un test. Esa invalidación la prueba
+// version-catalogo.test.js.
+const sinVersion = async () => null;
+mock.module(servicio('services/version-catalogo.service.js'), {
+  namedExports: {
+    asegurarCacheVigente: async () => {},
+    leerVersion: sinVersion,
+    marcarCatalogoCambiado: sinVersion,
+    propagarInvalidacion: () => {},
+    reiniciarParaTests: () => {},
+  },
+});
+
 const cache = await import('../src/services/cache.service.js');
 const { obtenerResumenCatalogo } = await import('../src/services/catalogo.service.js');
 const { responderConsulta, responderConsultaStream, buscarFugaDeInstrucciones, TEXTOS_FIJOS_DEL_PROMPT, MENSAJE_SIN_RESPUESTA, MENSAJE_ACLARACION_VACIA, TOPE_CONVERSACION, TOPES_CONTEXTO, CONTENIDO_COMO_DATOS } =
