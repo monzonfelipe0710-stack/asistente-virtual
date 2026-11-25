@@ -29,7 +29,7 @@ const SOLO_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const ZONA_ARGENTINA = '-03:00';
 
 // Una fecha sola es un día de Argentina; con hora y zona se respeta tal cual.
-const filtroFecha = (desde, hasta) => {
+export const filtroFecha = (desde, hasta) => {
   const fecha = {};
   if (desde) fecha.gte = new Date(SOLO_FECHA.test(desde) ? `${desde}T00:00:00${ZONA_ARGENTINA}` : desde);
   if (hasta) fecha.lte = new Date(SOLO_FECHA.test(hasta) ? `${hasta}T23:59:59.999${ZONA_ARGENTINA}` : hasta);
@@ -55,17 +55,18 @@ const agruparMotivos = (grupos) => {
   return { porMotivo: [...conteo].map(([motivo, cantidad]) => ({ motivo, cantidad })), sinMotivo };
 };
 
-// sectorIds null = sin restricción (SU). Nunca se devuelven usuarioId ni calificarToken.
-export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificacion, page, limit, sectorIds }) => {
-  const where = {
-    ...SOLO_RESPUESTAS,
-    calificacion: calificacion ?? { not: null },
-    fecha: filtroFecha(desde, hasta),
-    ...(tramiteId && { tramiteId }),
-    ...(sectorIds && { tramite: { sectorId: { in: sectorIds } } }),
-  };
+const whereCalificadas = ({ desde, hasta, tramiteId, calificacion, sectorIds }) => ({
+  ...SOLO_RESPUESTAS,
+  calificacion: calificacion ?? { not: null },
+  fecha: filtroFecha(desde, hasta),
+  ...(tramiteId && { tramiteId }),
+  ...(sectorIds && { tramite: { sectorId: { in: sectorIds } } }),
+});
 
-  const [porCalificacion, motivos, topicos, items] = await Promise.all([
+const satisfaccionDe = (utiles, total) => (total > 0 ? Math.round((utiles * 1000) / total) / 10 : null);
+
+const armarResumen = async (where) => {
+  const [porCalificacion, motivos, topicos] = await Promise.all([
     prisma.consulta.groupBy({ by: ['calificacion'], where, _count: { _all: true } }),
     prisma.consulta.groupBy({
       by: ['motivoCalificacion'],
@@ -78,6 +79,31 @@ export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificaci
       _count: { _all: true },
       orderBy: [{ _count: { topico: 'desc' } }, { topico: 'asc' }],
     }),
+  ]);
+
+  const cantidad = (valor) => porCalificacion.find((g) => g.calificacion === valor)?._count._all ?? 0;
+  const utiles = cantidad(1);
+  const noUtiles = cantidad(0);
+  const total = utiles + noUtiles;
+  const { porMotivo, sinMotivo } = agruparMotivos(motivos);
+
+  return {
+    total,
+    utiles,
+    noUtiles,
+    satisfaccion: satisfaccionDe(utiles, total),
+    porMotivo,
+    sinMotivo,
+    porTopico: topicos.map((g) => ({ topico: g.topico, cantidad: g._count._all })),
+  };
+};
+
+// sectorIds null = sin restricción (SU). Nunca se devuelven usuarioId ni calificarToken.
+export const listarCalificaciones = async ({ page, limit, ...filtros }) => {
+  const where = whereCalificadas(filtros);
+
+  const [resumen, items] = await Promise.all([
+    armarResumen(where),
     prisma.consulta.findMany({
       where,
       orderBy: [{ fecha: 'desc' }, { id: 'desc' }],
@@ -90,25 +116,39 @@ export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificaci
     }),
   ]);
 
-  const cantidad = (valor) => porCalificacion.find((g) => g.calificacion === valor)?._count._all ?? 0;
-  const utiles = cantidad(1);
-  const noUtiles = cantidad(0);
-  const total = utiles + noUtiles;
-  const { porMotivo, sinMotivo } = agruparMotivos(motivos);
+  return { resumen, items, page, total: resumen.total };
+};
+
+// Solo agregados: sin textos de consultas ni respuestas.
+export const resumenCalificaciones = async (filtros) => {
+  const where = whereCalificadas(filtros);
+
+  const [resumen, grupos] = await Promise.all([
+    armarResumen(where),
+    prisma.consulta.groupBy({ by: ['tramiteId', 'calificacion'], where, _count: { _all: true } }),
+  ]);
+
+  const porId = new Map();
+  for (const g of grupos) {
+    const fila = porId.get(g.tramiteId) ?? { tramiteId: g.tramiteId, utiles: 0, noUtiles: 0 };
+    fila[g.calificacion === 1 ? 'utiles' : 'noUtiles'] += g._count._all;
+    porId.set(g.tramiteId, fila);
+  }
+  const ids = [...porId.keys()].filter((id) => id !== null);
+  const tramites = await prisma.tramite.findMany({ where: { id: { in: ids } }, select: { id: true, nombre: true } });
+  const nombres = new Map(tramites.map((t) => [t.id, t.nombre]));
+
+  const porTramite = [...porId.values()]
+    .map((f) => {
+      const total = f.utiles + f.noUtiles;
+      return { ...f, nombre: nombres.get(f.tramiteId) ?? null, total, satisfaccion: satisfaccionDe(f.utiles, total) };
+    })
+    .sort((a, b) => b.total - a.total || (a.tramiteId ?? 0) - (b.tramiteId ?? 0));
 
   return {
-    resumen: {
-      total,
-      utiles,
-      noUtiles,
-      satisfaccion: total > 0 ? Math.round((utiles * 1000) / total) / 10 : null,
-      porMotivo,
-      sinMotivo,
-      porTopico: topicos.map((g) => ({ topico: g.topico, cantidad: g._count._all })),
-    },
-    items,
-    page,
-    total,
+    ...resumen,
+    promedio: resumen.total > 0 ? Math.round((resumen.utiles * 1000) / resumen.total) / 1000 : null,
+    porTramite,
   };
 };
 

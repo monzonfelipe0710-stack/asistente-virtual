@@ -9,9 +9,9 @@ export const MOTIVOS_PREDEFINIDOS = [
 ];
 export const OTRO_MOTIVO = 'Otro motivo';
 
-const fechaIso = z.union([z.iso.date(), z.iso.datetime({ offset: true })], 'Las fechas deben estar en formato ISO (2026-11-04 o 2026-11-04T10:00:00Z).');
+export const fechaIso = z.union([z.iso.date(), z.iso.datetime({ offset: true })], 'Las fechas deben estar en formato ISO (2026-11-04 o 2026-11-04T10:00:00Z).');
 
-const entero = (mensaje) => z.coerce.number(mensaje).int(mensaje);
+export const entero = (mensaje) => z.coerce.number(mensaje).int(mensaje);
 const MSJ_TRAMITE = 'El tramiteId debe ser un entero positivo.';
 const MSJ_PAGINA = 'La página debe ser un entero mayor o igual a 1.';
 const MSJ_LIMITE = 'El límite debe ser un entero entre 1 y 50.';

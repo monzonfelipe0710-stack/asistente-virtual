@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 
 import prisma from '../src/config/prisma.js';
 import { calificaciones } from '../src/controllers/consulta.controller.js';
+import { alcanceSectores } from '../src/middlewares/propiedad.middleware.js';
 
 // Crea sus propios sectores, trámites (sin publicar), usuarios y consultas en la base y los
 // borra al terminar. Las consultas son de 2020 para que los filtros de fecha no mezclen datos reales.
@@ -24,7 +25,9 @@ const consultas = {};
 
 const llamar = async (usuario, query = {}) => {
   const res = { json(cuerpo) { res.cuerpo = cuerpo; return res; } };
-  await calificaciones({ usuario, query }, res);
+  const req = { usuario, query };
+  await alcanceSectores(req, res, () => {});
+  await calificaciones(req, res);
   return res.cuerpo;
 };
 
