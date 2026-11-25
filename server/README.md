@@ -394,7 +394,7 @@ Flujo de un request: `route → middlewares → controller → service → Prism
 | `ConfiguracionChat` (`configuracion_chat`) | Una sola fila (`CHECK id = 1`): el modelo activo, quién lo cambió y cuándo |
 | `AuditoriaModeloChat` (`auditoria_modelo_chat`) | Cada cambio del modelo activo: usuario, modelo anterior y nuevo, motivo y fecha |
 | `CatalogoVersion` (`catalogo_version`) | Una sola fila con un contador que se incrementa cada vez que cambia el catálogo; el server la usa para vaciar su caché |
-| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo ni las fuentes oficiales), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico`, un `calificarToken` único y el `modelo` que respondió |
+| `Consulta` (`consultas`) | Cada pregunta del chat que se respondió (o no), para las métricas y el historial. Guarda la `respuesta` (el cuerpo que se mostró, sin el saludo ni las fuentes oficiales), la `calificacion` (`0` no útil, `1` útil, con `CHECK`), el `motivoCalificacion`, el `topico`, un `calificarToken` único, el `modelo` que respondió y el `tipo` (`respuesta` o `aclaracion`: las aclaraciones no tienen trámite ni token y no cuentan en métricas, historial ni calificaciones) |
 
 La columna `tramites.search_vector` es generada (`GENERATED ALWAYS AS ... STORED`, full-text
 en español sobre nombre y descripción). En el schema figura como `Unsupported("tsvector")`,
@@ -754,7 +754,7 @@ usuario, se descarta sin error, y sin `tipo` todo funciona como antes. Se usa pa
 | `tramitesEncontrados` | Trámites usados en la respuesta. Vacío si no se encontró nada o es una aclaración |
 | `opciones` | Trámites entre los que elegir, solo en una aclaración: `[{ id, nombre }]`. En la aclaración por jurisdicción o localidad (ver [Cómo funciona el chat](#cómo-funciona-el-chat)) cada opción trae además `jurisdiccion` y `localidad`, y su `nombre` ("Habilitación comercial en Clorinda") mandado como `pregunta` ya resuelve el trámite |
 | `conversacional` | `true` si el mensaje no pedía un trámite (saludo, gracias, pregunta sobre el asistente o el catálogo, tema ajeno): `respuesta` es el texto del asistente, `tipo` es `respuesta`, `encontrado` es `false`, no hay trámites ni opciones y no se registra (`consultaId` y `calificarToken` `null`). `false` en todos los demás casos |
-| `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (no se registran) o si falló el registro |
+| `consultaId` | Id de la consulta registrada. `null` en las aclaraciones (se registran con `tipo = aclaracion`, pero sin id para el front ni token para calificarlas) o si falló el registro |
 | `calificarToken` | Token para calificar esa consulta sin sesión (32 caracteres hex). `null` cuando `consultaId` es `null`. Cada consulta tiene el suyo, también las que salen de la caché |
 
 **Saludo.** El modelo devuelve aparte el saludo que usó la persona ("Hola", "Buen día",

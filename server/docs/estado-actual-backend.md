@@ -275,6 +275,7 @@ Errores siempre como `{ "error": "mensaje" }`. `autenticar` responde 403 con `co
 | 20 | `20261105130000_documento_url_externa` | `58b9b56` | `documentos.url_externa`, `archivo` opcional y los dos `CHECK` (SQL a mano, idempotente) |
 | 21 | `20261106000000_fichas_del_portal` | | Datos de las fichas del portal y huellas de importación (SQL a mano, idempotente) |
 | 22 | `20261117120000_selector_modelo_chat` | `ec98627` | `modelo_chat`, `configuracion_chat`, `auditoria_modelo_chat`, `consultas.modelo` y el seed de los cuatro modelos (SQL a mano, idempotente) |
+| 23 | `20261125120000_consulta_tipo` | | `consultas.tipo` (`respuesta` por defecto o `aclaracion`, con `CHECK`) para registrar las aclaraciones del chat (SQL a mano, idempotente). Respaldo en la rama de Neon `respaldo-pre-tipo-consulta-2026-11-25` |
 
 **Las de tu compañero (Felipe) están solo en otras ramas** y no existen en `dev-nata`:
 
@@ -342,6 +343,29 @@ Esto sale de comparar lo que manda `client/src/services/auth.js` y `usuarios.js`
 
 `core/ai/proveedor.js` define el contrato `ProveedorIA` (`generarEmbedding`, `generarRespuesta`, `generarRespuestaStream`, `infoEmbedding`) y `openai.adapter.js` lo implementa. Los services solo importan `ia` desde `core/ai/index.js`. El modelo de chat se puede cambiar por variable de entorno. El de embeddings (`text-embedding-3-small`, 1536 dimensiones) está fijo en el código, porque cambiarlo invalida los vectores guardados.
 
+### Aclaraciones registradas en `consultas` (25-11-2026)
+
+- **Antes:** una aclaración (el chat repregunta cuál trámite) salía con `consultaId: null` y no
+  dejaba rastro.
+- **Ahora:** cada aclaración se guarda en `consultas` con `tipo = 'aclaracion'`, `encontrado = false`,
+  sin `tramite_id` y sin `calificar_token` (no se puede calificar), con la pregunta de la persona, el
+  texto de la aclaración sin el saludo y el modelo (`null` si el servidor repitió las opciones sin
+  llamarlo). Son cuatro caminos (el "ok" que repite las opciones, la pregunta por localidad del
+  grupo, la aclaración del modelo y la del modo anterior), en las dos rutas.
+- **Al front no le cambia nada:** sigue recibiendo `consultaId: null` y `calificarToken: null`, y la
+  aclaración no se cachea. Si el guardado falla, se loguea el nombre y el código del error (sin el
+  mensaje, que en un error de validación de Prisma trae el texto de la persona) y la respuesta sale
+  igual. Ese log también cambió para las consultas normales.
+- **Métricas que las excluyen** (`tipo = 'respuesta'`, constante `SOLO_RESPUESTAS` de
+  `services/tipo-consulta.js`): "sin respuesta" y el historial `/mias`, donde sí aparecerían por
+  `encontrado = false`; y, aunque ya quedaban afuera por no tener trámite ni token, el conteo por
+  trámite, los "más consultados" del catálogo y las calificaciones. El turno siguiente, con el
+  trámite elegido, se registra y cuenta como siempre. Las filas viejas y las que escribe otro proceso
+  sin la columna quedan en `respuesta`, así que los resultados de antes no cambian.
+- **Scripts:** como la aclaración no devuelve id, los que borran lo que crean (`eval-chat`,
+  `eval-seguridad`, `medir-*`) lo reciben por la opción `alRegistrarAclaracion`; `precalentar-guion
+  --borrar` borra las aclaraciones anónimas de sus preguntas creadas durante la corrida.
+
 ### Descarga estable de documentos (25-11-2026)
 
 `GET /api/documentos/:id/descargar`, pública, con `publicoLimiter` (60 / min por IP, el contador
@@ -391,7 +415,7 @@ POST /api/chat  (o /stream)
        │    asistente con tipo "aclaracion" o sin tipo)
        ├─ se descartan los ids que no estén en el contexto;
        │    encontrado = el modelo dice true y quedó algún id válido
-       └─ registra la consulta en `consultas` (las aclaraciones no se registran ni se cachean)
+       └─ registra la consulta en `consultas` (las aclaraciones, con `tipo = aclaracion` y fuera de las métricas; no se cachean)
 ```
 
 La caché se limpia al crear, editar, borrar, publicar o despublicar un trámite, al editar o borrar una mesa y al crear, editar o borrar un documento. Cada una de esas limpiezas incrementa la versión del catálogo en la base, y el import y los scripts de reindexado también la incrementan: antes de usar la caché, cada instancia del server revisa esa versión como mucho cada `CACHE_CHEQUEO_MS` y, si cambió, vacía la suya. A los formularios el modelo los conoce solo por su nombre, sean archivo o enlace.
