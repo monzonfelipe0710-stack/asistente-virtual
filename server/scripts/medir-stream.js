@@ -73,7 +73,7 @@ const medir = async (pregunta, modo) => {
   let primero = null;
   let deltas = 0;
   let fin = null;
-  for await (const e of responderConsultaStream([{ rol: 'usuario', texto: pregunta }])) {
+  for await (const e of responderConsultaStream([{ rol: 'usuario', texto: pregunta }], null, { alRegistrarAclaracion: (id) => consultasCreadas.push(id) })) {
     if (e.tipo === 'delta') {
       primero ??= performance.now() - inicio;
       deltas++;

@@ -28,11 +28,11 @@ export const mezclaEstable = (id) => Math.imul(id ^ 0x9e3779b9, 0x85ebca6b) >>> 
 // Primero los más consultados; con las mismas consultas, en el orden de la mezcla estable.
 const porRepresentatividad = (a, b) => b.consultas - a.consultas || mezclaEstable(a.id) - mezclaEstable(b.id);
 
-const leerPublicados = () => prisma.$queryRaw`
+export const leerPublicados = () => prisma.$queryRaw`
   SELECT t.id, t.nombre, t.sector_id AS "sectorId", s.nombre AS sector, count(c.id)::int AS consultas
   FROM tramites t
   JOIN sectores s ON s.id = t.sector_id
-  LEFT JOIN consultas c ON c.tramite_id = t.id AND c.encontrado
+  LEFT JOIN consultas c ON c.tramite_id = t.id AND c.encontrado AND c.tipo = 'respuesta'
   WHERE t.publicado
   GROUP BY t.id, s.nombre
 `;

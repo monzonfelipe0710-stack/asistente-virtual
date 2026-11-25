@@ -411,7 +411,12 @@ const correr = async ({ caso, mensajes, turnos }) => {
   const fugas = [];
   const correcciones = [];
   const reescrituras = [];
-  const opciones = { alDetectarFuga: (f) => fugas.push(f), alCorregirSalida: (c) => correcciones.push(c), alReescribir: (x) => reescrituras.push(x) };
+  const opciones = {
+    alDetectarFuga: (f) => fugas.push(f),
+    alCorregirSalida: (c) => correcciones.push(c),
+    alReescribir: (x) => reescrituras.push(x),
+    alRegistrarAclaracion: (id) => consultasCreadas.push(id),
+  };
   let historial = mensajes ?? usuario(caso);
   let r;
   try {

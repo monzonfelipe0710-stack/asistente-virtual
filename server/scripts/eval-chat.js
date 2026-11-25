@@ -585,7 +585,10 @@ const juntar = async (eventos) => {
   const { tipo: _, tipoRespuesta, ...resto } = fin;
   return { tipo: tipoRespuesta, respuesta, ...resto };
 };
-const consultar = async (mensajes, opciones, pregunta) => {
+// Las aclaraciones se registran sin devolver consultaId: llegan por alRegistrarAclaracion para borrarlas al final.
+const anotarAclaracion = (id) => consultasCreadas.push(id);
+const consultar = async (mensajes, opcionesDelCaso, pregunta) => {
+  const opciones = { ...opcionesDelCaso, alRegistrarAclaracion: anotarAclaracion };
   if (!STREAM) return responderConsulta(mensajes, null, opciones);
   const salidas = [];
   grabadas = salidas;
@@ -602,7 +605,7 @@ const consultar = async (mensajes, opciones, pregunta) => {
   cache.limpiar();
   aRepetir = salidas;
   try {
-    const normal = await responderConsulta(mensajes, null, {});
+    const normal = await responderConsulta(mensajes, null, { alRegistrarAclaracion: anotarAclaracion });
     if (normal.consultaId) consultasCreadas.push(normal.consultaId);
     comparaciones.push({ pregunta, igual: normal.respuesta === r.respuesta && normal.tipo === r.tipo && normal.encontrado === r.encontrado, stream: r.respuesta, normal: normal.respuesta });
   } finally {

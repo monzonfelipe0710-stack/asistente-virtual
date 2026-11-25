@@ -106,7 +106,10 @@ describe('chat con trámites repetidos en distintos municipios', () => {
     ]);
     assert.deepEqual(r.tramitesEncontrados, []);
     assert.equal(r.consultaId, null);
-    assert.equal(registros.length, 0);
+    assert.deepEqual(registros, [{
+      textoConsulta: 'cómo saco la habilitación comercial', tramiteId: null, encontrado: false, usuarioId: null,
+      respuesta: r.respuesta, tipo: 'aclaracion', modelo: 'gpt-4o-mini',
+    }]);
     assert.equal(cache.obtener('cómo saco la habilitación comercial', 'gpt-4o-mini'), null);
   });
 
@@ -208,6 +211,9 @@ describe('chat con trámites repetidos en distintos municipios', () => {
     assert.equal(fin.tipo, 'fin');
     assert.equal(fin.tipoRespuesta, 'aclaracion');
     assert.deepEqual(fin.opciones.map((o) => o.localidad), ['Clorinda', 'Pirané']);
-    assert.equal(registros.length, 0);
+    assert.equal(fin.consultaId, null);
+    assert.equal(registros.length, 1);
+    assert.equal(registros[0].tipo, 'aclaracion');
+    assert.equal(registros[0].respuesta, texto.replace(/^¡Hola, María! /, ''), 'se guarda sin el saludo');
   });
 });

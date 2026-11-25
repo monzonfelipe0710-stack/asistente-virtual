@@ -1,16 +1,19 @@
 import crypto from 'node:crypto';
 import prisma from '../config/prisma.js';
+import { ACLARACION, RESPUESTA, SOLO_RESPUESTAS } from './tipo-consulta.js';
 
-export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId, respuesta, modelo }) => {
+// Una aclaración se guarda sin token: no se puede calificar.
+export const registrarConsulta = async ({ textoConsulta, tramiteId, encontrado, usuarioId, respuesta, modelo, tipo = RESPUESTA }) => {
   return prisma.consulta.create({
     data: {
+      tipo,
       textoConsulta,
       tramiteId: tramiteId ?? null,
       encontrado,
       usuarioId: usuarioId ?? null,
       respuesta: respuesta ?? null,
       modelo: modelo ?? null,
-      calificarToken: crypto.randomBytes(16).toString('hex'),
+      calificarToken: tipo === ACLARACION ? null : crypto.randomBytes(16).toString('hex'),
     },
     select: { id: true, calificarToken: true },
   });
@@ -20,6 +23,7 @@ export const consultasPorTramite = async (sectorIds = null) => {
   const grupos = await prisma.consulta.groupBy({
     by: ['tramiteId'],
     where: {
+      ...SOLO_RESPUESTAS,
       encontrado: true,
       tramiteId: { not: null },
       ...(sectorIds ? { tramite: { sectorId: { in: sectorIds } } } : {}),
@@ -47,7 +51,7 @@ export const consultasPorTramite = async (sectorIds = null) => {
 
 export const consultasSinRespuesta = async () => {
   return prisma.consulta.findMany({
-    where: { encontrado: false },
+    where: { ...SOLO_RESPUESTAS, encontrado: false },
     orderBy: { fecha: 'desc' },
     take: 50,
     // Sin usuarioId: quién preguntó no le corresponde a quien mira las métricas.
@@ -57,7 +61,7 @@ export const consultasSinRespuesta = async () => {
 
 export const consultasDeUsuario = async (usuarioId) => {
   return prisma.consulta.findMany({
-    where: { usuarioId },
+    where: { ...SOLO_RESPUESTAS, usuarioId },
     orderBy: { fecha: 'desc' },
     take: 50,
     select: {

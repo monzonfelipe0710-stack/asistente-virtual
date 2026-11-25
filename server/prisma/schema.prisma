@@ -216,6 +216,8 @@ model Consulta {
   motivoCalificacion String? @map("motivo_calificacion")
   calificarToken  String? @unique @map("calificar_token")
   modelo          String?
+  // 'respuesta' o 'aclaracion' (CHECK en la migración). Las aclaraciones no tienen trámite ni token.
+  tipo            String  @default("respuesta")
 
   tramiteId Int? @map("tramite_id")
   tramite Tramite? @relation(fields: [tramiteId], references: [id], onDelete: SetNull)

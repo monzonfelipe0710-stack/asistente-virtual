@@ -52,7 +52,7 @@ const consultar = async (texto) => {
   cache.limpiarEmbeddings();
   const antes = lineas.length;
   let fin = null;
-  for await (const e of responderConsultaStream([{ rol: 'usuario', texto }], null, {})) if (e.tipo === 'fin') fin = e;
+  for await (const e of responderConsultaStream([{ rol: 'usuario', texto }], null, { alRegistrarAclaracion: (id) => creadas.push(id) })) if (e.tipo === 'fin') fin = e;
   if (fin?.consultaId) creadas.push(fin.consultaId);
   return { linea: lineas[antes] ?? null, tipo: fin?.tipoRespuesta };
 };

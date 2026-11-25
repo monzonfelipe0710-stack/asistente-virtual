@@ -3,7 +3,6 @@ import prisma from "../config/prisma.js";
 import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental, tipeoReescritura } from "../config/ia.js";
 import { conSenal, crearPlazoConVencimiento } from "../utils/plazo.js";
 import { codigoTransitorio, conReintentoBase } from "../utils/reintento-base.js";
-import { sanitizarError } from "../utils/sanitizar-error.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
 import { cargarDetalle } from "./detalle.service.js";
@@ -11,6 +10,7 @@ import { corregirConsulta, debeReescribir } from "./tipeo.service.js";
 import { describirJurisdiccion, nombreConRaiz, obtenerJurisdicciones } from "./jurisdiccion.service.js";
 import { aclaracionDeGrupo, etiquetarPorJurisdiccion, formatearGrupo, localidadesConocidas, loQueNombro, quitarLocalidades, resolverGrupos } from "./variantes.service.js";
 import { registrarConsulta } from "./metrica.service.js";
+import { ACLARACION } from "./tipo-consulta.js";
 import { obtenerResumenCatalogo } from "./catalogo.service.js";
 import * as cache from "./cache.service.js";
 import { resolverModeloChat } from "./modelo-chat.service.js";
@@ -482,9 +482,22 @@ const registrar = async (datos, signal, modelo) => {
     const consulta = await conReintentoBase(() => registrarConsulta({ ...datos, modelo }), { signal, escritura: true, etiqueta: "registro" });
     return { consultaId: consulta.id, calificarToken: consulta.calificarToken };
   } catch (err) {
-    console.error("Error al registrar consulta:", sanitizarError(err).message);
+    // Sin el mensaje: el de una validación de Prisma trae los datos, con el texto de la persona.
+    console.error(`Error al registrar ${datos.tipo === ACLARACION ? "aclaración" : "consulta"}: ${[err?.name, err?.code].filter(Boolean).join(" ")}`);
     return SIN_REGISTRO;
   }
+};
+
+// La aclaración queda en `consultas` (sin trámite ni token, fuera de las métricas), pero al front le
+// sigue llegando sin consultaId. `alRegistrarAclaracion` es para los scripts que borran lo que crean.
+const registrarAclaracion = async ({ preguntaActual, usuarioId, signal, alRegistrarAclaracion }, respuesta, modelo) => {
+  const { consultaId } = await registrar(
+    { textoConsulta: preguntaActual, tramiteId: null, encontrado: false, usuarioId, respuesta, tipo: ACLARACION },
+    signal,
+    modelo,
+  );
+  if (consultaId) alRegistrarAclaracion?.(consultaId);
+  return SIN_REGISTRO;
 };
 
 const registrarConsultaCacheada = (pregunta, cacheado, usuarioId, signal, modelo) =>
@@ -629,8 +642,8 @@ const completarOpciones = (idsDelModelo, candidatos) => {
 const aclaracionRepetida = (candidatos) => completarOpciones([], candidatos);
 
 // La persona pidió un trámite que existe con el mismo nombre en distintos organismos y no dijo
-// cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones), no la cachea
-// ni la registra.
+// cuál: el servidor arma la pregunta (aunque se haya pasado el tope de aclaraciones) y no la cachea;
+// se registra como aclaración.
 // Cuenta también una aclaración del modelo cuya única opción es el grupo: el modelo a veces pregunta
 // la localidad por su cuenta en vez de devolver el grupo en "tramiteId".
 const grupoElegido = (salida, candidatos) => {
@@ -786,16 +799,17 @@ const resolverConsulta = async (recibidos, usuario, opciones, traza) => {
 
   // "ok" después de una aclaración no elige ninguna opción: se repiten, sin llamar al modelo.
   if (!topeAlcanzado && siguioSinElegir(mensajes)) {
-    const opciones = aclaracionRepetida(candidatos);
-    if (opciones) {
+    const repetidas = aclaracionRepetida(candidatos);
+    if (repetidas) {
+      const registro = await registrarAclaracion({ ...opciones, preguntaActual, usuarioId, signal }, MENSAJE_ACLARACION_VACIA, null);
       return {
         tipo: "aclaracion",
         respuesta: MENSAJE_ACLARACION_VACIA,
-        opciones,
+        opciones: repetidas,
         encontrado: false,
         tramitesEncontrados: [],
         conversacional: false,
-        ...SIN_REGISTRO,
+        ...registro,
       };
     }
   }
@@ -841,6 +855,7 @@ const resolverSalidaAnterior = async (salida, ctx) => {
   const grupo = grupoElegido(salida, candidatos);
   if (grupo) {
     const { texto, opciones } = aclaracionDeGrupo(grupo);
+    const registro = await registrarAclaracion(ctx, texto, sel.modelo.id);
     return {
       tipo: "aclaracion",
       respuesta: conSaludo(texto, saludo, usuario),
@@ -848,22 +863,23 @@ const resolverSalidaAnterior = async (salida, ctx) => {
       encontrado: false,
       tramitesEncontrados: [],
       conversacional: false,
-      ...SIN_REGISTRO,
+      ...registro,
     };
   }
 
   // ACLARACIÓN (solo si no llegamos al tope y quedan 2 opciones o más, completando con la búsqueda).
   const opcionesAclaracion = salida.tipo === "aclaracion" && !topeAlcanzado ? completarOpciones(salida.opciones, candidatos) : null;
   if (opcionesAclaracion) {
-    // No registramos consulta: una aclaración no es una consulta resuelta.
+    const pregunta = cuerpoModelo.trim() ? cuerpoModelo : MENSAJE_ACLARACION_VACIA;
+    const registro = await registrarAclaracion(ctx, pregunta, sel.modelo.id);
     return {
       tipo: "aclaracion",
-      respuesta: conSaludo(cuerpoModelo.trim() ? cuerpoModelo : MENSAJE_ACLARACION_VACIA, saludo, usuario),
+      respuesta: conSaludo(pregunta, saludo, usuario),
       opciones: opcionesAclaracion,
       encontrado: false,
       tramitesEncontrados: [],
       conversacional: false,
-      ...SIN_REGISTRO,
+      ...registro,
     };
   }
 
@@ -961,7 +977,8 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   if (grupo) {
     const { texto, opciones } = aclaracionDeGrupo(grupo);
     yield delta(prefijo + texto);
-    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones, conversacional: false, ...SIN_REGISTRO };
+    const registro = await registrarAclaracion(ctx, texto, sel.modelo.id);
+    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones, conversacional: false, ...registro };
     return;
   }
 
@@ -1039,8 +1056,8 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   if (resto || saludoPendiente) yield delta(conSaludoPendiente(resto));
 
   if (esAclaracion) {
-    // Una aclaración no es una consulta resuelta: no se registra.
-    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones: opcionesAclaracion, conversacional: false, ...SIN_REGISTRO };
+    const registro = await registrarAclaracion(ctx, cuerpo.trim() ? cuerpo : MENSAJE_ACLARACION_VACIA, sel.modelo.id);
+    yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones: opcionesAclaracion, conversacional: false, ...registro };
     return;
   }
 
@@ -1188,10 +1205,11 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
 
   // "ok" después de una aclaración no elige ninguna opción: se repiten, sin llamar al modelo.
   if (!topeAlcanzado && siguioSinElegir(mensajes)) {
-    const opciones = aclaracionRepetida(candidatos);
-    if (opciones) {
+    const repetidas = aclaracionRepetida(candidatos);
+    if (repetidas) {
       yield { tipo: "delta", texto: MENSAJE_ACLARACION_VACIA };
-      yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones, conversacional: false, ...SIN_REGISTRO };
+      const registro = await registrarAclaracion({ ...opciones, preguntaActual, usuarioId, signal }, MENSAJE_ACLARACION_VACIA, null);
+      yield { tipo: "fin", tipoRespuesta: "aclaracion", encontrado: false, tramitesEncontrados: [], opciones: repetidas, conversacional: false, ...registro };
       return;
     }
   }
@@ -1329,6 +1347,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
         const prefijo = componerSaludo(saludoPara(preguntaActual, parsed.saludo), nombre);
         if (prefijo) yield { tipo: "delta", texto: prefijo };
         yield { tipo: "delta", texto };
+        const registro = await registrarAclaracion(ctx, texto, sel.modelo.id);
         yield {
           tipo: "fin",
           tipoRespuesta: "aclaracion",
@@ -1336,7 +1355,7 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
           tramitesEncontrados: [],
           opciones,
           conversacional: false,
-          ...SIN_REGISTRO,
+          ...registro,
         };
         return;
       }
@@ -1434,7 +1453,9 @@ async function* transmitirSalidaAnterior(deltas, ctx) {
   const tramitesEncontrados = usados.map(({ id, nombre }) => ({ id, nombre }));
 
   let registro = SIN_REGISTRO;
-  if (!esAclaracion) {
+  if (esAclaracion) {
+    registro = await registrarAclaracion(ctx, cuerpo.trim() ? cuerpo.trim() : MENSAJE_ACLARACION_VACIA, sel.modelo.id);
+  } else {
     // Sin trámite el loop corta antes de mandar texto: solo se muestra el mensaje fijo.
     const respuesta = encontrado ? cuerpo.trim() : MENSAJE_SIN_RESPUESTA;
     const metaValida = meta ? meta.valida : leerMeta(buffer) !== null;

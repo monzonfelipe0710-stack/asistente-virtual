@@ -38,7 +38,7 @@ openai.chat.completions.create = async (...argumentos) => {
 
 // Correcciones de la verificación de la salida en cada respuesta.
 const correcciones = [];
-const conVerificacion = { alCorregirSalida: (c) => correcciones.push(c) };
+const conVerificacion = { alCorregirSalida: (c) => correcciones.push(c), alRegistrarAclaracion: (id) => consultasCreadas.push(id) };
 const describirCorrecciones = () => {
   const texto = correcciones.length === 0 ? 'sin correcciones' : correcciones.map((c) => `${c.capa}: "${c.original.slice(0, 120)}"`).join('; ');
   correcciones.length = 0;

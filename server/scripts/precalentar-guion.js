@@ -10,7 +10,8 @@
 //              empiezan con # se ignoran. No se commitea (server/guion*.txt está en .gitignore).
 //   --pausa    ms entre preguntas (default 7000): el chat limita a CHAT_LIMITE_POR_MINUTO por IP.
 //   --borrar   al final borra de la base del .env las consultas que registró el precalentado (solo
-//              si el texto coincide con la pregunta enviada): cuentan en "más consultados".
+//              si el texto coincide con la pregunta enviada): cuentan en "más consultados". También las
+//              aclaraciones anónimas de esas preguntas registradas desde que arrancó (no devuelven id).
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 
@@ -36,6 +37,8 @@ if (preguntas.length > POR_HORA / 2) console.warn(`  Aviso: usan ${preguntas.len
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const registradas = [];
+const aclaradas = new Set();
+const comienzo = new Date();
 const resumen = { cacheadas: 0, sinCache: 0, fallas: 0 };
 
 for (const [i, pregunta] of preguntas.entries()) {
@@ -62,6 +65,7 @@ for (const [i, pregunta] of preguntas.entries()) {
     } else if (cuerpo.tipo === 'aclaracion' || cuerpo.conversacional) {
       linea = `${cuerpo.tipo === 'aclaracion' ? 'aclaración' : 'conversación'}, no se cachea (${ms} ms)`;
       resumen.sinCache++;
+      if (cuerpo.tipo === 'aclaracion') aclaradas.add(pregunta);
     } else {
       linea = `${cuerpo.encontrado ? 'respuesta' : 'sin trámite'}, cacheada (${ms} ms)`;
       resumen.cacheadas++;
@@ -77,7 +81,7 @@ for (const [i, pregunta] of preguntas.entries()) {
 console.log(`Cacheadas: ${resumen.cacheadas}, sin caché (aclaraciones y conversaciones): ${resumen.sinCache}, fallas: ${resumen.fallas}.`);
 console.log('La caché vence en CACHE_TTL_MS (1 hora por defecto) y se vacía si se edita el catálogo o se reinicia el server.');
 
-if (BORRAR && registradas.length > 0) {
+if (BORRAR && (registradas.length > 0 || aclaradas.size > 0)) {
   const { default: prisma } = await import('../src/config/prisma.js');
   try {
     const filas = await prisma.consulta.findMany({ where: { id: { in: registradas.map((r) => r.id) } }, select: { id: true, textoConsulta: true } });
@@ -85,6 +89,12 @@ if (BORRAR && registradas.length > 0) {
     const ids = registradas.filter((r) => texto.get(r.id) === r.pregunta).map((r) => r.id);
     const { count } = await prisma.consulta.deleteMany({ where: { id: { in: ids } } });
     console.log(`Consultas del precalentado borradas: ${count} de ${registradas.length}${count < registradas.length ? ' (las demás no coinciden con la base del .env: no se tocaron)' : ''}.`);
+    if (aclaradas.size > 0) {
+      const { count: aclaraciones } = await prisma.consulta.deleteMany({
+        where: { tipo: 'aclaracion', usuarioId: null, textoConsulta: { in: [...aclaradas] }, fecha: { gte: comienzo } },
+      });
+      console.log(`Aclaraciones del precalentado borradas: ${aclaraciones}.`);
+    }
   } finally {
     await prisma.$disconnect();
   }

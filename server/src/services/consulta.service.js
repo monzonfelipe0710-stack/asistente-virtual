@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import prisma from '../config/prisma.js';
 import { MOTIVOS_PREDEFINIDOS, OTRO_MOTIVO } from '../validators/consulta.validator.js';
+import { SOLO_RESPUESTAS } from './tipo-consulta.js';
 
 const sha256 = (texto) => crypto.createHash('sha256').update(texto).digest();
 
@@ -57,6 +58,7 @@ const agruparMotivos = (grupos) => {
 // sectorIds null = sin restricción (SU). Nunca se devuelven usuarioId ni calificarToken.
 export const listarCalificaciones = async ({ desde, hasta, tramiteId, calificacion, page, limit, sectorIds }) => {
   const where = {
+    ...SOLO_RESPUESTAS,
     calificacion: calificacion ?? { not: null },
     fecha: filtroFecha(desde, hasta),
     ...(tramiteId && { tramiteId }),

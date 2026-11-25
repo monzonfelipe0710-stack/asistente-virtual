@@ -15,6 +15,7 @@ let salidaModelo;
 let pedazosStream;
 let llamadasModelo;
 let registros;
+let registroFalla = null;
 
 const servicio = (ruta) => new URL(`../src/${ruta}`, import.meta.url).href;
 
@@ -47,6 +48,7 @@ mock.module(servicio('core/ai/index.js'), {
 mock.module(servicio('services/metrica.service.js'), {
   namedExports: {
     registrarConsulta: async (datos) => {
+      if (registroFalla) throw registroFalla;
       registros.push(datos);
       return { id: registros.length, calificarToken: `token-${registros.length}` };
     },
@@ -1065,6 +1067,19 @@ describe('chat', () => {
           },
         );
 
+        const aclaracion = {
+          textoConsulta: 'necesito un trámite', tramiteId: null, encontrado: false, usuarioId: null,
+          respuesta: '¿Cuál de los dos?', tipo: 'aclaracion', modelo: 'gpt-4o-mini',
+        };
+        assert.deepEqual(registros, [aclaracion, aclaracion, aclaracion], 'se registra cada vez, en las dos rutas');
+
+        const avisadas = [];
+        const alRegistrarAclaracion = (id) => avisadas.push(id);
+        await responderConsulta(turno('necesito un trámite'), null, { alRegistrarAclaracion });
+        pedazosStream = [meta({ tipo: 'aclaracion', opciones: [tramite.id, otro.id] }), '¿Cuál de los dos?'];
+        await consumir(responderConsultaStream(turno('necesito un trámite'), null, { alRegistrarAclaracion }));
+        assert.deepEqual(avisadas, [4, 5], 'los scripts reciben el id para borrarla');
+
         const historial = [
           { rol: 'usuario', texto: 'necesito un trámite' },
           { rol: 'asistente', texto: '¿Cuál de los dos?', tipo: 'aclaracion' },
@@ -1081,6 +1096,35 @@ describe('chat', () => {
           [{ textoConsulta: 'el otro', tramiteId: otro.id, encontrado: true }, { textoConsulta: 'el otro', tramiteId: otro.id, encontrado: true }],
         );
       } finally {
+        await prisma.tramite.delete({ where: { id: otro.id } });
+      }
+    });
+
+    it('si falla el guardado de una aclaración, la respuesta sale igual y el log no lleva el texto de la persona, en las dos rutas', async (t) => {
+      const otro = await prisma.tramite.create({
+        data: { nombre: `Otro ${SUFIJO}`, descripcion: 'de prueba', sectorId: sector.id, encargadoId: tramite.encargadoId },
+      });
+      const errores = [];
+      t.mock.method(console, 'error', (...args) => errores.push(args.map(String).join(' ')));
+      registroFalla = new Error('Can\'t reach database server para "necesito un trámite secreto"');
+      try {
+        candidatos = [{ id: tramite.id }, { id: otro.id }];
+        salidaModelo = salida({ tipo: 'aclaracion', opciones: [tramite.id, otro.id], respuesta: '¿Cuál de los dos?' });
+        const r = await responderConsulta(turno('necesito un trámite secreto'));
+        assert.equal(r.tipo, 'aclaracion');
+        assert.equal(r.respuesta, '¿Cuál de los dos?');
+        assert.deepEqual([r.consultaId, r.calificarToken], [null, null]);
+
+        pedazosStream = [meta({ tipo: 'aclaracion', opciones: [tramite.id, otro.id] }), '¿Cuál de los dos?'];
+        const { texto, fin } = await consumir(responderConsultaStream(turno('necesito un trámite secreto')));
+        assert.equal(texto, '¿Cuál de los dos?');
+        assert.equal(fin.tipoRespuesta, 'aclaracion');
+        assert.deepEqual([fin.consultaId, fin.calificarToken], [null, null]);
+
+        assert.equal(errores.length, 2);
+        for (const e of errores) assert.equal(e.includes('secreto'), false, e);
+      } finally {
+        registroFalla = null;
         await prisma.tramite.delete({ where: { id: otro.id } });
       }
     });
@@ -1130,13 +1174,16 @@ describe('chat', () => {
         assert.deepEqual(r.opciones.map((o) => o.id).sort(), [tramite.id, otro.id].sort());
         assert.deepEqual(r.consultaId, null);
         assert.equal(llamadasModelo.length, 0, 'no debería llamar al modelo');
-        assert.deepEqual(registros, []);
 
         const { texto, fin } = await consumir(responderConsultaStream(historial));
         assert.equal(texto, MENSAJE_ACLARACION_VACIA);
         assert.equal(fin.tipoRespuesta, 'aclaracion');
+        assert.equal(fin.consultaId, null);
         assert.deepEqual(fin.opciones.map((o) => o.id).sort(), [tramite.id, otro.id].sort());
         assert.equal(llamadasModelo.length, 0, 'no debería llamar al modelo');
+
+        const aclaracion = { textoConsulta: 'ok', tramiteId: null, encontrado: false, usuarioId: null, respuesta: MENSAJE_ACLARACION_VACIA, tipo: 'aclaracion', modelo: null };
+        assert.deepEqual(registros, [aclaracion, aclaracion], 'se registra en las dos rutas, sin modelo porque no se lo llamó');
       } finally {
         await prisma.tramite.delete({ where: { id: otro.id } });
       }
