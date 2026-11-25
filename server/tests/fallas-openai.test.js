@@ -392,6 +392,8 @@ describe('fallas de OpenAI en el chat', () => {
       const linea = JSON.parse(lineas[0]);
       assert.equal(linea.ruta, 'stream');
       assert.ok(linea.primerTexto > 0 && linea.primerTexto <= linea.total);
+      assert.ok(linea.primerToken > 0 && linea.primerToken <= linea.primerTexto);
+      assert.ok(linea.verificacion === undefined || (typeof linea.verificacion === 'number' && linea.verificacion < linea.etapas.modelo));
       for (const etapa of ['busqueda', 'detalle', 'modelo', 'registro']) assert.equal(typeof linea.etapas[etapa], 'number', etapa);
       assert.ok(!lineas[0].includes(pregunta));
     });

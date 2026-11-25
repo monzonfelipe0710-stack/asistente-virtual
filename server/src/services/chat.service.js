@@ -712,6 +712,8 @@ const crearTraza = () => {
   let etapa = "inicio";
   let desde = inicio;
   let primerTexto = null;
+  let primerToken = null;
+  let verificacion = 0;
   let cacheada = false;
   const duraciones = {};
   const cerrarEtapa = (ahora) => {
@@ -727,6 +729,21 @@ const crearTraza = () => {
     primerTexto() {
       primerTexto ??= Date.now() - inicio;
     },
+    primerToken() {
+      primerToken ??= Date.now() - inicio;
+    },
+    medirVerificacion(verificar) {
+      if (!logLatencia()) return verificar;
+      const medir = (fn) => (...args) => {
+        const desde = performance.now();
+        try {
+          return fn(...args);
+        } finally {
+          verificacion += performance.now() - desde;
+        }
+      };
+      return Object.assign(medir(verificar), verificar, { nuevaLinea: () => medir(verificar.nuevaLinea()) });
+    },
     cacheada() {
       cacheada = true;
     },
@@ -736,7 +753,7 @@ const crearTraza = () => {
       cerrarEtapa(ahora);
       etapa = "fin";
       desde = ahora;
-      const linea = { ruta, total: ahora - inicio, ...(primerTexto !== null && { primerTexto }), cacheada, etapas: duraciones };
+      const linea = { ruta, total: ahora - inicio, ...(primerTexto !== null && { primerTexto }), ...(primerToken !== null && { primerToken }), ...(verificacion > 0 && { verificacion: Math.round(verificacion * 10) / 10 }), cacheada, etapas: duraciones };
       console.info(`Chat latencia: ${JSON.stringify(linea)}`);
     },
     traducir(err) {
@@ -992,7 +1009,7 @@ async function* responderConSalida({ salida, valida, partes }, ctx) {
   const esAclaracion = opcionesAclaracion !== null;
   const encontrado = !esConversacion && !esAclaracion && idsUsados.length > 0;
   const usados = encontrado ? idsUsados.map((id) => tramites.find((x) => x.id === id)) : [];
-  const verificar = verificadorPara(tramites, idsUsados, alCorregirSalida, { contexto, fijo, pregunta: textoDeLaPersona(mensajes) });
+  const verificar = traza.medirVerificacion(verificadorPara(tramites, idsUsados, alCorregirSalida, { contexto, fijo, pregunta: textoDeLaPersona(mensajes) }));
   const limpiador = crearLimpiadorPorOraciones({ saludo, alCorregirTuteo, verificar });
   // Sin trámite no se muestra el texto del modelo, pero se revisa igual (fuga, idioma).
   const liberador = crearLiberador({ oculto: esConversacion || (!esAclaracion && !encontrado), retenerContenido: encontrado, buscarFuga: buscarFugaDeInstrucciones });
@@ -1142,6 +1159,13 @@ async function* transmitirConEsquema(deltas, ctx) {
   }
 }
 
+async function* marcarPrimerToken(deltas, traza) {
+  for await (const delta of deltas) {
+    traza.primerToken();
+    yield delta;
+  }
+}
+
 export async function* responderConsultaStream(mensajes, usuario = null, opciones = {}) {
   const traza = crearTraza();
   try {
@@ -1215,13 +1239,16 @@ async function* transmitirConsulta(recibidos, usuario, opciones, traza) {
   const conEsquema = streamIncremental() && streamEsquema();
   const prompt = conEsquema ? SYSTEM_PROMPT_MULTIVUELTA : SYSTEM_PROMPT_STREAM_MULTIVUELTA;
   const { instruccion, contexto, fijo } = await conSenal(armarInstruccion(prompt, topeAlcanzado, candidatos.lista, candidatos, signal), signal);
-  const deltas = ia.generarRespuestaStream({
-    instruccionSistema: instruccion,
-    turnos: mensajes,
-    ...(conEsquema && { esquema: ESQUEMA_SALIDA_STREAM }),
-    signal,
-    ...pedidoDeModelo(sel),
-  });
+  const deltas = marcarPrimerToken(
+    ia.generarRespuestaStream({
+      instruccionSistema: instruccion,
+      turnos: mensajes,
+      ...(conEsquema && { esquema: ESQUEMA_SALIDA_STREAM }),
+      signal,
+      ...pedidoDeModelo(sel),
+    }),
+    traza,
+  );
   const ctx = { ...opciones, sel, signal, traza, mensajes, usuario, usuarioId, esUnTurno, preguntaActual, candidatos, tramites, idsResueltos, topeAlcanzado, contexto, fijo };
   if (conEsquema) {
     yield* transmitirConEsquema(deltas, ctx);
