@@ -116,7 +116,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | `UMBRAL_DISTANCIA` | no | `0.5` (no figura en `.env.example`) |
 | `CACHE_TTL_MS`, `CACHE_MAX` | no | 1 hora, 500 entradas |
 | `CACHE_CHEQUEO_MS` | no | `5000`: cada cuánto se revisa la versión del catálogo en la base |
-| `SERVIDOR_URL` | no | Solo el script de import: `http://localhost:$PORT`, para avisar si hay un server encendido |
+| `SERVIDOR_URL` | no | URL pública de la API: base del link de descarga de los documentos con archivo en el chat (sin ella no se enlazan). También la usan los scripts para llegar al server (`http://localhost:$PORT`) |
 | `STREAM_INCREMENTAL` | no | `true`: las dos rutas del chat sacan el texto de a oraciones verificadas (ver 6, "Streaming incremental"); `false` vuelve al comportamiento anterior |
 | `STREAM_ESQUEMA` | no | `true`: el streaming usa el mismo JSON con esquema y el mismo prompt que la ruta sin streaming y lee `respuesta` a medida que llega (ver 6, "Streaming con esquema JSON"); `false` vuelve a la línea META. Solo aplica con `STREAM_INCREMENTAL=true` |
 | `TIPEO_REESCRITURA` | no | `true`: si la búsqueda no encuentra nada parecido, el modelo corrige la ortografía de la consulta y se busca de nuevo (ver 6, "Corrección de tipeo"); `false` no corrige. `TIPEO_TIMEOUT_MS` (default 3000) es el timeout de esa llamada |
@@ -193,6 +193,7 @@ Solo nombres; los valores que figuran son los defaults del código, no los del `
 | GET | `/api/tramites/:id/documentos` | `publicoLimiter`, `auth?` | `documento.listar` | Borrador: solo SU o ADM del sector; al resto 404 |
 | GET | `/api/tramites/:id/documentos/:docId/descargar` | `publicoLimiter`, `auth?` | `documento.descargar` | `{ url, externa }`: el enlace externo o una URL de R2 firmada por 5 min |
 | DELETE | `/api/tramites/:id/documentos/:docId` | `auth`, `rol(ADM)`, `sector` | `documento.eliminar` | |
+| GET | `/api/documentos/:id/descargar` | `publicoLimiter` | `documento.descargarPublico` | Descarga estable (ver 6, "Descarga estable de documentos"): el archivo en streaming o 302 al enlace externo |
 | POST | `/api/chat` | `chatLimiter`, `auth?` | `chat.consultar` | `{ tipo, respuesta, encontrado, tramitesEncontrados, opciones }` |
 | POST | `/api/chat/stream` | `chatLimiter`, `auth?` | `chat.consultarStream` | SSE: eventos `delta`, `fin`, `error` |
 | GET | `/api/metricas/por-tramite` | `auth`, `rol(SU,ADM)` | `metrica.porTramite` | `?alcance=propias` |
@@ -340,6 +341,36 @@ Esto sale de comparar lo que manda `client/src/services/auth.js` y `usuarios.js`
 ### Capa de IA (puerto + adaptador)
 
 `core/ai/proveedor.js` define el contrato `ProveedorIA` (`generarEmbedding`, `generarRespuesta`, `generarRespuestaStream`, `infoEmbedding`) y `openai.adapter.js` lo implementa. Los services solo importan `ia` desde `core/ai/index.js`. El modelo de chat se puede cambiar por variable de entorno. El de embeddings (`text-embedding-3-small`, 1536 dimensiones) está fijo en el código, porque cambiarlo invalida los vectores guardados.
+
+### Descarga estable de documentos (25-11-2026)
+
+`GET /api/documentos/:id/descargar`, pública, con `publicoLimiter` (60 / min por IP, el contador
+de las rutas públicas de lectura; el del chat no cambia). `:id` es el id del documento en la base.
+
+- **Antes:** el único acceso era `GET /api/tramites/:id/documentos/:docId/descargar`, que devuelve
+  `{ url }` con una URL firmada de R2 de 5 minutos (vence y lleva bucket, clave e id de credencial).
+  El chat solo enlazaba los documentos con URL externa: los archivos de R2 quedaban afuera porque la
+  firma no sobrevivía a la caché de respuestas. El SDK de R2 se llamaba desde `documento.service.js`.
+- **Puerto de almacenamiento:** `core/almacenamiento/` (`puerto.js`, `r2.adapter.js`, `index.js`)
+  con `subir`, `borrar`, `urlFirmada` y `leer`. Las fallas salen como `ErrorAlmacenamiento`
+  (`timeout` o `proveedor`), sin clave, bucket ni mensaje del SDK. El service ya no importa el SDK.
+- **Respuestas:** 200 con el archivo (streaming, `Content-Disposition: attachment` con el nombre
+  saneado y la extensión de su tipo, `Cache-Control: no-store`); 302 si el documento es un enlace
+  externo; 404 `{ error: "Documento no encontrado." }` igual para id inválido, inexistente, trámite
+  sin publicar o sin archivo en R2; 502 si R2 falla y 503 si no responde en 10 s, con un mensaje
+  genérico. El log anota el id del documento y la causa; el borrado de huérfanos ya no anota la clave.
+- **Streaming y no 302 a una URL firmada:** la URL firmada expone el bucket, la clave y el id de la
+  credencial en `Location`. El costo es el ancho de banda del server (archivos de hasta 10 MB).
+- **Chat:** con `SERVIDOR_URL` (la URL pública de la API) definida, `componerDocumentos` agrega el
+  link estable de cada archivo; el detalle del trámite trae `id` y `conArchivo` del documento, nunca
+  la clave. `eval-chat` reconoce el mismo link (usa `urlDescargaDocumento`).
+- **Front y app:** usar el link tal cual (ver el README, "Descarga estable"). La ruta vieja sigue
+  para no romper a nadie, pero conviene dejarla.
+- **Evals (gpt-6-luna):** `eval-chat --stream` 76/79 (0 "enlace inventado"). En la base real no
+  hay archivos de R2 en trámites publicados: en la temporal, con un documento de prueba en Pasaporte y
+  `SERVIDOR_URL`, la respuesta trajo el link estable y el caso pasó. `eval-seguridad` completo,
+  normal y stream: 30/30 ataques, 0 llegan a la persona (falla de utilidad, no de seguridad, Fc
+  "olvidar reglas → licencia de conducir").
 
 ### Cómo funciona el chat
 

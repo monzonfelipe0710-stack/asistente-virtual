@@ -95,7 +95,7 @@ obligatorias al arrancar y, si falta alguna, termina nombrándolas.
 | `CACHE_TTL_MS` | no | Vigencia de la caché de respuestas. Default 1 hora |
 | `CACHE_MAX` | no | Entradas máximas de la caché. Default `500` |
 | `CACHE_CHEQUEO_MS` | no | Cada cuánto el server revisa la versión del catálogo en la base para vaciar su caché. Default `5000` |
-| `SERVIDOR_URL` | no | Solo para el script de import: dónde consultar `/api/health` para avisar si hay un server encendido. Default `http://localhost:$PORT` |
+| `SERVIDOR_URL` | no | URL pública de la API (por ejemplo `https://api.midominio.gob.ar`). El chat la usa para el link de descarga de los documentos con archivo (`/api/documentos/:id/descargar`); sin ella, esos documentos no se enlazan. Los scripts de import, `calentar` y `precalentar-guion` la usan para llegar al server (default `http://localhost:$PORT`) |
 | `OPENAI_TIMEOUT_EMBEDDING_MS`, `OPENAI_REINTENTOS_EMBEDDING` | no | Timeout por intento y reintentos del embedding. Default `4000` y `1` |
 | `OPENAI_TIMEOUT_CHAT_MS`, `OPENAI_REINTENTOS_CHAT` | no | Si están definidas, pisan el timeout por intento y los reintentos de todos los modelos de chat, con y sin streaming (cada modelo trae los suyos en el catálogo: `8000` y `1`) |
 | `OPENAI_ESPERA_MAXIMA_REINTENTO_MS` | no | Espera máxima antes de reintentar, aunque OpenAI pida más con `retry-after`. Default `2000` |
@@ -365,6 +365,7 @@ server/
 ├── src/
 │   ├── config/           # Prisma, OpenAI, R2, correo, multer, rate limiters, orígenes
 │   ├── core/ai/          # Puerto ProveedorIA y adaptador de OpenAI
+│   ├── core/almacenamiento/ # Puerto de almacenamiento de archivos y adaptador de R2
 │   ├── routes/           # Endpoints y middlewares por ruta
 │   ├── controllers/      # Validan la entrada (Zod) y arman la respuesta
 │   ├── services/         # Lógica de negocio y acceso a datos
@@ -616,9 +617,48 @@ o editar, el embedding se recalcula en segundo plano; al publicar se genera si f
 | GET | `/api/tramites/:id/documentos` | público, 60 / min, token opcional | `[{ id, nombre, tipo, urlExterna, createdAt }]` (la key de R2 nunca sale) |
 | GET | `/api/tramites/:id/documentos/:docId/descargar` | público, 60 / min, token opcional | `{ url, externa }`: el enlace tal cual si es externo (sin firmar nada; 409 si no es http o https) o una URL de R2 firmada por 5 minutos |
 | DELETE | `/api/tramites/:id/documentos/:docId` | ADM del sector | 204. Borrar un enlace no llama a R2 |
+| GET | `/api/documentos/:id/descargar` | público, 60 / min, sin token | Descarga estable (ver abajo): el archivo, o 302 al enlace externo |
 
 Las rutas públicas siguen la visibilidad del trámite: si está publicado, cualquiera; si
 es un borrador, solo un SU o un ADM del sector (con token), y al resto se le responde 404.
+
+#### Descarga estable: `GET /api/documentos/:id/descargar`
+
+Link fijo para un documento, que no vence y no expone nada del bucket. Es el que pone el chat
+y el que tienen que usar el front y la app.
+
+- `:id` es el `id` del documento (el de `GET /api/tramites/:id/documentos`), nunca la clave de R2.
+- Solo documentos de trámites **publicados**. No mira el token: un borrador da 404 también a un SU.
+- Pasa por el limitador de las rutas públicas (`publicoLimiter`, 60 por minuto por IP, el mismo
+  contador que el resto de las rutas públicas de lectura; el del chat es aparte).
+
+| Respuesta | Cuándo |
+|---|---|
+| 200 + el archivo | Documento con archivo en R2. `Content-Type` del archivo (PDF o DOCX), `Content-Disposition: attachment` con el nombre del documento saneado (`filename` ASCII y `filename*` UTF-8, con la extensión de su tipo), `Cache-Control: no-store` |
+| 302 | Documento que es un enlace externo: redirige a ese enlace |
+| 404 `{ error: "Documento no encontrado." }` | id que no es un entero positivo, documento inexistente, trámite sin publicar, sin archivo en R2 o enlace guardado que no es http(s). Siempre el mismo cuerpo |
+| 502 / 503 `{ error: "El documento no está disponible en este momento. Probá de nuevo en unos minutos." }` | R2 falló (502) o no respondió en 10 s (503). Sin detalles; el log anota solo el id del documento y la causa |
+| 429 | Limitador |
+
+**Front y app:** usar la ruta tal cual como link, sin pedir nada antes ni mandar token:
+`<a href={`${API_URL}/api/documentos/${doc.id}/descargar`}>`. En la app, abrirla con el navegador
+del sistema o el gestor de descargas. El archivo baja con su nombre. Sirve para cualquier documento
+(archivo o enlace), así que no hace falta distinguir `urlExterna`. Está pensada para descargar o
+navegar, no para mostrarse dentro de un `<iframe>` o `<embed>` de otro origen (helmet manda
+`Cross-Origin-Resource-Policy: same-origin`).
+
+**Archivo por el server, no 302 a R2:** una URL firmada de R2 lleva en la dirección el bucket, la
+clave del objeto y el id de la credencial (`X-Amz-Credential`), así que redirigir a ella los
+expondría. El server lee el objeto por el puerto de almacenamiento (`core/almacenamiento`) y lo
+pasa en streaming, sin cargarlo entero en memoria. A cambio, cada descarga usa ancho de banda del
+server (los archivos son de 10 MB como máximo).
+
+**En el chat:** con `SERVIDOR_URL` definida, la respuesta agrega `[Formulario: <nombre>](<SERVIDOR_URL>/api/documentos/<id>/descargar)`
+por cada archivo de los trámites usados, igual que el enlace de un documento externo. Sin esa
+variable los archivos no se enlazan (como antes).
+
+La ruta anterior, `GET /api/tramites/:id/documentos/:docId/descargar`, sigue funcionando, pero su
+URL vence a los 5 minutos y deja ver el bucket y la clave: conviene dejar de usarla.
 
 ### Chat
 
