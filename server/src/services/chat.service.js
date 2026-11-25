@@ -514,11 +514,14 @@ const tramitesConFuente = async (tramitesEncontrados, signal) => {
   const filas = await conReintentoBase(
     () => prisma.tramite.findMany({
       where: { id: { in: ids } },
-      select: { id: true, nombre: true, fuenteUrl: true, documentos: { select: { nombre: true, urlExterna: true } } },
+      select: { id: true, nombre: true, fuenteUrl: true, documentos: { select: { id: true, nombre: true, urlExterna: true, archivo: true } } },
     }),
     { signal, etiqueta: "fuentes" },
   );
-  const porId = new Map(filas.map((t) => [t.id, t]));
+  const porId = new Map(filas.map((t) => [
+    t.id,
+    { ...t, documentos: t.documentos.map(({ archivo, ...d }) => ({ ...d, conArchivo: Boolean(archivo) })) },
+  ]));
   return ids.map((id) => porId.get(id)).filter(Boolean);
 };
 

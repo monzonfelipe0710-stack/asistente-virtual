@@ -1,4 +1,8 @@
+import { pipeline } from 'node:stream/promises';
 import * as documentoService from '../services/documento.service.js';
+import { ErrorAlmacenamiento } from '../core/almacenamiento/errores.js';
+import { nombreDeDescarga, disposicionDeDescarga } from '../utils/nombre-archivo.js';
+import { esUrlHttp } from '../validators/documento.validator.js';
 import { usuarioTieneSector } from '../services/usuario.service.js';
 import { buscarInstruccion } from '../services/sanitizacion.service.js';
 import { subirDocumentoSchema, actualizarDocumentoSchema } from '../validators/documento.validator.js';
@@ -84,6 +88,46 @@ export const descargar = async (req, res) => {
   const documento = await obtenerDocumentoDelTramite(req);
   const url = await documentoService.generarUrlDescarga(documento);
   res.json({ url, externa: Boolean(documento.urlExterna) });
+};
+
+const NO_DISPONIBLE = 'El documento no está disponible en este momento. Probá de nuevo en unos minutos.';
+
+// Ruta pública y estable (/api/documentos/:id/descargar). Inexistente, de un borrador o sin archivo
+// en R2 responden el mismo 404. El archivo pasa por el server: la URL firmada de R2 lleva el bucket,
+// la clave y el id de la credencial.
+export const descargarPublico = async (req, res) => {
+  const documento = await documentoService.obtenerDescargable(Number(req.params.id));
+  if (!documento) throw noEncontrado('Documento no encontrado.');
+
+  if (documento.urlExterna) {
+    if (!esUrlHttp(documento.urlExterna)) throw noEncontrado('Documento no encontrado.');
+    return res.redirect(302, documento.urlExterna);
+  }
+
+  const corte = new AbortController();
+  res.on('close', () => corte.abort());
+
+  let objeto;
+  try {
+    objeto = await documentoService.leerArchivo(documento, { signal: corte.signal });
+  } catch (err) {
+    if (!(err instanceof ErrorAlmacenamiento)) throw err;
+    if (corte.signal.aborted) return;
+    console.error(`Descarga del documento ${documento.id}: ${err.causa}`);
+    throw conEstado(err.tipo === 'timeout' ? 503 : 502, NO_DISPONIBLE);
+  }
+  if (!objeto) throw noEncontrado('Documento no encontrado.');
+
+  res.set('Content-Disposition', disposicionDeDescarga(nombreDeDescarga(documento.nombre, documento.tipo)));
+  res.type(documento.tipo ?? objeto.tipo ?? 'application/octet-stream');
+  if (Number.isInteger(objeto.largo)) res.set('Content-Length', String(objeto.largo));
+  res.set('Cache-Control', 'no-store');
+
+  try {
+    await pipeline(objeto.cuerpo, res);
+  } catch (err) {
+    if (!corte.signal.aborted) console.error(`Descarga del documento ${documento.id}: se cortó la transmisión (${err.code ?? err.name})`);
+  }
 };
 
 export const eliminar = async (req, res) => {

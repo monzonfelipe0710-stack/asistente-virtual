@@ -33,7 +33,7 @@ export const COLUMNAS_DETALLE = Prisma.sql`
     WHERE tm.tramite_id = t.id
   ), '[]') AS mesas,
   COALESCE((
-    SELECT json_agg(json_build_object('nombre', d.nombre, 'urlExterna', d.url_externa) ORDER BY d.id)
+    SELECT json_agg(json_build_object('id', d.id, 'nombre', d.nombre, 'urlExterna', d.url_externa, 'conArchivo', d.archivo IS NOT NULL) ORDER BY d.id)
     FROM documentos d WHERE d.tramite_id = t.id
   ), '[]') AS documentos`;
 
@@ -50,8 +50,9 @@ export const detalleDeFila = (fila) => {
 };
 
 // Un solo viaje a la base: el include de Prisma hacía una consulta por relación, en serie.
-// Devuelve lo mismo que findMany con requisitos (por id), mesas con su mesa y los documentos (nombre y
-// enlace externo, que la verificación de la salida acepta como enlace del trámite).
+// Devuelve lo mismo que findMany con requisitos (por id), mesas con su mesa y los documentos (id, nombre,
+// enlace externo, que la verificación de la salida acepta como enlace del trámite, y si tiene archivo en
+// R2, sin la clave).
 export const cargarDetalle = async (ids) => {
   const filas = await prisma.$queryRaw`
     SELECT t.id, t.nombre, t.sector_id AS "sectorId", ${COLUMNAS_DETALLE}

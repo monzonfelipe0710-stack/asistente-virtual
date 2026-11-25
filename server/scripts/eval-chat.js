@@ -36,6 +36,7 @@ import { streamEsquema, streamIncremental } from '../src/config/ia.js';
 import { CorridaSinCredito, SALIDA_SIN_CREDITO, cortarSiSinCredito } from './lib/sin-credito.js';
 import { MENSAJE_LISTA_COLAPSADA, montosEn } from '../src/services/verificacion.service.js';
 import { costoDelPortal } from '../src/utils/huella.js';
+import { urlDescargaDocumento } from '../src/utils/enlaces.js';
 import { obtenerResumenCatalogo } from '../src/services/catalogo.service.js';
 import { leerSectoresParaResolver, resolverJurisdicciones } from '../src/services/jurisdiccion.service.js';
 import { localidadesConocidas, loQueNombro } from '../src/services/variantes.service.js';
@@ -346,12 +347,14 @@ const sinSaludoCompuesto = (texto) => texto.replace(/^¡[^!]{1,60}!\s*/, '');
 
 const publicados = await prisma.tramite.findMany({
   where: { publicado: true },
-  select: { id: true, nombre: true, fuenteUrl: true, sectorId: true, documentos: { select: { urlExterna: true } } },
+  select: { id: true, nombre: true, fuenteUrl: true, sectorId: true, documentos: { select: { id: true, urlExterna: true, archivo: true } } },
 });
 const fuentePorId = new Map(publicados.filter((t) => t.fuenteUrl).map((t) => [t.id, t.fuenteUrl]));
-// El servidor también agrega el enlace de cada documento con URL externa (ver utils/enlaces.js,
-// componerDocumentos): sin esto, ese enlace real se marcaría como "enlace inventado".
-const documentosPorId = new Map(publicados.map((t) => [t.id, t.documentos.map((d) => d.urlExterna).filter(Boolean)]));
+// El servidor también agrega el enlace de cada documento: la URL externa o, si es un archivo en R2, la
+// ruta estable /api/documentos/:id/descargar (ver utils/enlaces.js, componerDocumentos). Sin esto, ese
+// enlace real se marcaría como "enlace inventado".
+const urlDocumento = (d) => d.urlExterna ?? (d.archivo ? urlDescargaDocumento(d.id) : null);
+const documentosPorId = new Map(publicados.map((t) => [t.id, t.documentos.map(urlDocumento).filter(Boolean)]));
 
 // Esperado determinista según la base: sin trámites publicados con ese nombre, "no encontrado";
 // con un solo par (jurisdicción, localidad), la respuesta con ese trámite; con más de uno, la

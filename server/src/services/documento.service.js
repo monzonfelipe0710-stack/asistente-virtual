@@ -1,8 +1,6 @@
-import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import prisma from '../config/prisma.js';
-import { r2, R2_BUCKET } from '../config/r2.js';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { almacenamiento } from '../core/almacenamiento/index.js';
 import * as cache from './cache.service.js';
 import { esUrlHttp } from '../validators/documento.validator.js';
 import { TOPES_CAMPOS, sanitizarTexto } from './sanitizacion.service.js';
@@ -30,18 +28,20 @@ export const obtenerPorId = async (id) => {
   return prisma.documento.findUnique({ where: {id} });
 };
 
+// Solo de un trámite publicado: un id inexistente o de un borrador dan null, sin distinguirse.
+export const obtenerDescargable = (id) =>
+  prisma.documento.findFirst({
+    where: { id, tramite: { publicado: true } },
+    select: { id: true, nombre: true, archivo: true, urlExterna: true, tipo: true },
+  });
+
+export const leerArchivo = (documento, opciones) => almacenamiento.leer(documento.archivo, opciones);
+
 const subirArchivoAR2 = async (archivo) => {
   const key = `documentos/${randomUUID()}.${EXTENSIONES[archivo.mimetype]}`;
-  await r2.send(new PutObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: key,
-    Body: archivo.buffer,
-    ContentType: archivo.mimetype,
-  }));
+  await almacenamiento.subir(key, archivo.buffer, archivo.mimetype);
   return key;
 };
-
-const borrarDeR2 = (key) => r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
 
 export const subirDocumento = async (archivo, datos) => {
   const key = await subirArchivoAR2(archivo);
@@ -109,12 +109,7 @@ export const generarUrlDescarga = async (documento) => {
     return documento.urlExterna;
   }
 
-  const comando = new GetObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: documento.archivo,
-  });
-
-  return getSignedUrl(r2, comando, {expiresIn: 300 });
+  return almacenamiento.urlFirmada(documento.archivo, 300);
 };
 
 export const eliminarDocumento = async (documento) => {
@@ -129,11 +124,10 @@ export const eliminarDocumento = async (documento) => {
 // ya no existe y no tiene sentido revertir la operación por un archivo huérfano.
 export const eliminarArchivos = async (keys) => {
   const conArchivo = keys.filter(Boolean);
-  const resultados = await Promise.allSettled(conArchivo.map(borrarDeR2));
+  const resultados = await Promise.allSettled(conArchivo.map((key) => almacenamiento.borrar(key)));
 
-  resultados.forEach((r, i) => {
-    if (r.status === 'rejected') {
-      console.error(`Error al borrar de R2 el archivo ${conArchivo[i]}`, r.reason?.message);
-    }
-  });
+  const fallidos = resultados.filter((r) => r.status === 'rejected');
+  if (fallidos.length > 0) {
+    console.error(`No se pudieron borrar de R2 ${fallidos.length} de ${conArchivo.length} archivos (${fallidos[0].reason?.name ?? 'error'})`);
+  }
 };

@@ -12,6 +12,7 @@ import metricaRoutes from './src/routes/metrica.routes.js';
 import consultaRoutes from './src/routes/consulta.routes.js';
 import mesaRoutes from './src/routes/mesa.routes.js';
 import modeloChatRoutes from './src/routes/modelo-chat.routes.js';
+import documentoDescargaRoutes from './src/routes/documento-descarga.routes.js';
 import { origenesPermitidos } from './src/config/origenes.js';
 import { LIMITES_CHAT } from './src/config/chat.js';
 
@@ -42,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/sectores', sectorRoutes);
 app.use('/api/tramites', tramiteRoutes);
+app.use('/api/documentos', documentoDescargaRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/metricas', metricaRoutes);
 app.use('/api/consultas', consultaRoutes);

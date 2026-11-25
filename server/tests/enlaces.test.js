@@ -2,7 +2,7 @@ import './helpers/base-de-prueba.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { componerDocumentos, componerFuentes, conFuentes, esUrlHttp, quitarEnlaces } from '../src/utils/enlaces.js';
+import { componerDocumentos, componerFuentes, conFuentes, esUrlHttp, quitarEnlaces, urlDescargaDocumento } from '../src/utils/enlaces.js';
 
 describe('quitarEnlaces', () => {
   it('saca los enlaces en Markdown con su texto y el ":" que los anunciaba', () => {
@@ -72,6 +72,25 @@ describe('componerFuentes y conFuentes', () => {
     );
     assert.equal(componerDocumentos([{ ...pasaporte, documentos: [] }]), '');
     assert.equal(componerDocumentos([{ ...pasaporte }]), '', 'sin el campo documentos');
+  });
+
+  it('un archivo en R2 se enlaza con la ruta estable de la API, nunca con su clave, y sin SERVIDOR_URL no se enlaza', (t) => {
+    const anterior = process.env.SERVIDOR_URL;
+    t.after(() => { if (anterior === undefined) delete process.env.SERVIDOR_URL; else process.env.SERVIDOR_URL = anterior; });
+    const conArchivo = { ...pasaporte, documentos: [{ id: 42, nombre: 'Formulario en PDF', urlExterna: null, conArchivo: true }, { id: 43, nombre: 'Externo', urlExterna: 'https://docs.formosa.gob.ar/f.pdf', conArchivo: false }] };
+
+    process.env.SERVIDOR_URL = 'https://api.ejemplo.test/';
+    assert.equal(urlDescargaDocumento(42), 'https://api.ejemplo.test/api/documentos/42/descargar');
+    assert.equal(
+      componerDocumentos([conArchivo]),
+      '[Formulario: Formulario en PDF](https://api.ejemplo.test/api/documentos/42/descargar)\n[Formulario: Externo](https://docs.formosa.gob.ar/f.pdf)',
+    );
+
+    for (const valor of [undefined, '', 'api.ejemplo.test', 'javascript:alert(1)']) {
+      if (valor === undefined) delete process.env.SERVIDOR_URL; else process.env.SERVIDOR_URL = valor;
+      assert.equal(urlDescargaDocumento(42), null, String(valor));
+      assert.equal(componerDocumentos([conArchivo]), '[Formulario: Externo](https://docs.formosa.gob.ar/f.pdf)', String(valor));
+    }
   });
 
   it('conFuentes agrega el enlace de la fuente y, después, el de cada documento con enlace', () => {

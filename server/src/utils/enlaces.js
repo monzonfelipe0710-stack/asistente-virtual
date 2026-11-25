@@ -39,14 +39,26 @@ export const componerFuentes = (tramites) =>
     .map((t) => `[Fuente oficial: ${escaparTextoDeEnlace(t.nombre)}](${escaparUrl(t.fuenteUrl)})`)
     .join('\n');
 
-// Una línea por documento con enlace externo http(s) de cada trámite (los que son un archivo en R2,
-// sin enlace, quedan afuera: necesitarían firmar una URL en cada respuesta, y esa firma no sería
-// válida si la respuesta sale de la caché).
+// Ruta estable de descarga de un documento con archivo en R2, con la base pública del server
+// (SERVIDOR_URL). Sin esa variable, null: el documento no se enlaza.
+export const urlDescargaDocumento = (id) => {
+  const base = process.env.SERVIDOR_URL?.trim().replace(/\/+$/, '');
+  if (!base || !esUrlHttp(base)) return null;
+  return `${base}/api/documentos/${id}/descargar`;
+};
+
+const urlDeDocumento = (d) => {
+  if (d.urlExterna) return esUrlHttp(d.urlExterna) ? d.urlExterna : null;
+  return d.conArchivo ? urlDescargaDocumento(d.id) : null;
+};
+
+// Una línea por documento de cada trámite: el enlace externo http(s) o la ruta estable del archivo.
 export const componerDocumentos = (tramites) =>
   tramites
     .flatMap((t) => t.documentos ?? [])
-    .filter((d) => d.urlExterna && esUrlHttp(d.urlExterna))
-    .map((d) => `[Formulario: ${escaparTextoDeEnlace(d.nombre)}](${escaparUrl(d.urlExterna)})`)
+    .map((d) => ({ nombre: d.nombre, url: urlDeDocumento(d) }))
+    .filter((d) => d.url)
+    .map((d) => `[Formulario: ${escaparTextoDeEnlace(d.nombre)}](${escaparUrl(d.url)})`)
     .join('\n');
 
 export const conFuentes = (cuerpo, tramites) => {
