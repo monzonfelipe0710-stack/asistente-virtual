@@ -1420,6 +1420,31 @@ minutos (default 120) o con Ctrl+C.
 Usarlo solo durante la demo, no 24/7: mientras corre, la base no se suspende y consume horas de
 cómputo de Neon todo ese tiempo.
 
+### Precalentar las respuestas del guion de una demo
+
+La caché de respuestas (`CACHE_TTL_MS`, 1 hora) sirve a las dos rutas del chat: una pregunta ya
+respondida sale en unos 200 a 550 ms en vez de 2 a 3 s, también por streaming y aunque cambien las
+mayúsculas, las tildes o los signos. `scripts/precalentar-guion.js` manda antes de la demo cada
+pregunta de un archivo (una por línea; las vacías y las que empiezan con `#` se ignoran), con el
+server ya levantado:
+
+```
+node scripts/precalentar-guion.js guion-demo.txt [--url http://localhost:3000] [--pausa 7000] [--borrar]
+```
+
+- La lista no se commitea: `server/guion*.txt` está en el `.gitignore`.
+- Correrlo dentro de la hora previa, contra el mismo proceso del server que se va a usar: la caché
+  es en memoria, se pierde al reiniciarlo y se vacía si se edita el catálogo. Guarda hasta
+  `CACHE_MAX` (500) respuestas.
+- Las aclaraciones y las conversaciones (saludos, preguntas fuera de tema) no se cachean: el script
+  las marca y en la demo pasan por el modelo igual.
+- `--pausa` (default 7 s) deja la tanda por debajo de `CHAT_LIMITE_POR_MINUTO` (10); cada pregunta
+  usa uno de los `CHAT_LIMITE_POR_HORA` (100) pedidos de esa IP, que la demo desde la misma
+  máquina comparte. Ante un 429 el script corta.
+- Cada pregunta queda registrada en `consultas` y cuenta en los "más consultados" del resumen del
+  catálogo. Con `--borrar`, al final borra esas consultas de la base del `.env`, solo las que
+  coinciden en id y texto (si el server usa otra base, no toca nada).
+
 ## Tests
 
 ```bash
