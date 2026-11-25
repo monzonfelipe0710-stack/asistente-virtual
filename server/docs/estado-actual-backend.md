@@ -850,6 +850,36 @@ modelos no cuentan igual). Costo estimado sin caché, por 1000 consultas: 0,70 U
 `gpt-6-luna` y 0,84 `gpt-4o-mini`. Medido en la evaluación, con el caché del proveedor: 0,382 y
 0,497.
 
+**Estado desde el 25-11-2026 (paso 2 del plan):** `gpt-6-luna` está habilitado (`habilitar-modelo.js`,
+con la evaluación registrada del 25-11: 76/79 en las dos rutas, 0 llegan a la persona, 0,2648 USD) y
+**activo**, elegido con `cambiarModeloActivo` (la misma función del panel) por el usuario 1, con el
+motivo "reevaluación del 24-11: iguala o supera a gpt-4o-mini en fidelidad y seguridad, más rápido y
+más barato" en `auditoria_modelo_chat`. `gpt-4o-mini` sigue siendo el modelo por defecto y el
+respaldo de `gpt-6-luna`. Verificado con 3 consultas reales (normal, stream y una aclaración): las
+que se registran quedaron con `consultas.modelo = gpt-6-luna` y no hubo avisos de respaldo.
+
+**Cómo volver a `gpt-4o-mini`** (se ve en hasta 30 s en todos los servidores; no hace falta deploy ni
+tocar el `.env`; `gpt-4o-mini` no se deshabilitó):
+
+- Desde el panel del superusuario, eligiendo `gpt-4o-mini` con un motivo; o con la llamada que usa el panel:
+
+  ```
+  PUT /api/admin/modelos-chat/activo
+  Authorization: Bearer <token de superusuario>
+  {"modeloId": "gpt-4o-mini", "motivo": "vuelta atrás: <qué pasó>"}
+  ```
+
+- Sin token (desde `server/`, con el `.env` de la base), por el mismo servicio, que también deja la auditoría:
+
+  ```
+  node --input-type=module -e "import 'dotenv/config'; import { cambiarModeloActivo } from './src/services/modelo-chat.service.js'; console.log(await cambiarModeloActivo({ modeloId: 'gpt-4o-mini', motivo: 'vuelta atrás: <qué pasó>', usuarioId: 1 })); process.exit(0)"
+  ```
+
+- Comprobar con `GET /api/admin/modelos-chat` (`activo: gpt-4o-mini`) y que las consultas nuevas
+  tengan `consultas.modelo = gpt-4o-mini`. Para solo probar sin tocar la base, `MODELO_CHAT_FORZADO`
+  en el entorno de desarrollo (se ignora en producción).
+- `gpt-4o-mini` se apaga el 14-01-2027: la vuelta atrás vale solo hasta esa fecha.
+
 ### Modelos candidatos (17-11-2026)
 
 Etapa 1 del selector de modelo de chat para el superusuario. `gpt-4o-mini` está deprecado: OpenAI lo
