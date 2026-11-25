@@ -8,8 +8,14 @@ const servicio = (ruta) => new URL(`../src/${ruta}`, import.meta.url).href;
 mock.module(servicio('config/prisma.js'), { defaultExport: { $queryRaw: async () => filas } });
 let pedidosDeEmbedding = 0;
 let ultimoTextoEmbedding;
+let fallaEmbedding = null;
 mock.module(servicio('services/embedding.service.js'), {
-  namedExports: { generarEmbedding: async (texto) => { pedidosDeEmbedding++; ultimoTextoEmbedding = texto; return [0.1, 0.2]; } },
+  namedExports: { generarEmbedding: async (texto) => {
+    pedidosDeEmbedding++;
+    ultimoTextoEmbedding = texto;
+    if (fallaEmbedding) throw fallaEmbedding;
+    return [0.1, 0.2];
+  } },
 });
 
 const { PROPORCION_DEL_PRIMERO, buscarTramites, soloLosCercanos } = await import('../src/services/busqueda.service.js');
@@ -93,6 +99,18 @@ describe('caché de embeddings de la búsqueda', () => {
     await buscar('cómo renuevo el pasaporte ¿y cuánto cuesta?', false);
     assert.equal(pedidosDeEmbedding, 2);
     assert.equal(cache.cantidadDeEmbeddings(), 0);
+  });
+
+  it('un embedding que falla no se guarda: la siguiente consulta lo pide de nuevo', async () => {
+    cache.limpiarEmbeddings();
+    pedidosDeEmbedding = 0;
+    fallaEmbedding = new Error('timeout');
+    await assert.rejects(buscar('cómo saco el pasaporte', true), /timeout/);
+    fallaEmbedding = null;
+    assert.equal(cache.cantidadDeEmbeddings(), 0);
+    await buscar('cómo saco el pasaporte', true);
+    assert.equal(pedidosDeEmbedding, 2);
+    assert.equal(cache.cantidadDeEmbeddings(), 1);
   });
 
   it('cache.limpiar() (cambio del catálogo) no vacía los embeddings', async () => {
