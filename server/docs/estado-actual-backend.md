@@ -917,6 +917,34 @@ línea de `CHAT_LOG_LATENCIA`, que ahora trae también `primerToken` (primer del
   `gpt-4o-mini` mediana 617 ms, p95 924; `gpt-6-luna` mediana 805, p95 1036. Costo parecido (0,029 y
   0,026 USD por 1000 correcciones). `gpt-4o-mini` se apaga el 14-01-2027.
 
+#### Latencia fuera del modelo: conexión con OpenAI, base y caché (25-11-2026)
+
+- **Medición corregida:** hasta `8c2e6cf`, `medir-etapas.js` llamaba a `cache.limpiar()`, que además
+  de las respuestas vacía el resumen del catálogo y las jurisdicciones: cada consulta pagaba dos
+  viajes a la base que en el server no existen (unos 55 ms en `busqueda` y otro en `modelo`). La
+  tabla de la sección anterior los incluye. Ahora vacía solo las respuestas (`limpiarRespuestas`).
+- **Conexión con OpenAI:** el `fetch` global (undici) cierra una conexión ociosa a los 4 s, así que
+  con más de 4 s entre preguntas cada embedding abría TLS de nuevo (mediana 449 ms contra 346 sin
+  pausa, 30 consultas con 8 s entre cada una). OpenAI corta la conexión ociosa entre los 20 y los
+  45 s. `config/openai.js` usa un `Agent` de undici con 30 s: con 8 s de pausa el embedding vuelve a
+  345 ms.
+- **Caché de embeddings:** ya existía (`cache.service.js`, 200 entradas, 1 h, solo consultas de un
+  turno, no guarda fallas). No se cambió.
+- **Búsqueda y detalle en una consulta** (`detalle.service.js`): la búsqueda trae el detalle de
+  todas las variantes de los grupos (las columnas de `cargarDetalle`) y el chat usa el de los ids
+  resueltos; si falta alguno, lo carga aparte. Mismos grupos, orden y detalle (`deepStrictEqual`)
+  en 32 preguntas reales y en `detalle.test.js`. Búsqueda + detalle por consulta: mediana 150 a 175
+  ms → 74 a 104 ms. Un viaje a Neon cuesta unos 48 ms.
+- **Lo que no se tocó:** el chequeo de la versión del catálogo (`asegurarCacheVigente`) hace un viaje
+  a la base por consulta cuando pasaron más de `CACHE_CHEQUEO_MS` (5 s); con pausas es la etapa
+  `inicio` (mediana 96 ms, p95 592). Sacarlo del camino cambia cuándo se ve un cambio del catálogo.
+- **Caché de respuestas:** sirve a las dos rutas; una pregunta repetida (con otras mayúsculas o
+  signos) sale por stream en 200 a 550 ms. `scripts/precalentar-guion.js` (ver el README).
+- **Evals:** `evaluar-modelo.js gpt-6-luna` (sin registrar): stream 77/79, normal 74/79 (una
+  corrida de "necesito renovar el psporte" con la corrección de tipeo en timeout, como el 24-11, y
+  una de "solicitud de actas a otras provincias" sin "no está cargado"); seguridad 0 llegan a la
+  persona en las dos rutas, 30/30 ataques; medir-tipeo 0 cambios. eval-chat normal de nuevo: 76/79.
+
 ### Modelos candidatos (17-11-2026)
 
 Etapa 1 del selector de modelo de chat para el superusuario. `gpt-4o-mini` está deprecado: OpenAI lo
