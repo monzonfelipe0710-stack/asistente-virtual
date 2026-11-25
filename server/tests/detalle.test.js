@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 
 import prisma from '../src/config/prisma.js';
 import { cargarDetalle } from '../src/services/chat.service.js';
+import { puntuarGrupos } from '../src/services/busqueda.service.js';
 
 // La implementación anterior, con el include de Prisma: el resultado nuevo tiene que ser idéntico.
 const cargarDetalleAnterior = async (ids) => {
@@ -113,5 +114,19 @@ describe('cargarDetalle', () => {
     const anterior = await cargarDetalleAnterior(ids);
     assert.deepEqual(anterior.map((t) => t.id), [enUso.id, completo.id, vacio.id]);
     assert.deepStrictEqual(await cargarDetalle(ids), anterior);
+  });
+
+  it('la búsqueda con alDetalle trae el mismo detalle que cargarDetalle, sin cambiar los grupos', async () => {
+    const vector = Array.from({ length: 1536 }, (_, i) => Math.sin(i + 1));
+    const ids = [completo.id, vacio.id, enUso.id];
+    await prisma.$executeRaw`UPDATE tramites SET publicado = true, embedding = ${`[${vector.join(',')}]`}::vector WHERE id = ANY(${ids}::int[])`;
+    let detalles = null;
+    const sinDetalle = await puntuarGrupos(SUFIJO, vector, { limite: 10 });
+    const conDetalle = await puntuarGrupos(SUFIJO, vector, { limite: 10, alDetalle: (porId) => (detalles = porId) });
+    assert.deepStrictEqual(conDetalle, sinDetalle);
+    const variantes = conDetalle.flatMap((g) => g.variantes.map((v) => v.id));
+    for (const id of ids) assert.ok(variantes.includes(id), `falta ${id}`);
+    assert.deepEqual([...detalles.keys()].sort(), [...variantes].sort());
+    assert.deepStrictEqual(ids.map((id) => detalles.get(id)), await cargarDetalle(ids));
   });
 });

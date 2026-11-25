@@ -47,12 +47,13 @@ const FILAS = {
 // que lo tira); vacío, contesta bien.
 let fallas;
 let llamadas;
-const operacion = async (nombre) => {
+const operacion = async (nombre, { conDetalle = false } = {}) => {
   llamadas.push(nombre);
   const falla = fallas[nombre]?.shift();
   if (typeof falla === 'function') await falla();
   else if (falla) throw falla;
-  return FILAS[nombre]();
+  // La búsqueda del chat trae también el detalle (las columnas de detalle.service.js).
+  return conDetalle ? FILAS[nombre]().map((f) => ({ ...PASAPORTE, ...f })) : FILAS[nombre]();
 };
 const consultaDe = (sql) => {
   if (sql.includes('catalogo_version')) return 'version';
@@ -62,7 +63,7 @@ const consultaDe = (sql) => {
   throw new Error(`Consulta no simulada: ${sql.slice(0, 60)}`);
 };
 const baseSimulada = {
-  $queryRaw: (partes) => operacion(consultaDe(partes.join('?'))),
+  $queryRaw: (partes, ...valores) => operacion(consultaDe(partes.join('?')), { conDetalle: valores.some((v) => v?.sql?.includes?.('json_agg')) }),
   sector: { findMany: () => operacion('sectores') },
   tramite: { findMany: () => operacion('fuentes') },
   consulta: { create: () => operacion('registro') },
@@ -263,11 +264,12 @@ describe('reintento ante caídas de la base', () => {
         assert.equal(modelo, 1);
       });
 
-      it('el detalle del trámite falla una vez (al conectar) y anda al reintentar', async () => {
-        fallas.detalle = [caidaAlConectar()];
+      it('el detalle viene con la búsqueda: si falla al conectar se reintenta, sin una consulta aparte', async () => {
+        fallas.busqueda = [caidaAlConectar()];
         const r = await pedir();
         assert.ok(r.ok, r.cuerpo);
-        assert.equal(cuantas('detalle'), 2);
+        assert.equal(cuantas('busqueda'), 2);
+        assert.equal(cuantas('detalle'), 0);
       });
 
       it('la versión del catálogo falla una vez y se reintenta', async () => {

@@ -4,6 +4,7 @@ import { generarEmbedding } from './embedding.service.js';
 import { conReintentoBase } from '../utils/reintento-base.js';
 import * as cache from './cache.service.js';
 import { expandirConSinonimos } from './sinonimos.service.js';
+import { COLUMNAS_DETALLE, detalleDeFila } from './detalle.service.js';
 
 const UMBRAL_DISTANCIA = Number(process.env.UMBRAL_DISTANCIA ?? 0.5);
 
@@ -24,20 +25,23 @@ const clave = (columna) => Prisma.sql`regexp_replace(translate(lower(trim(${colu
 // `id` es la variante de mejor puntaje. `alEtapa` avisa cuándo empieza el embedding y cuándo la
 // consulta a la base (para el log de latencia del chat). Con `cachearEmbedding` el embedding de la
 // pregunta se reusa (cache.service.js): el chat lo pide solo para las consultas de un turno.
-// `alPuntaje` recibe el puntaje del mejor grupo, o null si no hubo ninguno.
-export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, alPuntaje, cachearEmbedding = false } = {}) => {
+// `alPuntaje` recibe el puntaje del mejor grupo, o null si no hubo ninguno. Con `alDetalle`, la misma
+// consulta trae el detalle de todas las variantes y lo entrega por id (como cargarDetalle): un viaje
+// menos a la base.
+export const buscarTramites = async (pregunta, { limite = 3, signal, alEtapa, alPuntaje, alDetalle, cachearEmbedding = false } = {}) => {
   const textoBusqueda = expandirConSinonimos(pregunta);
   alEtapa?.('embedding');
   const embedding = await embeddingDe(textoBusqueda, { signal, cachear: cachearEmbedding });
   alEtapa?.('busqueda');
-  const ordenados = await puntuarGrupos(textoBusqueda, embedding, { limite, signal });
+  const ordenados = await puntuarGrupos(textoBusqueda, embedding, { limite, signal, alDetalle });
   alPuntaje?.(ordenados[0]?.mejor ?? null);
   return soloLosCercanos(ordenados).map(({ mejor, ...grupo }) => grupo);
 };
 
 // Los `limite` grupos de mejor puntaje con su puntaje (`mejor`), antes del filtro de
-// soloLosCercanos. Lo usa también scripts/medir-busqueda.js.
-export const puntuarGrupos = async (pregunta, embedding, { limite = 3, signal } = {}) => {
+// soloLosCercanos. Lo usa también scripts/medir-busqueda.js. `alDetalle`: ver buscarTramites.
+export const puntuarGrupos = async (pregunta, embedding, { limite = 3, signal, alDetalle } = {}) => {
+  const conDetalle = Boolean(alDetalle);
   const vectorSql = `[${embedding.join(',')}]`;
   const consulta = Prisma.sql`replace(plainto_tsquery('spanish', ${pregunta})::text, '&', '|')::tsquery`;
 
@@ -62,7 +66,7 @@ export const puntuarGrupos = async (pregunta, embedding, { limite = 3, signal } 
       ORDER BY mejor DESC
       LIMIT ${limite}
     )
-    SELECT t.id, t.nombre, t.sector_id AS "sectorId", g.clave, g.mejor, p.score
+    SELECT t.id, t.nombre, t.sector_id AS "sectorId", g.clave, g.mejor, p.score${conDetalle ? Prisma.sql`, ${COLUMNAS_DETALLE}` : Prisma.empty}
     FROM grupos g
     JOIN tramites t ON t.publicado = true AND ${clave(Prisma.sql`t.nombre`)} = g.clave
     LEFT JOIN puntuados p ON p.id = t.id
@@ -74,6 +78,7 @@ export const puntuarGrupos = async (pregunta, embedding, { limite = 3, signal } 
     if (!grupos.has(f.clave)) grupos.set(f.clave, { id: f.id, nombre: f.nombre, mejor: Number(f.mejor), variantes: [] });
     grupos.get(f.clave).variantes.push({ id: f.id, nombre: f.nombre, sectorId: f.sectorId });
   }
+  if (conDetalle) alDetalle(new Map(filas.map((f) => [f.id, detalleDeFila(f)])));
   return [...grupos.values()];
 };
 

@@ -1,5 +1,4 @@
 import { ia } from "../core/ai/index.js";
-import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import { TIEMPOS_IA, logLatencia, streamEsquema, streamIncremental, tipeoReescritura } from "../config/ia.js";
 import { conSenal, crearPlazoConVencimiento } from "../utils/plazo.js";
@@ -7,6 +6,7 @@ import { codigoTransitorio, conReintentoBase } from "../utils/reintento-base.js"
 import { sanitizarError } from "../utils/sanitizar-error.js";
 import { ErrorProveedorIA } from "../core/ai/errores.js";
 import { buscarTramites } from "./busqueda.service.js";
+import { cargarDetalle } from "./detalle.service.js";
 import { corregirConsulta, debeReescribir } from "./tipeo.service.js";
 import { describirJurisdiccion, nombreConRaiz, obtenerJurisdicciones } from "./jurisdiccion.service.js";
 import { aclaracionDeGrupo, etiquetarPorJurisdiccion, formatearGrupo, localidadesConocidas, loQueNombro, quitarLocalidades, resolverGrupos } from "./variantes.service.js";
@@ -337,53 +337,7 @@ const formatearTramite = (t, organismo, { consulta = "", secundario = false } = 
   return lineas.join("\n");
 };
 
-const aDecimal = (valor) => (valor === null ? null : new Prisma.Decimal(valor));
-
-// Un solo viaje a la base: el include de Prisma hacía una consulta por relación, en serie.
-// Devuelve lo mismo que findMany con requisitos (por id), mesas con su mesa y los documentos (nombre y
-// enlace externo, que la verificación de la salida acepta como enlace del trámite).
-export const cargarDetalle = async (ids) => {
-  const filas = await prisma.$queryRaw`
-    SELECT
-      t.id, t.nombre, t.descripcion, t.costo,
-      t.costo_detalle AS "costoDetalle", t.informacion_adicional AS "informacionAdicional",
-      t.verificado_en AS "verificadoEn", t.huella_importacion AS "huellaImportacion",
-      t.encargado_id AS "encargadoId", t.publicado,
-      t.created_at AS "createdAt", t.updated_at AS "updatedAt",
-      t.sector_id AS "sectorId", t.fuente_url AS "fuenteUrl",
-      COALESCE((
-        SELECT json_agg(json_build_object(
-          'id', r.id, 'descripcion', r.descripcion, 'dondeSeConsigue', r.donde_se_consigue,
-          'costo', r.costo::text, 'tramiteId', r.tramite_id
-        ) ORDER BY r.id)
-        FROM requisitos r WHERE r.tramite_id = t.id
-      ), '[]') AS requisitos,
-      COALESCE((
-        SELECT json_agg(json_build_object(
-          'tramiteId', tm.tramite_id, 'mesaId', tm.mesa_id,
-          'mesa', json_build_object(
-            'id', m.id, 'nombre', m.nombre, 'direccion', m.direccion, 'localidad', m.localidad,
-            'horario', m.horario, 'telefono', m.telefono, 'email', m.email,
-            'esGeneral', m.es_general, 'sectorId', m.sector_id,
-            'origenId', m.origen_id, 'huellaImportacion', m.huella_importacion
-          )
-        ) ORDER BY m.id)
-        FROM tramite_mesa tm JOIN mesas_entrada m ON m.id = tm.mesa_id
-        WHERE tm.tramite_id = t.id
-      ), '[]') AS mesas,
-      COALESCE((
-        SELECT json_agg(json_build_object('nombre', d.nombre, 'urlExterna', d.url_externa) ORDER BY d.id)
-        FROM documentos d WHERE d.tramite_id = t.id
-      ), '[]') AS documentos
-    FROM tramites t
-    WHERE t.id = ANY(${ids}::int[])
-  `;
-
-  const porId = new Map(
-    filas.map((t) => [t.id, { ...t, requisitos: t.requisitos.map((r) => ({ ...r, costo: aDecimal(r.costo) })) }]),
-  );
-  return ids.map((id) => porId.get(id)).filter(Boolean);
-};
+export { cargarDetalle };
 
 // "municipal (Clorinda)" o "provincial".
 const describirOrganismo = ({ jurisdiccion, localidad }) => {
@@ -603,13 +557,16 @@ const SIN_CANDIDATOS = { lista: [], tramites: [], grupos: new Map(), ids: new Se
 
 // El embedding de la búsqueda se cachea solo en las consultas de un turno: el texto de varios turnos
 // juntos casi nunca se repite. Si la búsqueda no encuentra nada parecido (ver tipeo.service.js), se
-// busca de nuevo con la ortografía corregida; un mensaje de cortesía no se corrige.
+// busca de nuevo con la ortografía corregida; un mensaje de cortesía no se corrige. El detalle llega
+// con la búsqueda; si falta alguno, se carga aparte.
 const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { esCortesia = false, alReescribir, modelo } = {}) => {
   traza.etapa("busqueda");
   const jurisdicciones = await conSenal(obtenerJurisdicciones({ signal }), signal);
   const localidades = localidadesConocidas(jurisdicciones);
   const textoDeBusqueda = quitarLocalidades(consultaBusqueda, localidades) || consultaBusqueda;
-  const buscar = (texto, alPuntaje) => buscarTramites(texto, { signal, alEtapa: (nombre) => traza.etapa(nombre), alPuntaje, cachearEmbedding: esUnTurno });
+  let detalles = new Map();
+  const buscar = (texto, alPuntaje) =>
+    buscarTramites(texto, { signal, alEtapa: (nombre) => traza.etapa(nombre), alPuntaje, alDetalle: (porId) => (detalles = porId), cachearEmbedding: esUnTurno });
   let mejor = null;
   let encontrados = await buscar(textoDeBusqueda, (p) => (mejor = p));
   if (tipeoReescritura() && !esCortesia && debeReescribir(encontrados, mejor)) {
@@ -623,7 +580,9 @@ const prepararCandidatos = async (consultaBusqueda, signal, traza, esUnTurno, { 
   const nombrado = loQueNombro(consultaBusqueda, localidades);
   const resueltos = resolverGrupos(encontrados, jurisdicciones, nombrado);
   const ids = resueltos.filter((c) => !c.sinResolver).map((c) => c.id);
-  const tramites = ids.length > 0 ? await conReintentoBase(() => cargarDetalle(ids), { signal, etiqueta: "detalle" }) : [];
+  const tramites = ids.every((id) => detalles.has(id))
+    ? ids.map((id) => detalles.get(id))
+    : await conReintentoBase(() => cargarDetalle(ids), { signal, etiqueta: "detalle" });
   const porId = new Map(tramites.map((t) => [t.id, t]));
   const lista = resueltos.map((c) => (c.sinResolver ? c : porId.get(c.id))).filter(Boolean);
 
