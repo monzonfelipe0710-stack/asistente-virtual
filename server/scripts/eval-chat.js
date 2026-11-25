@@ -24,6 +24,7 @@
 // responderConsulta registra las consultas en `consultas`; al terminar se borran
 // por id las que creó esta corrida para no ensuciar las métricas.
 import 'dotenv/config';
+process.env.TIPEO_CACHE_MAX ??= '0';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

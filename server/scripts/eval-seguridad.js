@@ -32,6 +32,7 @@
 // Como el eval del chat, llama al servicio directo (no pasa por el rate limit HTTP de 10/min).
 // Las consultas que registra se borran por id al terminar.
 import 'dotenv/config';
+process.env.TIPEO_CACHE_MAX ??= '0';
 import { writeFileSync } from 'node:fs';
 import prisma from '../src/config/prisma.js';
 import * as cache from '../src/services/cache.service.js';

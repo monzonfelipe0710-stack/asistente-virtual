@@ -2,7 +2,7 @@
 // corrige la ortografía y se busca de nuevo con el texto corregido. El texto corregido solo se usa
 // para buscar: el modelo de la respuesta, el registro y la persona ven el original.
 import { ia } from '../core/ai/index.js';
-import { TIEMPOS_IA } from '../config/ia.js';
+import { TIEMPOS_IA, enteroDeEntorno } from '../config/ia.js';
 import { revisarMensajes } from './guardrail.service.js';
 import { corregirTuteo } from '../utils/voseo.js';
 
@@ -39,9 +39,37 @@ export const validarCorreccion = (original, salida) => {
   return corregirTuteo(original).formas.length === 0 ? corregirTuteo(texto).texto : texto;
 };
 
+// Texto normalizado → texto corregido, por modelo. Solo guarda correcciones válidas (también las que
+// devuelven el mismo texto): una falla o un timeout no se cachea. TIPEO_CACHE_MAX=0 la apaga; los
+// scripts que miden la llamada la apagan solos.
+const cacheTipeo = new Map();
+export const limpiarCacheTipeo = () => cacheTipeo.clear();
+const leerCache = (clave) => {
+  const e = cacheTipeo.get(clave);
+  if (!e) return undefined;
+  if (e.vence < Date.now()) {
+    cacheTipeo.delete(clave);
+    return undefined;
+  }
+  return e.corregido;
+};
+const guardarEnCache = (clave, corregido) => {
+  const tope = enteroDeEntorno('TIPEO_CACHE_MAX', 500, 0);
+  if (tope === 0) return;
+  cacheTipeo.delete(clave);
+  cacheTipeo.set(clave, { corregido, vence: Date.now() + enteroDeEntorno('TIPEO_CACHE_MS', 3600000, 1) });
+  while (cacheTipeo.size > tope) cacheTipeo.delete(cacheTipeo.keys().next().value);
+};
+
 // Devuelve el texto corregido si cambió y es válido; null si no hay que buscar de nuevo. Una falla
 // del modelo no corta la consulta (sigue con lo que encontró), salvo que se haya cortado el pedido.
 export const corregirConsulta = async (texto, { signal, alReescribir, modelo } = {}) => {
+  const clave = `${modelo?.id ?? ''}|${normalizar(texto)}`;
+  const guardado = enteroDeEntorno('TIPEO_CACHE_MAX', 500, 0) > 0 ? leerCache(clave) : undefined;
+  if (guardado !== undefined) {
+    alReescribir?.(guardado === null ? { estado: 'igual' } : { estado: 'corregida', corregido: guardado });
+    return guardado;
+  }
   let salida;
   try {
     salida = await ia.corregirTexto({ instruccionSistema: INSTRUCCION_TIPEO, texto, signal, timeout: TIEMPOS_IA.tipeo, modelo });
@@ -58,9 +86,11 @@ export const corregirConsulta = async (texto, { signal, alReescribir, modelo } =
     return null;
   }
   if (normalizar(corregido) === normalizar(texto)) {
+    guardarEnCache(clave, null);
     alReescribir?.({ estado: 'igual' });
     return null;
   }
+  guardarEnCache(clave, corregido);
   alReescribir?.({ estado: 'corregida', corregido });
   return corregido;
 };

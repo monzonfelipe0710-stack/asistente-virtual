@@ -8,6 +8,7 @@
 // Las preguntas se leen de los scripts de los evals; con --pregunta, solo esas. Las de eval-chat
 // marcadas `tipeo: true` cuentan como mal escritas (salvo los controles, que van aparte).
 import 'dotenv/config';
+process.env.TIPEO_CACHE_MAX ??= '0';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import prisma from '../src/config/prisma.js';

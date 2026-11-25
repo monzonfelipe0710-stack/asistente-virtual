@@ -58,7 +58,7 @@ mock.module(servicio('services/metrica.service.js'), {
 const { default: prisma } = await import('../src/config/prisma.js');
 const cache = await import('../src/services/cache.service.js');
 const { responderConsulta, responderConsultaStream } = await import('../src/services/chat.service.js');
-const { UMBRAL_REESCRITURA, INSTRUCCION_TIPEO, debeReescribir, validarCorreccion } = await import('../src/services/tipeo.service.js');
+const { UMBRAL_REESCRITURA, INSTRUCCION_TIPEO, debeReescribir, validarCorreccion, corregirConsulta, limpiarCacheTipeo } = await import('../src/services/tipeo.service.js');
 const { ErrorProveedorIA } = await import('../src/core/ai/errores.js');
 
 const DOMINIO = '@tipeo.test.invalid';
@@ -127,6 +127,8 @@ describe('corrección de tipeo', () => {
 
     beforeEach(() => {
       delete process.env.TIPEO_REESCRITURA;
+      delete process.env.TIPEO_CACHE_MAX;
+      limpiarCacheTipeo();
       cache.limpiar();
       busquedas = [];
       correcciones = [];
@@ -232,6 +234,78 @@ describe('corrección de tipeo', () => {
       correcciones = ['hola necesito renovar el pasaporte'];
       await responderConsulta([{ rol: 'usuario', texto: 'hola' }, { rol: 'asistente', texto: '¿En qué te ayudo?' }, { rol: 'usuario', texto: 'nscito renovar el psporte' }]);
       assert.deepEqual(busquedas, ['hola nscito renovar el psporte', 'hola necesito renovar el pasaporte']);
+    });
+
+    describe('caché de correcciones', () => {
+      const tipeos = () => llamadas.filter((l) => l.ruta === 'tipeo').length;
+
+      it('la misma consulta (sin contar mayúsculas, tildes ni signos) no vuelve a llamar al modelo y busca con el mismo texto corregido', async () => {
+        correcciones = ['necesito renovar el pasaporte'];
+        await responderConsulta(turno('necesito renovar el psporte'));
+        cache.limpiar();
+        busquedas = [];
+        const r = await responderConsulta(turno('¡Necesito renovar el PSPORTE!'));
+        assert.equal(tipeos(), 1);
+        assert.deepEqual(busquedas, ['¡Necesito renovar el PSPORTE!', 'necesito renovar el pasaporte']);
+        assert.equal(r.encontrado, true);
+      });
+
+      it('un texto que el modelo devuelve igual también se guarda', async () => {
+        correcciones = ['capital de francia'];
+        salidaModelo = { ...salidaModelo, tramiteId: null, tramitesUsados: [] };
+        await responderConsulta(turno('capital de francia'));
+        cache.limpiar();
+        await responderConsulta(turno('capital de francia'));
+        assert.equal(tipeos(), 1);
+      });
+
+      it('una falla, un timeout o una salida inválida no se guardan', async (t) => {
+        t.mock.method(console, 'warn', () => {});
+        salidaModelo = { ...salidaModelo, tramiteId: null, tramitesUsados: [] };
+        correcciones = [new ErrorProveedorIA('Error ETIMEDOUT', { operacion: 'tipeo', tipo: 'timeout' }), 'El pasaporte se tramita en el Registro Civil con el DNI.', 'pasaporte'];
+        for (let i = 0; i < 3; i++) {
+          cache.limpiar();
+          await responderConsulta(turno('pasaporet'));
+        }
+        assert.equal(tipeos(), 3);
+        assert.deepEqual(busquedas.filter((b) => b === 'pasaporte'), ['pasaporte']);
+      });
+
+      it('cada modelo tiene sus correcciones', async () => {
+        const salida = [];
+        const llamar = (modelo) => corregirConsulta('necesito renovar el psporte', { modelo, alReescribir: (x) => salida.push(x.estado) });
+        correcciones = ['necesito renovar el pasaporte', 'necesito renovar el pasaporte'];
+        await llamar({ id: 'a' });
+        await llamar({ id: 'b' });
+        await llamar({ id: 'a' });
+        assert.equal(tipeos(), 2);
+        assert.deepEqual(salida, ['corregida', 'corregida', 'corregida']);
+      });
+
+      it('respeta el tope de entradas (sale la más vieja) y el vencimiento', async (t) => {
+        process.env.TIPEO_CACHE_MAX = '2';
+        const hora = t.mock.timers;
+        hora.enable({ apis: ['Date'], now: 1_000_000 });
+        correcciones = ['uno corregido', 'dos corregido', 'tres corregido', 'uno corregido', 'dos corregido'];
+        for (const texto of ['uno mal', 'dos mal', 'tres mal']) await corregirConsulta(texto);
+        assert.equal(tipeos(), 3);
+        await corregirConsulta('dos mal');
+        await corregirConsulta('tres mal');
+        assert.equal(tipeos(), 3);
+        await corregirConsulta('uno mal');
+        assert.equal(tipeos(), 4);
+        hora.tick(3_600_001);
+        await corregirConsulta('tres mal');
+        assert.equal(tipeos(), 5);
+      });
+
+      it('con TIPEO_CACHE_MAX=0 no se guarda nada', async () => {
+        process.env.TIPEO_CACHE_MAX = '0';
+        correcciones = ['necesito renovar el pasaporte', 'necesito renovar el pasaporte'];
+        await corregirConsulta('necesito renovar el psporte');
+        await corregirConsulta('necesito renovar el psporte');
+        assert.equal(tipeos(), 2);
+      });
     });
   });
 });

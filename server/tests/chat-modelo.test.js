@@ -72,6 +72,7 @@ mock.module(servicio('services/metrica.service.js'), {
 const { default: prisma } = await import('../src/config/prisma.js');
 const cache = await import('../src/services/cache.service.js');
 const { responderConsulta, responderConsultaStream } = await import('../src/services/chat.service.js');
+const { limpiarCacheTipeo } = await import('../src/services/tipeo.service.js');
 
 const DOMINIO = '@chat-modelo.test.invalid';
 const SUFIJO = `chat-modelo-${Date.now()}`;
@@ -103,6 +104,7 @@ describe('el modelo en el chat', () => {
   });
 
   beforeEach(() => {
+    limpiarCacheTipeo();
     cache.limpiar({ propagar: false });
     activo = { ...LUNA, respaldo: MINI };
     resoluciones = 0;
