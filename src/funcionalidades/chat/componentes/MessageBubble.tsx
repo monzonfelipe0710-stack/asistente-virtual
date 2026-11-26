@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 
@@ -7,9 +7,31 @@ import { Fonts, Radius, Spacing, useColors } from "@/compartido/constantes/theme
 import type { ChatMessage } from "@/funcionalidades/chat/tipos";
 import { useAjustes } from "@/compartido/lib/accesibilidad";
 
-const MS_POR_PASO = 12;
+// Cada paso vuelve a interpretar el Markdown y re-mide la burbuja (y con ella la lista): 50 pasos
+// de 24 ms duran lo mismo que 100 de 12 ms con la mitad del trabajo.
+const MS_POR_PASO = 24;
 
-const PASOS_MAXIMOS = 100;
+const PASOS_MAXIMOS = 50;
+
+// [texto](url), con corchetes o paréntesis escapados adentro como los manda el server.
+const ENLACE_MARKDOWN = /\[(?:\\.|[^\]\\])*\]\((?:\\.|[^)\\])*\)/g;
+
+function rangosDeEnlaces(texto: string): [number, number][] {
+  const rangos: [number, number][] = [];
+  for (const enlace of texto.matchAll(ENLACE_MARKDOWN)) {
+    rangos.push([enlace.index, enlace.index + enlace[0].length]);
+  }
+  return rangos;
+}
+
+// Un corte en medio de un enlace muestra "[Fuente oficial: Acci" y después la URL cruda hasta que
+// se cierra el paréntesis. Si el corte cae adentro de uno, se muestra el enlace entero.
+function corteSinPartirEnlaces(corte: number, rangos: [number, number][]): number {
+  for (const [inicio, fin] of rangos) {
+    if (corte > inicio && corte < fin) return fin;
+  }
+  return corte;
+}
 
 const REGLAS_MARKDOWN = { image: () => null };
 
@@ -29,15 +51,19 @@ function MessageBubbleBase({
   const { reducirAnimaciones, letraLegible } = useAjustes();
   const escribiendo = pideEscribir && !reducirAnimaciones;
   const total = message.text.length;
+  const enlaces = useMemo(() => rangosDeEnlaces(message.text), [message.text]);
   const [letras, setLetras] = useState(escribiendo ? 0 : total);
 
   useEffect(() => {
     if (!escribiendo || letras >= total) return;
 
     const paso = Math.max(2, Math.ceil(total / PASOS_MAXIMOS));
-    const id = setTimeout(() => setLetras((n) => Math.min(total, n + paso)), MS_POR_PASO);
+    const id = setTimeout(
+      () => setLetras((n) => corteSinPartirEnlaces(Math.min(total, n + paso), enlaces)),
+      MS_POR_PASO
+    );
     return () => clearTimeout(id);
-  }, [escribiendo, letras, total]);
+  }, [escribiendo, letras, total, enlaces]);
 
   const visibles = escribiendo ? letras : total;
   const parcial = message.text.slice(0, visibles);
