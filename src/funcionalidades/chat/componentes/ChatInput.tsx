@@ -44,6 +44,7 @@ function ChatInputBase({
         ]}
       >
         <TextInput
+          nativeID="campo-del-chat"
           style={[styles.campo, { color: C.ink }]}
           value={texto}
           onChangeText={setTexto}
