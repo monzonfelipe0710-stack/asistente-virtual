@@ -100,7 +100,7 @@ export function VentanaAccesibilidad({ open, onClose }: { open: boolean; onClose
     >
       <View style={styles.tamanos}>
         <Text style={[Type.bodyStrong, { color: C.ink }]}>Tamaño del texto</Text>
-        <View style={styles.tamanosFila}>
+        <View style={styles.tamanosFila} accessibilityRole="radiogroup" accessibilityLabel="Tamaño del texto">
           {TAMANOS.map((tamano, indice) => {
             const activo = tamano === ajustes.tamanoDeTexto;
             return (
@@ -110,9 +110,10 @@ export function VentanaAccesibilidad({ open, onClose }: { open: boolean; onClose
                   cambiarAjustes({ tamanoDeTexto: tamano });
                   vibrarAlElegir();
                 }}
-                accessibilityRole="button"
+                accessibilityRole="radio"
                 accessibilityLabel={`Tamaño del texto: ${tamano}`}
-                accessibilityState={{ selected: activo }}
+                accessibilityState={{ checked: activo }}
+                aria-checked={activo}
                 style={[
                   styles.tamano,
                   activo
@@ -134,7 +135,6 @@ export function VentanaAccesibilidad({ open, onClose }: { open: boolean; onClose
             );
           })}
         </View>
-        <Text style={[Type.meta, { color: C.ink2 }]}>Actual: {ajustes.tamanoDeTexto}</Text>
       </View>
 
       <View style={styles.interruptores}>
