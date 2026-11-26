@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Spacing, useColors } from "@/compartido/constantes/theme";
 import { useKeyboardHeight } from "@/compartido/hooks/useKeyboardHeight";
+import { useAjustes } from "@/compartido/lib/accesibilidad";
 
 const AIRE_SOBRE_EL_TECLADO = 12;
 
@@ -14,6 +15,16 @@ const FocoContext = createContext<AvisarFoco>(() => {});
 
 export function useAvisarFoco(): AvisarFoco {
   return useContext(FocoContext);
+}
+
+// Lleva la pantalla al principio, o al principio de una vista (por ejemplo, una lista) dejándola
+// debajo del encabezado flotante. La usan los cambios de página para no quedar abajo de todo.
+type VolverArriba = (hasta?: ViewInstance | null) => void;
+
+const VolverArribaContext = createContext<VolverArriba>(() => {});
+
+export function useVolverArriba(): VolverArriba {
+  return useContext(VolverArribaContext);
 }
 
 export function ScrollConTeclado({
@@ -26,6 +37,8 @@ export function ScrollConTeclado({
   const scroll = useRef<ScrollViewInstance>(null);
   const desplazamiento = useRef(0);
   const enfocado = useRef<ViewInstance | null>(null);
+  const altoDelEncabezado = useContext(HeaderHeightContext) ?? 0;
+  const { reducirAnimaciones } = useAjustes();
 
   const subirCampo = useCallback(() => {
     const campo = enfocado.current;
@@ -50,21 +63,42 @@ export function ScrollConTeclado({
     [subirCampo]
   );
 
+  const volverArriba = useCallback<VolverArriba>(
+    (hasta) => {
+      const lista = scroll.current;
+      const animated = !reducirAnimaciones;
+      if (!lista) return;
+      if (!hasta) {
+        lista.scrollTo({ y: 0, animated });
+        return;
+      }
+      hasta.measureInWindow((_x, yDeLaVista) => {
+        lista.measureInWindow((_xl, yDeLaLista) => {
+          const destino = desplazamiento.current + yDeLaVista - yDeLaLista - altoDelEncabezado - Spacing[2];
+          lista.scrollTo({ y: Math.max(0, destino), animated });
+        });
+      });
+    },
+    [altoDelEncabezado, reducirAnimaciones]
+  );
+
   return (
     <FocoContext.Provider value={avisarFoco}>
-      <ScrollView
-        ref={scroll}
-        onScroll={(e) => {
-          desplazamiento.current = e.nativeEvent.contentOffset.y;
-        }}
-        scrollEventThrottle={16}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        {...rest}
-      >
-        {children}
-        {conEspacio && Platform.OS === "ios" && teclado > 0 && <View style={{ height: teclado }} />}
-      </ScrollView>
+      <VolverArribaContext.Provider value={volverArriba}>
+        <ScrollView
+          ref={scroll}
+          onScroll={(e) => {
+            desplazamiento.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          {...rest}
+        >
+          {children}
+          {conEspacio && Platform.OS === "ios" && teclado > 0 && <View style={{ height: teclado }} />}
+        </ScrollView>
+      </VolverArribaContext.Provider>
     </FocoContext.Provider>
   );
 }

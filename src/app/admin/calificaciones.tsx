@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, StyleSheet, View, useWindowDimensions, type ViewInstance } from "react-native";
 
 import { Badge } from "@/compartido/ui/Badge";
 import { Btn } from "@/compartido/ui/Btn";
@@ -7,7 +7,7 @@ import { Field } from "@/compartido/ui/Field";
 import { Icon } from "@/compartido/ui/Icon";
 import { Input } from "@/compartido/ui/Input";
 import { PageHeader } from "@/compartido/ui/PageHeader";
-import { Screen } from "@/compartido/ui/Screen";
+import { Screen, useVolverArriba } from "@/compartido/ui/Screen";
 import { Select } from "@/compartido/ui/Select";
 import { Text } from "@/compartido/ui/Text";
 import { Radius, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
@@ -131,6 +131,66 @@ function Desglose({
   );
 }
 
+function Paginado({
+  pagina,
+  paginas,
+  cargando,
+  onIrA,
+}: {
+  pagina: number;
+  paginas: number;
+  cargando: boolean;
+  onIrA: (pagina: number) => void;
+}) {
+  const C = useColors();
+  return (
+    <View style={[styles.paginado, { borderTopColor: C.border }]}>
+      <Text style={[Type.meta, { color: C.ink2 }]}>{`Página ${pagina} de ${paginas}`}</Text>
+      <View style={styles.paginadoBotones}>
+        <Btn
+          label="Anterior"
+          variant="secondary"
+          size="md"
+          onPress={() => onIrA(Math.max(1, pagina - 1))}
+          disabled={cargando || pagina <= 1}
+        />
+        <Btn
+          label="Siguiente"
+          variant="secondary"
+          size="md"
+          onPress={() => onIrA(Math.min(paginas, pagina + 1))}
+          disabled={cargando || pagina >= paginas}
+        />
+      </View>
+    </View>
+  );
+}
+
+// Después de cambiar de página lleva al principio de la lista de opiniones (no al tope: la lista
+// está debajo de los filtros y del resumen). Espera a que termine la carga, porque mientras
+// carga el resumen y la lista no se muestran y la pantalla cambia de alto. Va dentro de Screen
+// y siempre montado, para poder usar useVolverArriba.
+function LlevarALaListaAlCargar({
+  cargando,
+  pendienteRef,
+  listaRef,
+}: {
+  cargando: boolean;
+  pendienteRef: React.RefObject<boolean>;
+  listaRef: React.RefObject<ViewInstance | null>;
+}) {
+  const volverArriba = useVolverArriba();
+
+  useEffect(() => {
+    if (cargando || !pendienteRef.current) return;
+    pendienteRef.current = false;
+    const id = setTimeout(() => volverArriba(listaRef.current), 50);
+    return () => clearTimeout(id);
+  }, [cargando, pendienteRef, listaRef, volverArriba]);
+
+  return null;
+}
+
 export default function Calificaciones() {
   const C = useColors();
   const { width } = useWindowDimensions();
@@ -139,6 +199,8 @@ export default function Calificaciones() {
 
   const { tramites, cargando: tramitesCargando, error: tramitesError } = useTramites();
 
+  const opiniones = useRef<ViewInstance>(null);
+  const irALaLista = useRef(false);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [tramite, setTramite] = useState(TODOS_LOS_TRAMITES);
@@ -280,6 +342,7 @@ export default function Calificaciones() {
 
   return (
     <Screen>
+      <LlevarALaListaAlCargar cargando={cargando} pendienteRef={irALaLista} listaRef={opiniones} />
       <PageHeader
         title="Calificaciones"
         description="Seguimiento de las valoraciones de la ciudadanía para conocer la utilidad de las respuestas y detectar oportunidades de mejora."
@@ -392,7 +455,10 @@ export default function Calificaciones() {
             />
           </View>
 
-          <View style={[styles.tarjeta, styles.opiniones, { backgroundColor: C.surface, borderColor: C.border }]}>
+          <View
+            ref={opiniones}
+            style={[styles.tarjeta, styles.opiniones, { backgroundColor: C.surface, borderColor: C.border }]}
+          >
             <View style={[styles.opinionesCabecera, { borderBottomColor: C.border }]}>
               <View style={styles.opinionesTitulo}>
                 <Text style={[Type.cardTitle, { color: C.ink }]}>Opiniones de la ciudadanía</Text>
@@ -465,25 +531,15 @@ export default function Calificaciones() {
               })
             )}
 
-            <View style={[styles.paginado, { borderTopColor: C.border }]}>
-              <Text style={[Type.meta, { color: C.ink2 }]}>{`Página ${pedido.page} de ${paginas}`}</Text>
-              <View style={styles.paginadoBotones}>
-                <Btn
-                  label="Anterior"
-                  variant="secondary"
-                  size="md"
-                  onPress={() => pedirDeNuevo({ page: Math.max(1, pedido.page - 1) })}
-                  disabled={cargando || pedido.page <= 1}
-                />
-                <Btn
-                  label="Siguiente"
-                  variant="secondary"
-                  size="md"
-                  onPress={() => pedirDeNuevo({ page: Math.min(paginas, pedido.page + 1) })}
-                  disabled={cargando || pedido.page >= paginas}
-                />
-              </View>
-            </View>
+            <Paginado
+              pagina={pedido.page}
+              paginas={paginas}
+              cargando={cargando}
+              onIrA={(page) => {
+                irALaLista.current = true;
+                pedirDeNuevo({ page });
+              }}
+            />
           </View>
         </>
       )}

@@ -8,6 +8,7 @@ import { Text } from "./Text";
 
 import { Fonts, Radius, Size, Spacing, useColors } from "@/compartido/constantes/theme";
 import { Icon } from "./Icon";
+import { useVolverArriba } from "./Screen";
 
 export function Pagination({
   currentPage,
@@ -19,6 +20,13 @@ export function Pagination({
   onPageChange: (page: number) => void;
 }) {
   const C = useColors();
+  const volverArriba = useVolverArriba();
+
+  // Cada cambio de página vuelve al principio: si no, se queda abajo de todo en la página nueva.
+  function irA(pagina: number) {
+    onPageChange(pagina);
+    volverArriba();
+  }
 
   const pages = useMemo(() => {
     const out: (number | "...")[] = [];
@@ -37,7 +45,7 @@ export function Pagination({
   return (
     <View style={styles.wrap}>
       <Pressable
-        onPress={() => onPageChange(currentPage - 1)}
+        onPress={() => irA(currentPage - 1)}
         disabled={currentPage === 1}
         accessibilityRole="button"
         accessibilityLabel="Página anterior"
@@ -54,7 +62,7 @@ export function Pagination({
         ) : (
           <Pressable
             key={p}
-            onPress={() => onPageChange(p)}
+            onPress={() => irA(p)}
             accessibilityRole="button"
             accessibilityLabel={`Página ${p}`}
             accessibilityState={{ selected: p === currentPage }}
@@ -70,7 +78,7 @@ export function Pagination({
       )}
 
       <Pressable
-        onPress={() => onPageChange(currentPage + 1)}
+        onPress={() => irA(currentPage + 1)}
         disabled={currentPage === totalPages}
         accessibilityRole="button"
         accessibilityLabel="Página siguiente"
