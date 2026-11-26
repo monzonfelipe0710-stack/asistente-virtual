@@ -30,13 +30,11 @@ const PANTALLAS: {
 }[] = [
   { pantalla: "index", titulo: "Resumen", icono: "home", grupo: "Principal", permiso: "dashboard" },
   { pantalla: "solicitudes", titulo: "Solicitudes", icono: "checkCircle", grupo: "Principal", permiso: "solicitudes" },
-  { pantalla: "mesa-de-entrada", titulo: "Mesa de Entradas", icono: "box", grupo: "Principal", permiso: "mesa_entrada" },
   { pantalla: "tramites", titulo: "Trámites", icono: "files", grupo: "Principal", permiso: "tramites" },
   { pantalla: "usuarios", titulo: "Usuarios", icono: "users", grupo: "Gestión", permiso: "usuarios" },
   { pantalla: "documentos", titulo: "Documentos", icono: "folder", grupo: "Gestión", permiso: "documentos" },
   { pantalla: "calificaciones", titulo: "Calificaciones", icono: "checkDouble", grupo: "Sistema", permiso: "calificaciones" },
   { pantalla: "reportes", titulo: "Reportes", icono: "chart", grupo: "Sistema", permiso: "reportes" },
-  { pantalla: "modelo-chat", titulo: "Modelo del chat", icono: "sliders", grupo: "Sistema", permiso: "modelo_chat" },
 ];
 
 type PantallaDelPanel = (typeof PANTALLAS)[number];

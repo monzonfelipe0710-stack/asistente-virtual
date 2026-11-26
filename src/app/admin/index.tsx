@@ -95,10 +95,9 @@ export default function Resumen() {
 
   const anchoDeTarjeta = ancho ? { flexBasis: "22%" as const } : undefined;
 
-  const accesos: { titulo: string; icono: "files" | "box" | "checkCircle"; ruta: "/admin/tramites" | "/admin/mesa-de-entrada" | "/admin/solicitudes" }[] = [];
+  const accesos: { titulo: string; icono: "files" | "checkCircle"; ruta: "/admin/tramites" | "/admin/solicitudes" }[] = [];
   if (can("tramites")) accesos.push({ titulo: "Trámites", icono: "files", ruta: "/admin/tramites" });
   if (can("solicitudes")) accesos.push({ titulo: "Solicitudes", icono: "checkCircle", ruta: "/admin/solicitudes" });
-  if (can("mesa_entrada")) accesos.push({ titulo: "Mesa de Entradas", icono: "box", ruta: "/admin/mesa-de-entrada" });
 
   const rutaDeTodos = can("tramites") ? "/admin/tramites" : "/admin/solicitudes";
 

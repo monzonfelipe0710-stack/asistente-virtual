@@ -234,29 +234,8 @@ export interface MesaApi {
   sector?: { id: number; nombre: string } | null;
 }
 
-export interface MesaDatos {
-  nombre: string;
-  direccion?: string;
-  localidad?: string;
-  horario?: string;
-  esGeneral?: boolean;
-  sectorId?: number | null;
-}
-
 export function pedirMesas() {
   return pedir<MesaApi[]>("/mesas");
-}
-
-export function crearMesa(datos: MesaDatos) {
-  return pedir<{ mensaje: string; mesa: MesaApi }>("/mesas", { metodo: "POST", cuerpo: datos });
-}
-
-export function actualizarMesa(id: number, datos: MesaDatos) {
-  return pedir<{ mensaje: string; mesa: MesaApi }>(`/mesas/${id}`, { metodo: "PATCH", cuerpo: datos });
-}
-
-export function eliminarMesa(id: number) {
-  return pedir<{ mensaje: string }>(`/mesas/${id}`, { metodo: "DELETE" });
 }
 
 export interface TramiteDetalleApi extends TramiteApi {
@@ -410,50 +389,6 @@ export function pedirCalificaciones(filtros: FiltrosDeCalificaciones) {
 // Solo tiene sentido para Administración: con alcance de sector el server responde [].
 export function pedirConsultasSinRespuesta(filtros: FiltrosDeMetricas = {}) {
   return pedir<ConsultaSinRespuestaApi[]>(rutaDeMetrica("/metricas/sin-respuesta", filtros));
-}
-
-export interface ModeloDeChatApi {
-  id: string;
-  proveedor: string;
-  nombre: string;
-  habilitado: boolean;
-  esPorDefecto: boolean;
-  activo: boolean;
-  claveConfigurada: boolean;
-  seleccionable: boolean;
-  motivoNoSeleccionable: string | null;
-  avisos: string[];
-  costoPor1000: { estimado: number | null; medido: number | null } | null;
-}
-
-export interface ModelosDeChatApi {
-  activo: string;
-  enUso: string;
-  origen: "base" | "entorno" | "forzado";
-  actualizadoPor: { id: number; nombre: string } | null;
-  actualizadoEn: string | null;
-  modelos: ModeloDeChatApi[];
-}
-
-export interface CambioDeModeloApi {
-  id: number;
-  fecha: string;
-  usuario: { id: number; nombre: string; email: string } | null;
-  modeloAnterior: string | null;
-  modeloNuevo: string;
-  motivo: string;
-}
-
-export function pedirModelosDeChat() {
-  return pedir<ModelosDeChatApi>("/admin/modelos-chat");
-}
-
-export function cambiarModeloDeChat(modeloId: string, motivo: string) {
-  return pedir<ModelosDeChatApi>("/admin/modelos-chat/activo", { metodo: "PUT", cuerpo: { modeloId, motivo } });
-}
-
-export function pedirAuditoriaDeModelos(limite = 20) {
-  return pedir<{ cambios: CambioDeModeloApi[] }>(`/admin/modelos-chat/auditoria?limite=${limite}`);
 }
 
 export interface DocumentoApi {

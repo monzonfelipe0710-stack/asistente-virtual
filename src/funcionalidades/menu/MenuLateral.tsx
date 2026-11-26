@@ -25,6 +25,7 @@ export interface ItemDeMenu {
   icono: IconName;
 }
 
+// Las secciones se separan con una línea; el título solo identifica la sección.
 export interface SeccionDeMenu {
   titulo?: string;
   items: ItemDeMenu[];
@@ -78,9 +79,7 @@ export function MenuLateral({
 
   const listaDeSecciones = secciones.map((seccion, indice) => (
     <View key={seccion.titulo ?? indice}>
-      {!!seccion.titulo && (
-        <Text style={[Type.overline, styles.rotulo, { color: C.ink2 }]}>{seccion.titulo}</Text>
-      )}
+      {indice > 0 && <View style={[styles.separador, { backgroundColor: C.border }]} />}
 
       <View style={styles.items}>
         {seccion.items.map((item) => {
@@ -223,9 +222,9 @@ const styles = StyleSheet.create({
     height: ALTO_DEL_DIFUMINADO,
     pointerEvents: "none",
   },
-  rotulo: {
-    marginTop: 14,
-    marginBottom: 4,
+  separador: {
+    height: 1,
+    marginVertical: Spacing[3],
     marginHorizontal: Spacing[2],
   },
   items: {
