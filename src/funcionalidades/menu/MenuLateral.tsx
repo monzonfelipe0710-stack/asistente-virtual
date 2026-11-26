@@ -1,7 +1,7 @@
 import type { DrawerContentComponentProps } from "expo-router/drawer";
 import { DrawerActions } from "expo-router/react-navigation";
-import { useEffect, useRef } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Animated, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChatBotAvatar } from "@/compartido/avatar/ChatBotAvatar";
@@ -11,6 +11,12 @@ import { Icon, type IconName } from "@/compartido/ui/Icon";
 import { Text } from "@/compartido/ui/Text";
 import { Radius, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
 import { vibrarSuave } from "@/compartido/lib/haptica";
+
+// Alto del difuminado de arriba: lo bastante largo para que un ítem (52 px) se disuelva de a poco
+// en vez de cortarse en el borde. Quieto no se muestra, para no tapar el primero, y aparece entero
+// en los primeros píxeles de desplazamiento: a medias, el borde cortado se ve por transparencia.
+const ALTO_DEL_DIFUMINADO = Spacing[10];
+const DESPLAZAMIENTO_PARA_DIFUMINAR = Spacing[3];
 
 export interface ItemDeMenu {
   pantalla?: string;
@@ -46,6 +52,12 @@ export function MenuLateral({
   const pantallaActiva = drawer.state.routes[drawer.state.index].name;
   const abierto = !!drawer.state.history?.some((entrada) => entrada.type === "drawer");
   const estabaAbierto = useRef(abierto);
+  const [desplazamiento] = useState(() => new Animated.Value(0));
+  const opacidadDelDifuminado = desplazamiento.interpolate({
+    inputRange: [0, DESPLAZAMIENTO_PARA_DIFUMINAR],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   useEffect(() => {
     if (abierto !== estabaAbierto.current) vibrarSuave();
@@ -111,7 +123,14 @@ export function MenuLateral({
 
   const zonaDesplazable = (
     <View style={styles.secciones}>
-      <ScrollView contentContainerStyle={styles.desplazable} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView
+        contentContainerStyle={styles.desplazable}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: desplazamiento } } }], {
+          useNativeDriver: Platform.OS !== "web",
+        })}
+      >
         {contenidoDesplazable ? (
           contenidoDesplazable
         ) : (
@@ -120,8 +139,10 @@ export function MenuLateral({
             {listaDeSecciones}
           </>
         )}
-      </ScrollView>
-      <Desvanecido alto={Spacing[4]} />
+      </Animated.ScrollView>
+      <Animated.View style={[styles.difuminadoArriba, { opacity: opacidadDelDifuminado }]}>
+        <Desvanecido alto={ALTO_DEL_DIFUMINADO} solido={DESPLAZAMIENTO_PARA_DIFUMINAR / ALTO_DEL_DIFUMINADO} />
+      </Animated.View>
       <Desvanecido alto={Spacing[5]} lado="abajo" />
     </View>
   );
@@ -193,6 +214,14 @@ const styles = StyleSheet.create({
   secciones: {
     flex: 1,
     marginTop: Spacing[1],
+  },
+  difuminadoArriba: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: ALTO_DEL_DIFUMINADO,
+    pointerEvents: "none",
   },
   rotulo: {
     marginTop: 14,
