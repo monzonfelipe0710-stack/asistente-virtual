@@ -14,7 +14,7 @@ import {
   mensajeDeError,
   pedirDocumentos,
   pedirTramitesPublicados,
-  pedirUrlDeDescarga,
+  urlDeDescargaPublica,
   type DocumentoApi,
   type TramitePublicadoApi,
 } from "@/compartido/lib/backend";
@@ -109,8 +109,7 @@ function TramiteConDocumentos({ tramite }: { tramite: TramitePublicadoApi }) {
 
   async function descargar(documento: DocumentoApi) {
     try {
-      const { url } = await pedirUrlDeDescarga(tramite.id, documento.id);
-      if (url) await Linking.openURL(url);
+      await Linking.openURL(urlDeDescargaPublica(documento.id));
     } catch (e) {
       push(mensajeDeError(e, "No se pudo abrir el documento."));
     }

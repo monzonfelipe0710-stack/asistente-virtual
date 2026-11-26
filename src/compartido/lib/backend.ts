@@ -440,6 +440,14 @@ export async function subirDocumento(tramiteId: number, archivo: ArchivoElegido,
   return pedir<DocumentoApi>(`/tramites/${tramiteId}/documentos`, { metodo: "POST", cuerpo: formulario });
 }
 
+// Link estable y público: no vence ni expone el bucket, y sirve para archivos y enlaces externos.
+// Solo funciona con trámites publicados; un borrador responde 404.
+export function urlDeDescargaPublica(documentoId: number) {
+  return `${API_URL}/documentos/${documentoId}/descargar`;
+}
+
+// Ruta con token y URL firmada que vence a los 5 minutos. Se usa en el panel, donde el empleado
+// también descarga documentos de sus trámites sin publicar.
 export function pedirUrlDeDescarga(tramiteId: number, documentoId: number) {
   return pedir<{ url: string }>(`/tramites/${tramiteId}/documentos/${documentoId}/descargar`);
 }
