@@ -109,7 +109,8 @@
 <script>
   function ajustar() {
     var telefono = document.getElementById("telefono");
-    var escala = Math.min(1, (window.innerHeight - 40) / 880, (window.innerWidth - 40) / 421);
+    // Ocupa el alto de la ventana con 24 px de margen, también agrandándose por encima de su tamaño real.
+    var escala = Math.min((window.innerHeight - 24) / 880, (window.innerWidth - 24) / 421);
     telefono.style.transform = "scale(" + escala + ")";
   }
   function mostrarHora() {
