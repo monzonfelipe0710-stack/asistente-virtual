@@ -2,10 +2,10 @@ import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { View } from "react-native";
 
-import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
+import { Spacing } from "@/compartido/constantes/theme";
+import { PageHeader } from "@/compartido/ui/PageHeader";
 import { Screen } from "@/compartido/ui/Screen";
 import { SearchInput } from "@/compartido/ui/SearchInput";
-import { Text } from "@/compartido/ui/Text";
 import { useConversacion, type Conversacion } from "@/funcionalidades/chat/ChatContext";
 import { ChatsConOpciones } from "@/funcionalidades/menu/ChatsConOpciones";
 import { PantallaConEncabezadoFlotante } from "@/funcionalidades/menu/Encabezado";
@@ -25,7 +25,6 @@ function filtrarPorNombre(conversaciones: Conversacion[], busqueda: string) {
 }
 
 export default function Chats() {
-  const C = useColors();
   const router = useRouter();
   const { conversaciones, abrir } = useConversacion();
   const [busqueda, setBusqueda] = useState("");
@@ -39,11 +38,13 @@ export default function Chats() {
   }
 
   return (
-    <PantallaConEncabezadoFlotante titulo="Chats">
+    // El título va en el contenido y no en el encabezado flotante, así se desplaza con la lista.
+    <PantallaConEncabezadoFlotante>
       <Screen>
-        <Text style={[Type.lead, { color: C.ink2, marginBottom: Spacing[4] }]}>
-          {conversaciones.length === 1 ? "1 chat guardado." : `${conversaciones.length} chats guardados.`}
-        </Text>
+        <PageHeader
+          title="Chats"
+          description={conversaciones.length === 1 ? "1 chat guardado." : `${conversaciones.length} chats guardados.`}
+        />
 
         <SearchInput
           value={busqueda}
