@@ -30,6 +30,15 @@ function filtrarPorEstado(lista: TramiteApi[], filtro: Filtro) {
   return lista.filter((t) => !t.publicado);
 }
 
+const LARGO_MAXIMO_DEL_NOMBRE = 45;
+
+function avisoDeRevision(nombre: string, aceptado: boolean) {
+  const recortado =
+    nombre.length > LARGO_MAXIMO_DEL_NOMBRE ? `${nombre.slice(0, LARGO_MAXIMO_DEL_NOMBRE).trimEnd()}…` : nombre;
+  if (aceptado) return `Aceptaste “${recortado}”. Ya aparece en el chat.`;
+  return `Rechazaste “${recortado}”. Ya no aparece en el chat.`;
+}
+
 function textoVacio(busqueda: string, filtro: Filtro) {
   if (busqueda.trim()) return "No hay trámites que coincidan con la búsqueda.";
   if (filtro === "aceptados") return "No hay trámites aceptados.";
@@ -102,11 +111,13 @@ export default function Solicitudes() {
     setPage(1);
   }
 
-  async function revisar(t: { id: number }, aceptar: boolean) {
+  // Al decidir se cierra el detalle y el aviso nombra el trámite; si falla, el detalle queda abierto.
+  async function revisar(t: { id: number; nombre: string }, aceptar: boolean) {
     setTrabajando(true);
     try {
       await cambiarPublicacion(t.id, aceptar);
-      push(aceptar ? "Trámite aceptado" : "Trámite rechazado");
+      setVerId(null);
+      push(avisoDeRevision(t.nombre, aceptar));
       setVersionDetalle((v) => v + 1);
     } catch (e) {
       push(mensajeDeError(e, "No se pudo guardar la revisión."));
