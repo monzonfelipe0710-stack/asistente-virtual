@@ -7,7 +7,8 @@ import jwt from 'jsonwebtoken';
 // Los endpoints del selector de modelo, por HTTP contra la base temporal: permisos, lista cerrada,
 // auditoría y que ninguna respuesta ni log muestre una clave. El modelo activo se restaura al final.
 delete process.env.MODELO_CHAT_FORZADO;
-delete process.env.ANTHROPIC_API_KEY;
+// Vacía y no borrada: dotenv (al cargar la app) no pisa una variable definida, aunque el .env tenga la clave.
+process.env.ANTHROPIC_API_KEY = '';
 const CLAVE_GEMINI = 'clave-gemini-falsa-de-prueba';
 process.env.GEMINI_API_KEY = CLAVE_GEMINI;
 
@@ -111,8 +112,9 @@ describe('/api/admin/modelos-chat', () => {
     assert.ok(mini.precios.fuente.startsWith('https://'));
     const claude = porId.get('claude-haiku-5-5');
     assert.deepEqual([claude.habilitado, claude.seleccionable, claude.claveConfigurada], [false, false, false]);
-    assert.deepEqual(claude.avisos, ['sin sondear', 'sin evaluar']);
-    assert.equal(claude.motivoNoSeleccionable, 'Deshabilitado: sin sondear ni evaluar.');
+    assert.deepEqual(claude.avisos, ['sin evaluar']);
+    assert.equal(claude.motivoNoSeleccionable, 'Deshabilitado: falta la evaluación.');
+    assert.equal(porId.get('gemini-3.1-flash-lite').motivoNoSeleccionable, 'Deshabilitado: sin sondear ni evaluar.');
     assert.equal(porId.get('gpt-6-luna').motivoNoSeleccionable, 'Deshabilitado: falta la evaluación.');
     assert.equal(porId.get('gemini-3.1-flash-lite').claveConfigurada, true);
     assert.equal(porId.get(HABILITADO).seleccionable, true);

@@ -146,7 +146,40 @@ describe('Anthropic', () => {
     assert.deepEqual(cuerpo.output_config, { effort: 'low', format: { type: 'json_schema', schema: ESQUEMA.schema } });
     assert.equal('temperature' in cuerpo, false);
     assert.deepEqual([opciones.timeout, opciones.maxRetries], [8000, 1]);
-    assert.deepEqual(usos(), [{ modelo: 'claude-haiku-5-5', operacion: 'chat', entrada: 100, cacheada: 20, salida: 7 }]);
+    assert.deepEqual(usos(), [{ modelo: 'claude-haiku-5-5', operacion: 'chat', entrada: 100, cacheada: 20, escrituraCache: 0, salida: 7 }]);
+  });
+
+  describe('perfil de Haiku 5.5', () => {
+    beforeEach(() => delete process.env.ANTHROPIC_CONFIGURACION_CHAT);
+    after(() => delete process.env.ANTHROPIC_CONFIGURACION_CHAT);
+
+    it('razonamiento-bajo: pensamiento adaptativo, effort low y tope con margen, elegido por el entorno o los parámetros', async () => {
+      process.env.ANTHROPIC_CONFIGURACION_CHAT = 'razonamiento-bajo';
+      await ia.generarRespuesta(pedido(CLAUDE));
+      delete process.env.ANTHROPIC_CONFIGURACION_CHAT;
+      await ia.generarRespuesta(pedido({ ...CLAUDE, parametros: { ...CLAUDE.parametros, configuracion: 'razonamiento-bajo' } }));
+      for (const { cuerpo } of pedidosAnthropic) {
+        assert.deepEqual(cuerpo.thinking, { type: 'adaptive' });
+        assert.equal(cuerpo.output_config.effort, 'low');
+        assert.equal(cuerpo.max_tokens, 4000);
+        assert.equal('temperature' in cuerpo, false);
+      }
+    });
+
+    it('pisa thinking y effort de los parámetros guardados, y una configuración desconocida es de configuración', async () => {
+      await ia.generarRespuesta(pedido({ ...CLAUDE, parametros: { ...CLAUDE.parametros, thinking: 'adaptive', effort: 'high' } }));
+      assert.deepEqual(pedidosAnthropic[0].cuerpo.thinking, { type: 'disabled' });
+      assert.equal(pedidosAnthropic[0].cuerpo.output_config.effort, 'low');
+      process.env.ANTHROPIC_CONFIGURACION_CHAT = 'no-existe';
+      await assert.rejects(ia.generarRespuesta(pedido(CLAUDE)), falla('configuracion'));
+    });
+
+    it('el tipeo va sin pensamiento aunque la configuración piense', async () => {
+      process.env.ANTHROPIC_CONFIGURACION_CHAT = 'razonamiento-bajo';
+      await ia.corregirTexto({ instruccionSistema: 'Corregí.', texto: 'pasaporet', timeout: 3000, modelo: CLAUDE });
+      assert.deepEqual(pedidosAnthropic[0].cuerpo.thinking, { type: 'disabled' });
+      assert.equal(pedidosAnthropic[0].cuerpo.max_tokens, 25);
+    });
   });
 
   it('con respaldo, el modelo activo no reintenta', async () => {
@@ -166,7 +199,7 @@ describe('Anthropic', () => {
     const texto = await juntar(ia.generarRespuestaStream(pedido(CLAUDE)));
     assert.equal(texto, '{"tipo":"respuesta"}');
     assert.equal(pedidosAnthropic[0].cuerpo.stream, true);
-    assert.deepEqual(usos(), [{ modelo: 'claude-haiku-5-5', operacion: 'chat_stream', entrada: 90, cacheada: 0, salida: 12 }]);
+    assert.deepEqual(usos(), [{ modelo: 'claude-haiku-5-5', operacion: 'chat_stream', entrada: 90, cacheada: 0, escrituraCache: 0, salida: 12 }]);
   });
 
   for (const [caso, contesta, tipo] of [

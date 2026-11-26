@@ -60,8 +60,8 @@
         "fuente": "https://platform.claude.com/docs/en/about-claude/pricing"
       },
       "habilitado": false,
-      "sondeado": null,
-      "notas": "Sin temperature, top_p ni top_k. Pensamiento adaptativo por defecto (effort medium): se manda thinking disabled y effort low. Retiro no antes del 07-10-2027."
+      "sondeado": "2026-11-26",
+      "notas": "Sin temperature, top_p ni top_k (400). Pensamiento adaptativo por defecto (effort medium). thinking y effort salen del perfil del adaptador: sin-razonamiento (por defecto) o razonamiento-bajo, con parametros.configuracion o ANTHROPIC_CONFIGURACION_CHAT. Evaluado el 26-11-2026: no alcanza el criterio (ver docs/estado-actual-backend.md). Retiro no antes del 07-10-2027."
     },
     {
       "id": "gemini-3.1-flash-lite",

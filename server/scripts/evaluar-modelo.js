@@ -98,8 +98,8 @@ const revisar = (resultados) => {
 
 console.log('\n1) eval-chat (normal y stream) y medir-tipeo, contra la base del .env, en paralelo...');
 revisar(await Promise.all([
-  correr('eval-chat-normal', ['scripts/eval-chat.js', '--json', json('eval-chat-normal'), ...(PRUEBA ? SOLO_CHAT : [])]),
-  correr('eval-chat-stream', ['scripts/eval-chat.js', '--stream', '--json', json('eval-chat-stream'), ...(PRUEBA ? SOLO_CHAT : [])]),
+  correr('eval-chat-normal', ['scripts/eval-chat.js', '--detalle', '--json', json('eval-chat-normal'), ...(PRUEBA ? SOLO_CHAT : [])]),
+  correr('eval-chat-stream', ['scripts/eval-chat.js', '--stream', '--detalle', '--json', json('eval-chat-stream'), ...(PRUEBA ? SOLO_CHAT : [])]),
   correr('medir-tipeo', ['scripts/medir-tipeo.js', '--json', json('medir-tipeo'), ...(PRUEBA ? ['--pregunta', 'pasaporet', '--pregunta', 'cómo renuevo el pasaporte'] : [])]),
 ]));
 
@@ -171,6 +171,8 @@ const resultado = {
   fecha: inicio.toISOString(),
   terminada: new Date().toISOString(),
   modelo: MODELO,
+  // La configuración del perfil del adaptador, si se eligió por el entorno (por ejemplo, Haiku 5.5).
+  configuracion: process.env.ANTHROPIC_CONFIGURACION_CHAT?.trim() || null,
   criterio: { cumple: motivos.length === 0, motivos, base: base ? { modelo: base.modelo, fecha: base.fecha } : MODELO === porDefecto?.id ? { modelo: MODELO, nota: 'es el modelo por defecto: línea base' } : null },
   resumen,
   costoUsd: Math.round(gasto * 10000) / 10000,

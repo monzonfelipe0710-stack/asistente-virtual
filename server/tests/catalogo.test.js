@@ -31,6 +31,17 @@ const sintetico = () => {
   ];
 };
 
+const masConsultados = async () =>
+  (
+    await prisma.$queryRaw`
+      WITH conteo AS (
+        SELECT t.nombre, count(*) AS n FROM consultas c JOIN tramites t ON t.id = c.tramite_id
+        WHERE c.encontrado AND t.publicado AND NOT (t.nombre = ANY(${TRAMITES_DESTACADOS}))
+        GROUP BY t.id, t.nombre
+      )
+      SELECT nombre FROM conteo WHERE n = (SELECT max(n) FROM conteo)`
+  ).map((f) => f.nombre);
+
 describe('resumen del catálogo (en memoria)', () => {
   const r = armarResumen(sintetico(), SECTORES);
   const texto = armarTexto(r);
@@ -102,6 +113,8 @@ describe('resumen del catálogo (base)', () => {
   });
 
   it(`trae ${TOPES_RESUMEN.ejemplos} ejemplos publicados, sin nombres repetidos, empezando por los destacados y después el más consultado`, async () => {
+    // Otros archivos registran consultas en paralelo: el más consultado se lee antes y después del resumen.
+    const masConsultadosAntes = await masConsultados();
     const { destacados: ejemplos, texto } = await obtenerResumenCatalogo();
     assert.equal(ejemplos.length, TOPES_RESUMEN.ejemplos);
     assert.equal(new Set(ejemplos.map(normalizar)).size, ejemplos.length);
@@ -117,14 +130,8 @@ describe('resumen del catálogo (base)', () => {
     assert.deepEqual(ejemplos.slice(0, esperados.length), esperados);
 
     // Con empate cualquiera de los más consultados sirve: el desempate es la mezcla estable.
-    const masConsultados = await prisma.$queryRaw`
-      WITH conteo AS (
-        SELECT t.nombre, count(*) AS n FROM consultas c JOIN tramites t ON t.id = c.tramite_id
-        WHERE c.encontrado AND t.publicado AND NOT (t.nombre = ANY(${TRAMITES_DESTACADOS}))
-        GROUP BY t.id, t.nombre
-      )
-      SELECT nombre FROM conteo WHERE n = (SELECT max(n) FROM conteo)`;
-    if (masConsultados.length > 0) assert.ok(masConsultados.map((f) => f.nombre).includes(ejemplos[esperados.length]));
+    const candidatos = [...masConsultadosAntes, ...(await masConsultados())];
+    if (candidatos.length > 0) assert.ok(candidatos.includes(ejemplos[esperados.length]));
   });
 
   it('los destacados existen en la base y están publicados', async () => {

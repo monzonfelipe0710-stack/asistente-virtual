@@ -15,6 +15,9 @@
 //                                         solo los casos de la Municipalidad de la Ciudad de Formosa
 //                                         (base-temporal.js --municipal). También solo en la temporal.
 //
+//   node scripts/eval-chat.js --casos <archivo.json>
+//                                         otro conjunto de casos en vez del fijo (por ejemplo, uno aparte
+//                                         que no se usa para ajustar prompts), con trámites por nombre
 //   node scripts/eval-chat.js --json <archivo>
 //                                         el resultado en ese archivo (por defecto, en eval-resultados/)
 //   node scripts/eval-chat.js --stream    las respuestas por el streaming; además, la misma salida
@@ -25,7 +28,7 @@
 // por id las que creó esta corrida para no ensuciar las métricas.
 import 'dotenv/config';
 process.env.TIPEO_CACHE_MAX ??= '0';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import prisma from '../src/config/prisma.js';
@@ -46,6 +49,7 @@ const argumento = (nombre) => process.argv.flatMap((a, i) => (a === nombre ? [pr
 const CORRIDAS = Number(argumento('--corridas')[0] ?? 3);
 const DETALLE = process.argv.includes('--detalle');
 const SOLO = argumento('--solo');
+const CASOS_APARTE = argumento('--casos')[0] ?? null;
 const TIPEO = process.argv.includes('--tipeo');
 const MODO = argumento('--catalogo')[0] ?? null;
 const SINTETICO = MODO === 'sintetico';
@@ -383,6 +387,19 @@ const esperadoSegunCatalogo = ({ segunCatalogo, oTramite, siNoHay = {} }) => {
 // (requisitos, costo, mesas de entrada), la respuesta tiene que mencionarlo (y un costo del portal,
 // aclarar que conviene confirmarlo en la fuente oficial); si no lo tiene, decir que no está cargado.
 // Con `nombre` en vez de `id`: los casos del catálogo municipal, cuyos ids dependen de la base.
+// Casos de --casos: "incluyeNombres" y "segunBase.nombre" se resuelven contra los publicados.
+if (CASOS_APARTE) {
+  const idDe = (nombre) => {
+    const t = publicados.find((x) => normalizar(x.nombre) === normalizar(nombre));
+    if (!t) throw new Error(`--casos: "${nombre}" no es un trámite publicado en esta base.`);
+    return t.id;
+  };
+  const aparte = JSON.parse(readFileSync(CASOS_APARTE, 'utf8')).map(({ pregunta, esperado: { incluyeNombres, ...esperado } }) => ({
+    pregunta,
+    esperado: { ...esperado, ...(incluyeNombres && { incluye: incluyeNombres.map(idDe) }) },
+  }));
+  casos.splice(0, casos.length, ...aparte);
+}
 for (const { esperado: { segunBase } } of casos) {
   if (segunBase?.nombre) segunBase.id = publicados.find((t) => normalizar(t.nombre) === normalizar(segunBase.nombre))?.id ?? null;
 }

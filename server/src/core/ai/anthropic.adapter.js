@@ -36,19 +36,53 @@ const comoFalla = (err, signal, operacion) => {
   return new ErrorProveedorIA(describir(err), { operacion, original: err, ...clasificar(err) });
 };
 
-// Haiku 5.5 piensa por defecto (effort medium): se apaga con thinking disabled y effort low. No
-// acepta temperature; un modelo que la tenga en sus parámetros la manda.
-const cuerpoDe = (modelo, { instruccionSistema, turnos, esquema, maxTokens }) => {
+// Perfil por modelo de la API: lo particular de cada uno. La configuración sale de
+// ANTHROPIC_CONFIGURACION_CHAT (fuera de producción, para evaluar), de parametros.configuracion o
+// del perfil, y pisa thinking, effort y maxTokens de los parámetros.
+// Haiku 5.5 (docs de Anthropic, 25-11-2026): piensa por defecto con effort medium; thinking disabled
+// solo hasta effort high; temperature, top_p y top_k dan 400.
+const PERFILES = {
+  'claude-haiku-5-5': {
+    porDefecto: 'sin-razonamiento',
+    configuraciones: {
+      'sin-razonamiento': { thinking: { type: 'disabled' }, effort: 'low' },
+      'razonamiento-bajo': { thinking: { type: 'adaptive' }, effort: 'low', maxTokens: 4000 },
+    },
+    // El tope del tipeo es justo para el texto corregido: con pensamiento se lo comería.
+    tipeo: { thinking: { type: 'disabled' }, effort: 'low' },
+  },
+};
+
+const configuracionDe = (modelo, operacion) => {
+  const perfil = PERFILES[modelo.modeloApi];
+  if (!perfil) return null;
+  if (operacion === 'tipeo') return perfil.tipeo;
+  const delEntorno = process.env.NODE_ENV === 'production' ? null : process.env.ANTHROPIC_CONFIGURACION_CHAT?.trim();
+  const nombre = delEntorno || modelo.parametros?.configuracion || perfil.porDefecto;
+  const config = perfil.configuraciones[nombre];
+  if (!config) throw new ErrorProveedorIA(`configuración desconocida (${nombre}) para ${modelo.modeloApi}`, { operacion, tipo: 'configuracion' });
+  return config;
+};
+
+// Sin perfil, los parámetros del modelo van tal cual.
+const ajustesDe = (modelo, operacion) => {
+  const config = configuracionDe(modelo, operacion);
+  if (config) return config;
   const p = modelo.parametros ?? {};
+  return { ...(p.thinking && { thinking: { type: p.thinking } }), effort: p.effort, temperature: p.temperature };
+};
+
+const cuerpoDe = (modelo, { instruccionSistema, turnos, esquema, maxTokens }, operacion) => {
+  const a = ajustesDe(modelo, operacion);
   return {
     model: modelo.modeloApi,
-    max_tokens: maxTokens ?? maxTokensDe(modelo),
+    max_tokens: maxTokens ?? a.maxTokens ?? maxTokensDe(modelo),
     system: instruccionSistema,
     messages: turnos.map((t) => ({ role: t.rol === 'usuario' ? 'user' : 'assistant', content: t.texto })),
-    ...(p.thinking && { thinking: { type: p.thinking } }),
-    ...(p.temperature != null && { temperature: p.temperature }),
-    ...((esquema || p.effort) && {
-      output_config: { ...(p.effort && { effort: p.effort }), ...(esquema && { format: { type: 'json_schema', schema: esquema.schema } }) },
+    ...(a.thinking && { thinking: a.thinking }),
+    ...(a.temperature != null && { temperature: a.temperature }),
+    ...((esquema || a.effort) && {
+      output_config: { ...(a.effort && { effort: a.effort }), ...(esquema && { format: { type: 'json_schema', schema: esquema.schema } }) },
     }),
   };
 };
@@ -59,6 +93,7 @@ const usoDe = (modelo, operacion, u) =>
     operacion,
     entrada: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
     cacheada: u.cache_read_input_tokens ?? 0,
+    escrituraCache: u.cache_creation_input_tokens ?? 0,
     salida: u.output_tokens ?? 0,
   };
 
@@ -81,14 +116,14 @@ const pedir = async (modelo, cuerpo, { signal, sinReintentos, operacion, timeout
 
 export const chatAnthropic = {
   async generarRespuesta(modelo, { instruccionSistema, turnos, esquema, signal, sinReintentos, alUsar }) {
-    const r = await pedir(modelo, cuerpoDe(modelo, { instruccionSistema, turnos, esquema }), { signal, sinReintentos, operacion: 'chat' });
+    const r = await pedir(modelo, cuerpoDe(modelo, { instruccionSistema, turnos, esquema }, 'chat'), { signal, sinReintentos, operacion: 'chat' });
     alUsar?.(usoDe(modelo.id, 'chat', r.usage));
     revisarFin(r.stop_reason, 'chat');
     return textoDe(r);
   },
 
   async corregirTexto(modelo, { instruccionSistema, texto, signal, timeout, alUsar }) {
-    const cuerpo = cuerpoDe(modelo, { instruccionSistema, turnos: [{ rol: 'usuario', texto }], maxTokens: maxTokensDeTipeo(modelo, texto) });
+    const cuerpo = cuerpoDe(modelo, { instruccionSistema, turnos: [{ rol: 'usuario', texto }], maxTokens: maxTokensDeTipeo(modelo, texto) }, 'tipeo');
     const r = await pedir(modelo, cuerpo, { signal, operacion: 'tipeo', timeout });
     alUsar?.(usoDe(modelo.id, 'tipeo', r.usage));
     revisarFin(r.stop_reason, 'tipeo');
@@ -100,7 +135,7 @@ export const chatAnthropic = {
     let stopReason = null;
     let uso = null;
     try {
-      const stream = await pedir(modelo, { ...cuerpoDe(modelo, { instruccionSistema, turnos, esquema }), stream: true }, { signal: senal, sinReintentos, operacion: 'chat_stream' });
+      const stream = await pedir(modelo, { ...cuerpoDe(modelo, { instruccionSistema, turnos, esquema }, 'chat_stream'), stream: true }, { signal: senal, sinReintentos, operacion: 'chat_stream' });
       rearmar();
       for await (const evento of stream) {
         rearmar();
