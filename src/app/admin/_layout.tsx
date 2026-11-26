@@ -36,6 +36,7 @@ const PANTALLAS: {
   { pantalla: "documentos", titulo: "Documentos", icono: "folder", grupo: "Gestión", permiso: "documentos" },
   { pantalla: "calificaciones", titulo: "Calificaciones", icono: "checkDouble", grupo: "Sistema", permiso: "calificaciones" },
   { pantalla: "reportes", titulo: "Reportes", icono: "chart", grupo: "Sistema", permiso: "reportes" },
+  { pantalla: "modelo-chat", titulo: "Modelo del chat", icono: "sliders", grupo: "Sistema", permiso: "modelo_chat" },
 ];
 
 type PantallaDelPanel = (typeof PANTALLAS)[number];

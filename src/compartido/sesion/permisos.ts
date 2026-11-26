@@ -8,7 +8,8 @@ export type Permission =
   | "usuarios"
   | "documentos"
   | "calificaciones"
-  | "reportes";
+  | "reportes"
+  | "modelo_chat";
 
 export const PERMISSIONS: Record<AuthRole, Permission[]> = {
   "Administración": [
@@ -18,6 +19,7 @@ export const PERMISSIONS: Record<AuthRole, Permission[]> = {
     "usuarios",
     "calificaciones",
     "reportes",
+    "modelo_chat",
   ],
   Empleado: [
     "dashboard",

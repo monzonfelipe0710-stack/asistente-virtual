@@ -313,12 +313,53 @@ export function pedirMisConsultas() {
   return pedir<ConsultaPropiaApi[]>("/consultas/mias");
 }
 
-export function pedirConsultasPorTramite(soloPropias = false) {
-  let ruta = "/metricas/por-tramite";
-  if (soloPropias) {
-    ruta += "?alcance=propias";
-  }
-  return pedir<ConsultasPorTramiteApi[]>(ruta);
+// Filtros de /metricas/*: fechas ISO (un día de Argentina, extremos inclusivos). El server ya acota
+// al Empleado (ADMINISTRADOR) a sus sectores; no hace falta mandar ?alcance=propias.
+export interface FiltrosDeMetricas {
+  desde?: string;
+  hasta?: string;
+}
+
+function rutaDeMetrica(ruta: string, filtros: FiltrosDeMetricas) {
+  const partes: string[] = [];
+  if (filtros.desde) partes.push(`desde=${encodeURIComponent(filtros.desde)}`);
+  if (filtros.hasta) partes.push(`hasta=${encodeURIComponent(filtros.hasta)}`);
+  if (partes.length === 0) return ruta;
+  return `${ruta}?${partes.join("&")}`;
+}
+
+export function pedirConsultasPorTramite(filtros: FiltrosDeMetricas = {}) {
+  return pedir<ConsultasPorTramiteApi[]>(rutaDeMetrica("/metricas/por-tramite", filtros));
+}
+
+// Con alcance de sector (el Empleado) sinRespuesta y aclaraciones llegan null: no se pueden
+// atribuir a un sector porque no tienen trámite.
+export interface ResumenDeConsultasApi {
+  respuestas: { total: number; encontradas: number; sinRespuesta: number | null };
+  aclaraciones: number | null;
+}
+
+export function pedirResumenDeConsultas(filtros: FiltrosDeMetricas = {}) {
+  return pedir<ResumenDeConsultasApi>(rutaDeMetrica("/metricas/resumen", filtros));
+}
+
+export interface SatisfaccionApi {
+  total: number;
+  utiles: number;
+  noUtiles: number;
+  satisfaccion: number | null;
+  porTramite: {
+    tramiteId: number;
+    nombre: string | null;
+    utiles: number;
+    noUtiles: number;
+    total: number;
+    satisfaccion: number | null;
+  }[];
+}
+
+export function pedirSatisfaccion(filtros: FiltrosDeMetricas = {}) {
+  return pedir<SatisfaccionApi>(rutaDeMetrica("/metricas/calificaciones", filtros));
 }
 
 interface CalificacionApi {
@@ -366,8 +407,53 @@ export function pedirCalificaciones(filtros: FiltrosDeCalificaciones) {
   return pedir<ReporteDeCalificacionesApi>(`/consultas/calificaciones?${partes.join("&")}`);
 }
 
-export function pedirConsultasSinRespuesta() {
-  return pedir<ConsultaSinRespuestaApi[]>("/metricas/sin-respuesta");
+// Solo tiene sentido para Administración: con alcance de sector el server responde [].
+export function pedirConsultasSinRespuesta(filtros: FiltrosDeMetricas = {}) {
+  return pedir<ConsultaSinRespuestaApi[]>(rutaDeMetrica("/metricas/sin-respuesta", filtros));
+}
+
+export interface ModeloDeChatApi {
+  id: string;
+  proveedor: string;
+  nombre: string;
+  habilitado: boolean;
+  esPorDefecto: boolean;
+  activo: boolean;
+  claveConfigurada: boolean;
+  seleccionable: boolean;
+  motivoNoSeleccionable: string | null;
+  avisos: string[];
+  costoPor1000: { estimado: number | null; medido: number | null } | null;
+}
+
+export interface ModelosDeChatApi {
+  activo: string;
+  enUso: string;
+  origen: "base" | "entorno" | "forzado";
+  actualizadoPor: { id: number; nombre: string } | null;
+  actualizadoEn: string | null;
+  modelos: ModeloDeChatApi[];
+}
+
+export interface CambioDeModeloApi {
+  id: number;
+  fecha: string;
+  usuario: { id: number; nombre: string; email: string } | null;
+  modeloAnterior: string | null;
+  modeloNuevo: string;
+  motivo: string;
+}
+
+export function pedirModelosDeChat() {
+  return pedir<ModelosDeChatApi>("/admin/modelos-chat");
+}
+
+export function cambiarModeloDeChat(modeloId: string, motivo: string) {
+  return pedir<ModelosDeChatApi>("/admin/modelos-chat/activo", { metodo: "PUT", cuerpo: { modeloId, motivo } });
+}
+
+export function pedirAuditoriaDeModelos(limite = 20) {
+  return pedir<{ cambios: CambioDeModeloApi[] }>(`/admin/modelos-chat/auditoria?limite=${limite}`);
 }
 
 export interface DocumentoApi {

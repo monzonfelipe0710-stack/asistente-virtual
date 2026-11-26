@@ -3,7 +3,6 @@ import { StyleSheet, View, useWindowDimensions } from "react-native";
 
 import { Badge } from "@/compartido/ui/Badge";
 import { Btn } from "@/compartido/ui/Btn";
-import { Icon } from "@/compartido/ui/Icon";
 import { PageHeader } from "@/compartido/ui/PageHeader";
 import { Screen } from "@/compartido/ui/Screen";
 import { StatCard } from "@/compartido/ui/StatCard";
@@ -15,7 +14,6 @@ import { useCuentas } from "@/funcionalidades/admin/hooks/useCuentas";
 import { useMetricas } from "@/funcionalidades/admin/hooks/useMetricas";
 import { usePermisos } from "@/compartido/sesion/usePermisos";
 import { useTramites } from "@/funcionalidades/admin/hooks/useTramites";
-import { sumarConsultasRespondidas } from "@/funcionalidades/admin/tramites";
 import { formatDate } from "@/compartido/utils/date";
 
 function Seccion({
@@ -64,24 +62,22 @@ export default function Resumen() {
   const metricasHook = useMetricas();
 
   const tramites = tramitesHook.tramites;
-  const cargando =
-    tramitesHook.cargando || (esSuper && (metricasHook.cargando || cuentasHook.cargando));
-  const metricasPendientes = esSuper && !metricasHook.cargando && !!metricasHook.error;
+  // El server acota las métricas del Empleado a sus sectores, así que las ven los dos roles.
+  const cargando = tramitesHook.cargando || metricasHook.cargando || (esSuper && cuentasHook.cargando);
+  const metricasPendientes = !metricasHook.cargando && !!metricasHook.error;
   const usuariosNoDisponibles = esSuper && !cuentasHook.cargando && !!cuentasHook.error;
 
   function actualizar() {
     tramitesHook.recargar();
-    if (esSuper) {
-      metricasHook.recargar();
-      cuentasHook.recargar();
-    }
+    metricasHook.recargar();
+    if (esSuper) cuentasHook.recargar();
   }
 
   const publicados = tramites.filter((t) => t.publicado).length;
   const misTramites = tramites.filter((t) => String(t.encargado?.id) === user?.id);
   const misPublicados = misTramites.filter((t) => t.publicado).length;
 
-  const totalConsultas = sumarConsultasRespondidas(metricasHook.porTramite);
+  const respuestas = metricasHook.resumen?.respuestas;
 
   const aprobados = cuentasHook.usuarios.filter((u) => u.status === "Activo").length;
   const pendientes = cuentasHook.usuarios.filter((u) => u.status === "Pendiente").length;
@@ -166,18 +162,18 @@ export default function Resumen() {
             />
             <StatCard
               label="Consultas registradas"
-              value={cargando || metricasPendientes ? null : totalConsultas}
+              value={cargando || metricasPendientes || !respuestas ? null : respuestas.total}
               icon="chat"
               tone="info"
-              hint={cargando ? "Cargando…" : metricasPendientes ? "Dato no disponible" : "agrupadas por trámite"}
+              hint={cargando ? "Cargando…" : metricasPendientes ? "Dato no disponible" : "respuestas del chat"}
               style={anchoDeTarjeta}
             />
             <StatCard
               label="Consultas sin respuesta"
-              value={cargando || metricasPendientes ? null : metricasHook.sinRespuesta.length}
+              value={cargando || metricasPendientes || !respuestas ? null : respuestas.sinRespuesta}
               icon="bulb"
               tone="warn"
-              hint={cargando ? "Cargando…" : metricasPendientes ? "Dato no disponible" : "registros recientes (máximo 50)"}
+              hint={cargando ? "Cargando…" : metricasPendientes ? "Dato no disponible" : "no encontraron trámite"}
               style={anchoDeTarjeta}
             />
             <StatCard
@@ -227,21 +223,12 @@ export default function Resumen() {
         )}
       </StatGrid>
 
-      {!esSuper && (
-        <View style={[styles.aviso, { backgroundColor: C.infoBg, borderColor: C.info }]}>
-          <Icon name="info" size={22} color={C.info} />
-          <View style={styles.avisoTexto}>
-            <Text style={[Type.bodyStrong, { color: C.ink }]}>Métricas de actividad no disponibles para este rol</Text>
-            <Text style={[Type.meta, { color: C.ink2 }]}>
-              Las métricas detalladas solo están habilitadas para Administración. Podés seguir gestionando tus trámites desde la sección correspondiente.
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {esSuper && !cargando && (
+      {!cargando && (
         <>
-          <Seccion titulo="Trámites más consultados" detalle={metricasPendientes ? "No disponible" : "Chat"}>
+          <Seccion
+            titulo="Trámites más consultados"
+            detalle={metricasPendientes ? "No disponible" : esSuper ? "Chat" : "Tus sectores"}
+          >
             {metricasPendientes ? (
               <Vacio texto="No se pudieron cargar las métricas del chat." />
             ) : topConsultados.length === 0 ? (
@@ -272,27 +259,29 @@ export default function Resumen() {
             )}
           </Seccion>
 
-          <Seccion titulo="Consultas sin respuesta" detalle={`${sinRespuestaRecientes.length} de hasta 50`}>
-            {sinRespuestaRecientes.length === 0 ? (
-              <Vacio texto="No hay consultas sin respuesta." />
-            ) : (
-              sinRespuestaRecientes.map((c, i) => (
-                <View
-                  key={c.id}
-                  style={[
-                    styles.fila,
-                    mediano ? styles.filaEnLinea : null,
-                    i > 0 ? { borderTopWidth: 1, borderTopColor: C.border } : null,
-                  ]}
-                >
-                  <Text style={[Type.body, { color: C.ink, flexShrink: 1 }]}>
-                    {c.textoConsulta || "Consulta sin texto disponible"}
-                  </Text>
-                  <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(c.fecha)}</Text>
-                </View>
-              ))
-            )}
-          </Seccion>
+          {esSuper && (
+            <Seccion titulo="Consultas sin respuesta" detalle={`${sinRespuestaRecientes.length} de hasta 50`}>
+              {sinRespuestaRecientes.length === 0 ? (
+                <Vacio texto="No hay consultas sin respuesta." />
+              ) : (
+                sinRespuestaRecientes.map((c, i) => (
+                  <View
+                    key={c.id}
+                    style={[
+                      styles.fila,
+                      mediano ? styles.filaEnLinea : null,
+                      i > 0 ? { borderTopWidth: 1, borderTopColor: C.border } : null,
+                    ]}
+                  >
+                    <Text style={[Type.body, { color: C.ink, flexShrink: 1 }]}>
+                      {c.textoConsulta || "Consulta sin texto disponible"}
+                    </Text>
+                    <Text style={[Type.meta, { color: C.ink3 }]}>{formatDate(c.fecha)}</Text>
+                  </View>
+                ))
+              )}
+            </Seccion>
+          )}
         </>
       )}
 
@@ -370,20 +359,6 @@ const styles = StyleSheet.create({
     padding: Spacing[4],
     borderRadius: Radius.xl,
     borderWidth: 1,
-  },
-  aviso: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing[3],
-    marginTop: Spacing[8],
-    padding: Spacing[4],
-    borderRadius: Radius["2xl"],
-    borderWidth: 1,
-  },
-  avisoTexto: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
   },
   seccion: {
     marginTop: Spacing[8],

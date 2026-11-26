@@ -7,16 +7,21 @@ import { RankRow } from "@/funcionalidades/admin/componentes/RankRow";
 import { Text } from "@/compartido/ui/Text";
 import { Radius, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
 import { useCuentas } from "@/funcionalidades/admin/hooks/useCuentas";
-import { useMetricas } from "@/funcionalidades/admin/hooks/useMetricas";
+import { PERIODOS, useMetricas } from "@/funcionalidades/admin/hooks/useMetricas";
 import { useTramites } from "@/funcionalidades/admin/hooks/useTramites";
-import { sumarConsultasRespondidas } from "@/funcionalidades/admin/tramites";
 import { rolesDePersonal, type AuthUser } from "@/compartido/sesion/auth";
-import type { ConsultaSinRespuestaApi, ConsultasPorTramiteApi } from "@/compartido/lib/backend";
+import type {
+  ConsultaSinRespuestaApi,
+  ConsultasPorTramiteApi,
+  ResumenDeConsultasApi,
+  SatisfaccionApi,
+} from "@/compartido/lib/backend";
 import { formatDate } from "@/compartido/utils/date";
 import { Screen } from "@/compartido/ui/Screen";
 import { PageHeader } from "@/compartido/ui/PageHeader";
 import { SectionTitle } from "@/compartido/ui/SectionTitle";
 import { CountUp } from "@/compartido/ui/CountUp";
+import { Segmented } from "@/compartido/ui/Segmented";
 import { StatCard } from "@/compartido/ui/StatCard";
 import { StatGrid } from "@/compartido/ui/StatGrid";
 
@@ -56,32 +61,70 @@ function calcularPorcentajeActivos(activos: number, totalCuentas: number) {
   return Math.round((activos / totalCuentas) * 100);
 }
 
+function textoDeSatisfaccion(satisfaccion: SatisfaccionApi | null) {
+  if (!satisfaccion) return "respuestas útiles";
+  if (satisfaccion.total === 0) return "sin calificaciones";
+  return `${satisfaccion.utiles} útiles de ${satisfaccion.total}`;
+}
+
+function valorDeSatisfaccion(satisfaccion: SatisfaccionApi | null) {
+  if (!satisfaccion || satisfaccion.satisfaccion === null) return null;
+  return satisfaccion.satisfaccion;
+}
+
+// Las cifras del chat salen de /metricas/resumen y /metricas/calificaciones, en el período elegido.
+// Sin respuesta y aclaraciones no tienen trámite: el server no las atribuye a un sector y solo
+// Administración las ve.
 function TarjetasResumen({
-  consultasRespondidas,
-  cantidadSinRespuesta,
+  resumen,
+  satisfaccion,
+  veSinRespuesta,
+  cargando,
   cantidadTramites,
   tramitesAceptados,
 }: {
-  consultasRespondidas: number;
-  cantidadSinRespuesta: number;
+  resumen: ResumenDeConsultasApi | null;
+  satisfaccion: SatisfaccionApi | null;
+  veSinRespuesta: boolean;
+  cargando: boolean;
   cantidadTramites: number;
   tramitesAceptados: number;
 }) {
+  const datos = cargando ? null : resumen;
   return (
     <StatGrid>
       <StatCard
         label="Consultas respondidas"
-        value={consultasRespondidas}
-        hint="en el asistente"
+        value={datos ? datos.respuestas.encontradas : null}
+        hint="encontraron un trámite"
         icon="eye"
         tone="info"
       />
+      {veSinRespuesta && (
+        <StatCard
+          label="Sin respuesta"
+          value={datos ? datos.respuestas.sinRespuesta : null}
+          hint="no encontraron trámite"
+          icon="bulb"
+          tone="brand"
+        />
+      )}
+      {veSinRespuesta && (
+        <StatCard
+          label="Aclaraciones"
+          value={datos ? datos.aclaraciones : null}
+          hint="el chat pidió precisar"
+          icon="chat"
+          tone="muted"
+        />
+      )}
       <StatCard
-        label="Sin respuesta"
-        value={cantidadSinRespuesta}
-        hint="últimas consultas"
-        icon="bulb"
-        tone="brand"
+        label="Satisfacción"
+        value={cargando ? null : valorDeSatisfaccion(satisfaccion)}
+        sufijo="%"
+        hint={textoDeSatisfaccion(satisfaccion)}
+        icon="checkDouble"
+        tone="ok"
       />
       <StatCard
         label="Trámites"
@@ -236,7 +279,17 @@ export default function Reportes() {
   const C = useColors();
   const { cuentas } = useCuentas();
   const { tramites } = useTramites();
-  const { porTramite, sinRespuesta, error: errorMetricas } = useMetricas();
+  const {
+    porTramite,
+    sinRespuesta,
+    resumen,
+    satisfaccion,
+    veSinRespuesta,
+    periodo,
+    cambiarPeriodo,
+    cargando: cargandoMetricas,
+    error: errorMetricas,
+  } = useMetricas();
 
   const stats = useMemo(() => {
     const activeUsers = contarUsuariosActivos(cuentas);
@@ -244,7 +297,6 @@ export default function Reportes() {
     return {
       activeUsers,
       inactiveUsers: cuentas.length - activeUsers,
-      consultasRespondidas: sumarConsultasRespondidas(porTramite),
       usersByRole: contarUsuariosPorRol(cuentas),
       topTramites: porTramite.slice(0, 5),
     };
@@ -266,13 +318,19 @@ export default function Reportes() {
         description="Métricas del sistema y del contenido."
       />
 
+      <View style={styles.periodo}>
+        <Segmented value={periodo} options={PERIODOS} onChange={cambiarPeriodo} />
+      </View>
+
       {!!errorMetricas && (
         <Text style={[Type.meta, { color: C.danger, marginBottom: Spacing[3] }]}>{errorMetricas}</Text>
       )}
 
       <TarjetasResumen
-        consultasRespondidas={stats.consultasRespondidas}
-        cantidadSinRespuesta={sinRespuesta.length}
+        resumen={resumen}
+        satisfaccion={satisfaccion}
+        veSinRespuesta={veSinRespuesta}
+        cargando={cargandoMetricas}
         cantidadTramites={tramites.length}
         tramitesAceptados={tramitesAceptados}
       />
@@ -293,12 +351,15 @@ export default function Reportes() {
 
       <BloquePreguntasFrecuentes topTramites={stats.topTramites} />
 
-      <BloqueConsultasSinRespuesta sinRespuesta={sinRespuesta} />
+      {veSinRespuesta && <BloqueConsultasSinRespuesta sinRespuesta={sinRespuesta} />}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  periodo: {
+    marginBottom: Spacing[4],
+  },
   block: {
     paddingVertical: Spacing[2],
   },

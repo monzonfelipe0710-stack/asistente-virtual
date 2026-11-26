@@ -12,10 +12,12 @@ export function StatCard({
   icon,
   tone = "brand",
   hint,
+  sufijo,
   style,
 }: {
   label: string;
   value: number | null;
+  sufijo?: string;
   icon?: IconName;
   tone?: Tone;
   hint?: string;
@@ -38,7 +40,10 @@ export function StatCard({
       {value === null ? (
         <Text style={[Type.figure, { color: C.ink }]}>—</Text>
       ) : (
-        <CountUp value={value} style={[Type.figure, { color: C.ink }]} />
+        <View style={styles.cifra}>
+          <CountUp value={value} style={[Type.figure, { color: C.ink }]} />
+          {!!sufijo && <Text style={[Type.figure, { color: C.ink }]}>{sufijo}</Text>}
+        </View>
       )}
       <View style={styles.top}>
         {!!icon && <Icon name={icon} size={18} color={color} />}
@@ -57,6 +62,10 @@ const styles = StyleSheet.create({
     padding: Spacing[4],
     borderRadius: Radius["2xl"],
     borderWidth: 1,
+  },
+  cifra: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
   top: {
     flexDirection: "row",
