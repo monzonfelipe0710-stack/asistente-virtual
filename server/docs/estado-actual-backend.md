@@ -887,7 +887,7 @@ un 30 % menos por respuesta.
 |---|---|---|---|
 | gpt-4o-mini | 0,15 / 0,075 / 0,60 | 0,84 | 0,489 |
 | gpt-6-luna | 0,10 (0,125 con escritura de caché) / 0,01 / 0,50 | 0,70 | 0,34 |
-| claude-haiku-5-5 | 0,10 / 0,01 / 0,50 | 0,57 | sin evaluar |
+| claude-haiku-5-5 | 0,10 / 0,01 / 0,50 | 0,57 | 0,47-0,51 con caché de prefijo (no cumple el criterio, ver abajo) |
 | gemini-3.1-flash-lite | 0,25 / 0,025 / 1,50 | 1,45 | sin evaluar |
 
 El estimado usa el perfil medido en el sondeo (5200 tokens de entrada y 100 de salida, sin caché);
@@ -908,8 +908,9 @@ dos evaluaciones y 0,004 de la prueba del circuito, unos 0,58 USD.
    Antes del 07-01-2027, con una semana de margen: si `gpt-4o-mini` sigue de por defecto cuando lo
    apaguen, el respaldo y el modelo del entorno fallan juntos y el chat responde 503.
 4. Para la defensa, el modelo por defecto sigue siendo `gpt-4o-mini`.
-5. Claude Haiku 5.5 y Gemini 3.1 Flash-Lite: cargar sus claves, `sondear-modelos.js --modelo <id>` y
-   `evaluar-modelo.js <id>`; hasta entonces quedan deshabilitados.
+5. Gemini 3.1 Flash-Lite: cargar su clave, `sondear-modelos.js --modelo <id>` y `evaluar-modelo.js
+   <id>`; hasta entonces queda deshabilitado. Claude Haiku 5.5 se evaluó el 25 y 26-11-2026 y no
+   alcanzó el criterio (ver "Evaluación de Claude Haiku 5.5").
 
 #### Reevaluación de `gpt-6-luna` (24-11-2026)
 
@@ -1063,6 +1064,71 @@ línea de `CHAT_LOG_LATENCIA`, que ahora trae también `primerToken` (primer del
   una de "solicitud de actas a otras provincias" sin "no está cargado"); seguridad 0 llegan a la
   persona en las dos rutas, 30/30 ataques; medir-tipeo 0 cambios. eval-chat normal de nuevo: 76/79.
 
+#### Evaluación de Claude Haiku 5.5 (25 y 26-11-2026): no alcanza el criterio
+
+Para decidir si sirve de respaldo (o de principal) cuando se apague `gpt-4o-mini`. Criterio: 76/79
+casos 3/3 en stream y 75 en normal, 0 invenciones, 0 de 30 ataques, JSON 100 % conforme, 0
+razonamiento visible, latencia de principal (primer texto p50 ≤ 2,2 s, total p95 ≤ 3,8 s) o hasta un
+30 % más como respaldo, ≤ 2 USD cada 1000 consultas. **Ninguna configuración lo cumplió**; no se
+registró ninguna evaluación y el modelo sigue deshabilitado.
+
+- **Documentación de Anthropic (verificada el 25-11-2026):** pensamiento adaptativo por defecto con
+  effort `medium`; `thinking: {type: "disabled"}` solo hasta effort `high`; `temperature`, `top_p` y
+  `top_k` dan 400 (el SDK 1.10 manda la versión `2026-10-21`: cualquier valor da 400, probado en vivo);
+  0,10 / 0,50 por millón, lectura de caché 0,01 y escritura 0,125; con el pensamiento apagado o en
+  `low` puede escribir texto tipo razonamiento en la respuesta.
+- **Perfil en el adaptador** (`anthropic.adapter.js`): dos configuraciones, `sin-razonamiento`
+  (disabled, effort low, por defecto) y `razonamiento-bajo` (adaptive, effort low, `max_tokens`
+  4000); se elige con `parametros.configuracion` del modelo o, fuera de producción,
+  `ANTHROPIC_CONFIGURACION_CHAT`. La corrección de tipeo va siempre sin pensamiento.
+  `evaluar-modelo.js` anota la configuración y pasa `--detalle` a eval-chat (texto de cada corrida).
+- **Sondeo:** esquema estricto 5/5 en las dos rutas, "respuesta" llega entera y en orden por SSE,
+  medir-tipeo 0 cambios (corrección en unos 450 ms). El tokenizer cuenta unos 9100 tokens de entrada
+  por consulta (el perfil del catálogo supone 5200).
+- **Resultados sin instrucciones propias** (eval-chat, 3 corridas; casos 3/3, normal / stream):
+  `sin-razonamiento` 67 / 66, `razonamiento-bajo` 68 / 70. JSON conforme 100 %, 0 vacías, 0
+  razonamiento visible, 0 errores 429/5xx. Latencia en caliente (medir-etapas, 30 consultas):
+  `sin-razonamiento` primer texto 1,96 s p50, total 3,69 s p95 (sirve de principal);
+  `razonamiento-bajo` 2,12 s y 4,75 s (solo de respaldo). Con la caché de prefijo (abajo), 0,47 y
+  0,51 USD cada 1000 respuestas; sin ella, cerca de 1 USD.
+- **Diagnóstico:** casi todas las fallas eran aclaraciones de más, por tres causas: (1) toma
+  candidatos que solo comparten una palabra o el tema con el pedido como "variantes del trámite
+  pedido"; (2) pregunta por modalidades o categorías de un mismo trámite ("no dividas un mismo
+  trámite en sub-opciones"); (3) cuando ningún candidato es lo pedido, ofrece los parecidos o
+  termina con una pregunta. Claude Sonnet 5.5 (solo diagnóstico, perfil temporal ya eliminado, 0,11
+  USD) respondió directo en esos 7 casos y también pidió aclaración en los 3 de licencia por
+  maternidad, que el prompt común justifica (dos trámites de maternidad); `gpt-6-luna` los resuelve
+  con su `instruccionAdicional`. Otras fallas: nombra una modalidad que coincide con otro candidato
+  sin ponerlo en `tramitesUsados` (más en stream, donde los ids se escriben antes que el texto), "el
+  contexto" dicho a la persona (2 casos) y "dentro del país" en la pregunta del pasaporte como
+  documento de identidad (se abstiene, pero el eval lo cuenta como invención).
+- **Lo que se probó:** una `instruccionAdicional` en el perfil de Haiku (al final de la instrucción,
+  como la de Luna), corta y sin nombres de trámites, y la caché del prefijo fijo con
+  `cache_control` (campo neutral `instruccionFija` en el puerto). Dos iteraciones de texto,
+  evaluadas también sobre un conjunto aparte de 15 preguntas que no se usó para ajustar
+  (`scripts/eval-chat-aparte.json`, `eval-chat.js --casos`, 5 de abstención).
+
+  | Casos 3/3 (normal / stream) | 79 casos, `sin-razonamiento` | 79 casos, `razonamiento-bajo` | Aparte (15), `sin-razonamiento` | Aparte (15), `razonamiento-bajo` |
+  |---|---|---|---|---|
+  | Sin instrucciones | 67 / 66 | 68 / 70 | 13 / 12 | 11 / 12 |
+  | Iteración 1 | 68 / 69 | 75 / 67 | 14 / 15 | 13 / 13 |
+  | Iteración 2 (solo `razonamiento-bajo`) | — | 70 / 76 | — | 14 / 14 |
+
+  La iteración 1 sacó casi todas las aclaraciones de más y "el contexto"; la 2 atacó los nombres
+  sin usar y llegó a 76 en stream, pero normal cayó a 70 y siguieron las 2 "invenciones" por ruta.
+  Sin `temperature`, la variación entre corridas es grande: entre 3 y 10 casos inestables (1/3 o
+  2/3) por corrida de 79, y la misma configuración se movió de 75 a 70 en normal entre
+  iteraciones. Seguridad y latencia con las instrucciones no se midieron: no cumplía en calidad, la
+  base temporal no se pudo levantar (Windows reservó el rango de puertos 55411-55510, que incluye el
+  55432) y el gasto llegó al tope.
+- **Por qué no alcanzó:** el techo lo ponen fallas que se mueven de una corrida a otra
+  (nombres sin usar, invenciones de una frase, aclaraciones de maternidad) más que una causa única
+  que se arregle con texto; para cumplir en las dos rutas a la vez haría falta más margen que el
+  que da Haiku en `low`. Se revirtieron la instrucción adicional y `instruccionFija`; queda el
+  perfil base.
+- **Gasto en Anthropic:** 0,57 USD la evaluación inicial y 1,42 USD el intento de mejora (Sonnet
+  0,11, conjunto aparte 0,16, iteración 1 0,75, iteración 2 0,39).
+
 ### Modelos candidatos (17-11-2026)
 
 Etapa 1 del selector de modelo de chat para el superusuario. `gpt-4o-mini` está deprecado: OpenAI lo
@@ -1167,7 +1233,7 @@ hacer?"), 5 corridas por pregunta y ruta, prompts reales de unos 5170 tokens de 
 - **gpt-6-luna:** modelo de razonamiento; exige `reasoning_effort: "none"` para la latencia de
   `gpt-4o-mini` y para aceptar `temperature` 0,3. Primer texto del stream unos 400 ms más tarde. La
   escritura del caché se cobra (0,125) por encima de la entrada (0,10).
-- **claude-haiku-5-5 (sin sondear):** sin `temperature`; pensamiento adaptativo activo por defecto
+- **claude-haiku-5-5 (sondeado y evaluado el 26-11-2026, no cumple):** sin `temperature`; pensamiento adaptativo activo por defecto
   (hay que mandar `thinking: {type: "disabled"}` o bajar `effort`); `max_tokens` obligatorio; caché
   del prompt solo con `cache_control` explícito; la refusal llega con 200 y sin respetar el esquema;
   precios más altos en prompts de más de 100.000 tokens (el nuestro tiene unos 5000); el tokenizer
