@@ -23,7 +23,6 @@ function MenuCiudadano({
   const secciones: SeccionDeMenu[] = [
     {
       items: [
-        { pantalla: "accesos", titulo: "Accesos", icono: "external" },
         {
           titulo: "Accesibilidad",
           icono: "access",
@@ -72,7 +71,6 @@ export default function LayoutCiudadano() {
       >
         <Drawer.Screen name="index" options={{ title: "ChatAP · Asistente virtual de trámites" }} />
         <Drawer.Screen name="descargas" options={{ title: "ChatAP · Descargas" }} />
-        <Drawer.Screen name="accesos" options={{ title: "ChatAP · Accesos" }} />
         <Drawer.Screen name="chats" options={{ title: "ChatAP · Chats" }} />
       </Drawer>
       <VentanaAccesibilidad open={accesibilidadAbierta} onClose={() => setAccesibilidadAbierta(false)} />
