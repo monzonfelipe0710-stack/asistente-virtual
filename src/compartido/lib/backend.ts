@@ -110,16 +110,32 @@ export interface MensajeChat {
   tipo?: "respuesta" | "aclaracion";
 }
 
+// consultaId y calificarToken son null en las aclaraciones y en los mensajes conversacionales
+// (saludos, gracias): esas respuestas no se pueden calificar.
 interface RespuestaChat {
   tipo: "respuesta" | "aclaracion";
   respuesta: string;
   tramitesEncontrados: { id: number; nombre: string }[];
   opciones: { id: number; nombre: string }[];
   encontrado: boolean;
+  consultaId?: number | null;
+  calificarToken?: string | null;
 }
 
 export function consultarChat(mensajes: MensajeChat[], senal?: AbortSignal) {
   return pedir<RespuestaChat>("/chat", { metodo: "POST", cuerpo: { mensajes }, senal });
+}
+
+// Una sola vez por consulta: si ya se calificó, el server responde 409. El token sirve sin sesión.
+export function calificarConsulta(
+  consultaId: number,
+  calificacion: 0 | 1,
+  { motivo, token }: { motivo?: string; token?: string | null } = {}
+) {
+  return pedir<{ consultaId: number; calificacion: 0 | 1 }>(`/consultas/${consultaId}/calificar`, {
+    metodo: "PATCH",
+    cuerpo: { calificacion, motivo: motivo || null, token: token ?? undefined },
+  });
 }
 
 type RolApi = "SUPERUSUARIO" | "ADMINISTRADOR" | "CIUDADANO";

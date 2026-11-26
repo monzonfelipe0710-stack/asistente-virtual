@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "./tipos";
-import { consultarChat, mensajeDeError, type MensajeChat } from "@/compartido/lib/backend";
+import { calificarConsulta, consultarChat, mensajeDeError, type MensajeChat } from "@/compartido/lib/backend";
 
 const MAX_MENSAJES = 20;
 const MAX_TEXTO = 2000;
@@ -73,13 +73,13 @@ export function useChat(
 
   useEffect(() => () => pedidoActual.current?.abort(), []);
 
-  const agregar = useCallback((type: ChatMessage["type"], text: string, tipo?: ChatMessage["tipo"]) => {
+  const agregar = useCallback((type: ChatMessage["type"], text: string, extra?: Partial<ChatMessage>) => {
     const mensaje: ChatMessage = {
+      ...extra,
       id: siguienteId.current++,
       type,
       text,
       timestamp: new Date().toISOString(),
-      tipo,
     };
     setMessages((anteriores) => [...anteriores, mensaje]);
   }, []);
@@ -93,12 +93,16 @@ export function useChat(
       setInterrumpido(false);
       setIsTyping(true);
       try {
-        const { tipo, respuesta, opciones } = await consultarChat(
+        const { tipo, respuesta, opciones, consultaId, calificarToken } = await consultarChat(
           armarHistorial(mensajesActuales.current, text),
           pedido.signal
         );
         if (!pedido.signal.aborted) {
-          agregar("bot", armarTextoDeRespuesta(respuesta, opciones), tipo);
+          agregar("bot", armarTextoDeRespuesta(respuesta, opciones), {
+            tipo,
+            consultaId: consultaId ?? null,
+            calificarToken: calificarToken ?? null,
+          });
         }
       } catch (error) {
         if (!pedido.signal.aborted) {
@@ -124,6 +128,27 @@ export function useChat(
 
   const reintentar = useCallback(() => preguntar(ultimaConsulta.current), [preguntar]);
 
+  // Saca la última respuesta y vuelve a hacer la misma pregunta: la nueva respuesta la reemplaza.
+  const regenerar = useCallback(() => {
+    const actuales = mensajesActuales.current;
+    const ultimo = actuales[actuales.length - 1];
+    if (!ultimo || ultimo.type !== "bot" || pedidoActual.current) return;
+    const sinLaUltima = actuales.slice(0, -1);
+    const pregunta = [...sinLaUltima].reverse().find((m) => m.type === "user");
+    if (!pregunta) return;
+    mensajesActuales.current = sinLaUltima;
+    setMessages(sinLaUltima);
+    return preguntar(pregunta.text);
+  }, [preguntar]);
+
+  // Lanza el error del server (por ejemplo 409 si ya se calificó) para que la pantalla lo muestre.
+  const calificar = useCallback(async (id: number, calificacion: 0 | 1, motivo?: string) => {
+    const mensaje = mensajesActuales.current.find((m) => m.id === id);
+    if (!mensaje?.consultaId) return;
+    await calificarConsulta(mensaje.consultaId, calificacion, { motivo, token: mensaje.calificarToken });
+    setMessages((anteriores) => anteriores.map((m) => (m.id === id ? { ...m, calificacion } : m)));
+  }, []);
+
   const detener = useCallback(() => {
     if (!pedidoActual.current) return;
     pedidoActual.current.abort();
@@ -132,5 +157,5 @@ export function useChat(
     setInterrumpido(true);
   }, []);
 
-  return { messages, isTyping, send, fallo, interrumpido, reintentar, detener };
+  return { messages, isTyping, send, fallo, interrumpido, reintentar, regenerar, calificar, detener };
 }

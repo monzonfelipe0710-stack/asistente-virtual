@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -73,7 +73,14 @@ function ChatWindowBase() {
     (mensajes: ChatMessage[]) => guardar(activa, mensajes),
     [activa, guardar]
   );
-  const { messages, isTyping, send, fallo, interrumpido, reintentar, detener } = useChat(inicial, alCambiar);
+  const { messages, isTyping, send, fallo, interrumpido, reintentar, regenerar, calificar, detener } = useChat(
+    inicial,
+    alCambiar
+  );
+  const acciones = useMemo(
+    () => ({ ocupado: isTyping, onRegenerar: regenerar, onCalificar: calificar }),
+    [isTyping, regenerar, calificar]
+  );
   const [escribiendo, setEscribiendo] = useState(false);
   const [altoDeLaBarra, setAltoDeLaBarra] = useState(Size.composer + 8);
   const [altoDeLaLista, setAltoDeLaLista] = useState(0);
@@ -170,10 +177,11 @@ function ChatWindowBase() {
         <MessageBubble
           message={item}
           escribiendo={item.id === ultimoId && item.id > idMaximoInicial.current}
+          acciones={item.id === ultimoId && item.type === "bot" ? acciones : undefined}
         />
       </View>
     ),
-    [ultimoId, alMedir]
+    [ultimoId, alMedir, acciones]
   );
 
   return (

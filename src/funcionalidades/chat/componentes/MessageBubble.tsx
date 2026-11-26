@@ -5,6 +5,7 @@ import Markdown from "react-native-markdown-display";
 import { Text, useEscalaDeTexto } from "@/compartido/ui/Text";
 import { Fonts, Radius, Spacing, useColors } from "@/compartido/constantes/theme";
 import type { ChatMessage } from "@/funcionalidades/chat/tipos";
+import { AccionesDeRespuesta } from "./AccionesDeRespuesta";
 import { useAjustes } from "@/compartido/lib/accesibilidad";
 
 // Cada paso vuelve a interpretar el Markdown y re-mide la burbuja (y con ella la lista): 50 pasos
@@ -39,12 +40,20 @@ function esEnlaceWeb(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
+// Las acciones (copiar, calificar, regenerar) van solo debajo de la última respuesta, cuando
+// terminó de escribirse.
 function MessageBubbleBase({
   message,
   escribiendo: pideEscribir = false,
+  acciones,
 }: {
   message: ChatMessage;
   escribiendo?: boolean;
+  acciones?: {
+    ocupado: boolean;
+    onRegenerar: () => void;
+    onCalificar: (id: number, calificacion: 0 | 1, motivo?: string) => Promise<void>;
+  };
 }) {
   const C = useColors();
   const escala = useEscalaDeTexto();
@@ -105,6 +114,14 @@ function MessageBubbleBase({
           {markdown}
         </Markdown>
       </View>
+      {!!acciones && visibles >= total && (
+        <AccionesDeRespuesta
+          mensaje={message}
+          ocupado={acciones.ocupado}
+          onRegenerar={acciones.onRegenerar}
+          onCalificar={acciones.onCalificar}
+        />
+      )}
     </View>
   );
 }
