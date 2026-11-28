@@ -71,10 +71,19 @@ async function enviarPedido(
   }
 }
 
+// Algunos trámites del catálogo vienen con un prefijo de orden ("A- Servicios en línea RPI").
+// Se quita al leer cualquier "nombre" de la respuesta, así no aparece en ninguna pantalla.
+const PREFIJO_DE_ORDEN = /^[A-Z]\s*-\s+(?=\S)/;
+
+function limpiarNombres(clave: string, valor: unknown) {
+  if (clave === "nombre" && typeof valor === "string") return valor.replace(PREFIJO_DE_ORDEN, "");
+  return valor;
+}
+
 async function leerRespuesta<T>(res: Response, conSesion: boolean): Promise<T> {
   let datos: { error?: string } | null = null;
   try {
-    datos = await res.json();
+    datos = JSON.parse(await res.text(), limpiarNombres);
   } catch {
     datos = null;
   }
