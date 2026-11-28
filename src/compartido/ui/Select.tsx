@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 
-import { BottomSheet } from "./BottomSheet";
+import { BottomSheet, ListaDeLaHoja } from "./BottomSheet";
 import { Icon } from "./Icon";
 import { Text } from "./Text";
 import { Radius, Size, Spacing, Weight, useColors } from "@/compartido/constantes/theme";
@@ -45,7 +45,7 @@ export function Select<T extends string>({
       </Pressable>
 
       <BottomSheet open={open} onClose={() => setOpen(false)}>
-        <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+        <ListaDeLaHoja style={styles.list} showsVerticalScrollIndicator={false}>
           {options.map((option) => {
             const selected = option === value;
             return (
@@ -71,7 +71,7 @@ export function Select<T extends string>({
               </Pressable>
             );
           })}
-        </ScrollView>
+        </ListaDeLaHoja>
       </BottomSheet>
     </>
   );

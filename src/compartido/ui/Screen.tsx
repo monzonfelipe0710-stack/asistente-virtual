@@ -30,6 +30,7 @@ export function useVolverArriba(): VolverArriba {
 export function ScrollConTeclado({
   children,
   conEspacio = true,
+  onScroll,
   ...rest
 }: ScrollViewProps & { conEspacio?: boolean }) {
   const teclado = useKeyboardHeight();
@@ -89,6 +90,7 @@ export function ScrollConTeclado({
           ref={scroll}
           onScroll={(e) => {
             desplazamiento.current = e.nativeEvent.contentOffset.y;
+            onScroll?.(e);
           }}
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"

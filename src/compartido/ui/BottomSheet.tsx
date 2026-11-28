@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -6,10 +6,14 @@ import {
   PanResponder,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
   type GestureResponderHandlers,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollViewProps,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -20,27 +24,46 @@ import { useKeyboardHeight } from "@/compartido/hooks/useKeyboardHeight";
 const DISTANCIA_PARA_CERRAR = 100;
 const VELOCIDAD_PARA_CERRAR = 0.8;
 
-// La hoja se arrastra desde la manija y desde la zona que la use (el título del Modal),
-// no desde el contenido, para no competir con su scroll.
-const ArrastreDeLaHoja = createContext<GestureResponderHandlers | undefined>(undefined);
+// La hoja se arrastra desde la manija y el título siempre, y desde el contenido cuando su lista
+// está arriba de todo (como las hojas de iOS): así no le gana al scroll del contenido.
+// Cada lista dentro de una hoja avisa su desplazamiento con useAlDesplazarEnLaHoja.
+interface Arrastre {
+  manejadores: GestureResponderHandlers;
+  alDesplazar: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+}
+
+const ArrastreDeLaHoja = createContext<Arrastre | undefined>(undefined);
 
 export function useArrastreDeLaHoja() {
-  return useContext(ArrastreDeLaHoja);
+  return useContext(ArrastreDeLaHoja)?.manejadores;
+}
+
+export function useAlDesplazarEnLaHoja() {
+  return useContext(ArrastreDeLaHoja)?.alDesplazar;
+}
+
+// Lista para usar directo dentro de una hoja: avisa su desplazamiento para el arrastre.
+export function ListaDeLaHoja(props: ScrollViewProps) {
+  const alDesplazar = useAlDesplazarEnLaHoja();
+  return <ScrollView scrollEventThrottle={16} onScroll={alDesplazar} {...props} />;
 }
 
 function useArrastrarParaCerrar(onClose: () => void, alturaDePantalla: number) {
   const [desplazamiento] = useState(() => new Animated.Value(0));
+  const contenidoArriba = useRef(true);
 
-  const respuesta = useMemo(() => {
+  const alDesplazar = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    contenidoArriba.current = e.nativeEvent.contentOffset.y <= 0;
+  }, []);
+
+  const respuestas = useMemo(() => {
     function volver() {
       Animated.spring(desplazamiento, { toValue: 0, bounciness: 4, useNativeDriver: true }).start();
     }
 
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
-      onPanResponderMove: (_, g) => desplazamiento.setValue(Math.max(0, g.dy)),
-      onPanResponderRelease: (_, g) => {
+    const comun = {
+      onPanResponderMove: (_: unknown, g: { dy: number }) => desplazamiento.setValue(Math.max(0, g.dy)),
+      onPanResponderRelease: (_: unknown, g: { dy: number; vy: number }) => {
         if (g.dy > DISTANCIA_PARA_CERRAR || g.vy > VELOCIDAD_PARA_CERRAR) {
           Animated.timing(desplazamiento, {
             toValue: alturaDePantalla,
@@ -52,11 +75,34 @@ function useArrastrarParaCerrar(onClose: () => void, alturaDePantalla: number) {
         }
         volver();
       },
+      onPanResponderTerminationRequest: () => false,
       onPanResponderTerminate: volver,
-    });
+    };
+
+    return {
+      // Manija y título: cualquier arrastre hacia abajo.
+      manija: PanResponder.create({
+        ...comun,
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+      }),
+      // Toda la hoja, en la fase de captura: solo si el contenido está arriba de todo, así le
+      // quita el gesto a la lista antes de que esta se desplace.
+      hoja: PanResponder.create({
+        ...comun,
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          contenidoArriba.current && g.dy > 8 && g.dy > Math.abs(g.dx) * 1.5,
+      }),
+    };
   }, [desplazamiento, onClose, alturaDePantalla]);
 
-  return { desplazamiento, manejadores: respuesta.panHandlers };
+  return {
+    desplazamiento,
+    manejadores: respuestas.manija.panHandlers,
+    manejadoresDeLaHoja: respuestas.hoja.panHandlers,
+    alDesplazar,
+  };
 }
 
 export function BottomSheet({
@@ -74,7 +120,11 @@ export function BottomSheet({
   const teclado = useKeyboardHeight();
   const alzar = Platform.OS === "android" ? teclado : 0;
   const [entrada] = useState(() => new Animated.Value(0));
-  const { desplazamiento, manejadores } = useArrastrarParaCerrar(onClose, alturaDePantalla);
+  const { desplazamiento, manejadores, manejadoresDeLaHoja, alDesplazar } = useArrastrarParaCerrar(
+    onClose,
+    alturaDePantalla
+  );
+  const arrastre = useMemo(() => ({ manejadores, alDesplazar }), [manejadores, alDesplazar]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,6 +158,7 @@ export function BottomSheet({
       </Animated.View>
 
       <Animated.View
+        {...manejadoresDeLaHoja}
         style={[
           styles.sheet,
           Shadows.sheet,
@@ -126,7 +177,7 @@ export function BottomSheet({
         <View style={styles.zonaDeArrastre} {...manejadores}>
           <View style={[styles.handle, { backgroundColor: C.borderStrong }]} />
         </View>
-        <ArrastreDeLaHoja.Provider value={manejadores}>{children}</ArrastreDeLaHoja.Provider>
+        <ArrastreDeLaHoja.Provider value={arrastre}>{children}</ArrastreDeLaHoja.Provider>
       </Animated.View>
     </RNModal>
   );

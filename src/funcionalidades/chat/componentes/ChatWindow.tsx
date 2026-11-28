@@ -4,6 +4,7 @@ import {
   Keyboard,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   View,
   type ListRenderItemInfo,
@@ -233,21 +234,31 @@ function ChatWindowBase() {
             estiloDeLaBienvenida,
           ]}
         >
-          <Pressable style={styles.lista} onPress={Keyboard.dismiss} accessible={false}>
-            <View style={styles.bienvenida}>
-              <ChatBotAvatar size={56} />
-              <Text style={[Type.pageTitle, styles.pregunta, { color: C.ink }]}>¿En qué te ayudo hoy?</Text>
+          {/* Si la bienvenida no entra (pantalla chica o letra grande del sistema), se desplaza en
+              lugar de desbordarse sobre el encabezado y las sugerencias. Si entra, no cambia nada. */}
+          <ScrollView
+            style={styles.lista}
+            contentContainerStyle={styles.crecer}
+            alwaysBounceVertical={false}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Pressable style={styles.crecer} onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.bienvenida}>
+                <ChatBotAvatar size={56} />
+                <Text style={[Type.pageTitle, styles.pregunta, { color: C.ink }]}>¿En qué te ayudo hoy?</Text>
+                <Plegable abierto={!escribiendo}>
+                  <Text style={[Type.lead, styles.bajada, { color: C.ink2 }]}>
+                    Consultá por trámites de Recursos Humanos.
+                  </Text>
+                </Plegable>
+              </View>
               <Plegable abierto={!escribiendo}>
-                <Text style={[Type.lead, styles.bajada, { color: C.ink2 }]}>
-                  Consultá por trámites de Recursos Humanos.
-                </Text>
+                <SugerenciaDeIngreso />
+                <QuickReplies onSelect={send} />
               </Plegable>
-            </View>
-            <Plegable abierto={!escribiendo}>
-              <SugerenciaDeIngreso />
-              <QuickReplies onSelect={send} />
-            </Plegable>
-          </Pressable>
+            </Pressable>
+          </ScrollView>
         </Animated.View>
       )}
 
@@ -287,8 +298,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  crecer: {
+    flexGrow: 1,
+  },
   bienvenida: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing[4],

@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Text } from "./Text";
 
-import { BottomSheet, useArrastreDeLaHoja } from "./BottomSheet";
+import { BottomSheet, useAlDesplazarEnLaHoja, useArrastreDeLaHoja } from "./BottomSheet";
 import { Icon } from "./Icon";
 import { ScrollConTeclado } from "./Screen";
 import { Spacing, Type, useColors } from "@/compartido/constantes/theme";
@@ -49,6 +49,7 @@ function Contenido({
   const C = useColors();
   const actions = Children.toArray(footer);
   const arrastre = useArrastreDeLaHoja();
+  const alDesplazar = useAlDesplazarEnLaHoja();
 
   return (
     <KeyboardAvoidingView
@@ -71,6 +72,7 @@ function Contenido({
 
       <ScrollConTeclado
         conEspacio={false}
+        onScroll={alDesplazar}
         style={styles.flexShrink}
         contentContainerStyle={styles.body}
       >

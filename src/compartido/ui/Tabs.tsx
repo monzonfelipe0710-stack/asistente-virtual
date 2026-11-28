@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { BottomSheet } from "./BottomSheet";
+import { BottomSheet, ListaDeLaHoja } from "./BottomSheet";
 import { Icon } from "./Icon";
 import { Text } from "./Text";
 import { Radius, Size, Spacing, Type, Weight, useColors } from "@/compartido/constantes/theme";
@@ -58,7 +58,7 @@ export function Tabs<T extends string>({
 
       <BottomSheet open={open} onClose={() => setOpen(false)}>
         <Text style={[Type.overline, styles.titulo, { color: C.ink2 }]}>Filtrar por</Text>
-        <ScrollView style={styles.lista} showsVerticalScrollIndicator={false}>
+        <ListaDeLaHoja style={styles.lista} showsVerticalScrollIndicator={false}>
           {items.map((t) => {
             const elegida = t.id === value;
             return (
@@ -88,7 +88,7 @@ export function Tabs<T extends string>({
               </Pressable>
             );
           })}
-        </ScrollView>
+        </ListaDeLaHoja>
       </BottomSheet>
     </View>
   );
