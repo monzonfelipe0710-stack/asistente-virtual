@@ -11,6 +11,12 @@ npx expo start
 
 Presioná `a` (Android), `i` (iOS) o `w` (web) en la terminal, o escaneá el QR con Expo Go.
 
+Para la versión web en modo producción, la que usa `demo/marco-iphone.html` (en el puerto 5173, minificada y con la caché limpia):
+
+```bash
+npx expo start --web --port 5173 --no-dev --minify -c
+```
+
 ## Estructura
 
 El código está en `src` y se divide en tres carpetas.
