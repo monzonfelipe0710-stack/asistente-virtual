@@ -78,15 +78,14 @@ export const registrarCiudadano = async (datos) => {
       estado: 'APROBADO',
       dni: datos.dni,
       genero: datos.genero,
+      cuil: datos.cuil,
     },
     select: { id: true, nombre: true, email: true, rol: true },
   });
 };
 
-export const buscarPorDni = async (dni, genero) => {
-  return prisma.usuario.findUnique({
-    where: { dni_genero: { dni, genero } },
-  });
+export const buscarPorDni = async (dni) => {
+  return prisma.usuario.findUnique({ where: { dni } });
 };
 
 export const guardarTokenRecuperacion = async (id, tokenHash, expira) => {

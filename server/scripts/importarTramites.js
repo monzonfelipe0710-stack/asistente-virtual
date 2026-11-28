@@ -1,97 +1,76 @@
+// Importa el catálogo. Formato del JSON y opciones: README, sección "Importar el catálogo".
+//
+//   node scripts/importarTramites.js [archivo] [--dry-run] [--lote n] [--completa [--despublicar-faltantes]]
+//   node scripts/importarTramites.js --municipal [archivo] [--dry-run] [--lote n] [--sin-despublicar]
+//
+// Es idempotente y reanudable: si una corrida se corta, se vuelve a correr la misma. Con --completa
+// despublica los trámites que el sitio ya no lista (ver el README). Con --municipal importa el JSON
+// de formosatuciudad.gob.ar y despublica los faltantes de esa fuente solo si es seguro.
 import 'dotenv/config';
 import { readFileSync } from 'node:fs';
-import crypto from 'node:crypto';
-import bcrypt from 'bcrypt';
 import prisma from '../src/config/prisma.js';
-import { indexarTramite } from '../src/services/embedding.service.js';
+import { importarCatalogo, formatearInforme, opcionesMunicipales } from '../src/services/importacion.service.js';
 
-const ARCHIVO = process.argv[2] ?? 'tramites_normalizado.json';
+const args = process.argv.slice(2);
+const bandera = (nombre) => args.includes(nombre);
+const valor = (nombre) => {
+  const i = args.indexOf(nombre);
+  return i === -1 ? undefined : args[i + 1];
+};
+const posicionales = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lote');
 
-async function obtenerUsuarioSistema() {
-  const email = 'sistema@chatap.local';
-  const existente = await prisma.usuario.findUnique({ where: { email } });
-  if (existente) return existente;
+const MUNICIPAL = bandera('--municipal');
+const ARCHIVO = posicionales[0]
+  ?? new URL(`../../ingestion/data/${MUNICIPAL ? 'tramites_municipal' : 'tramites_normalizado'}.json`, import.meta.url);
+const opciones = {
+  simular: bandera('--dry-run'),
+  completa: bandera('--completa'),
+  despublicarFaltantes: bandera('--despublicar-faltantes'),
+  lote: Number(valor('--lote') ?? 100),
+};
 
-  const passwordHash = await bcrypt.hash(crypto.randomUUID(), 10);
-  return prisma.usuario.create({
-    data: {
-      nombre: 'Sistema',
-      email,
-      passwordHash,
-      rol: 'ADMINISTRADOR',
-      estado: 'APROBADO', // no es logueable: password aleatorio
-    },
-  });
-}
-
-async function upsertSectores(sectores) {
-  const mapa = new Map();
-  for (const s of sectores) {
-    const existente = await prisma.sector.findFirst({
-      where: { nombre: s.nombre, parentId: null },
-    });
-    const sector = existente ?? await prisma.sector.create({
-      data: { nombre: s.nombre, tipo: s.tipo },
-    });
-    mapa.set(s.nombre, sector.id);
+// La caché la invalida la versión del catálogo en la base; el health solo sirve para avisar.
+const servidorResponde = async (base) => {
+  try {
+    const res = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch {
+    return false;
   }
-  return mapa;
-}
+};
 
-async function main() {
+const avisoDeCache = async ({ cache }) => {
+  const base = process.env.SERVIDOR_URL ?? `http://localhost:${process.env.PORT ?? 3000}`;
+  if (cache.error) return `No se pudo marcar el cambio del catálogo (${cache.error}). ¿Falta aplicar la migración catalogo_version? Reiniciá el servidor para que no responda con la caché anterior.`;
+  if (!cache.invalidada) return 'Sin cambios: la caché del servidor sigue siendo válida.';
+  return (await servidorResponde(base))
+    ? `Catálogo en la versión ${cache.version}: el servidor en ${base} vacía su caché en unos segundos (CACHE_CHEQUEO_MS, 5 s por defecto).`
+    : `Catálogo en la versión ${cache.version}. No hay servidor respondiendo en ${base}: el que arranque empieza sin caché, y uno en otra dirección también la vacía solo (la versión está en la base).`;
+};
+
+const informeMunicipal = ({ sinDespublicar, noReconocidas, errores }) => [
+  `Despublicación de faltantes de formosatuciudad.gob.ar: ${sinDespublicar ? `no se aplica (${sinDespublicar})` : 'se aplica'}`,
+  ...noReconocidas.map((f) => `  - no reconocida: ${f.titulo} <${f.url}>: ${f.motivo}`),
+  ...errores.map((f) => `  - con error: ${f.titulo} <${f.url}>: ${f.motivo}`),
+].join('\n');
+
+try {
+  if (!Number.isInteger(opciones.lote) || opciones.lote < 1) throw new Error('--lote tiene que ser un entero positivo.');
   const datos = JSON.parse(readFileSync(ARCHIVO, 'utf-8'));
-  const sistema = await obtenerUsuarioSistema();
-  const sectoresPorNombre = await upsertSectores(datos.sectores);
-
-  const aIndexar = [];
-  let creados = 0, actualizados = 0;
-
-  for (const t of datos.tramites) {
-    const sectorId = sectoresPorNombre.get(t.sector);
-    if (!sectorId) {
-      console.warn(`Sector no encontrado para "${t.nombre}": ${t.sector}`);
-      continue;
-    }
-
-    const existente = t.fuenteUrl
-      ? await prisma.tramite.findUnique({ where: { fuenteUrl: t.fuenteUrl } })
-      : null;
-
-    if (existente) {
-      const cambio = existente.descripcion !== t.descripcion || existente.nombre !== t.nombre;
-      await prisma.tramite.update({
-        where: { id: existente.id },
-        data: { nombre: t.nombre, descripcion: t.descripcion, sectorId },
-      });
-      actualizados++;
-      if (cambio) aIndexar.push(existente.id);
-    } else {
-      const creado = await prisma.tramite.create({
-        data: {
-          nombre: t.nombre,
-          descripcion: t.descripcion,
-          sectorId,
-          encargadoId: sistema.id,
-          publicado: true,
-          fuenteUrl: t.fuenteUrl || null,
-        },
-      });
-      creados++;
-      aIndexar.push(creado.id);
-    }
+  let municipal = null;
+  if (MUNICIPAL) {
+    if (opciones.completa || opciones.despublicarFaltantes) throw new Error('Con --municipal la despublicación la decide el importador: usá --sin-despublicar para no aplicarla.');
+    municipal = opcionesMunicipales(datos, { despublicar: !bandera('--sin-despublicar') });
+    Object.assign(opciones, municipal.opciones);
+    console.log(informeMunicipal(municipal));
   }
-
-  console.log(`Sectores: ${sectoresPorNombre.size} | Creados: ${creados} | Actualizados: ${actualizados}`);
-  console.log(`Generando embeddings de ${aIndexar.length} trámites...`);
-
-  let i = 0;
-  for (const id of aIndexar) {
-    await indexarTramite(id);
-    if (++i % 25 === 0) console.log(`  ${i}/${aIndexar.length}`);
-  }
-  console.log('Listo.');
+  const informe = await importarCatalogo(datos, opciones);
+  console.log(formatearInforme(informe));
+  if (!informe.simulado) console.log(await avisoDeCache(informe));
+  if (informe.fallidos.length > 0 || municipal?.noReconocidas.length > 0 || municipal?.errores.length > 0) process.exitCode = 1;
+} catch (e) {
+  console.error(e.message);
+  process.exitCode = 1;
+} finally {
+  await prisma.$disconnect();
 }
-
-main()
-  .catch((e) => { console.error(e); process.exitCode = 1; })
-  .finally(() => prisma.$disconnect());

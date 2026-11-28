@@ -1,7 +1,12 @@
+import { sanitizarError } from '../utils/sanitizar-error.js';
+
 export const errorHandler = (err, req, res, next) => {
   // Lo lanza express.json() y trae statusCode 400, pero con el mensaje del parser en inglés.
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'El cuerpo de la solicitud no es un JSON válido.' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'La solicitud es demasiado grande.' });
   }
 
   if (err.name === 'ZodError') {
@@ -21,7 +26,9 @@ export const errorHandler = (err, req, res, next) => {
   }
 
   if (err.statusCode) {
-    return res.status(err.statusCode).json({ error: err.message });
+    return res.status(err.statusCode).json(
+      err.codigo ? { error: err.message, codigo: err.codigo } : { error: err.message }
+    );
   }
 
   // Argumentos mal formados (por ejemplo, un id que no es numérico).
@@ -49,6 +56,6 @@ export const errorHandler = (err, req, res, next) => {
     return res.status(409).json({ error: 'No se puede eliminar: tiene registros asociados.' });
   }
 
-  console.error('Error inesperado:', err);
+  console.error('Error inesperado:', sanitizarError(err));
   res.status(500).json({ error: 'Error del servidor.'});
 };

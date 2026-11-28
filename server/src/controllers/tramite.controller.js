@@ -28,7 +28,7 @@ export const crear = async (req, res) => {
 };
 
 export const listar = async (req, res) => {
-  const tramites = await tramiteService.listarTramites();
+  const tramites = await tramiteService.listarTramites(req.usuario);
   res.json(tramites);
 }
 
@@ -41,7 +41,13 @@ export const obtener = async (req, res) => {
   const id = Number(req.params.id);
   const tramite = await tramiteService.obtenerTramitePorId(id);
 
-  if (!tramite) {
+  const visible = tramite && (
+    tramite.publicado
+    || req.usuario.rol === 'SUPERUSUARIO'
+    || await usuarioService.usuarioTieneSector(req.usuario.id, tramite.sectorId)
+  );
+
+  if (!visible) {
     const error = new Error('Trámite no encontrado.');
     error.statusCode = 404;
     throw error;

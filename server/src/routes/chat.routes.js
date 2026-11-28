@@ -1,18 +1,15 @@
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import * as chatController from '../controllers/chat.controller.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { autenticarOpcional } from '../middlewares/auth.middleware.js';
+import { crearLimitadoresChat } from '../config/rateLimit.js';
+import { LIMITES_CHAT } from '../config/chat.js';
 
 const router = Router();
 
-const chatLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minuto
-  max: 10, // 10 consultas por minuto por IP
-  message: { error: 'Demasiadas consultas. Esperá un momento e intentá de nuevo.' },
-});
+const limitesChat = crearLimitadoresChat(LIMITES_CHAT);
 
-router.post('/', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultar));
-router.post('/stream', chatLimiter, autenticarOpcional, asyncHandler(chatController.consultarStream));
+router.post('/', ...limitesChat, autenticarOpcional, asyncHandler(chatController.consultar));
+router.post('/stream', ...limitesChat, autenticarOpcional, asyncHandler(chatController.consultarStream));
 
 export default router;

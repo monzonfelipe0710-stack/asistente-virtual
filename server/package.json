@@ -1,7 +1,9 @@
 {
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
     "@aws-sdk/client-s3": "^3.1142.0",
     "@aws-sdk/s3-request-presigner": "^3.1142.0",
+    "@google/genai": "^3.4.0",
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -15,13 +17,17 @@
     "multer": "^2.1.1",
     "nodemailer": "^10.1.7",
     "openai": "^6.49.0",
+    "prisma": "^6.19.3",
+    "undici": "^8.13.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14",
-    "prisma": "6.19.3"
+    "nodemon": "^3.1.14"
   },
   "name": "server",
+  "engines": {
+    "node": ">=22.3.0"
+  },
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -29,9 +35,11 @@
     "start": "node index.js",
     "predev": "prisma generate",
     "dev": "nodemon index.js",
-    "test": "node --test \"tests/**/*.test.js\"",
+    "test": "node scripts/test.js",
+    "test:real": "node scripts/test.js --real",
     "postinstall": "prisma generate",
-    "seed:demo": "node prisma/seed-demo.js"
+    "seed:demo": "node prisma/seed-demo.js",
+    "base:temporal": "node scripts/base-temporal.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -39,5 +47,12 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "allowScripts": {
+    "prisma@6.19.3": true,
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "bcrypt@6.0.0": true,
+    "protobufjs": false
+  }
 }

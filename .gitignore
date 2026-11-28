@@ -38,3 +38,16 @@ test-frontend
 
 # Vite cache
 .vite
+
+# Entorno virtual y caché del scraper de ingestion
+ingestion/.venv/
+ingestion/data/cache_html/
+ingestion/data/tramites_muestra.json
+ingestion/data/informe_muestra.md
+__pycache__/
+# HTML y PDF crudos de los scrapers (se reprocesan sin volver a pedirlos)
+ingestion/data/raw/
+# Resultados de eval-chat por corrida (scripts/comparar-evals.js)
+server/eval-resultados/
+# Guiones de preguntas para precalentar la caché antes de una demo (scripts/precalentar-guion.js)
+server/guion*.txt

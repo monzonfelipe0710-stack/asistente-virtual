@@ -1,14 +1,29 @@
 import * as chatService from '../services/chat.service.js';
+import { ClienteDesconectadoError } from '../utils/plazo.js';
 import { z } from 'zod';
+import { LIMITES_CHAT } from '../config/chat.js';
+import { sanitizarError } from '../utils/sanitizar-error.js';
 
-const mensajeSchema = z.object({
-  rol: z.enum(['usuario', 'asistente']),
-  texto: z.string().min(1, 'El texto es obligatorio').max(2000),
-});
+// `tipo` es el que devolvió cada respuesta del asistente ("tipo" de POST /api/chat, "tipoRespuesta"
+// del evento `fin`): una pista del cliente, no un dato confiable. Uno desconocido, o en un mensaje
+// del usuario, se descarta sin error; sin él todo funciona como antes.
+// Solo hay dos roles y lo que no es del esquema se descarta: un mensaje no puede traer otro rol ni
+// instrucciones. El texto de la persona tiene el mismo tope que la pregunta.
+const { pregunta: MAX_PREGUNTA, textoAsistente: MAX_ASISTENTE, mensajes: MAX_MENSAJES } = LIMITES_CHAT;
+const mensajeSchema = z
+  .object({
+    rol: z.enum(['usuario', 'asistente'], { error: 'El rol de cada mensaje tiene que ser "usuario" o "asistente".' }),
+    texto: z.string({ error: 'El texto es obligatorio' }).min(1, 'El texto es obligatorio'),
+    tipo: z.enum(['respuesta', 'aclaracion', 'conversacion']).optional().catch(undefined),
+  })
+  .refine((m) => m.texto.length <= (m.rol === 'usuario' ? MAX_PREGUNTA : MAX_ASISTENTE), {
+    error: (issue) => `Cada mensaje puede tener hasta ${issue.input.rol === 'usuario' ? MAX_PREGUNTA : MAX_ASISTENTE} caracteres.`,
+  })
+  .transform(({ tipo, ...mensaje }) => (mensaje.rol === 'asistente' && tipo ? { ...mensaje, tipo } : mensaje));
 
-const consultaMultivueltaSchema = z.object({
-  pregunta: z.string().min(1).max(500).optional(),
-  mensajes: z.array(mensajeSchema).min(1).max(20).optional(),
+export const consultaMultivueltaSchema = z.object({
+  pregunta: z.string().min(1, 'La pregunta no puede estar vacía.').max(MAX_PREGUNTA, `La pregunta puede tener hasta ${MAX_PREGUNTA} caracteres.`).optional(),
+  mensajes: z.array(mensajeSchema).min(1, 'Faltan los mensajes.').max(MAX_MENSAJES, `La conversación puede tener hasta ${MAX_MENSAJES} mensajes.`).optional(),
 }).refine((d) => d.pregunta || d.mensajes, { message: 'Falta la pregunta o los mensajes.' });
 
 export const consultar = async (req, res) => {
@@ -21,7 +36,7 @@ export const consultar = async (req, res) => {
     throw error;
   }
 
-  const resultado = await chatService.responderConsulta(mensajes, req.usuario?.id ?? null);
+  const resultado = await chatService.responderConsulta(mensajes, req.usuario ?? null);
   res.json(resultado);
 };
 
@@ -41,19 +56,26 @@ export const consultarStream = async (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
-  let clienteDesconectado = false;
-  res.on('close', () => { clienteDesconectado = true; });
+  // `close` también llega al terminar bien: solo es desconexión si la respuesta no se cerró.
+  // Se cancela la llamada al modelo para no seguir gastando tokens.
+  const cancelacion = new AbortController();
+  res.on('close', () => {
+    if (!res.writableEnded) cancelacion.abort(new ClienteDesconectadoError());
+  });
 
   try {
-    for await (const evento of chatService.responderConsultaStream(mensajes, req.usuario?.id ?? null)) {
-      if (clienteDesconectado) break;
+    const eventos = chatService.responderConsultaStream(mensajes, req.usuario ?? null, { signal: cancelacion.signal });
+    for await (const evento of eventos) {
+      if (cancelacion.signal.aborted) break;
       res.write(`data: ${JSON.stringify(evento)}\n\n`);
     }
   } catch (err) {
-    console.error('Error en streaming del chat:', err.message);
-    if (!clienteDesconectado) {
-      res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje: 'Ocurrió un error procesando la consulta.' })}\n\n`);
-    }
+    if (cancelacion.signal.aborted) return;
+    // La causa de una falla del modelo ya quedó en el log del servicio.
+    const noDisponible = err instanceof chatService.AsistenteNoDisponibleError;
+    if (!noDisponible) console.error('Error en streaming del chat:', sanitizarError(err));
+    const mensaje = noDisponible ? err.message : 'Ocurrió un error procesando la consulta.';
+    res.write(`data: ${JSON.stringify({ tipo: 'error', mensaje })}\n\n`);
   } finally {
     res.end();
   }

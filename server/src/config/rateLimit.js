@@ -45,3 +45,31 @@ export const restablecerLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Demasiados intentos de restablecimiento. Probá de nuevo en unos minutos.' },
 });
+
+// Administración del modelo de chat (solo superusuario).
+export const modelosChatLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Esperá un momento e intentá de nuevo.' },
+});
+
+// Chat público: cada consulta llama a OpenAI. Un limitador por minuto y otro por hora, por IP; las
+// mismas instancias van en /api/chat y /api/chat/stream, así que el contador es compartido.
+export const crearLimitadoresChat = ({ porMinuto, porHora }) => [
+  rateLimit({
+    windowMs: 60 * 1000,
+    limit: porMinuto,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiadas consultas. Esperá un momento e intentá de nuevo.' },
+  }),
+  rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: porHora,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Llegaste al máximo de consultas por hora. Probá de nuevo más tarde.' },
+  }),
+];

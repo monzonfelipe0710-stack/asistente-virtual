@@ -1,13 +1,33 @@
+import { APIError, APIConnectionError, APIConnectionTimeoutError } from 'openai';
 import { openai } from '../../config/openai.js';
+import { TIEMPOS_IA } from '../../config/ia.js';
+import { ErrorProveedorIA } from './errores.js';
+import { crearInactividad, maxTokensDe, maxTokensDeTipeo, negativa, tiemposDe } from './comun.js';
 
-const MODELO_CHAT = process.env.OPENAI_MODELO_CHAT ?? 'gpt-4o-mini';
-const TEMPERATURA = Number(process.env.OPENAI_TEMPERATURA ?? 0.3);
+export { MAX_TOKENS_RESPUESTA } from './comun.js';
 
 // El modelo de embeddings queda fijo: cambiarlo invalida los vectores ya guardados
 // (otro espacio vectorial) y rompe la búsqueda sin dar error. Se cambia solo con una
 // migración + re-embeddear todo, no por configuración.
 const MODELO_EMBEDDING = 'text-embedding-3-small';
 const DIMENSIONES_EMBEDDING = 1536;
+const SIN_CREDITO = new Set(['insufficient_quota', 'credit_balance_exhausted']);
+
+// Lo que un modelo de esta API necesita además de la instrucción común, por su nombre en la API.
+// Va al final (después del contexto), así el prefijo común sigue aprovechando el caché del proveedor.
+const PERFILES = {
+  'gpt-6-luna': {
+    instruccionAdicional: `Criterio para elegir entre responder y pedir aclaración (aplicalo antes de decidir el tipo):
+- Si un candidato ES lo que la persona nombró (su nombre coincide con el pedido) y los demás son ese mismo trámite en otra modalidad o servicio (como el Pasaporte "Express"), restringido a un organismo, una norma o un artículo (como un nombre que agrega "Artículo …" o "Decreto …"), o un trámite general que lo incluye, respondé con el que lo nombra sin esas restricciones: tipo "respuesta" y su ID en "tramiteId". En ese caso no pidas aclaración, aunque la pregunta sea sobre requisitos, reglas, plazos o días.
+- Que el nombre coincida no alcanza si la persona agregó algo que lo convierte en otro trámite que el candidato no cubre, como un documento de otro país (renovar una licencia de conducir extranjera no es el trámite de la licencia nacional): ese candidato no es lo que pidió, así que el tipo es "respuesta" con "tramiteId" null.
+- Pedí aclaración solo si los candidatos sirven para situaciones distintas de la persona (por ejemplo, licencia médica de corto o de largo tratamiento) y el pedido no alcanza para elegir.`,
+  },
+};
+
+const instruccionPara = (modelo, instruccionSistema) => {
+  const adicional = PERFILES[modelo.modeloApi]?.instruccionAdicional;
+  return adicional ? `${instruccionSistema}\n\n${adicional}` : instruccionSistema;
+};
 
 const construirMensajes = (instruccionSistema, turnos) => [
   { role: 'system', content: instruccionSistema },
@@ -17,35 +37,172 @@ const construirMensajes = (instruccionSistema, turnos) => [
   })),
 ];
 
-/** @type {import('./proveedor.js').ProveedorIA} */
-export const openaiAdapter = {
-  async generarEmbedding(texto) {
-    const r = await openai.embeddings.create({ model: MODELO_EMBEDDING, input: texto });
-    return r.data[0].embedding;
+// Solo tipo y código: los mensajes pueden traer partes del pedido, de la respuesta o de la clave.
+// Los de red (TypeError de fetch: "terminated", "fetch failed") son fijos y se dejan.
+const describir = (err) => {
+  if (err instanceof APIError) return `${err.constructor.name}${err.status ? ` ${err.status}` : ''}`;
+  const codigo = err?.code ?? err?.cause?.code;
+  return [err?.name ?? 'Error', codigo, err instanceof TypeError ? err.message : null].filter(Boolean).join(' ');
+};
+
+const clasificar = (err) => {
+  if (err instanceof APIConnectionTimeoutError) return { tipo: 'timeout' };
+  if (err instanceof APIConnectionError || err instanceof TypeError) return { tipo: 'transitorio' };
+  if (!(err instanceof APIError)) return { tipo: 'otro' };
+  if ([err.code, err.type, err.error?.code, err.error?.type].some((c) => SIN_CREDITO.has(c))) return { tipo: 'cuota', sinCredito: true };
+  if (err.status === 429 || err.status === 408 || err.status === 409 || err.status >= 500) return { tipo: 'transitorio' };
+  if (err.status === 401 || err.status === 403) return { tipo: 'configuracion', claveRechazada: true };
+  if (err.status === 404) return { tipo: 'configuracion' };
+  return { tipo: 'solicitud' };
+};
+
+// Un abort propio (plazo, desconexión, inactividad) sale con su motivo; lo demás, como falla del proveedor.
+const comoFalla = (err, signal, operacion) => {
+  if (signal?.aborted) return signal.reason;
+  if (err instanceof ErrorProveedorIA) return err;
+  return new ErrorProveedorIA(describir(err), { operacion, original: err, ...clasificar(err) });
+};
+
+const incompleta = (finishReason, operacion) =>
+  new ErrorProveedorIA(`respuesta incompleta (finish_reason: ${finishReason ?? 'ninguno'})`, { operacion, tipo: finishReason ? 'contenido' : 'transitorio' });
+
+const usoDe = (modelo, operacion, u) =>
+  u && {
+    modelo,
+    operacion,
+    entrada: u.prompt_tokens ?? 0,
+    cacheada: u.prompt_tokens_details?.cached_tokens ?? 0,
+    salida: u.completion_tokens ?? 0,
+    razonamiento: u.completion_tokens_details?.reasoning_tokens ?? 0,
+  };
+
+// gpt-4o-mini no acepta reasoning_effort; un modelo de razonamiento acepta temperature solo con
+// reasoning_effort "none". Cada modelo manda lo que tiene en `parametros`.
+const cuerpoDe = (modelo, { temperatura, maxTokens } = {}) => {
+  const p = modelo.parametros ?? {};
+  return {
+    model: modelo.modeloApi,
+    max_completion_tokens: maxTokens ?? maxTokensDe(modelo),
+    ...(p.temperature != null && { temperature: temperatura ?? p.temperature }),
+    ...(p.reasoningEffort && { reasoning_effort: p.reasoningEffort }),
+  };
+};
+
+const opcionesDe = (modelo, { signal, sinReintentos }) => ({ ...tiemposDe(modelo, { sinReintentos }), signal });
+
+export const embeddingsOpenai = {
+  async generarEmbedding(texto, { signal, alUsar } = {}) {
+    try {
+      const r = await openai.embeddings.create(
+        { model: MODELO_EMBEDDING, input: texto },
+        { ...TIEMPOS_IA.embedding, signal },
+      );
+      alUsar?.({ modelo: MODELO_EMBEDDING, operacion: 'embedding', entrada: r.usage?.total_tokens ?? 0, cacheada: 0, salida: 0 });
+      return r.data[0].embedding;
+    } catch (err) {
+      throw comoFalla(err, signal, 'embedding');
+    }
   },
 
-  async generarRespuesta({ instruccionSistema, turnos, esquema }) {
-    const completion = await openai.chat.completions.create({
-      model: MODELO_CHAT,
-      temperature: TEMPERATURA,
-      messages: construirMensajes(instruccionSistema, turnos),
-      ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
-    });
-    return completion.choices[0].message.content;
-  },
-
-  async *generarRespuestaStream({ instruccionSistema, turnos }) {
-    const stream = await openai.chat.completions.create({
-      model: MODELO_CHAT,
-      temperature: TEMPERATURA,
-      stream: true,
-      messages: construirMensajes(instruccionSistema, turnos),
-    });
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content ?? '';
-      if (delta) yield delta;
+  // Para reindexar en lotes: un pedido con varios textos tarda más que uno solo.
+  async generarEmbeddings(textos, { signal, timeout = TIEMPOS_IA.embedding.timeout * 5 } = {}) {
+    try {
+      const r = await openai.embeddings.create(
+        { model: MODELO_EMBEDDING, input: textos },
+        { ...TIEMPOS_IA.embedding, timeout, signal },
+      );
+      return {
+        vectores: [...r.data].sort((a, b) => a.index - b.index).map((d) => d.embedding),
+        tokens: r.usage?.total_tokens ?? null,
+      };
+    } catch (err) {
+      throw comoFalla(err, signal, 'embedding_lote');
     }
   },
 
   infoEmbedding: { modelo: MODELO_EMBEDDING, dimensiones: DIMENSIONES_EMBEDDING },
+};
+
+export const chatOpenai = {
+  async generarRespuesta(modelo, { instruccionSistema, turnos, esquema, signal, sinReintentos, alUsar }) {
+    let completion;
+    try {
+      completion = await openai.chat.completions.create(
+        {
+          ...cuerpoDe(modelo),
+          messages: construirMensajes(instruccionPara(modelo, instruccionSistema), turnos),
+          ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
+        },
+        opcionesDe(modelo, { signal, sinReintentos }),
+      );
+    } catch (err) {
+      throw comoFalla(err, signal, 'chat');
+    }
+    alUsar?.(usoDe(modelo.id, 'chat', completion.usage));
+    const { finish_reason: finishReason, message } = completion.choices[0];
+    if (message.refusal) throw negativa('chat');
+    if (finishReason !== 'stop') throw incompleta(finishReason, 'chat');
+    return message.content;
+  },
+
+  // Una llamada corta, sin reintentos y con su propio timeout: devuelve el texto tal cual.
+  async corregirTexto(modelo, { instruccionSistema, texto, signal, timeout, alUsar }) {
+    let completion;
+    try {
+      completion = await openai.chat.completions.create(
+        {
+          ...cuerpoDe(modelo, { temperatura: 0, maxTokens: maxTokensDeTipeo(modelo, texto) }),
+          messages: [{ role: 'system', content: instruccionSistema }, { role: 'user', content: texto }],
+        },
+        { timeout, maxRetries: 0, signal },
+      );
+    } catch (err) {
+      throw comoFalla(err, signal, 'tipeo');
+    }
+    alUsar?.(usoDe(modelo.id, 'tipeo', completion.usage));
+    const { finish_reason: finishReason, message } = completion.choices[0];
+    if (message.refusal) throw negativa('tipeo');
+    if (finishReason !== 'stop') throw incompleta(finishReason, 'tipeo');
+    return message.content;
+  },
+
+  // El SDK termina el stream sin error si se corta sin [DONE] o si se lo aborta: por eso un abort
+  // propio se relanza con su motivo y sin finish_reason "stop" la respuesta se da por incompleta.
+  // Con `esquema`, una negativa del modelo (refusal) también es una falla.
+  async *generarRespuestaStream(modelo, { instruccionSistema, turnos, esquema, signal, sinReintentos, alUsar }) {
+    const { senal, rearmar, limpiar } = crearInactividad(signal, 'chat_stream');
+
+    let finishReason = null;
+    let uso = null;
+    try {
+      const stream = await openai.chat.completions.create(
+        {
+          ...cuerpoDe(modelo),
+          stream: true,
+          stream_options: { include_usage: true },
+          messages: construirMensajes(instruccionPara(modelo, instruccionSistema), turnos),
+          ...(esquema && { response_format: { type: 'json_schema', json_schema: esquema } }),
+        },
+        opcionesDe(modelo, { signal: senal, sinReintentos }),
+      );
+      rearmar();
+      for await (const chunk of stream) {
+        rearmar();
+        if (chunk.usage) uso = chunk.usage;
+        const opcion = chunk.choices?.[0];
+        finishReason = opcion?.finish_reason ?? finishReason;
+        if (opcion?.delta?.refusal) throw negativa('chat_stream');
+        const delta = opcion?.delta?.content ?? '';
+        if (delta) yield delta;
+      }
+    } catch (err) {
+      throw comoFalla(err, senal, 'chat_stream');
+    } finally {
+      limpiar();
+    }
+
+    alUsar?.(usoDe(modelo.id, 'chat_stream', uso));
+    if (senal.aborted) throw senal.reason;
+    if (finishReason !== 'stop') throw incompleta(finishReason, 'chat_stream');
+  },
 };

@@ -1,3 +1,4 @@
+import './helpers/base-de-prueba.js';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { z } from 'zod';
@@ -52,6 +53,17 @@ describe('errorHandler', () => {
   it('respeta el statusCode de los errores propios', () => {
     const res = manejar(Object.assign(new Error('Sector no encontrado.'), { statusCode: 404 }));
     assert.deepEqual([res.codigo, res.cuerpo], [404, { error: 'Sector no encontrado.' }]);
+  });
+
+  it('incluye el codigo del error propio cuando lo trae', () => {
+    const err = Object.assign(new Error('Debés cambiar tu contraseña antes de continuar.'), {
+      statusCode: 403,
+      codigo: 'PASSWORD_CHANGE_REQUIRED',
+    });
+    assert.deepEqual(
+      [manejar(err).codigo, manejar(err).cuerpo],
+      [403, { error: 'Debés cambiar tu contraseña antes de continuar.', codigo: 'PASSWORD_CHANGE_REQUIRED' }]
+    );
   });
 
   it('convierte argumentos inválidos de Prisma en 400 y no en 500', () => {

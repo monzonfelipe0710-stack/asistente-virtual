@@ -11,7 +11,10 @@ import chatRoutes from './src/routes/chat.routes.js';
 import metricaRoutes from './src/routes/metrica.routes.js';
 import consultaRoutes from './src/routes/consulta.routes.js';
 import mesaRoutes from './src/routes/mesa.routes.js';
+import modeloChatRoutes from './src/routes/modelo-chat.routes.js';
+import documentoDescargaRoutes from './src/routes/documento-descarga.routes.js';
 import { origenesPermitidos } from './src/config/origenes.js';
+import { LIMITES_CHAT } from './src/config/chat.js';
 
 const app = express();
 
@@ -28,6 +31,8 @@ if (process.env.TRUST_PROXY) {
 app.use(helmet());
 app.use(cors({ origin: origenesPermitidos }));
 app.use(morgan('dev'));
+// El chat tiene su propio tope de cuerpo, más chico que el general (100 kb).
+app.use('/api/chat', express.json({ limit: `${LIMITES_CHAT.cuerpoKb}kb` }));
 app.use(express.json());
 
 app.get('/api/health', (req, res) =>{
@@ -38,10 +43,12 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/sectores', sectorRoutes);
 app.use('/api/tramites', tramiteRoutes);
+app.use('/api/documentos', documentoDescargaRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/metricas', metricaRoutes);
 app.use('/api/consultas', consultaRoutes);
 app.use('/api/mesas', mesaRoutes);
+app.use('/api/admin/modelos-chat', modeloChatRoutes);
 
 // Cualquier ruta no registrada responde JSON, no el HTML por defecto de Express.
 app.use((req, res) => {
