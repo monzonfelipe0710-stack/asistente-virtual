@@ -22,7 +22,7 @@ import { formatDate } from "@/compartido/utils/date";
 
 const TODOS_LOS_TRAMITES = "Todos los trámites";
 const OPCIONES_DE_CALIFICACION = ["Todas", "Útil", "No útil"] as const;
-const OPCIONES_POR_PAGINA = ["10", "20", "50"] as const;
+const POR_PAGINA = 20;
 const FORMATO_DE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
 function formatDateTime(d: Date): string {
@@ -47,7 +47,6 @@ function formatearFecha(texto: string) {
 }
 
 type Calificacion = (typeof OPCIONES_DE_CALIFICACION)[number];
-type PorPagina = (typeof OPCIONES_POR_PAGINA)[number];
 
 interface Pedido {
   desde: string;
@@ -55,7 +54,6 @@ interface Pedido {
   tramiteId: number | null;
   calificacion: number | null;
   page: number;
-  limit: number;
   version: number;
 }
 
@@ -213,7 +211,6 @@ export default function Calificaciones() {
     tramiteId: null,
     calificacion: null,
     page: 1,
-    limit: 20,
     version: 0,
   });
   const [reporte, setReporte] = useState<ReporteDeCalificacionesApi | null>(null);
@@ -223,7 +220,7 @@ export default function Calificaciones() {
 
   useEffect(() => {
     let activo = true;
-    const filtros: FiltrosDeCalificaciones = { page: pedido.page, limit: pedido.limit };
+    const filtros: FiltrosDeCalificaciones = { page: pedido.page, limit: POR_PAGINA };
     if (pedido.desde) filtros.desde = pedido.desde;
     if (pedido.hasta) filtros.hasta = pedido.hasta;
     if (pedido.tramiteId !== null) filtros.tramiteId = pedido.tramiteId;
@@ -310,7 +307,14 @@ export default function Calificaciones() {
 
   const resumen = reporte?.resumen;
   const total = reporte ? Number(reporte.total ?? resumen?.total) || 0 : 0;
-  const paginas = Math.max(1, Math.ceil(total / pedido.limit));
+  const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+
+  let rango = "";
+  if (reporte && reporte.items.length > 0) {
+    const primero = (pedido.page - 1) * POR_PAGINA + 1;
+    const ultimo = primero + reporte.items.length - 1;
+    rango = `Del ${primero} al ${ultimo} de ${total}`;
+  }
 
   const motivos = resumen
     ? [
@@ -460,22 +464,8 @@ export default function Calificaciones() {
             style={[styles.tarjeta, styles.opiniones, { backgroundColor: C.surface, borderColor: C.border }]}
           >
             <View style={[styles.opinionesCabecera, { borderBottomColor: C.border }]}>
-              <View style={styles.opinionesTitulo}>
-                <Text style={[Type.cardTitle, { color: C.ink }]}>Opiniones de la ciudadanía</Text>
-                <Text style={[Type.meta, { color: C.ink2 }]}>
-                  El resumen incluye todas las coincidencias, no solo esta página.
-                </Text>
-              </View>
-              <View style={styles.porPagina}>
-                <Text style={[Type.meta, { color: C.ink2 }]}>Por página</Text>
-                <View style={styles.porPaginaSelect}>
-                  <Select
-                    value={String(pedido.limit) as PorPagina}
-                    options={OPCIONES_POR_PAGINA}
-                    onChange={(valor) => pedirDeNuevo({ limit: Number(valor), page: 1 })}
-                  />
-                </View>
-              </View>
+              <Text style={[Type.cardTitle, { color: C.ink, flexShrink: 1 }]}>Opiniones de la ciudadanía</Text>
+              {!!rango && <Text style={[Type.meta, { color: C.ink2 }]}>{rango}</Text>}
             </View>
 
             {reporte.items.length === 0 ? (
@@ -651,18 +641,6 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
     padding: Spacing[5],
     borderBottomWidth: 1,
-  },
-  opinionesTitulo: {
-    flexShrink: 1,
-    gap: Spacing[1],
-  },
-  porPagina: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing[2],
-  },
-  porPaginaSelect: {
-    width: 110,
   },
   sinResultados: {
     paddingHorizontal: Spacing[5],
