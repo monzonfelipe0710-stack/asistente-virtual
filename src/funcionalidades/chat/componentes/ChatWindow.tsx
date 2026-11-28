@@ -1,7 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Animated,
-  Easing,
   FlatList,
   Keyboard,
   Platform,
@@ -10,6 +8,7 @@ import {
   View,
   type ListRenderItemInfo,
 } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChatBotAvatar } from "@/compartido/avatar/ChatBotAvatar";
@@ -109,15 +108,20 @@ function ChatWindowBase() {
   const espacioInferior =
     alturaDelTeclado > 0 ? tecladoQueTapa + Spacing[3] : Math.max(insets.bottom, Spacing[3]);
 
-  const [espacioAnimado] = useState(() => new Animated.Value(espacioInferior));
+  // Con Reanimated: sigue al teclado en el hilo de la interfaz, sin pasar por el JavaScript del chat.
+  const espacioAnimado = useSharedValue(espacioInferior);
   useEffect(() => {
-    Animated.timing(espacioAnimado, {
-      toValue: espacioInferior,
-      duration: reducirAnimaciones ? 0 : Motion.sheet,
-      easing: Easing.bezier(...Motion.bezier),
-      useNativeDriver: false,
-    }).start();
+    espacioAnimado.set(
+      withTiming(espacioInferior, {
+        duration: reducirAnimaciones ? 0 : Motion.sheet,
+        easing: Easing.bezier(...Motion.bezier),
+      })
+    );
   }, [espacioInferior, reducirAnimaciones, espacioAnimado]);
+  const estiloDeLaBarra = useAnimatedStyle(() => ({ bottom: espacioAnimado.get() }));
+  const estiloDeLaBienvenida = useAnimatedStyle(() => ({
+    paddingBottom: espacioAnimado.get() + altoDeLaBarra,
+  }));
 
   useEffect(() => {
     const alSubir = Keyboard.addListener("keyboardDidShow", () => setEscribiendo(true));
@@ -225,7 +229,8 @@ function ChatWindowBase() {
         <Animated.View
           style={[
             styles.lista,
-            { paddingTop: arriba, paddingBottom: Animated.add(espacioAnimado, altoDeLaBarra) },
+            { paddingTop: arriba },
+            estiloDeLaBienvenida,
           ]}
         >
           <Pressable style={styles.lista} onPress={Keyboard.dismiss} accessible={false}>
@@ -246,7 +251,7 @@ function ChatWindowBase() {
         </Animated.View>
       )}
 
-      <Animated.View style={[styles.abajo, { bottom: espacioAnimado }]}>
+      <Animated.View style={[styles.abajo, estiloDeLaBarra]}>
         <View onLayout={(e) => setAltoDeLaBarra(e.nativeEvent.layout.height)}>
           <ChatInput
             onSend={send}

@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import Markdown from "react-native-markdown-display";
+import Markdown, { MarkdownIt } from "react-native-markdown-display";
 
 import { Text, useEscalaDeTexto } from "@/compartido/ui/Text";
 import { Fonts, Radius, Spacing, useColors } from "@/compartido/constantes/theme";
@@ -35,6 +35,13 @@ function corteSinPartirEnlaces(corte: number, rangos: [number, number][]): numbe
 }
 
 const REGLAS_MARKDOWN = { image: () => null };
+
+// La librería trae estos tres como valores por defecto que se crean de nuevo en cada render, y eso
+// le invalida el memo: cada paso del efecto de escritura armaba otro intérprete de Markdown y
+// recalculaba todos los estilos. Pasados una sola vez, se reusan. Misma configuración que la suya.
+// Los dos últimos existen en la librería pero no en sus tipos; por eso van en un objeto aparte.
+const INTERPRETE_MARKDOWN = MarkdownIt({ typographer: true });
+const PROPS_FIJAS_SIN_TIPO: object = { allowedImageHandlers: [], topLevelMaxExceededItem: null };
 
 function esEnlaceWeb(url: string): boolean {
   return /^https?:\/\//i.test(url);
@@ -74,6 +81,26 @@ function MessageBubbleBase({
     return () => clearTimeout(id);
   }, [escribiendo, letras, total, enlaces]);
 
+  const estiloMarkdown = useMemo(
+    () => ({
+      body: {
+        color: C.ink,
+        fontFamily: letraLegible ? Fonts.legible : Fonts.regular,
+        fontSize: 17 * escala,
+        lineHeight: 25 * escala * (letraLegible ? 1.15 : 1),
+        letterSpacing: letraLegible ? 0.3 : 0,
+      },
+      paragraph: { marginTop: 0, marginBottom: Spacing[2] },
+      strong: {
+        fontFamily: letraLegible ? Fonts.legibleNegrita : Fonts.bold,
+        fontWeight: "normal" as const,
+      },
+      bullet_list: { marginBottom: Spacing[2] },
+      ordered_list: { marginBottom: Spacing[2] },
+    }),
+    [C.ink, escala, letraLegible]
+  );
+
   const visibles = escribiendo ? letras : total;
   const parcial = message.text.slice(0, visibles);
   const markdown = (parcial.match(/\*\*/g)?.length ?? 0) % 2 ? `${parcial}**` : parcial;
@@ -93,23 +120,10 @@ function MessageBubbleBase({
       <View style={styles.markdown} accessible accessibilityLabel={message.text}>
         <Markdown
           rules={REGLAS_MARKDOWN}
+          markdownit={INTERPRETE_MARKDOWN}
+          {...PROPS_FIJAS_SIN_TIPO}
           onLinkPress={esEnlaceWeb}
-          style={{
-            body: {
-              color: C.ink,
-              fontFamily: letraLegible ? Fonts.legible : Fonts.regular,
-              fontSize: 17 * escala,
-              lineHeight: 25 * escala * (letraLegible ? 1.15 : 1),
-              letterSpacing: letraLegible ? 0.3 : 0,
-            },
-            paragraph: { marginTop: 0, marginBottom: Spacing[2] },
-            strong: {
-              fontFamily: letraLegible ? Fonts.legibleNegrita : Fonts.bold,
-              fontWeight: "normal",
-            },
-            bullet_list: { marginBottom: Spacing[2] },
-            ordered_list: { marginBottom: Spacing[2] },
-          }}
+          style={estiloMarkdown}
         >
           {markdown}
         </Markdown>
