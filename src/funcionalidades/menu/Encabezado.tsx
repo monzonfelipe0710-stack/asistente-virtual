@@ -1,6 +1,7 @@
 import { DrawerActions, HeaderHeightContext } from "expo-router/react-navigation";
 import { useNavigation } from "expo-router";
-import { Keyboard, Platform, Pressable, StyleSheet, View } from "react-native";
+import { Keyboard, Platform, StyleSheet, View } from "react-native";
+import { Pressable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Desvanecido } from "@/compartido/ui/Desvanecido";
@@ -10,6 +11,9 @@ import { Shadows, Size, Spacing, Weight, useColors } from "@/compartido/constant
 
 const ES_IOS = Platform.OS === "ios";
 
+// El botón usa el Pressable de gesture-handler y no el de React Native: en iOS el gesto de
+// deslizar para abrir el menú (también de gesture-handler, en todo el ancho) se quedaba con el
+// toque y el botón no respondía. Este participa del mismo sistema de gestos y gana el toque.
 export function Encabezado({ titulo }: { titulo?: string }) {
   const C = useColors();
   const insets = useSafeAreaInsets();
