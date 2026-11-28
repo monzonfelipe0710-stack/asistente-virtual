@@ -309,13 +309,6 @@ export default function Calificaciones() {
   const total = reporte ? Number(reporte.total ?? resumen?.total) || 0 : 0;
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
-  let rango = "";
-  if (reporte && reporte.items.length > 0) {
-    const primero = (pedido.page - 1) * POR_PAGINA + 1;
-    const ultimo = primero + reporte.items.length - 1;
-    rango = `Del ${primero} al ${ultimo} de ${total}`;
-  }
-
   const motivos = resumen
     ? [
         ...resumen.porMotivo.map((m) => ({ nombre: m.motivo, cantidad: Number(m.cantidad) || 0 })),
@@ -465,7 +458,6 @@ export default function Calificaciones() {
           >
             <View style={[styles.opinionesCabecera, { borderBottomColor: C.border }]}>
               <Text style={[Type.cardTitle, { color: C.ink, flexShrink: 1 }]}>Opiniones de la ciudadanía</Text>
-              {!!rango && <Text style={[Type.meta, { color: C.ink2 }]}>{rango}</Text>}
             </View>
 
             {reporte.items.length === 0 ? (
