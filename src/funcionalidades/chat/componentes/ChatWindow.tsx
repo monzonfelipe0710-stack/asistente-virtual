@@ -96,7 +96,13 @@ function ChatWindowBase() {
   const ultimoId = messages[messages.length - 1]?.id;
   const ultimoTipo = messages[messages.length - 1]?.type;
   const arriba = insets.top + Size.header;
-  const paddingInferior = Math.max(insets.bottom, Spacing[3]) + altoDeLaBarra + Spacing[5];
+  // En iOS el teclado tapa la pantalla (no la achica): la barra sube con él y la lista tiene que
+  // sumar su alto abajo, o el final de la conversación queda detrás y la lista rebota al bajar.
+  const tecladoQueTapa = Platform.OS === "ios" ? alturaDelTeclado : 0;
+  const paddingInferior =
+    (alturaDelTeclado > 0 ? tecladoQueTapa + Spacing[3] : Math.max(insets.bottom, Spacing[3])) +
+    altoDeLaBarra +
+    Spacing[5];
 
   const indiceFijado = idFijado === null ? -1 : messages.findIndex((m) => m.id === idFijado);
   const restante =
@@ -105,7 +111,6 @@ function ChatWindowBase() {
   const relleno =
     indiceFijado < 0 ? 0 : Math.max(0, altoDeLaLista - arriba - restante - paddingInferior);
 
-  const tecladoQueTapa = Platform.OS === "ios" ? alturaDelTeclado : 0;
   const espacioInferior =
     alturaDelTeclado > 0 ? tecladoQueTapa + Spacing[3] : Math.max(insets.bottom, Spacing[3]);
 

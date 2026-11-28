@@ -1,5 +1,14 @@
-import { Children, useEffect, useState, type ReactNode } from "react";
-import { Animated, Easing, Modal as RNModal, Pressable, StyleSheet, View } from "react-native";
+import { Children, cloneElement, isValidElement, useEffect, useState, type ReactNode } from "react";
+import {
+  Animated,
+  Easing,
+  Modal as RNModal,
+  Pressable,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 
 import { Text } from "./Text";
 import { Motion, Radius, Shadows, Spacing, Type, useColors } from "@/compartido/constantes/theme";
@@ -68,7 +77,11 @@ export function Dialogo({
             <View style={styles.acciones}>
               {acciones.map((accion, indice) => (
                 <View key={indice} style={styles.accion}>
-                  {accion}
+                  {/* El botón ocupa todo su lugar: los dos quedan del mismo ancho y alto aunque
+                      el texto de uno ocupe dos líneas. */}
+                  {isValidElement<{ style?: StyleProp<ViewStyle> }>(accion)
+                    ? cloneElement(accion, { style: [accion.props.style, styles.llenar] })
+                    : accion}
                 </View>
               ))}
             </View>
@@ -104,5 +117,8 @@ const styles = StyleSheet.create({
   },
   accion: {
     flex: 1,
+  },
+  llenar: {
+    flexGrow: 1,
   },
 });

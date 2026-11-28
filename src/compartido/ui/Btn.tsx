@@ -74,7 +74,16 @@ export function Btn({
       ) : (
         <>
           {!!icon && <Icon name={icon} size={20} color={fg} />}
-          <Text style={{ fontSize: 17, lineHeight: 21, fontWeight: Weight.semibold, color: fg }}>
+          <Text
+            style={{
+              flexShrink: 1,
+              fontSize: 17,
+              lineHeight: 21,
+              fontWeight: Weight.semibold,
+              color: fg,
+              textAlign: "center",
+            }}
+          >
             {label}
           </Text>
         </>
