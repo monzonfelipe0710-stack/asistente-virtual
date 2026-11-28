@@ -103,3 +103,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

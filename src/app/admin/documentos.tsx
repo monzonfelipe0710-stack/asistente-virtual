@@ -256,3 +256,5 @@ const styles = StyleSheet.create({
     marginTop: Spacing[6],
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

@@ -13,25 +13,25 @@ function consultaDeTramite(nombre: string) {
   return `Quiero iniciar el trámite "${nombre}". ¿Cómo debo hacer la gestión?`;
 }
 
+// Los tres trámites con más demanda en Formosa capital según la investigación de noviembre de 2026:
+// licencia de conducir (más de 200 por día), buena conducta y libre deuda municipal.
 export const quickReplies: QuickReply[] = [
   {
-    label: "Enfermedad profesional",
-    description: "Accidente de trabajo",
-    query: consultaDeTramite("Accidente de trabajo - Enfermedad Profesional"),
-    icon: "alert",
+    label: "Licencia de conducir",
+    description: "Requisitos para obtenerla",
+    query: consultaDeTramite("Requisitos para obtener la Licencia Nacional de Conducir"),
+    icon: "user",
   },
   {
-    label: "Accidente in itinere",
-    description: "Entre el domicilio particular y el lugar de trabajo",
-    query: consultaDeTramite(
-      "Accidente de trabajo - In itinere: infortunio ocurrido entre el domicilio particular y el lugar de trabajo"
-    ),
-    icon: "home",
-  },
-  {
-    label: "Accidente en el trabajo",
-    description: "Por el hecho o en ocasión del mismo",
-    query: consultaDeTramite("Accidente de trabajo - Por el hecho o en ocasión del mismo"),
+    label: "Certificado de Buena Conducta",
+    description: "Policía de Formosa",
+    query: consultaDeTramite("Solicitud de Certificado de Buena Conducta"),
     icon: "shield",
+  },
+  {
+    label: "Libre deuda inmobiliario",
+    description: "Municipalidad de Formosa",
+    query: consultaDeTramite("Libre Deuda del Impuesto Inmobiliario y Tasa Única de Servicios"),
+    icon: "home",
   },
 ];

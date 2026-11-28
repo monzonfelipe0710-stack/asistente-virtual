@@ -452,3 +452,5 @@ const styles = StyleSheet.create({
     width: 120,
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

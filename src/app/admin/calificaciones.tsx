@@ -677,3 +677,5 @@ const styles = StyleSheet.create({
     gap: Spacing[2],
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

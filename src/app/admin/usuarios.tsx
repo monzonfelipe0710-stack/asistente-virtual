@@ -260,3 +260,5 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

@@ -201,3 +201,5 @@ const styles = StyleSheet.create({
     paddingLeft: Spacing[3],
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

@@ -48,3 +48,5 @@ const styles = StyleSheet.create({
     pointerEvents: "box-none",
   },
 });
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";

@@ -61,3 +61,5 @@ export default function Chats() {
     </PantallaConEncabezadoFlotante>
   );
 }
+
+export { ErrorBoundary } from "@/compartido/ui/PantallaConError";
